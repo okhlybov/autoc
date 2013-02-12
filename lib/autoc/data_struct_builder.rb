@@ -313,6 +313,7 @@ class Vector < Structure
       void #{dtor}(#{type}* self) {
         #{assert}(self);
         #{destruct_stmt};
+        #{free}(self->values);
       }
       #{type}* #{new}(size_t element_count) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
@@ -417,8 +418,15 @@ class List < Structure
         self->node_count = 0;
       }
       void #{dtor}(#{type}* self) {
+        #{node}* node;
         #{assert}(self);
         #{destruct_stmt};
+        node = self->head_node;
+        while(node) {
+          #{node}* this_node = node;
+          node = node->next_node;
+          #{free}(this_node);
+        }
       }
       #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
@@ -618,6 +626,7 @@ class HashSet < Structure
         for(i = 0; i < self->bucket_count; ++i) {
           #{@bucket.dtor}(&self->buckets[i]);
         }
+        #{free}(self->buckets);
       }
       #{type}* #{new}(size_t bucket_count) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
@@ -870,7 +879,7 @@ class HashMap < Code
     ValueType.new(hash)
   end
   def new_entry_set
-    Set.new("#{type}EntrySet", @entry_hash)
+    HashSet.new("#{type}EntrySet", @entry_hash)
   end
 end # Map
 

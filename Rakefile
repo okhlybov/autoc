@@ -2,7 +2,7 @@ require 'zip/zip'
 
 
 Package = 'autoc'
-Version = '0.1'
+Version = '0.2'
 
 
 task :default => [:dist]
