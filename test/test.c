@@ -68,9 +68,28 @@ void PCharSetTest() {
     while(PCharSetItHasNext(&it)) {
         printf("- %s\n", PCharSetItNext(&it));
     }
-    printf("contains(pig) == %d\n", PCharSetContains(&set, "pig"));
-    printf("contains(snake) == %d\n", PCharSetContains(&set, "snake"));
+    printf("contains('pig') == %d\n", PCharSetContains(&set, "pig"));
+    printf("contains('snake') == %d\n", PCharSetContains(&set, "snake"));
     PCharSetDtor(&set);
+}
+
+
+void PChar2IntMapTest() {
+    PChar2IntMap* map;
+    PChar2IntMapIt it;
+    printf("\n*** PChar2IntMap\n");
+    map = PChar2IntMapNew(16);
+    PChar2IntMapPut(map, "cat", 1);
+    PChar2IntMapPut(map, "dog", 2);
+    PChar2IntMapPut(map, "cat", 0);
+    PChar2IntMapPut(map, "pig", 0);
+    printf("size = %d\n", PChar2IntMapSize(map));
+    PChar2IntMapItCtor(&it, map);
+    while(PChar2IntMapItHasNext(&it)) {
+        PChar2IntMapEntry entry = PChar2IntMapItNext(&it);
+        printf("- '%s' -> %d\n", entry.key, entry.value);
+    }
+    PChar2IntMapDestroy(map);
 }
 
 
@@ -78,5 +97,6 @@ int main(int argc, char** argv) {
     IntVectorTest();
     IntSetTest();
     PCharSetTest();
+    PChar2IntMapTest();
     return 0;
 }

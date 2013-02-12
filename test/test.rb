@@ -13,6 +13,7 @@ CModule.generate!(:test) do |m|
   m << Vector.new(:IntVector, Int)
   m << HashSet.new(:IntSet, Int)
   m << HashSet.new(:PCharSet, PChar)
+  m << HashMap.new(:PChar2IntMap, PChar, Int)
 end
 
 
