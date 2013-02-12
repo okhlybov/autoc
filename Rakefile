@@ -30,7 +30,7 @@ end
 
 task :dist => [:gen_doc, :gen_test] do
   package = "#{Package}-#{Version}.zip"
-  files = FileList.new ['lib/**/*', 'doc/**/*', 'test/test.{c,rb}', 'test/*_auto.[ch]', 'etc/**/*','Rakefile']
+  files = FileList.new ['lib/**/*', 'doc/**/*', 'test/test.{c,rb}', 'test/*_auto.[ch]', 'etc/**/*', 'Rakefile', 'README']
   begin
     FileUtils.rm_rf(package)
   rescue Errno::ENOENT

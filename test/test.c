@@ -39,10 +39,9 @@ void IntSetTest() {
 
 
 size_t PCharHash(const char* s) {
-    const char* p = s;
     size_t h = 0;
-    while(*p++) {
-        h += *p;
+    while(*s++) {
+        h += *s;
     }
     return h;
 }
