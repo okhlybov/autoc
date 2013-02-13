@@ -239,11 +239,13 @@ class Structure < Code
   def initialize(type, element_info)
     super(type)
     @element = new_element_type(element_info)
+    @forward = yield if block_given?
   end
   # :nodoc:
   def entities; [PrologueCode] end
   # :nodoc:
   def write_intf(stream)
+    stream << @forward
     element.write_intf(stream)
   end
   protected
@@ -737,8 +739,10 @@ class HashMap < Code
     @entrySet = new_entry_set
     @key = new_key_type(key_info)
     @value = new_value_type(value_info)
+    @forward = yield if block_given?
   end
   def write_intf(stream)
+    stream << @forward
     key.write_intf(stream)
     value.write_intf(stream)
     stream << %$
