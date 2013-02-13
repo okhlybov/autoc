@@ -1,12 +1,22 @@
 require 'autoc/code_builder'
 
-##
-# Generators for strongly-typed C data containers similar to C++ STL container classes.
-#
-# The data types used as elements for generated containers may be of almost arbitrary type,
-# with either value or reference semantics. A data type may be supplied with a host of user-defined functions
-# performing specific operations such as cloning, destruction and a like on it.
-# If no such function is specified, a default operation is generated.
+=begin rdoc
+Generators for strongly-typed C data containers similar to C++ STL container classes.
+
+The data types used as elements for generated containers may be of almost arbitrary type,
+with either value or reference semantics. A data type may be supplied with a host of user-defined functions
+performing specific operations such as cloning, destruction and a like on it.
+If no such function is specified, a default operation is generated.
+
+Generate notes on generated data structures:
+
+* When referring to the generated C side method of a recently introduced data container the following convention is applied:
+  container name portion of the method is abbreviated by the hash sign <code>#</code>, for example, the full method
+  <code>BlackBoxPut()</code> of a data container <code>BlackBox</code> will be abbreviated as <code>#Put()</code>.
+
+* Use proper pair of construction and destruction functions: those containers created on stack with <code>#Ctor()</code>
+  must be destroyed with <code>#Dtor()</code> while those created on heap with <code>#New()</code> must be destroyed with <code>#Destroy()</code>.
+=end
 module DataStructBuilder
 
 
@@ -30,8 +40,9 @@ PrologueCode = Class.new(CodeBuilder::Code) do
 end.new # PrologueCode
 
 
-##
-# Base class for all C data container generators.
+=begin rdoc
+Base class for all C data container generators.
+=end
 class Code < CodeBuilder::Code
   undef abort;
   ##
@@ -61,12 +72,13 @@ class Code < CodeBuilder::Code
 end # Code
 
 
-##
-# Indicates that the type class including this module provides the assignment operation.
-# The user-defined function is assigned to the key +:assign+ and
-# is expected to have the signature +type+ _assignment-function_(+type+).
-# The C function provided might return its argument or a new copy. It is also responsible for such things like ownership management etc.
-# When no user-defined function is specified, this module generates simple value assignment with = operator.
+=begin rdoc
+Indicates that the type class including this module provides the assignment operation.
+The user-defined function is assigned to the key +:assign+ and
+is expected to have the signature +type+ _assignment-function_(+type+).
+The C function provided might return its argument or a new copy. It is also responsible for such things like ownership management etc.
+When no user-defined function is specified, this module generates simple value assignment with = operator.
+=end
 module Assignable
   Methods = [:assign] # :nodoc:
   ##
@@ -87,12 +99,13 @@ module Assignable
 end # Assignable
 
 
-##
-# Indicates that the type class including this module provides the equality testing operation.
-# The user-defined function is assigned to the key +:compare+
-# and is expected to have the signature int _comparison-function_(+type+, +type+).
-# The C function provided must return 0 when the values are considered equal and not zero otherwise.
-# When no user-defined function is specified, this module generates simple value identity testing with == operator.
+=begin rdoc
+Indicates that the type class including this module provides the equality testing operation.
+The user-defined function is assigned to the key +:compare+
+and is expected to have the signature int _comparison-function_(+type+, +type+).
+The C function provided must return 0 when the values are considered equal and not zero otherwise.
+When no user-defined function is specified, this module generates simple value identity testing with == operator.
+=end
 module Comparable
   Methods = [:compare] # :nodoc:
   ##
@@ -112,12 +125,13 @@ module Comparable
 end # Comparable
 
 
-##
-# Indicates that the type class including this module provides the hash code calculation.
-# The user-defined function is assigned to the key +:hash+
-# and is expected to have the signature +size_t+ _hash-function_(+type+).
-# The C function provided is expected to return a hash code of its argument.
-# When no user-defined function is specified, this module generates simple casting to the +size_t+ type.
+=begin rdoc
+Indicates that the type class including this module provides the hash code calculation.
+The user-defined function is assigned to the key +:hash+
+and is expected to have the signature +size_t+ _hash-function_(+type+).
+The C function provided is expected to return a hash code of its argument.
+When no user-defined function is specified, this module generates simple casting to the +size_t+ type.
+=end
 module Hashable
   Methods = [:hash] # :nodoc:
   ##
@@ -137,12 +151,13 @@ module Hashable
 end # Hashable
 
 
-##
-# Indicates that the type class including this module provides the type construction with default value.
-# The user-defined function is assigned to the key +:ctor+
-# and is expected to have the signature +type+ _ctor-function_(+void+).
-# The C function provided is expected to return a new object initialized with default values.
-# When no user-defined function is specified, this module generates no code at all leaving the storage uninitialized.
+=begin rdoc
+Indicates that the type class including this module provides the type construction with default value.
+The user-defined function is assigned to the key +:ctor+
+and is expected to have the signature +type+ _ctor-function_(+void+).
+The C function provided is expected to return a new object initialized with default values.
+When no user-defined function is specified, this module generates no code at all leaving the storage uninitialized.
+=end
 module Constructible
   Methods = [:ctor] # :nodoc:
   ##
@@ -161,13 +176,14 @@ module Constructible
 end # Constructible
 
 
-##
-# Indicates that the type class including this module provides the type destruction.
-# The user-defined function is assigned to the key +:dtor+
-# and is expected to have the signature +void+ _dtor-function_(+type+).
-# The C function provided is expected to fully destroy the object (decrease reference count, reclaim the storage, whatever).
-# When no user-defined function is specified, this module generates no code at all.
-# The object destruction is performed prior the container destruction, on object removal/replacement.
+=begin rdoc
+Indicates that the type class including this module provides the type destruction.
+The user-defined function is assigned to the key +:dtor+
+and is expected to have the signature +void+ _dtor-function_(+type+).
+The C function provided is expected to fully destroy the object (decrease reference count, reclaim the storage, whatever).
+When no user-defined function is specified, this module generates no code at all.
+The object destruction is performed prior the container destruction, on object removal/replacement.
+=end
 module Destructible
   Methods = [:dtor]
   def dtor?
@@ -182,10 +198,11 @@ module Destructible
 end # Destructible
 
 
-##
-# Base class for user-defined data types intended to be put into the generated data containers.
-# A descendant of this class is assumed to include one or more the following capability modules to indicate that
-# the type supports specific operation: rdoc-ref:Assignable rdoc-ref:Comparable rdoc-ref:Hashable rdoc-ref:Constructible rdoc-ref:Destructible
+=begin rdoc
+Base class for user-defined data types intended to be put into the generated data containers.
+A descendant of this class is assumed to include one or more the following capability modules to indicate that
+the type supports specific operation: rdoc-ref:Assignable rdoc-ref:Comparable rdoc-ref:Hashable rdoc-ref:Constructible rdoc-ref:Destructible
+=end
 class Type
   ##
   # String representing C type. Must be a valid C type declaration.
@@ -253,8 +270,9 @@ class Structure < Code
 end # Struct
 
 
-##
-# Data structure representing simple light-weight vector with capabilities similar to C array, with optional bounds checking.
+=begin rdoc
+Data structure representing simple light-weight vector with capabilities similar to C array, with optional bounds checking.
+=end
 class Vector < Structure
   # :nodoc:
   def write_intf(stream)

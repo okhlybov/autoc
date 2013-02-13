@@ -118,10 +118,12 @@ void BoxDestroy(Box* box) {
 
 void BoxSetTest() {
     BoxSet* set;
-    Box *b1, *b2;
+    Box *b1, *b2, *b3, *b4;
     printf("\n*** BoxSet\n");
     b1 = BoxAssign(BoxNew());
     b2 = BoxAssign(BoxNew());
+    /* b3 = BoxNew(); */
+    b4 = BoxAssign(b2);
     set = BoxSetNew(16);
     BoxSetPut(set, b1);
     BoxSetPut(set, BoxNew());
@@ -131,6 +133,8 @@ void BoxSetTest() {
     BoxDestroy(b1);
     BoxSetDestroy(set);
     BoxDestroy(b2);
+    /* BoxDestroy(b3); */
+    BoxDestroy(b4);
 }
 
 
