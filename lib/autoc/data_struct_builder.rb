@@ -8,11 +8,12 @@ with either value or reference semantics. A data type may be supplied with a hos
 performing specific operations such as cloning, destruction and a like on it.
 If no such function is specified, a default operation is generated.
 
-Generate notes on generated data structures:
+A data structure generator with name <code>type</code> creates a C struct named <code>type</code> and a host of functions named <code>type*()</code>.
+From now on, the following convention is applied:
+when referring to a generated C function the container name portion of a function is abbreviated by the hash sign <code>#</code>, for example, the full method
+<code>BlackBoxPut()</code> of a data container <code>BlackBox</code> will be abbreviated as <code>#Put()</code>.
 
-* When referring to the generated C side method of a recently introduced data container the following convention is applied:
-  container name portion of the method is abbreviated by the hash sign <code>#</code>, for example, the full method
-  <code>BlackBoxPut()</code> of a data container <code>BlackBox</code> will be abbreviated as <code>#Put()</code>.
+Some notes on generated data structures:
 
 * Use proper pair of construction and destruction functions: those containers created on stack with <code>#Ctor()</code>
   must be destroyed with <code>#Dtor()</code> while those created on heap with <code>#New()</code> must be destroyed with <code>#Destroy()</code>.

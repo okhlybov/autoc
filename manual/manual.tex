@@ -1,0 +1,136 @@
+\documentclass[a4paper]{article}
+
+
+\usepackage{geometry}
+\geometry{a4paper,margin=15mm,bindingoffset=15mm,heightrounded}
+
+
+\usepackage{listings}
+\lstloadlanguages{Ruby,C,bash}
+\lstset{commentstyle=\itshape,stringstyle=\bfseries}
+
+
+\newcommand{\autoc}{\emph{AutoC}}
+
+
+\newcommand{\R}{\emph{Ruby}}
+
+
+\newcommand{\C}{\emph{C}}
+
+
+\newcommand{\Cpp}{\emph{C++}}
+
+
+\lstnewenvironment{rs}{\lstset{language=Ruby,frame=tlbr,basicstyle=\small}}{}
+
+
+\lstnewenvironment{cs}{\lstset{language=C,frame=tlbr,basicstyle=\small}}{}
+
+
+\lstnewenvironment{bs}{\lstset{language=bash,frame=tlbr,basicstyle=\small}}{}
+
+
+
+\begin{document}
+
+
+\title{\autoc\ user's manual}
+\author{Oleg A. Khlybov}
+
+
+\maketitle
+
+
+\section{Introduction}
+
+
+\autoc\ is a host of \R\ modules related to automatic \C\ source code generation.
+
+
+\newcommand{\codebuilder}{\emph{CodeBuilder}}
+\section{\codebuilder\ module}
+
+
+\newcommand{\datastructbuilder}{\emph{DataStructBuilder}}
+\section{\datastructbuilder\ module}
+
+
+\subsection{Quick start}
+
+
+Suppose one wants to have a \C\ hash set container which operates on \lstinline[language=C++]{int} data type.
+In \Cpp\ world this would be a \lstinline[language=C++]{std::vector<int>} type.
+
+
+\begin{enumerate}
+
+
+\item Create a \R\ definition file \emph{containers.rb}:
+
+
+\begin{rs}
+require "autoc/data_struct_builder"
+
+Int = {:type=>"int"}
+
+CodeBuilder::CModule.generate!("containers") do |m|
+	m << DataStructBuilder::HashSet.new("IntSet", Int)
+end
+\end{rs}
+
+
+The above file contains \R\ code which instructs to generate the set data structure \emph{IntSet} and put generated \C\ code into specific \C\ compilation unit named \emph{containers}.
+
+
+
+\item Generate \C\ source files:
+
+
+\lstinline[language=bash]!> ruby containers.rb!
+
+
+Provided that \autoc\ files are somewhere in the \R\ path, the above command will output two \C\ files: the \C\ module interface file \emph{containers\_auto.h} and the \C\ module implementation file \emph{containers\_auto.c}.
+
+
+\item Create main \C\ source file \emph{main.c}:
+
+
+\begin{cs}
+#include <stdio.h>
+
+#include "containers_auto.h"
+
+int main(int argc, char** argv) {
+	IntSet set;
+	IntSetCtor(&set, 16);
+	IntSetPut(&set, 0);
+	IntSetPut(&set, 1);
+	IntSetPut(&set, 0);
+	printf("size(set)=%d\n", IntSetSize(&set));
+	IntSetDtor(&set);
+	return 0;
+}
+\end{cs}
+
+
+The code above creates a set container \emph{set} on stack, puts three integer values into it, prints the number of elements the set actually contains and finally destroys the container.
+
+
+\item Build the executable:
+
+
+\lstinline[language=bash]!> cc -o runme main.c containers_auto.c!
+
+
+On successful execution the above command will produce the executable \emph{runme} with defined logic.
+The correct output for this program would be 
+\begin{verbatim}
+size(set)=2
+\end{verbatim}
+since the set will reject inclusion of duplicate values (in the above case it's \emph{0}).
+
+\end{enumerate}
+
+
+\end{document}
