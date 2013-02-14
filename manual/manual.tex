@@ -52,15 +52,21 @@
 \section{\codebuilder\ module}
 
 
+This module contains a facility to help generate \C\ modules.
+
+
 \newcommand{\datastructbuilder}{\emph{DataStructBuilder}}
 \section{\datastructbuilder\ module}
+
+
+This module contains generators which create strongly-typed \C\ data containers similar to those found in \Cpp\ \emph{STL} library: \emph{vectors}, \emph{lists}, \emph{sets}, \emph{maps}, and more.
 
 
 \subsection{Quick start}
 
 
-Suppose one wants to have a \C\ hash set container which operates on \lstinline[language=C++]{int} data type.
-In \Cpp\ world this would be a \lstinline[language=C++]{std::vector<int>} type.
+Suppose one wants to have a \C\ set container which operates on \lstinline[language=C++]{int} data type.
+In \Cpp\ world this would be a \lstinline[language=C++]{std::set<int>} type (with the difference that \lstinline[language=C++]{std::set<>} is a tree-based set while \autoc\ currently contains generator for a hash-based set implementation only).
 
 
 \begin{enumerate}
@@ -124,7 +130,7 @@ The code above creates a set container \emph{set} on stack, puts three integer v
 
 
 On successful execution the above command will produce the executable \emph{runme} with defined logic.
-The correct output for this program would be 
+Correct output for this program would be 
 \begin{verbatim}
 size(set)=2
 \end{verbatim}
