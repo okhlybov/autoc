@@ -1,6 +1,10 @@
 \documentclass[a4paper]{article}
 
 
+\clubpenalty=10000
+\widowpenalty=10000
+
+
 \usepackage{geometry}
 \geometry{a4paper,margin=15mm,bindingoffset=15mm,heightrounded}
 
@@ -32,6 +36,24 @@
 
 
 
+\newcommand{\type}{\underline{type}}
+\newcommand{\etype}{\underline{element-type}}
+\newcommand{\ktype}{\underline{key-type}}
+\newcommand{\vtype}{\underline{value-type}}
+
+
+\newcommand{\methx}[3]{\lstinline[language=C]{#1} \type{{#2}}(\type\lstinline[language=C]{* self,} \lstinline[language=C]{#3})}
+
+
+\newcommand{\methz}[2]{\lstinline[language=C]{#1} \type{{#2}}(\type\lstinline[language=C]{* self})}
+
+
+\newcommand{\newx}[1]{\type* \type{New}(\lstinline[language=C]{#1})}
+
+
+\newcommand{\newz}{\type* \type{New}()}
+
+
 \begin{document}
 
 
@@ -42,30 +64,50 @@
 \maketitle
 
 
-\section{Introduction}
+\part{Introduction}
 
 
 \autoc\ is a host of \R\ modules related to automatic \C\ source code generation.
 
 
 \newcommand{\codebuilder}{\emph{CodeBuilder}}
-\section{\codebuilder\ module}
+\part{\codebuilder\ module}
 
 
 This module contains a facility to help generate \C\ modules.
 
 
 \newcommand{\datastructbuilder}{\emph{DataStructBuilder}}
-\section{\datastructbuilder\ module}
+\part{\datastructbuilder\ module}
 
 
 This module contains generators which create strongly-typed \C\ data containers similar to those found in \Cpp\ \emph{STL} library: \emph{vectors}, \emph{lists}, \emph{sets}, \emph{maps}, and more.
 
 
-\subsection{Quick start}
+\section{Generated \C\ code}
 
 
-Suppose one wants to have a \C\ set container which operates on \lstinline[language=C++]{int} data type.
+\subsection{Naming conventions}
+
+
+Every generated data container named \emph{type} on the \C\ side comprises of the opaque \C\ struct named \emph{type} (referred to as \type\ in this manual) accompanied by a number of \C\ functions with their names prefxed by \emph{type}, which define a set operations on that data container.
+For example, a set of integers named \emph{IntSet} will be represented by the generated \C\ struct \lstinline[language=C]!struct IntSet {...}! and \C\ functions \lstinline[language=C]!void IntSetCtor(...)!, \lstinline[language=C]!void IntSetDtor(...)! etc.
+
+The data container's \C\ element type for all data structures but the mapping will be referred to as \etype, the key type and the value type for the mapping will be referred to as \ktype\ and \vtype, respectively.
+
+
+\subsection{Construction and destruction}
+
+
+A data container may be created either on stack or in heap. For the former case, a construction/destruction is performed by a \methx{void}{Ctor}{...} / \methz{void}{Dtor} pair of functions while for the latter its \newx{...} / \methz{void}{Destroy}.
+
+There may be additional container-specific constructors described in the respective sections.
+
+
+\section{Quick start}
+
+
+Suppose one needs a \C\ set container which operates on \lstinline[language=C++]{int} data type.
 In \Cpp\ world this would be a \lstinline[language=C++]{std::set<int>} type (with the difference that \lstinline[language=C++]{std::set<>} is a tree-based set while \autoc\ currently contains generator for a hash-based set implementation only).
 
 
@@ -96,7 +138,7 @@ The above file contains \R\ code which instructs to generate the set data struct
 \lstinline[language=bash]!> ruby containers.rb!
 
 
-Provided that \autoc\ files are somewhere in the \R\ path, the above command will output two \C\ files: the \C\ module interface file \emph{containers\_auto.h} and the \C\ module implementation file \emph{containers\_auto.c}.
+Provided that \autoc\ files are somewhere in the \R\ path, the above command will output two \C\ files which consitiute the compilation unit \emph{containers}: the interface file \emph{containers\_auto.h} and the implementation file \emph{containers\_auto.c}.
 
 
 \item Create main \C\ source file \emph{main.c}:
@@ -130,13 +172,50 @@ The code above creates a set container \emph{set} on stack, puts three integer v
 
 
 On successful execution the above command will produce the executable \emph{runme} with defined logic.
+
+
+\item Run the executable:
+
+
+\lstinline[language=bash]!> runme!
+
+
 Correct output for this program would be 
 \begin{verbatim}
 size(set)=2
 \end{verbatim}
 since the set will reject inclusion of duplicate values (in the above case it's \emph{0}).
 
+
 \end{enumerate}
+
+
+\renewcommand{\vector}{\emph{Vector}}
+\section{\vector\ container}
+
+
+\methx{void}{Ctor}{size\_t size}
+
+
+\methz{size\_t}{Size}
+
+
+\newz
+
+
+\methx{\etype}{Get}{size\_t index}
+
+
+\renewcommand{\list}{\emph{List}}
+\section{\list\ container}
+
+
+\newcommand{\hashset}{\emph{HashSet}}
+\section{\hashset\ container}
+
+
+\newcommand{\hashmap}{\emph{HashMap}}
+\section{\hashmap\ container}
 
 
 \end{document}
