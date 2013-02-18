@@ -1,21 +1,21 @@
-require 'autoc'
+require "autoc"
 
 
 include CodeBuilder
 include DataStructBuilder
 
 
-Int = {:type=>'int'}
-PChar = {:type=>'const char*', :compare=>'PCharCompare', :hash=>'PCharHash'}
-Box = {:type=>'Box*', :assign=>'BoxAssign', :dtor=>'BoxDestroy'}
+Int = {:type=>"int"}
+PChar = {:type=>"const char*", :compare=>"PCharCompare", :hash=>"PCharHash"}
+Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :assign=>"BoxAssign", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
 
 
-CModule.generate!(:test) do |m|
+CModule.generate!(:Test) do |m|
   m << Vector.new(:IntVector, Int)
   m << HashSet.new(:IntSet, Int)
   m << HashSet.new(:PCharSet, PChar)
   m << HashMap.new(:PChar2IntMap, PChar, Int)
-  m << HashSet.new(:BoxSet, Box) {"typedef struct Box Box;"}
+  m << HashSet.new(:BoxSet, Box)
 end
 
 

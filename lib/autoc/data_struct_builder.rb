@@ -248,6 +248,28 @@ class Type
 end # Type
 
 
+# :nodoc:
+class ForwardCode < CodeBuilder::Code
+  attr_reader :forward
+  def priority
+    CodeBuilder::Priority::MAX
+  end
+  def initialize(forward)
+    @forward = forward
+  end
+  def write_intf(stream)
+    stream << forward
+  end
+  def hash
+    forward.hash
+  end
+  def ==(other)
+    equal?(other) || self.class == other.class && self.forward == other.forward
+  end
+  alias :eql? :==
+end # ForwardCode
+
+
 ##
 # Internal base class for data structures which need one types specification, such as vectors, sets etc.
 class Structure < Code
@@ -257,13 +279,12 @@ class Structure < Code
   def initialize(type, element_info)
     super(type)
     @element = new_element_type(element_info)
-    @forward = yield if block_given?
+    @element_forward = ForwardCode.new(element_info[:forward]) unless element_info[:forward].nil?
   end
   # :nodoc:
-  def entities; [PrologueCode] end
+  def entities; @element_forward.nil? ? [PrologueCode] : [PrologueCode, @element_forward] end
   # :nodoc:
   def write_intf(stream)
-    stream << @forward
     element.write_intf(stream)
   end
   protected
@@ -378,7 +399,7 @@ class Vector < Structure
     if element.ctor?
       %${
         size_t index;
-        for(index = 0; index < self->element_count; ++index) self->values[index] = #{element.ctor()};
+        for(index = 0; index < self->element_count; ++index) self->values[index] = #{element.assign(element.ctor())};
       }$
     end
   end
@@ -750,7 +771,12 @@ end # Set
 
 class HashMap < Code
   attr_reader :key, :value
-  def entities; [PrologueCode] end
+  def entities
+    result = [PrologueCode]
+    result << @key_forward unless @key_forward.nil?
+    result << @value_forward unless @value_forward.nil?
+    result
+  end
   def initialize(type, key_info, value_info)
     super(type)
     @entry_hash = {:type=>"#{type}Entry", :hash=>"#{type}EntryHash", :compare=>"#{type}EntryCompare"}
@@ -758,7 +784,8 @@ class HashMap < Code
     @entrySet = new_entry_set
     @key = new_key_type(key_info)
     @value = new_value_type(value_info)
-    @forward = yield if block_given?
+    @key_forward = ForwardCode.new(key_info[:forward]) unless key_info[:forward].nil?
+    @value_forward = ForwardCode.new(value_info[:forward]) unless value_info[:forward].nil?
   end
   def write_intf(stream)
     stream << @forward
