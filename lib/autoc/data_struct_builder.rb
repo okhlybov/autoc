@@ -307,13 +307,14 @@ class Vector < Structure
         size_t element_count;
       };
       struct #{it} {
-        #{type}* array;
+        #{type}* vector;
         size_t index;
       };
       void #{ctor}(#{type}*, size_t);
       void #{dtor}(#{type}*);
       #{type}* #{new}(size_t);
       void #{destroy}(#{type}*);
+      void #{resize}(#{type}*, size_t);
       int #{within}(#{type}*, size_t);
       void #{itCtor}(#{it}*, #{type}*);
       int #{itHasNext}(#{it}*);
@@ -350,11 +351,11 @@ class Vector < Structure
         #{assert}(element_count > 0);
         self->element_count = element_count;
         self->values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(self->values);
-        #{construct_stmt};
+        #{construct_stmt("self->values", 0, "self->element_count-1")};
       }
       void #{dtor}(#{type}* self) {
         #{assert}(self);
-        #{destruct_stmt};
+        #{destruct_stmt("self->values", 0, "self->element_count-1")};
         #{free}(self->values);
       }
       #{type}* #{new}(size_t element_count) {
@@ -367,23 +368,46 @@ class Vector < Structure
         #{dtor}(self);
         #{free}(self);
       }
+      void #{resize}(#{type}* self, size_t element_count) {
+        #{assert}(self);
+        if(self->element_count != element_count) {
+          size_t count;
+          #{element.type}* values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(values);
+          if(self->element_count > element_count) {
+            #{destruct_stmt("self->values", "element_count", "self->element_count-1")};
+            count = element_count;
+          } else {
+            #{construct_stmt("values", "self->element_count", "element_count-1")};
+            count = self->element_count;
+          }
+          {
+            size_t index;
+            for(index = 0; index < count; ++index) {
+              values[index] = self->values[index];
+            }
+          }
+          #{free}(self->values);
+          self->element_count = element_count;
+          self->values = values;
+        }
+      }
       int #{within}(#{type}* self, size_t index) {
         #{assert}(self);
         return index < self->element_count;
       }
-      void #{itCtor}(#{it}* self, #{type}* array) {
+      void #{itCtor}(#{it}* self, #{type}* vector) {
         #{assert}(self);
-        #{assert}(array);
-        self->array = array;
+        #{assert}(vector);
+        self->vector = vector;
         self->index = 0;
       }
       int #{itHasNext}(#{it}* self) {
         #{assert}(self);
-        return self->index < #{size}(self->array);
+        return self->index < #{size}(self->vector);
       }
       #{element.type} #{itNext}(#{it}* self) {
         #{assert}(self);
-        return #{get}(self->array, self->index++);
+        return #{get}(self->vector, self->index++);
       }
     $
   end
@@ -395,19 +419,19 @@ class Vector < Structure
     ElementType.new(hash)
   end
   private
-  def construct_stmt
+  def construct_stmt(values, from, to)
     if element.ctor?
       %${
         size_t index;
-        for(index = 0; index < self->element_count; ++index) self->values[index] = #{element.assign(element.ctor())};
+        for(index = #{from}; index <= #{to}; ++index) #{values}[index] = #{element.assign(element.ctor())};
       }$
     end
   end
-  def destruct_stmt
+  def destruct_stmt(values, from, to)
     if element.dtor?
       %${
         size_t index;
-        for(index = 0; index < self->element_count; ++index) #{element.dtor("self->values[index]")};
+        for(index = #{from}; index <= #{to}; ++index) #{element.dtor(values+"[index]")};
       }$
     end
   end
@@ -435,6 +459,7 @@ class List < Structure
       };
       void #{ctor}(#{type}*);
       void #{dtor}(#{type}*);
+      void #{prune}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
       #{element.type} #{first}(#{type}*);
@@ -480,13 +505,29 @@ class List < Structure
         #{dtor}(self);
         #{free}(self);
       }
+      void #{prune}(#{type}* self) {
+        #{dtor}(self);
+        #{ctor}(self);
+      }
       #{element.type} #{first}(#{type}* self) {
         #{assert}(self);
+        #{assert}(!#{empty}(self));
         return self->head_node->element;
       }
       #{element.type} #{last}(#{type}* self) {
         #{assert}(self);
+        #{assert}(!#{empty}(self));
         return self->tail_node->element;
+      }
+      void #{pruneFirst}(#{type}* self) {
+        #{node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = self->head_node;
+        #{element.dtor("node->element")};
+        self->head_node = self->head_node->next_node;
+        --self->node_count;
+        #{free}(node);
       }
       void #{append}(#{type}* self, #{element.type} element) {
         #{node}* node;
