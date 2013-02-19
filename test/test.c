@@ -95,12 +95,21 @@ void PChar2IntMapTest() {
 
 struct Box {
     size_t refs;
+    int contents;
 };
 
 
 Box* BoxNew() {
     Box* box = malloc(sizeof(Box));
     box->refs = 0;
+    box->contents = -1;
+    return box;
+}
+
+
+Box* BoxMake(int contents) {
+    Box* box = BoxNew();
+    box->contents = contents;
     return box;
 }
 
@@ -111,6 +120,16 @@ Box* BoxAssign(Box* box) {
 }
 
 
+int BoxCompare(Box* lt, Box* rt) {
+    return (lt->contents == rt->contents) ? 0 : (lt->contents < rt->contents ? +1 : -1);
+}
+
+
+size_t BoxHash(Box* box) {
+    return box->contents;
+}
+
+
 void BoxDestroy(Box* box) {
     if(!--box->refs) free(box);
 }
@@ -118,23 +137,67 @@ void BoxDestroy(Box* box) {
 
 void BoxSetTest() {
     BoxSet* set;
-    Box *b1, *b2, *b3, *b4;
+    Box *b1, *b2, *b4;
     printf("\n*** BoxSet\n");
-    b1 = BoxAssign(BoxNew());
-    b2 = BoxAssign(BoxNew());
-    /* b3 = BoxNew(); */
+    b1 = BoxAssign(BoxMake(1));
+    b2 = BoxAssign(BoxMake(2));
     b4 = BoxAssign(b2);
     set = BoxSetNew(16);
     BoxSetPut(set, b1);
-    BoxSetPut(set, BoxNew());
+    BoxSetPut(set, BoxMake(3));
     BoxSetPut(set, b2);
     BoxSetPut(set, b1);
     printf("size = %d\n", BoxSetSize(set));
     BoxDestroy(b1);
     BoxSetDestroy(set);
     BoxDestroy(b2);
-    /* BoxDestroy(b3); */
     BoxDestroy(b4);
+}
+
+
+void BoxVectorTest() {
+    BoxVector* vec;
+    Box* b1;
+    printf("\n*** BoxVector\n");
+    b1 = BoxAssign(BoxNew());
+    vec = BoxVectorNew(10);
+    printf("size = %d\n", BoxVectorSize(vec));
+    BoxVectorSet(vec, 7, b1);
+    BoxVectorResize(vec, 5);
+    printf("size = %d\n", BoxVectorSize(vec));
+    BoxVectorSet(vec, 3, BoxNew());
+    BoxVectorResize(vec, 10);
+    printf("size = %d\n", BoxVectorSize(vec));
+    BoxVectorDestroy(vec);
+    BoxDestroy(b1);
+}
+
+
+void BoxListTest() {
+    BoxList* list;
+    Box *b1,*b2;
+    printf("\n*** BoxList\n");
+    list = BoxListNew();
+    b1 = BoxAssign(BoxNew());
+    BoxListPrepend(list, BoxMake(2));
+    BoxListAppend(list, BoxMake(1));
+    printf("size = %d\n", BoxListSize(list));
+    printf("contains([-1])=%d\n", BoxListContains(list, b1));
+    BoxListPrune(list);
+    BoxListPrepend(list, BoxMake(7));
+    BoxListAppend(list, b1);
+    BoxListPrepend(list, b1);
+    b2 = BoxAssign(BoxMake(3));
+    printf("size = %d\n", BoxListSize(list));
+    printf("contains([-1])=%d\n", BoxListContains(list, b1));
+    BoxListReplaceAll(list, b1, b2);
+    printf("contains([-1])=%d\n", BoxListContains(list, b1));
+    printf("contains([3])=%d\n", BoxListContains(list, b2));
+    BoxListPruneFirst(list);
+    printf("size = %d\n", BoxListSize(list));
+    BoxListDestroy(list);
+    BoxDestroy(b1);
+    BoxDestroy(b2);
 }
 
 
@@ -144,5 +207,7 @@ int main(int argc, char** argv) {
     PCharSetTest();
     PChar2IntMapTest();
     BoxSetTest();
+    BoxVectorTest();
+    BoxListTest();
     return 0;
 }
