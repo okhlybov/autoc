@@ -569,6 +569,7 @@ class List < Structure
         node = self->head_node;
         while(node) {
           if(#{element.compare("node->element", "what")} == 0) {
+            #{element.dtor(element.assign(:what))};
             return node->element;
           }
           node = node->next_node;
@@ -583,10 +584,12 @@ class List < Structure
           if(#{element.compare("node->element", "what")} == 0) {
             #{element.dtor("node->element")};
             node->element = #{element.assign(:with)};
+            #{element.dtor(element.assign(:what))};
             return 1;
           }
           node = node->next_node;
         }
+        #{element.dtor(element.assign(:what))};
         return 0;
       }
       int #{replaceAll}(#{type}* self, #{element.type} what, #{element.type} with) {
@@ -602,6 +605,7 @@ class List < Structure
           }
           node = node->next_node;
         }
+        #{element.dtor(element.assign(:what))};
         return count;
       }
       size_t #{size}(#{type}* self) {
@@ -668,16 +672,19 @@ class HashSet < Structure
         #{@bucket.type}* buckets;
         size_t bucket_count;
         size_t size;
+        size_t min_bucket_count;
+        unsigned min_fill, max_fill, capacity_multiplier; /* ?*1e-2 */
       };
       struct #{it} {
         #{type}* set;
         int bucket_index;
         #{@bucket.it} it;
       };
-      void #{ctor}(#{type}*, size_t);
+      void #{ctor}(#{type}*);
       void #{dtor}(#{type}*);
-      #{type}* #{new}(size_t);
+      #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      void #{rehash}(#{type}*);
       int #{contains}(#{type}*, #{element.type});
       #{element.type} #{get}(#{type}*, #{element.type});
       size_t #{size}(#{type}*);
@@ -692,16 +699,14 @@ class HashSet < Structure
   def write_defs(stream)
     @bucket.write_defs(stream)
     stream << %$
-      void #{ctor}(#{type}* self, size_t bucket_count) {
-        size_t i;
+      void #{ctor}(#{type}* self) {
         #{assert}(self);
-        #{assert}(bucket_count > 0);
-        self->bucket_count = bucket_count;
-        self->buckets = (#{@bucket.type}*)#{malloc}(bucket_count*sizeof(#{@bucket.type})); #{assert}(self->buckets);
-        for(i = 0; i < self->bucket_count; ++i) {
-          #{@bucket.ctor}(&self->buckets[i]);
-        }
-        self->size = 0;
+        self->min_bucket_count = 16;
+        self->min_fill = 20;
+        self->max_fill = 75;
+        self->capacity_multiplier = 200;
+        self->buckets = NULL;
+        #{rehash}(self);
       }
       void #{dtor}(#{type}* self) {
         size_t i;
@@ -711,15 +716,57 @@ class HashSet < Structure
         }
         #{free}(self->buckets);
       }
-      #{type}* #{new}(size_t bucket_count) {
+      #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self, bucket_count);
+        #{ctor}(self);
         return self;
       }
       void #{destroy}(#{type}* self) {
         #{assert}(self);
         #{dtor}(self);
         #{free}(self);
+      }
+      void #{rehash}(#{type}* self) {
+        #{@bucket.type}* buckets;
+        size_t i, bucket_count, size, fill;
+        #{assert}(self);
+        #{assert}(self->min_fill > 0);
+        #{assert}(self->max_fill > 0);
+        #{assert}(self->min_fill < self->max_fill);
+        #{assert}(self->min_bucket_count > 0);
+        if(self->buckets) {
+          fill = (float)self->size / (float)self->bucket_count * 100;
+          if(fill > self->max_fill) {
+            bucket_count = (float)self->bucket_count * (float)self->capacity_multiplier / 100;
+          } else
+          if(fill < self->min_fill && self->bucket_count > self->min_bucket_count) {
+            bucket_count = (float)self->bucket_count / (float)self->capacity_multiplier * 100;
+            if(bucket_count < self->min_bucket_count) bucket_count = self->min_bucket_count;
+          } else
+            return;
+          size = self->size;
+        } else {
+          bucket_count = self->min_bucket_count;
+          size = 0;
+        }
+        buckets = (#{@bucket.type}*)#{malloc}(bucket_count*sizeof(#{@bucket.type})); #{assert}(buckets);
+        for(i = 0; i < bucket_count; ++i) {
+          #{@bucket.ctor}(&buckets[i]);
+        }
+        if(self->buckets) {
+          #{it} it;
+          #{itCtor}(&it, self);
+          while(#{itHasNext}(&it)) {
+            #{@bucket.type}* bucket;
+            #{element.type} element = #{itNext}(&it);
+            bucket = &buckets[#{element.hash(:element)} % bucket_count];
+            #{@bucket.append}(bucket, element);
+          }
+          #{dtor}(self);
+        }
+        self->buckets = buckets;
+        self->bucket_count = bucket_count;
+        self->size = size;
       }
       int #{contains}(#{type}* self, #{element.type} element) {
         #{assert}(self);
@@ -745,8 +792,10 @@ class HashSet < Structure
         if(!#{@bucket.contains}(bucket, element)) {
           #{@bucket.append}(bucket, element);
           ++self->size;
+          #{rehash}(self);
           return 1;
         } else {
+          #{element.dtor(element.assign(:element))};
           return 0;
         }
       }
@@ -757,6 +806,7 @@ class HashSet < Structure
         if(!#{@bucket.replace}(bucket, element, element)) {
           #{@bucket.append}(bucket, element);
           ++self->size;
+          #{rehash}(self);
         }
       }
       void #{itCtor}(#{it}* self, #{type}* set) {
@@ -849,9 +899,9 @@ class HashMap < Code
       struct #{it} {
         #{@entrySet.it} it;
       };
-      void #{ctor}(#{type}*, size_t);
+      void #{ctor}(#{type}*);
       void #{dtor}(#{type}*);
-      #{type}* #{new}(size_t);
+      #{type}* #{new}(void);
       void #{destroy}(#{type}*);
       size_t #{size}(#{type}*);
       int #{containsKey}(#{type}*, #{key.type});
@@ -876,17 +926,17 @@ class HashMap < Code
     $
     @entrySet.write_defs(stream)
     stream << %$
-      void #{ctor}(#{type}* self, size_t bucket_count) {
+      void #{ctor}(#{type}* self) {
         #{assert}(self);
-        #{@entrySet.ctor}(&self->entries, bucket_count);
+        #{@entrySet.ctor}(&self->entries);
       }
       void #{dtor}(#{type}* self) {
         #{assert}(self);
         #{@entrySet.dtor}(&self->entries);
       }
-      #{type}* #{new}(size_t bucket_count) {
+      #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self, bucket_count);
+        #{ctor}(self);
         return self;
       }
       void #{destroy}(#{type}* self) {
