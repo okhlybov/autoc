@@ -21,7 +21,7 @@ void IntSetTest() {
     IntSet set;
     IntSetIt it;
     printf("\n*** IntSet\n");
-    IntSetCtor(&set, 10);
+    IntSetCtor(&set);
     printf("size = %d\n", IntSetSize(&set));
     IntSetPut(&set, -1);
     IntSetPut(&set, 3);
@@ -56,7 +56,7 @@ void PCharSetTest() {
     PCharSet set;
     PCharSetIt it;
     printf("\n*** PCharSet\n");
-    PCharSetCtor(&set, 10);
+    PCharSetCtor(&set);
     printf("size = %d\n", PCharSetSize(&set));
     PCharSetPut(&set, "cat");
     PCharSetPut(&set, "dog");
@@ -78,7 +78,7 @@ void PChar2IntMapTest() {
     PChar2IntMap* map;
     PChar2IntMapIt it;
     printf("\n*** PChar2IntMap\n");
-    map = PChar2IntMapNew(16);
+    map = PChar2IntMapNew();
     PChar2IntMapPut(map, "cat", 1);
     PChar2IntMapPut(map, "dog", 2);
     PChar2IntMapPut(map, "cat", 0);
@@ -142,7 +142,7 @@ void BoxSetTest() {
     b1 = BoxAssign(BoxMake(1));
     b2 = BoxAssign(BoxMake(2));
     b4 = BoxAssign(b2);
-    set = BoxSetNew(16);
+    set = BoxSetNew();
     BoxSetPut(set, b1);
     BoxSetPut(set, BoxMake(3));
     BoxSetPut(set, b2);
@@ -182,17 +182,17 @@ void BoxListTest() {
     BoxListPrepend(list, BoxMake(2));
     BoxListAppend(list, BoxMake(1));
     printf("size = %d\n", BoxListSize(list));
-    printf("contains([-1])=%d\n", BoxListContains(list, b1));
+    printf("contains([-1]) == %d\n", BoxListContains(list, b1));
     BoxListPrune(list);
     BoxListPrepend(list, BoxMake(7));
     BoxListAppend(list, b1);
     BoxListPrepend(list, b1);
     b2 = BoxAssign(BoxMake(3));
     printf("size = %d\n", BoxListSize(list));
-    printf("contains([-1])=%d\n", BoxListContains(list, b1));
+    printf("contains([-1]) == %d\n", BoxListContains(list, b1));
     BoxListReplaceAll(list, b1, b2);
-    printf("contains([-1])=%d\n", BoxListContains(list, b1));
-    printf("contains([3])=%d\n", BoxListContains(list, b2));
+    printf("contains([-1]) == %d\n", BoxListContains(list, b1));
+    printf("contains([3]) == %d\n", BoxListContains(list, b2));
     BoxListPruneFirst(list);
     printf("size = %d\n", BoxListSize(list));
     BoxListDestroy(list);
