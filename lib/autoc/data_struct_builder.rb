@@ -447,7 +447,6 @@ class List < Structure
       typedef struct #{it} #{it};
       struct #{type} {
         #{node}* head_node;
-        #{node}* tail_node;
         size_t node_count;
       };
       struct #{it} {
@@ -462,12 +461,11 @@ class List < Structure
       void #{prune}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
-      #{element.type} #{first}(#{type}*);
-      #{element.type} #{last}(#{type}*);
-      void #{append}(#{type}*, #{element.type});
-      void #{prepend}(#{type}*, #{element.type});
+      #{element.type} #{get}(#{type}*);
+      void #{add}(#{type}*, #{element.type});
+      void #{chop}(#{type}*);
       int #{contains}(#{type}*, #{element.type});
-      #{element.type} #{get}(#{type}*, #{element.type});
+      #{element.type} #{find}(#{type}*, #{element.type});
       int #{replace}(#{type}*, #{element.type}, #{element.type});
       int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
       size_t #{size}(#{type}*);
@@ -481,7 +479,7 @@ class List < Structure
     stream << %$
       void #{ctor}(#{type}* self) {
         #{assert}(self);
-        self->head_node = self->tail_node = NULL;
+        self->head_node = NULL;
         self->node_count = 0;
       }
       void #{dtor}(#{type}* self) {
@@ -509,17 +507,12 @@ class List < Structure
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{element.type} #{first}(#{type}* self) {
+      #{element.type} #{get}(#{type}* self) {
         #{assert}(self);
         #{assert}(!#{empty}(self));
         return self->head_node->element;
       }
-      #{element.type} #{last}(#{type}* self) {
-        #{assert}(self);
-        #{assert}(!#{empty}(self));
-        return self->tail_node->element;
-      }
-      void #{pruneFirst}(#{type}* self) {
+      void #{chop}(#{type}* self) {
         #{node}* node;
         #{assert}(self);
         #{assert}(!#{empty}(self));
@@ -529,47 +522,39 @@ class List < Structure
         --self->node_count;
         #{free}(node);
       }
-      void #{append}(#{type}* self, #{element.type} element) {
+      void #{add}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
-        node->element = #{element.assign(:element)};
-        node->next_node = NULL;
-        if(self->tail_node) self->tail_node->next_node = node;
-        self->tail_node = node;
-        if(!self->head_node) self->head_node = self->tail_node;
-        ++self->node_count;
-      }
-      void #{prepend}(#{type}* self, #{element.type} element) {
-        #{node}* node;
-        #{assert}(self);
-        node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
-        node->element = #{element.assign(:element)};
+        node->element = #{element.assign("element")};
         node->next_node = self->head_node;
         self->head_node = node;
-        if(!self->tail_node) self->tail_node = node;
         ++self->node_count;
       }
       int #{contains}(#{type}* self, #{element.type} what) {
         #{node}* node;
         #{assert}(self);
+        what = #{element.assign("what")};
         node = self->head_node;
         while(node) {
           if(#{element.compare("node->element", "what")} == 0) {
+            #{element.dtor("what")};
             return 1;
           }
           node = node->next_node;
         }
+        #{element.dtor("what")};
         return 0;
       }
-      #{element.type} #{get}(#{type}* self, #{element.type} what) {
+      #{element.type} #{find}(#{type}* self, #{element.type} what) {
         #{node}* node;
         #{assert}(self);
+        what = #{element.assign("what")};
         #{assert}(#{contains}(self, what));
         node = self->head_node;
         while(node) {
           if(#{element.compare("node->element", "what")} == 0) {
-            #{element.dtor(element.assign(:what))};
+            #{element.dtor("what")};
             return node->element;
           }
           node = node->next_node;
@@ -579,33 +564,40 @@ class List < Structure
       int #{replace}(#{type}* self, #{element.type} what, #{element.type} with) {
         #{node}* node;
         #{assert}(self);
+        what = #{element.assign("what")};
+        with = #{element.assign("with")};
         node = self->head_node;
         while(node) {
           if(#{element.compare("node->element", "what")} == 0) {
             #{element.dtor("node->element")};
-            node->element = #{element.assign(:with)};
-            #{element.dtor(element.assign(:what))};
+            node->element = #{element.assign("with")};
+            #{element.dtor("what")};
+            #{element.dtor("with")};
             return 1;
           }
           node = node->next_node;
         }
-        #{element.dtor(element.assign(:what))};
+        #{element.dtor("what")};
+        #{element.dtor("with")};
         return 0;
       }
       int #{replaceAll}(#{type}* self, #{element.type} what, #{element.type} with) {
         #{node}* node;
         int count = 0;
         #{assert}(self);
+        what = #{element.assign("what")};
+        with = #{element.assign("with")};
         node = self->head_node;
         while(node) {
           if(#{element.compare("node->element", "what")} == 0) {
             #{element.dtor("node->element")};
-            node->element = #{element.assign(:with)};
+            node->element = #{element.assign("with")};
             ++count;
           }
           node = node->next_node;
         }
-        #{element.dtor(element.assign(:what))};
+        #{element.dtor("what")};
+        #{element.dtor("with")};
         return count;
       }
       size_t #{size}(#{type}* self) {
@@ -689,7 +681,7 @@ class HashSet < Structure
       size_t #{size}(#{type}*);
       int #{empty}(#{type}*);
       int #{put}(#{type}*, #{element.type});
-      void #{putForce}(#{type}*, #{element.type});
+      void #{replace}(#{type}*, #{element.type});
       void #{itCtor}(#{it}*, #{type}*);
       int #{itHasNext}(#{it}*);
       #{element.type} #{itNext}(#{it}*);
@@ -763,8 +755,8 @@ class HashSet < Structure
           while(#{itHasNext}(&it)) {
             #{@bucket.type}* bucket;
             #{element.type} element = #{itNext}(&it);
-            bucket = &buckets[#{element.hash(:element)} % bucket_count];
-            #{@bucket.append}(bucket, element);
+            bucket = &buckets[#{element.hash("element")} % bucket_count];
+            #{@bucket.add}(bucket, element);
           }
           #{dtor}(self);
         }
@@ -773,13 +765,21 @@ class HashSet < Structure
         self->size = size;
       }
       int #{contains}(#{type}* self, #{element.type} element) {
+        int result;
         #{assert}(self);
-        return #{@bucket.contains}(&self->buckets[#{element.hash(:element)} % self->bucket_count], element);
+        element = #{element.assign("element")};
+        result = #{@bucket.contains}(&self->buckets[#{element.hash("element")} % self->bucket_count], element);
+        #{element.dtor("element")};
+        return result;
       }
       #{element.type} #{get}(#{type}* self, #{element.type} element) {
+        #{element.type} result;
         #{assert}(self);
+        element = #{element.assign("element")};
         #{assert}(#{contains}(self, element));
-        return #{@bucket.get}(&self->buckets[#{element.hash(:element)} % self->bucket_count], element);
+        result = #{@bucket.find}(&self->buckets[#{element.hash("element")} % self->bucket_count], element);
+        #{element.dtor("element")};
+        return result;
       }
       size_t #{size}(#{type}* self) {
         #{assert}(self);
@@ -792,26 +792,30 @@ class HashSet < Structure
       int #{put}(#{type}* self, #{element.type} element) {
         #{@bucket.type}* bucket;
         #{assert}(self);
-        bucket = &self->buckets[#{element.hash(:element)} % self->bucket_count];
+        element = #{element.assign("element")};
+        bucket = &self->buckets[#{element.hash("element")} % self->bucket_count];
         if(!#{@bucket.contains}(bucket, element)) {
-          #{@bucket.append}(bucket, element);
+          #{@bucket.add}(bucket, element);
           ++self->size;
           #{rehash}(self);
+          #{element.dtor("element")};
           return 1;
         } else {
-          #{element.dtor(element.assign(:element))};
+          #{element.dtor("element")};
           return 0;
         }
       }
-      void #{putForce}(#{type}* self, #{element.type} element) {
+      void #{replace}(#{type}* self, #{element.type} element) {
         #{@bucket.type}* bucket;
         #{assert}(self);
-        bucket = &self->buckets[#{element.hash(:element)} % self->bucket_count];
+        element = #{element.assign("element")};
+        bucket = &self->buckets[#{element.hash("element")} % self->bucket_count];
         if(!#{@bucket.replace}(bucket, element, element)) {
-          #{@bucket.append}(bucket, element);
+          #{@bucket.add}(bucket, element);
           ++self->size;
           #{rehash}(self);
         }
+        #{element.dtor("element")};
       }
       void #{itCtor}(#{it}* self, #{type}* set) {
         #{assert}(self);
@@ -911,7 +915,7 @@ class HashMap < Code
       int #{containsKey}(#{type}*, #{key.type});
       #{value.type} #{get}(#{type}*, #{key.type});
       int #{put}(#{type}*, #{key.type}, #{value.type});
-      void #{putForce}(#{type}*, #{key.type}, #{value.type});
+      void #{replace}(#{type}*, #{key.type}, #{value.type});
       void #{itCtor}(#{it}*, #{type}*);
       int #{itHasNext}(#{it}*);
       #{key.type} #{itNextKey}(#{it}*);
@@ -975,11 +979,11 @@ class HashMap < Code
           return 0;
         }
       }
-      void #{putForce}(#{type}* self, #{key.type} key, #{value.type} value) {
+      void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
         #{@entry.type} entry;
         #{assert}(self);
         entry.key = key; entry.value = value;
-        #{@entrySet.putForce}(&self->entries, entry);
+        #{@entrySet.replace}(&self->entries, entry);
       }
       void #{itCtor}(#{it}* self, #{type}* map) {
         #{assert}(self);
