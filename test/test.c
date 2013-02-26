@@ -136,6 +136,7 @@ void BoxDestroy(Box* box) {
 
 
 void BoxSetTest() {
+    int i;
     BoxSet* set;
     Box *b1, *b2, *b4;
     printf("\n*** BoxSet\n");
@@ -149,6 +150,10 @@ void BoxSetTest() {
     BoxSetPut(set, b1);
     printf("size = %d\n", BoxSetSize(set));
     BoxDestroy(b1);
+    for(i = 0; i < 100; ++i) {
+        BoxSetPut(set, BoxMake(i));
+    }
+    printf("size = %d\n", BoxSetSize(set));
     BoxSetDestroy(set);
     BoxDestroy(b2);
     BoxDestroy(b4);

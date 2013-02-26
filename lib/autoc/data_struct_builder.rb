@@ -670,9 +670,8 @@ class HashSet < Structure
       typedef struct #{it} #{it};
       struct #{type} {
         #{@bucket.type}* buckets;
-        size_t bucket_count;
-        size_t size;
-        size_t min_bucket_count;
+        size_t bucket_count, min_bucket_count;
+        size_t size, min_size, max_size;
         unsigned min_fill, max_fill, capacity_multiplier; /* ?*1e-2 */
       };
       struct #{it} {
@@ -703,7 +702,9 @@ class HashSet < Structure
         #{assert}(self);
         self->min_bucket_count = 16;
         self->min_fill = 20;
-        self->max_fill = 75;
+        self->max_fill = 80;
+        self->min_size = (float)self->min_fill/100*self->min_bucket_count;
+        self->max_size = (float)self->max_fill/100*self->min_bucket_count;
         self->capacity_multiplier = 200;
         self->buckets = NULL;
         #{rehash}(self);
@@ -735,16 +736,19 @@ class HashSet < Structure
         #{assert}(self->min_fill < self->max_fill);
         #{assert}(self->min_bucket_count > 0);
         if(self->buckets) {
-          fill = (float)self->size / (float)self->bucket_count * 100;
+          if(self->min_size < self->size && self->size < self->max_size) return;
+          fill = (float)self->size/(float)self->bucket_count*100;
           if(fill > self->max_fill) {
-            bucket_count = (float)self->bucket_count * (float)self->capacity_multiplier / 100;
+            bucket_count = (float)self->bucket_count/100*(float)self->capacity_multiplier;
           } else
           if(fill < self->min_fill && self->bucket_count > self->min_bucket_count) {
-            bucket_count = (float)self->bucket_count / (float)self->capacity_multiplier * 100;
+            bucket_count = (float)self->bucket_count/(float)self->capacity_multiplier*100;
             if(bucket_count < self->min_bucket_count) bucket_count = self->min_bucket_count;
           } else
             return;
           size = self->size;
+          self->min_size = (float)self->min_fill/100*size;
+          self->max_size = (float)self->max_fill/100*size;
         } else {
           bucket_count = self->min_bucket_count;
           size = 0;
