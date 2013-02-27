@@ -18,6 +18,7 @@ CModule.generate!(:Test) do |m|
   m << HashSet.new(:BoxSet, Box)
   m << Vector.new(:BoxVector, Box)
   m << List.new(:BoxList, Box)
+  m << HashMap.new(:Box2BoxMap, Box, Box)
 end
 
 

@@ -675,6 +675,7 @@ class HashSet < Structure
       void #{dtor}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      void #{purge}(#{type}*);
       void #{rehash}(#{type}*);
       int #{contains}(#{type}*, #{element.type});
       #{element.type} #{get}(#{type}*, #{element.type});
@@ -718,6 +719,12 @@ class HashSet < Structure
         #{assert}(self);
         #{dtor}(self);
         #{free}(self);
+      }
+      void #{purge}(#{type}* self) {
+        #{assert}(self);
+        #{dtor}(self);
+        self->buckets = NULL;
+        #{rehash}(self);
       }
       void #{rehash}(#{type}* self) {
         #{@bucket.type}* buckets;
@@ -878,7 +885,7 @@ class HashMap < Code
   end
   def initialize(type, key_info, value_info)
     super(type)
-    @entry_hash = {:type=>"#{type}Entry", :hash=>"#{type}EntryHash", :compare=>"#{type}EntryCompare"}
+    @entry_hash = {:type=>"#{type}Entry", :hash=>"#{type}EntryHash", :compare=>"#{type}EntryCompare", :assign=>"#{type}EntryAssign", :dtor=>"#{type}EntryDtor"}
     @entry = new_entry_type
     @entrySet = new_entry_set
     @key = new_key_type(key_info)
@@ -895,6 +902,7 @@ class HashMap < Code
       struct #{@entry.type} {
         #{key.type} key;
         #{value.type} value;
+        int valid_value;
       };
     $
     @entrySet.write_intf(stream)
@@ -911,6 +919,7 @@ class HashMap < Code
       void #{dtor}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      void #{purge}(#{type}*);
       size_t #{size}(#{type}*);
       int #{containsKey}(#{type}*, #{key.type});
       #{value.type} #{get}(#{type}*, #{key.type});
@@ -925,11 +934,33 @@ class HashMap < Code
   end
   def write_defs(stream)
     stream << %$
-      size_t #{type}EntryHash(#{@entry.type} entry) {
+      #{inline} #{@entry.type} #{entryKeyOnly}(#{key.type} key) {
+        #{@entry.type} entry;
+        entry.key = key;
+        entry.valid_value = 0;
+        return entry;
+      }
+      #{inline} #{@entry.type} #{entryKeyValue}(#{key.type} key, #{value.type} value) {
+        #{@entry.type} entry;
+        entry.key = key;
+        entry.value = value;
+        entry.valid_value = 1;
+        return entry;
+      }
+      size_t #{entryHash}(#{@entry.type} entry) {
         return #{key.hash("entry.key")};
       }
-      int #{type}EntryCompare(#{@entry.type} lt, #{@entry.type} rt) {
+      int #{entryCompare}(#{@entry.type} lt, #{@entry.type} rt) {
         return #{key.compare("lt.key", "rt.key")};
+      }
+      #{@entry.type} #{entryAssign}(#{@entry.type} entry) {
+        entry.key = #{key.assign("entry.key")};
+        if(entry.valid_value) entry.value = #{value.assign("entry.value")};
+        return entry;
+      }
+      void #{entryDtor}(#{@entry.type} entry) {
+        #{key.dtor("entry.key")};
+        if(entry.valid_value) #{value.dtor("entry.value")};
       }
     $
     @entrySet.write_defs(stream)
@@ -952,38 +983,49 @@ class HashMap < Code
         #{dtor}(self);
         #{free}(self);
       }
+      void #{purge}(#{type}* self) {
+        #{@entrySet.purge}(&self->entries);
+      }
       size_t #{size}(#{type}* self) {
         return #{@entrySet.size}(&self->entries);
       }
       int #{containsKey}(#{type}* self, #{key.type} key) {
+        int result;
         #{@entry.type} entry;
         #{assert}(self);
-        entry.key = key;
-        return #{@entrySet.contains}(&self->entries, entry);
+        entry = #{@entry.assign("#{entryKeyOnly}(key)")};
+        result = #{@entrySet.contains}(&self->entries, entry);
+        #{@entry.dtor("entry")};
+        return result;
       }
       #{value.type} #{get}(#{type}* self, #{key.type} key) {
+        #{value.type} result;
         #{@entry.type} entry;
         #{assert}(self);
+        entry = #{@entry.assign("#{entryKeyOnly}(key)")};
         #{assert}(#{containsKey}(self, key));
-        entry.key = key;
-        return #{@entrySet.get}(&self->entries, entry).value;
+        result = #{@entrySet.get}(&self->entries, entry).value;
+        #{@entry.dtor("entry")};
+        return result;
       }
       int #{put}(#{type}* self, #{key.type} key, #{value.type} value) {
+        #{@entry.type} entry = #{@entry.assign("#{entryKeyValue}(key,value)")};
         #{assert}(self);
         if(!#{containsKey}(self, key)) {
-          #{@entry.type} entry;
-          entry.key = key; entry.value = value;
           #{@entrySet.put}(&self->entries, entry);
+          #{@entry.dtor("entry")};
           return 1;
         } else {
+          #{@entry.dtor("entry")};
           return 0;
         }
       }
       void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
         #{@entry.type} entry;
         #{assert}(self);
-        entry.key = key; entry.value = value;
+        entry = #{@entry.assign("#{entryKeyValue}(key,value)")};
         #{@entrySet.replace}(&self->entries, entry);
+        #{@entry.dtor("entry")};
       }
       void #{itCtor}(#{it}* self, #{type}* map) {
         #{assert}(self);
@@ -1010,7 +1052,7 @@ class HashMap < Code
   end
   protected
   class EntryType < DataStructBuilder::Type
-    include Assignable, Hashable, Comparable
+    include Assignable, Destructible, Hashable, Comparable
   end # EntryType
   class KeyType < DataStructBuilder::Type
     include Assignable, Destructible, Hashable, Comparable
