@@ -305,6 +305,7 @@ class Vector < Structure
       struct #{type} {
         #{element.type}* values;
         size_t element_count;
+        size_t ref_count;
       };
       struct #{it} {
         #{type}* vector;
@@ -314,6 +315,7 @@ class Vector < Structure
       void #{dtor}(#{type}*);
       #{type}* #{new}(size_t);
       void #{destroy}(#{type}*);
+      #{type}* #{assign}(#{type}*);
       void #{resize}(#{type}*, size_t);
       int #{within}(#{type}*, size_t);
       void #{itCtor}(#{it}*, #{type}*);
@@ -361,12 +363,19 @@ class Vector < Structure
       #{type}* #{new}(size_t element_count) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self, element_count);
+        self->ref_count = 0;
         return self;
       }
       void #{destroy}(#{type}* self) {
         #{assert}(self);
-        #{dtor}(self);
-        #{free}(self);
+        if(!--self->ref_count) {
+          #{dtor}(self);
+          #{free}(self);
+        }
+      }
+      #{type}* #{assign}(#{type}* self) {
+        ++self->ref_count;
+        return self;
       }
       void #{resize}(#{type}* self, size_t element_count) {
         #{assert}(self);
@@ -448,6 +457,7 @@ class List < Structure
       struct #{type} {
         #{node}* head_node;
         size_t node_count;
+        size_t ref_count;
       };
       struct #{it} {
         #{node}* next_node;
@@ -461,6 +471,7 @@ class List < Structure
       void #{prune}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      #{type}* #{assign}(#{type}*);
       #{element.type} #{get}(#{type}*);
       void #{add}(#{type}*, #{element.type});
       void #{chop}(#{type}*);
@@ -496,12 +507,19 @@ class List < Structure
       #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
+        self->ref_count = 0;
         return self;
       }
       void #{destroy}(#{type}* self) {
         #{assert}(self);
-        #{dtor}(self);
-        #{free}(self);
+        if(!--self->ref_count) {
+          #{dtor}(self);
+          #{free}(self);
+        }
+      }
+      #{type}* #{assign}(#{type}* self) {
+        ++self->ref_count;
+        return self;
       }
       void #{prune}(#{type}* self) {
         #{dtor}(self);
@@ -665,6 +683,7 @@ class HashSet < Structure
         size_t bucket_count, min_bucket_count;
         size_t size, min_size, max_size;
         unsigned min_fill, max_fill, capacity_multiplier; /* ?*1e-2 */
+        size_t ref_count;
       };
       struct #{it} {
         #{type}* set;
@@ -675,6 +694,7 @@ class HashSet < Structure
       void #{dtor}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      #{type}* #{assign}(#{type}*);
       void #{purge}(#{type}*);
       void #{rehash}(#{type}*);
       int #{contains}(#{type}*, #{element.type});
@@ -713,12 +733,19 @@ class HashSet < Structure
       #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
+        self->ref_count = 0;
         return self;
       }
       void #{destroy}(#{type}* self) {
         #{assert}(self);
-        #{dtor}(self);
-        #{free}(self);
+        if(!--self->ref_count) {
+          #{dtor}(self);
+          #{free}(self);
+        }
+      }
+      #{type}* #{assign}(#{type}* self) {
+        ++self->ref_count;
+        return self;
       }
       void #{purge}(#{type}* self) {
         #{assert}(self);
@@ -885,7 +912,7 @@ class HashMap < Code
   end
   def initialize(type, key_info, value_info)
     super(type)
-    @entry_hash = {:type=>"#{type}Entry", :hash=>"#{type}EntryHash", :compare=>"#{type}EntryCompare", :assign=>"#{type}EntryAssign", :dtor=>"#{type}EntryDtor"}
+    @entry_hash = {:type=>"#{entry}", :hash=>"#{entryHash}", :compare=>"#{entryCompare}", :assign=>"#{entryAssign}", :dtor=>"#{entryDtor}"}
     @entry = new_entry_type
     @entrySet = new_entry_set
     @key = new_key_type(key_info)
@@ -911,6 +938,7 @@ class HashMap < Code
       typedef struct #{it} #{it};
       struct #{type} {
         #{@entrySet.type} entries;
+        size_t ref_count;
       };
       struct #{it} {
         #{@entrySet.it} it;
@@ -919,6 +947,7 @@ class HashMap < Code
       void #{dtor}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
+      #{type}* #{assign}(#{type}*);
       void #{purge}(#{type}*);
       size_t #{size}(#{type}*);
       int #{containsKey}(#{type}*, #{key.type});
@@ -976,12 +1005,19 @@ class HashMap < Code
       #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
+        self->ref_count = 0;
         return self;
       }
       void #{destroy}(#{type}* self) {
         #{assert}(self);
-        #{dtor}(self);
-        #{free}(self);
+        if(!--self->ref_count) {
+          #{dtor}(self);
+          #{free}(self);
+        }
+      }
+      #{type}* #{assign}(#{type}* self) {
+        ++self->ref_count;
+        return self;
       }
       void #{purge}(#{type}* self) {
         #{@entrySet.purge}(&self->entries);
