@@ -211,6 +211,7 @@ class CModule < CodeBuilder::Module
     end
     def write(stream)
       stream << %$
+        /* AUTOMATICALLY GENERATED HEADER FILE. DO NOT MODIFY. */
         #ifndef #{@guard_macro}
         #define #{@guard_macro}
       $
@@ -231,6 +232,7 @@ class CModule < CodeBuilder::Module
     end
     def write(stream)
       stream << %$
+        /* AUTOMATICALLY GENERATED SOURCE FILE. DO NOT MODIFY. */
         #include "#{@module.header.file_name}"
       $
       super

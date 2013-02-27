@@ -70,6 +70,7 @@ void PCharSetTest() {
     }
     printf("contains(pig) == %d\n", PCharSetContains(&set, "pig"));
     printf("contains(snake) == %d\n", PCharSetContains(&set, "snake"));
+    PCharSetPurge(&set);
     PCharSetDtor(&set);
 }
 
@@ -89,6 +90,7 @@ void PChar2IntMapTest() {
         PChar2IntMapEntry entry = PChar2IntMapItNext(&it);
         printf("- %s --> %d\n", entry.key, entry.value);
     }
+    PChar2IntMapPurge(map);
     PChar2IntMapDestroy(map);
 }
 
@@ -115,22 +117,27 @@ Box* BoxMake(int contents) {
 
 
 Box* BoxAssign(Box* box) {
+    assert(box);
     ++box->refs;
     return box;
 }
 
 
 int BoxCompare(Box* lt, Box* rt) {
+    assert(lt);
+    assert(rt);
     return (lt->contents == rt->contents) ? 0 : (lt->contents < rt->contents ? +1 : -1);
 }
 
 
 size_t BoxHash(Box* box) {
+    assert(box);
     return box->contents;
 }
 
 
 void BoxDestroy(Box* box) {
+    assert(box);
     if(!--box->refs) free(box);
 }
 
@@ -154,6 +161,7 @@ void BoxSetTest() {
         BoxSetPut(set, BoxMake(i));
     }
     printf("size = %d\n", BoxSetSize(set));
+    BoxSetPurge(set);
     BoxSetDestroy(set);
     BoxDestroy(b2);
     BoxDestroy(b4);
@@ -206,6 +214,38 @@ void BoxListTest() {
 }
 
 
+void Box2BoxMapTest() {
+    int i;
+    Box2BoxMap* map;
+    Box *b1, *b2;
+    printf("\n*** Box2BoxMap\n");
+    map = Box2BoxMapNew();
+    b1 = BoxAssign(BoxMake(-1));
+    b2 = BoxAssign(b1);
+    Box2BoxMapContainsKey(map, BoxMake(3));
+    Box2BoxMapContainsKey(map, b1);
+    Box2BoxMapReplace(map, BoxMake(-1), BoxMake(-1));
+    Box2BoxMapReplace(map, BoxMake(-2), BoxMake(-2));
+    Box2BoxMapPut(map, b1, BoxMake(3));
+    Box2BoxMapPut(map, BoxMake(2), BoxMake(2));
+    Box2BoxMapPut(map, BoxMake(1), BoxMake(1));
+    Box2BoxMapReplace(map, BoxMake(1), BoxMake(-3));
+    printf("size = %d\n", Box2BoxMapSize(map));
+    for(i = 0; i < 100; ++i) {
+        Box2BoxMapPut(map, BoxMake(i), BoxMake(-i));
+    }
+    printf("size = %d\n", Box2BoxMapSize(map));
+    i = -2; printf("map[Box(%d)] == Box(%d)\n", i, Box2BoxMapGet(map, BoxMake(i))->contents);
+    i = 3; printf("map[Box(%d)] == Box(%d)\n", i, Box2BoxMapGet(map, BoxMake(i))->contents);
+    Box2BoxMapPurge(map);
+    Box2BoxMapPut(map, BoxMake(3), b2);
+    BoxDestroy(b2);
+    printf("size = %d\n", Box2BoxMapSize(map));
+    Box2BoxMapDestroy(map);
+    BoxDestroy(b1);
+}
+
+
 int main(int argc, char** argv) {
     IntVectorTest();
     IntSetTest();
@@ -214,5 +254,6 @@ int main(int argc, char** argv) {
     BoxSetTest();
     BoxVectorTest();
     BoxListTest();
+    Box2BoxMapTest();
     return 0;
 }
