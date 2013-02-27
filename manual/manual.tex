@@ -26,6 +26,9 @@
 \newcommand{\Cpp}{\emph{C++}}
 
 
+\newcommand{\Java}{\emph{Java}}
+
+
 \lstnewenvironment{rs}{\lstset{language=Ruby,frame=tlbr,basicstyle=\small}}{}
 
 
@@ -36,22 +39,19 @@
 
 
 
-\newcommand{\type}{\underline{type}}
-\newcommand{\etype}{\underline{element-type}}
-\newcommand{\ktype}{\underline{key-type}}
-\newcommand{\vtype}{\underline{value-type}}
+\newcommand{\st}{\underline{type}}
+\newcommand{\et}{\underline{element-type}}
+\newcommand{\kt}{\underline{key-type}}
+\newcommand{\vt}{\underline{value-type}}
 
 
-\newcommand{\methx}[3]{\lstinline[language=C]{#1} \type{{#2}}(\type\lstinline[language=C]{* self,} \lstinline[language=C]{#3})}
+\newcommand{\sv}{\emph{self}}
+\newcommand{\ev}{\emph{element}}
+\newcommand{\kv}{\emph{key}}
+\newcommand{\vv}{\emph{value}}
 
 
-\newcommand{\methz}[2]{\lstinline[language=C]{#1} \type{{#2}}(\type\lstinline[language=C]{* self})}
-
-
-\newcommand{\newx}[1]{\type* \type{New}(\lstinline[language=C]{#1})}
-
-
-\newcommand{\newz}{\type* \type{New}()}
+\newcommand{\meth}[1]{#1}
 
 
 \begin{document}
@@ -81,27 +81,7 @@ This module contains a facility to help generate \C\ modules.
 \part{\datastructbuilder\ module}
 
 
-This module contains generators which create strongly-typed \C\ data containers similar to those found in \Cpp\ \emph{STL} library: \emph{vectors}, \emph{lists}, \emph{sets}, \emph{maps}, and more.
-
-
-\section{Generated \C\ code}
-
-
-\subsection{Naming conventions}
-
-
-Every generated data container named \emph{type} on the \C\ side comprises of the opaque \C\ struct named \emph{type} (referred to as \type\ in this manual) accompanied by a number of \C\ functions with their names prefxed by \emph{type}, which define a set operations on that data container.
-For example, a set of integers named \emph{IntSet} will be represented by the generated \C\ struct \lstinline[language=C]!struct IntSet {...}! and \C\ functions \lstinline[language=C]!void IntSetCtor(...)!, \lstinline[language=C]!void IntSetDtor(...)! etc.
-
-The data container's \C\ element type for all data structures but the mapping will be referred to as \etype, the key type and the value type for the mapping will be referred to as \ktype\ and \vtype, respectively.
-
-
-\subsection{Construction and destruction}
-
-
-A data container may be created either on stack or in heap. For the former case, a construction/destruction is performed by a \methx{void}{Ctor}{...} / \methz{void}{Dtor} pair of functions while for the latter its \newx{...} / \methz{void}{Destroy}.
-
-There may be additional container-specific constructors described in the respective sections.
+This module contains generators which create strongly-typed \C\ data containers similar to those found in \Cpp\ \emph{STL} library: \emph{vector}, \emph{list}, \emph{set}, \emph{map}, and more.
 
 
 \section{Quick start}
@@ -151,7 +131,7 @@ Provided that \autoc\ files are somewhere in the \R\ path, the above command wil
 
 int main(int argc, char** argv) {
 	IntSet set;
-	IntSetCtor(&set, 16);
+	IntSetCtor(&set);
 	IntSetPut(&set, 0);
 	IntSetPut(&set, 1);
 	IntSetPut(&set, 0);
@@ -180,38 +160,166 @@ On successful execution the above command will produce the executable \emph{runm
 \lstinline[language=bash]!> runme!
 
 
-Correct output for this program would be 
+Correct output for this program will be 
 \begin{verbatim}
 size(set)=2
 \end{verbatim}
-since the set will reject inclusion of duplicate values (in the above case it's \emph{0}).
+since the set rejects inclusion of duplicate values (in the above case it's \emph{0}).
 
 
 \end{enumerate}
+
+
+\section{Generated \C\ code}
+
+
+\subsection{Naming conventions}
+
+
+Every generated data container named \emph{type} on the \C\ side comprises of the opaque \C\ struct named \emph{type} (referred to as \st\ in this manual) accompanied by a number of \C\ functions with their names prefxed by \emph{type}, which define a set operations on that data container.
+For example, a set of integers named \emph{IntSet} will be represented by the generated \C\ struct \lstinline[language=C]!struct IntSet {...}! and \C\ functions \lstinline[language=C]!void IntSetCtor(...)!, \lstinline[language=C]!void IntSetDtor(...)! etc.
+
+The data container's \C\ element type for all data structures but the mapping will be referred to as \et, the key type and the value type for the mapping will be referred to as \kt\ and \vt, respectively.
+
+
+\subsection{Construction and destruction}
+
+
+A data container may be created either on stack or in heap.
+For the former case, a construction/destruction is performed by a \meth{\st Ctor()} / \meth{\st Dtor()} pair of functions while for the latter its \meth{\st New()} / \meth{\st Destroy()}.
+There may be additional container-specific constructors described in the respective sections.
+
+All generated data structures are reference-counted when allocated on heap.
+This means that the pointers may be aliased, passed in and out of functions etc.
+
+
+\subsection{Iteration}
+
+
+All generated data structures have built-in iteration capability.
+The \autoc's iterators are modeled after the \Java's iterators.
+The current implementation is fairly simple and is not designed for the iterator objects to be passed around, shared etc.
+Moreover, the data structures \emph{must not} be modified or destroyed from within the iteration loop.
+While alterations of some data structures (notably \emph{lists}) are known not to invalidate the active iterators, this does not hold true in general and must be avoided.
+
+
+The code snippet below demonstrates the typical iterator usage scenario:
+
+\begin{cs}
+...
+IntSetIt it;
+IntSetItCtor(&it, &set);
+while(IntSetItHasNext(&it)) {
+	int value = IntSetItNext(&it);
+	...
+}
+...
+\end{cs}
+
+
+The usual considerations apply to the order the iterated elements come in: \emph{vectors} and \emph{lists} are the ordered containers while \emph{sets} and \emph{maps} are not.
+
+
+%----------------------------------------------------------------------------------------------------------------------
 
 
 \renewcommand{\vector}{\emph{Vector}}
 \section{\vector\ container}
 
 
-\methx{void}{Ctor}{size\_t size}
+\vector\ data structure is a simple 0-based resizable array similar to \Cpp\ \lstinline[language=C++]{std::vector<>}.
 
 
-\methz{size\_t}{Size}
+\subsection{\vector\ interface}
 
 
-\newz
+\begin{itemize}
 
 
-\methx{\etype}{Get}{size\_t index}
+\item \meth{void \st Ctor(\st*\ \sv, size\_t \emph{size})}
+
+
+Constructs the container with \emph{size} elements.
+The valid index range will be [0, \emph{size}).
+The elements are initialized with default constructor.
+
+
+\item \meth{void \st Dtor(\st*\ \sv)}
+
+
+Destroys the container along with all contained elements.
+
+
+\item \meth{\st* \st New(size\_t \emph{size})}
+
+
+Returns a new heap-allocated container constructed with \meth{void \st Ctor()}.
+
+
+\item \meth{void \st Destroy(\st* \sv)}
+
+
+Frees the heap-allocated container destroying all contained elements.
+
+
+\item \meth{\st* \st Assign(\st* \sv)}
+
+
+\emph{Should be used on heap-allocated containers only.}
+
+
+\item \meth{size\_t \st Size(\st* \sv)}
+
+
+Returns current size of container.
+
+
+\item \meth{int \st Within(\st* \sv, size\_t \emph{index})}
+
+
+Returns non-zero value when \emph{index} is a valid index, that is \emph{index} $\in$ [0, \meth{\st Size(\sv)}), and zero otherwise.
+
+
+\item \meth{void \st Resize(\st* \sv, size\_t \emph{new\_size})}
+
+
+Resizes the container to have a new size \emph{new\_size}.
+The new size may be either larger or smaller than the old one.
+Upon resizing the extra elements which to not fall into new valid range [0, \emph{new\_size}) are destroyed and the missing elements are created with default constructor.
+
+
+\item \meth{\et\ \st Get(\st* \sv, size\_t \emph{index})}
+
+
+Returns the element contained at the valid index \emph{index} without releasing it (that is, the element returned will still be owned by the container).
+
+
+\item \meth{void \st Set(\st* \sv, size\_t \emph{index}, \et\ \ev)}
+
+
+Sets the new value \ev\ at the valid index \emph{index}.
+The previously contained element at that index is destroyed.
+The container takes ownership over the new element \ev.
+
+
+\end{itemize}
+
+
+%----------------------------------------------------------------------------------------------------------------------
 
 
 \renewcommand{\list}{\emph{List}}
 \section{\list\ container}
 
 
+%----------------------------------------------------------------------------------------------------------------------
+
+
 \newcommand{\hashset}{\emph{HashSet}}
 \section{\hashset\ container}
+
+
+%----------------------------------------------------------------------------------------------------------------------
 
 
 \newcommand{\hashmap}{\emph{HashMap}}
