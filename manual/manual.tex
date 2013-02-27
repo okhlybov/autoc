@@ -223,14 +223,14 @@ The usual considerations apply to the order the iterated elements come in: \emph
 %----------------------------------------------------------------------------------------------------------------------
 
 
-\renewcommand{\vector}{\emph{Vector}}
-\section{\vector\ container}
+\newcommand{\Vector}{\emph{Vector}}
+\section{\Vector\ container}
 
 
-\vector\ data structure is a simple 0-based resizable array similar to \Cpp\ \lstinline[language=C++]{std::vector<>}.
+\Vector\ data structure is a simple 0-based resizable array similar to \Cpp\ \lstinline[language=C++]{std::vector<>}.
 
 
-\subsection{\vector\ interface}
+\subsection{\Vector\ interface}
 
 
 \begin{itemize}
@@ -253,7 +253,7 @@ Destroys the container along with all contained elements.
 \item \meth{\st* \st New(size\_t \emph{size})}
 
 
-Returns a new heap-allocated container constructed with \meth{void \st Ctor()}.
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 \item \meth{void \st Destroy(\st* \sv)}
@@ -271,13 +271,13 @@ Frees the heap-allocated container destroying all contained elements.
 \item \meth{size\_t \st Size(\st* \sv)}
 
 
-Returns current size of container.
+Returns the number of elements in the container.
 
 
 \item \meth{int \st Within(\st* \sv, size\_t \emph{index})}
 
 
-Returns non-zero value when \emph{index} is a valid index, that is \emph{index} $\in$ [0, \meth{\st Size(\sv)}), and zero otherwise.
+Returns non-zero value when \emph{index} is a valid index, that is \emph{index} $\in$ [0, \meth{\st Size(\sv)}), and zero value otherwise.
 
 
 \item \meth{void \st Resize(\st* \sv, size\_t \emph{new\_size})}
@@ -292,14 +292,140 @@ Upon resizing the extra elements which to not fall into new valid range [0, \emp
 
 
 Returns the element contained at the valid index \emph{index} without releasing it (that is, the element returned will still be owned by the container).
+\emph{It is a run-time error to get value at the index outside valid range.}
 
 
 \item \meth{void \st Set(\st* \sv, size\_t \emph{index}, \et\ \ev)}
 
 
 Sets the new value \ev\ at the valid index \emph{index}.
+\emph{It is a run-time error to set value at the index outside valid range.}
 The previously contained element at that index is destroyed.
-The container takes ownership over the new element \ev.
+The container takes ownership over the element \ev.
+
+
+\end{itemize}
+
+
+
+%----------------------------------------------------------------------------------------------------------------------
+
+
+\newcommand{\List}{\emph{List}}
+\section{\List\ container}
+
+
+\List\ data structure is a singly-linked list which supports insertion and removal operations at one end in a manner of \emph{LIFO} stack.
+
+
+\subsection{\List\ interface}
+
+
+\begin{itemize}
+
+
+\item \meth{void \st Ctor(\st*\ \sv)}
+
+
+Constructs empty container.
+
+
+\item \meth{void \st Dtor(\st*\ \sv)}
+
+
+Destroys the container along with all contained elements.
+
+
+\item \meth{\st* \st New(void)}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
+
+
+\item \meth{void \st Destroy(\st* \sv)}
+
+
+Frees the heap-allocated container destroying all contained elements.
+
+
+\item \meth{\st* \st Assign(\st* \sv)}
+
+
+\emph{Should be used on heap-allocated containers only.}
+
+
+\item \meth{size\_t \st Size(\st* \sv)}
+
+
+Returns the number of elements in the container.
+
+
+\item \meth{int \st Empty}(\st* \sv)
+
+
+Returns non-zero value if container is empty (i.e. contains no elements) and zero value otherwise.
+
+
+\item \meth{void \st Prune}(\st* \sv)
+
+
+Removes and destroys all contained elements effectively emptying the container.
+
+
+\item \meth{\et\ \st Get(\st* \sv)}
+
+
+Returns top element of a non-empty container (i.e. the last one added according to the \emph{LIFO} concept).
+\emph{It is a run-time error to get top element of an empty container.}
+Container retains the ownership over the element returned.
+
+
+\item \meth{void \st Add(\st* \sv, \et\ \ev)}
+
+
+Adds the element \ev\ at the top.
+The container takes ownership over the element \ev.
+
+
+\item \meth{void \st Chop(\st* \sv)}
+
+
+Removes and destroys the top element of a non-empty container.
+\emph{It is a run-time error to call this function on an empty container.}
+
+
+\item \meth{int \st Contains(\st* \sv, \et\ \ev)}
+
+
+Returns non-zero value if container \sv\ contains one or more elements considered equal to the specified element \ev\ and zero value otherwise.
+
+
+\item \meth{\et\ \st Find(\st* \sv, \et\ \ev)}
+
+
+Returns the first element considered equal to the specified element \ev.
+\emph{It is a run-time error to call this function on a container which contains no such elements. Call the function \meth{\st Contains()} to check for their presence.}
+The container retains ownership over returned element.
+
+
+\item \meth{int \st Replace(\st* \sv, \et\ \ev)}
+
+
+Replaces the first element of those contained in \sv, which is considered equal to the specified element \ev, with this element.
+On successful replacement the container takes ownership over \ev.
+The replaced element is destroyed.
+Returns non-zero value on successful replacement (if there was such element) and zero value otherwise.
+It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
+\item \meth{int \st ReplaceAll(\st* \sv, \et\ \ev)}
+
+
+Replaces all the elements of those contained in \sv, which are considered equal to the specified element \ev\ with this element.
+On successful replacement the container takes ownership over \ev.
+The replaced elements are destroyed.
+Returns the number of elements replaced.
+It it not an error for a container not to contain such elements (in such a case the function will return zero).
 
 
 \end{itemize}
@@ -308,22 +434,15 @@ The container takes ownership over the new element \ev.
 %----------------------------------------------------------------------------------------------------------------------
 
 
-\renewcommand{\list}{\emph{List}}
-\section{\list\ container}
+\newcommand{\Hashset}{\emph{HashSet}}
+\section{\Hashset\ container}
 
 
 %----------------------------------------------------------------------------------------------------------------------
 
 
-\newcommand{\hashset}{\emph{HashSet}}
-\section{\hashset\ container}
-
-
-%----------------------------------------------------------------------------------------------------------------------
-
-
-\newcommand{\hashmap}{\emph{HashMap}}
-\section{\hashmap\ container}
+\newcommand{\Hashmap}{\emph{HashMap}}
+\section{\Hashmap\ container}
 
 
 \end{document}
