@@ -10,7 +10,7 @@
 
 
 \usepackage{listings}
-\lstloadlanguages{Ruby,C,bash}
+\lstloadlanguages{Ruby,C,C++,Java,bash}
 \lstset{commentstyle=\itshape,stringstyle=\bfseries}
 
 
@@ -173,6 +173,42 @@ since the set rejects inclusion of duplicate values (in the above case it's \emp
 \section{Generated \C\ code}
 
 
+\newcommand{\commonmethods}{
+
+
+\item \meth{void \st Dtor(\st*\ \sv)}
+
+
+Destroys the container along with all contained elements.
+
+
+\item \meth{\st* \st New(size\_t \emph{size})}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
+
+
+\item \meth{void \st Destroy(\st* \sv)}
+
+
+Frees the heap-allocated container destroying all contained elements.
+
+
+\item \meth{\st* \st Assign(\st* \sv)}
+
+
+\emph{Should be used on heap-allocated containers only.}
+
+
+\item \meth{size\_t \st Size(\st* \sv)}
+
+
+Returns the number of elements in container.
+
+	
+}
+
+
 \subsection{Naming conventions}
 
 
@@ -220,6 +256,9 @@ while(IntSetItHasNext(&it)) {
 The usual considerations apply to the order the iterated elements come in: \emph{vectors} and \emph{lists} are the ordered containers while \emph{sets} and \emph{maps} are not.
 
 
+\subsection{Thread safety}
+
+
 %----------------------------------------------------------------------------------------------------------------------
 
 
@@ -227,7 +266,7 @@ The usual considerations apply to the order the iterated elements come in: \emph
 \section{\Vector\ container}
 
 
-\Vector\ data structure is a simple 0-based resizable array similar to \Cpp\ \lstinline[language=C++]{std::vector<>}.
+\Vector\ data structure is a simple 0-based resizable array similar to the \Cpp's \lstinline[language=C++]{std::vector<>}.
 
 
 \subsection{\Vector\ interface}
@@ -244,34 +283,7 @@ The valid index range will be [0, \emph{size}).
 The elements are initialized with default constructor.
 
 
-\item \meth{void \st Dtor(\st*\ \sv)}
-
-
-Destroys the container along with all contained elements.
-
-
-\item \meth{\st* \st New(size\_t \emph{size})}
-
-
-Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
-
-
-\item \meth{void \st Destroy(\st* \sv)}
-
-
-Frees the heap-allocated container destroying all contained elements.
-
-
-\item \meth{\st* \st Assign(\st* \sv)}
-
-
-\emph{Should be used on heap-allocated containers only.}
-
-
-\item \meth{size\_t \st Size(\st* \sv)}
-
-
-Returns the number of elements in the container.
+\commonmethods
 
 
 \item \meth{int \st Within(\st* \sv, size\_t \emph{index})}
@@ -315,7 +327,7 @@ The container takes ownership over the element \ev.
 \section{\List\ container}
 
 
-\List\ data structure is a singly-linked list which supports insertion and removal operations at one end in a manner of \emph{LIFO} stack.
+\List\ data structure is a singly-linked list which supports insertion and removal operations at one end in a manner of the \Java's \lstinline[language=Java]{java.util.LinkedList<>} class.
 
 
 \subsection{\List\ interface}
@@ -330,46 +342,19 @@ The container takes ownership over the element \ev.
 Constructs empty container.
 
 
-\item \meth{void \st Dtor(\st*\ \sv)}
+\commonmethods
 
 
-Destroys the container along with all contained elements.
+\item \meth{void \st Purge}(\st* \sv)
 
 
-\item \meth{\st* \st New(void)}
-
-
-Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
-
-
-\item \meth{void \st Destroy(\st* \sv)}
-
-
-Frees the heap-allocated container destroying all contained elements.
-
-
-\item \meth{\st* \st Assign(\st* \sv)}
-
-
-\emph{Should be used on heap-allocated containers only.}
-
-
-\item \meth{size\_t \st Size(\st* \sv)}
-
-
-Returns the number of elements in the container.
+Removes and destroys all contained elements effectively emptying the container.
 
 
 \item \meth{int \st Empty}(\st* \sv)
 
 
 Returns non-zero value if container is empty (i.e. contains no elements) and zero value otherwise.
-
-
-\item \meth{void \st Prune}(\st* \sv)
-
-
-Removes and destroys all contained elements effectively emptying the container.
 
 
 \item \meth{\et\ \st Get(\st* \sv)}
@@ -438,11 +423,155 @@ It it not an error for a container not to contain such elements (in such a case 
 \section{\Hashset\ container}
 
 
+\Hashset\ data structure is a hashed set similar to the \Cpp's recently standartized \lstinline[language=C++]{std::unordered_set<>} or the \Java's \lstinline[language=Java]{java.util.HashSet<>} classes.
+Current implementation provides automatic capacity management.
+
+
+\subsection{\Hashset\ interface}
+
+
+\begin{itemize}
+
+
+\item \meth{void \st Ctor(\st*\ \sv)}
+
+
+Constructs empty container.
+
+
+\commonmethods
+
+
+\item \meth{void \st Purge}(\st* \sv)
+
+
+Removes and destroys all contained elements effectively emptying the container.
+
+
+\item \meth{int \st Empty}(\st* \sv)
+
+
+Returns non-zero value if container is empty (i.e. contains no elements) and zero value otherwise.
+
+
+\item \meth{void \st Rehash(\st* \sv)}
+
+
+Casuses the container to change its capacity according to the number of currently contained elements to stay within the optimal range.
+This function does nothing if current capacity is within optimal range.
+\emph{There is no need to call this function manually as rehashing is done automatically.}
+
+
+\item \meth{int \st Contains(\st* \sv, \et\ \ev)}
+
+
+Returns non-zero value if container \sv\ contains an element considered equal to the specified element \ev\ and zero value otherwise.
+
+
+\item \meth{\et\ \st Get(\st* \sv, \et\ \ev)}
+
+
+Returns the element of those contained in \sv, which is considered equal to the specified element \ev.
+\emph{It is a run-time error to call this function on a container which contains no such element. Call the function \meth{\st Contains()} to check for its presence.}
+Container retains ownership over the element returned.
+
+
+\item \meth{int \st Put(\st* \sv, \et\ \ev)}
+
+
+Puts element \ev\ into container if there is no other element already contained \sv\ which is considered equal to the element specified.
+Returns non-zero value on successful addition or zero value when the element is already present.
+In case of successful addition the container takes ownership over \ev.
+
+
+\item \meth{void \st Replace(\st* \sv, \et\ \ev)}
+
+
+Replaces the element of those contained in \sv, which is considered equal to the specified element \ev, with this element or simply puts the specified element into container if no such element was found.
+In either case the container takes ownership over \ev.
+On successful replacement the replaced element is destroyed.
+
+
+\end{itemize}
+
+
 %----------------------------------------------------------------------------------------------------------------------
 
 
 \newcommand{\Hashmap}{\emph{HashMap}}
 \section{\Hashmap\ container}
+
+
+\Hashmap\ data structure is a hashed map similar to the \Cpp's recently standartized \lstinline[language=C++]{std::unordered_map<>} or the \Java's \lstinline[language=Java]{java.util.HashMap<>} classes.
+Current implementation provides automatic capacity management.
+
+
+\subsection{\Hashmap\ interface}
+
+
+\begin{itemize}
+
+
+\item \meth{void \st Ctor(\st*\ \sv)}
+
+
+Constructs empty container.
+
+
+\commonmethods
+
+
+\item \meth{void \st Purge}(\st* \sv)
+
+
+Removes and destroys all contained entries effectively emptying the container.
+
+
+\item \meth{int \st Empty}(\st* \sv)
+
+
+Returns non-zero value if container is empty (i.e. contains no elements) and zero value otherwise.
+
+
+\item \meth{void \st Rehash(\st* \sv)}
+
+
+Casuses the container to change its capacity according to the number of currently contained elements to stay within the optimal range.
+This function does nothing if current capacity is within optimal range.
+\emph{There is no need to call this function manually as rehashing is done automatically.}
+
+
+\item \meth{int \st ContainsKey(\st* \sv, \kt\ \kv)}
+
+
+Returns non-zero value if container \sv\ contains an entry with the key considered equal to the specified key \kv\ and zero value otherwise.
+
+
+\item \meth{\vt\ \st Get(\st* \sv, \kt\ \kv)}
+
+
+Returns value associated with the key considered equal to the specified key \kv.
+\emph{It is a run-time error to call this function on a container which contains no entry with such a key. Call the function \meth{\st ContainsKey()} to check for its presence.}
+Container retains ownership over the value returned.
+
+
+\item \meth{int \st Put(\st* \sv, \kt\ \kv, \vt\ \vv)}
+
+
+Associates the specified value \vv\ with the specified key \kv\ and puts it into container if there exist no entry with the key considered equal to the specified key.
+Returns non-zero value on successful addition or zero value when such entry is already present.
+In any case the container takes ownership over \vv; the ownership over \kv\ is taken on successful addition only.
+
+
+\item \meth{void \st Replace(\st* \sv, \kt\ \kv, \vt\ \vv)}
+
+
+Replaces a value associated with the key considered equal to the specified key \kv with the specified value \vv if such key exists otherwise simply puts the new \kv$\rightarrow$\vv\ association into container.
+In any case the container takes ownership over \vv; the ownership over \kv\ is taken on successful replacement only.
+On successful replacement the replaced value is destroyed.
+
+
+\end{itemize}
 
 
 \end{document}

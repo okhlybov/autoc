@@ -949,7 +949,9 @@ class HashMap < Code
       void #{destroy}(#{type}*);
       #{type}* #{assign}(#{type}*);
       void #{purge}(#{type}*);
+      void #{rehash}(#{type}*);
       size_t #{size}(#{type}*);
+      int #{empty}(#{type}*);
       int #{containsKey}(#{type}*, #{key.type});
       #{value.type} #{get}(#{type}*, #{key.type});
       int #{put}(#{type}*, #{key.type}, #{value.type});
@@ -1015,15 +1017,26 @@ class HashMap < Code
           #{free}(self);
         }
       }
+      void #{rehash}(#{type}* self) {
+        #{assert}(self);
+        #{@entrySet.rehash}(&self->entries);
+      }
       #{type}* #{assign}(#{type}* self) {
+        #{assert}(self);
         ++self->ref_count;
         return self;
       }
       void #{purge}(#{type}* self) {
+        #{assert}(self);
         #{@entrySet.purge}(&self->entries);
       }
       size_t #{size}(#{type}* self) {
+        #{assert}(self);
         return #{@entrySet.size}(&self->entries);
+      }
+      int #{empty}(#{type}* self) {
+        #{assert}(self);
+        return #{@entrySet.empty}(&self->entries);
       }
       int #{containsKey}(#{type}* self, #{key.type} key) {
         int result;
