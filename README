@@ -3,7 +3,7 @@ AutoC is a free software distributed under the terms of modified BSD license.
 
 Project home page is http://autoc.sourceforge.net/
 
-For offline documentation refer to doc/index.html and manual/manual.pdf
+For offline user documentation refer to manual/manual.pdf
 
 Ad-hoc test build instructions:
     cd test

@@ -98,7 +98,7 @@ In \Cpp\ world this would be a \lstinline[language=C++]{std::set<int>} type (wit
 
 
 \begin{rs}
-require "autoc/data_struct_builder"
+require "autoc"
 
 Int = {:type=>"int"}
 
@@ -197,7 +197,7 @@ Frees the heap-allocated container destroying all contained elements.
 \item \meth{\st* \st Assign(\st* \sv)}
 
 
-\emph{Should be used on heap-allocated containers only.}
+\emph{Should be called on heap-allocated containers only.}
 
 
 \item \meth{size\_t \st Size(\st* \sv)}
@@ -257,6 +257,10 @@ The usual considerations apply to the order the iterated elements come in: \emph
 
 
 \subsection{Thread safety}
+
+
+As for now, no effort is made to make the generated data structures thread-safe.
+Hence, care must be taken when using there structures in multithreaded environment.
 
 
 %----------------------------------------------------------------------------------------------------------------------
