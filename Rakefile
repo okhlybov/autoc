@@ -2,7 +2,7 @@ require 'zip/zip'
 
 
 Package = 'autoc'
-Version = '0.3'
+Version = '0.4'
 
 
 task :default => [:dist]
@@ -30,7 +30,7 @@ end
 
 task :dist => [:gen_doc, :gen_test] do
   package = "#{Package}-#{Version}.zip"
-  files = FileList.new ['lib/**/*', 'doc/**/*', 'manual/manual.{tex,pdf}', 'test/test.{c,rb}', 'test/*_auto.[ch]', 'etc/**/*', 'Rakefile', 'README']
+  files = FileList.new ['lib/**/*', 'doc/**/*', 'manual/manual.pdf', 'test/test.{c,rb}', 'test/*_auto.[ch]', 'etc/**/*', 'README']
   begin
     FileUtils.rm_rf(package)
   rescue Errno::ENOENT

@@ -406,11 +406,27 @@ It it not an error for a container not to contain such element (in such a case t
 \item \meth{int \st ReplaceAll(\st* \sv, \et\ \ev)}
 
 
-Replaces all the elements of those contained in \sv, which are considered equal to the specified element \ev\ with this element.
+Replaces all the elements of those contained in \sv\ which are considered equal to the specified element \ev\ with this element.
 On successful replacement the container takes ownership over \ev.
 The replaced elements are destroyed.
 Returns the number of elements replaced.
-It it not an error for a container not to contain such elements (in such a case the function will return zero).
+It it not an error for a container to contain no such elements (in such a case the function will return zero).
+
+
+\item \meth{int \st Remove(\st* \sv, \et\ \ev)}
+
+
+Removes and destroys the first element of those contained in \sv\ which is considered equal to the specified element \ev.
+Returns non-zero value on successful removal (if there was such element) and zero value otherwise.
+It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
+\item \meth{int \st RemoveAll(\st* \sv, \et\ \ev)}
+
+
+Removes and destroys all elements of those contained in \sv\ which are considered equal to the specified element \ev.
+Returns the number of elements removed.
+It it not an error for a container to contain no such elements (in such a case the function will return zero).
 
 
 \end{itemize}
@@ -492,6 +508,14 @@ In either case the container takes ownership over \ev.
 On successful replacement the replaced element is destroyed.
 
 
+\item \meth{void \st Remove(\st* \sv, \et\ \ev)}
+
+
+Removes and destroys the element of those contained in \sv\ which is considered equal to the specified element \ev.
+Returns non-zero value on successful removal (if there was such element) and zero value otherwise.
+It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
 \end{itemize}
 
 
@@ -569,6 +593,15 @@ In any case the container takes ownership over \vv; the ownership over \kv\ is t
 Replaces a value associated with the key considered equal to the specified key \kv with the specified value \vv if such key exists otherwise simply puts the new \kv$\rightarrow$\vv\ association into container.
 In any case the container takes ownership over \vv; the ownership over \kv\ is taken on successful replacement only.
 On successful replacement the replaced value is destroyed.
+
+
+\item \meth{void \st Remove(\st* \sv, \kt\ \kv)}
+
+
+Removes the association \kv$\rightarrow$\vv\ of those contained in \sv\ with the key considered equal to the specified key \kv. 
+Returns non-zero value on successful removal (if there was such entry) and zero value otherwise.
+On successful removal both key and value are destroyed.
+It it not an error for a container not to contain \kv (in such a case the function will return zero).
 
 
 \end{itemize}
