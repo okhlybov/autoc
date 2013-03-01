@@ -196,6 +196,11 @@ void BoxListTest() {
     BoxListAdd(list, BoxMake(1));
     printf("size = %d\n", BoxListSize(list));
     printf("contains([-1]) == %d\n", BoxListContains(list, b1));
+    BoxListChop(list);
+    BoxListRemove(list, BoxMake(1));
+    BoxListRemove(list, BoxMake(2));
+    BoxListRemove(list, BoxMake(3));
+    printf("size = %d\n", BoxListSize(list));
     BoxListPrune(list);
     BoxListAdd(list, BoxMake(7));
     BoxListAdd(list, b1);
@@ -237,7 +242,11 @@ void Box2BoxMapTest() {
     printf("size = %d\n", Box2BoxMapSize(map));
     i = -2; printf("map[Box(%d)] == Box(%d)\n", i, Box2BoxMapGet(map, BoxMake(i))->contents);
     i = 3; printf("map[Box(%d)] == Box(%d)\n", i, Box2BoxMapGet(map, BoxMake(i))->contents);
+    printf("contains([99]) == %d\n", Box2BoxMapContainsKey(map, BoxMake(+99)));
+    Box2BoxMapRemove(map, BoxMake(+99));
+    printf("contains([99]) == %d\n", Box2BoxMapContainsKey(map, BoxMake(+99)));
     map2 = Box2BoxMapAssign(map);
+    Box2BoxMapRemove(map2, BoxMake(-99));
     Box2BoxMapPurge(map);
     Box2BoxMapPut(map2, BoxMake(3), b2);
     BoxDestroy(b2);
