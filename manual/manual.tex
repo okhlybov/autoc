@@ -54,6 +54,7 @@
 \newcommand{\meth}[1]{#1}
 
 
+\addtolength{\parskip}{\baselineskip}
 \begin{document}
 
 
@@ -170,6 +171,215 @@ since the set rejects inclusion of duplicate values (in the above case it's \emp
 \end{enumerate}
 
 
+\section{\R-side operation}
+
+
+In order to generate the appropriate \C\ source code a \R\ script is to be written.
+
+
+\subsection{Type specification}
+
+
+The custom type specification is supplied to the generator's constructor in form of the \emph{Hash} object.
+This hash contains the information regarding the \C-side type and function information in form of the sequence of associations \lstinline[language=Ruby]!{:key1=>value1, :key2=>value2, ...}!, for example \lstinline[language=Ruby]!{:type=>"const char*"}!. The keys must be the \R\ symbols while the associated values can be of any string-like type.
+The hash might contain the following keys:
+
+
+\begin{itemize}
+
+
+\item \lstinline[language=Ruby]!:type!
+
+
+A \emph{mandatory} key specifying the \C-side type declaration \st.
+
+For example, \lstinline[language=Ruby]!:type=>"Box*"!.
+
+
+\item \lstinline[language=Ruby]!:forward!
+
+
+An optional key which presents an arbitrary \C\ code to be injected into the generated interface file \emph{before} any other type declarations.
+This is useful for complex used-defined types, such as structs, which must be declared prior to the container's own declarations.
+
+
+For example, \lstinline[language=Ruby]!:forward=>"typedef struct Box Box;"!.
+Here an incomplete \C\ struct declaration is specified, which is sufficient if the generated data structure will operate on an opaque reference type (\lstinline[language=C]{Box*} in this case).
+For complex used-defined value types a full type declaration must be specified.
+
+
+If omitted, no code will be injected.
+
+
+\item \lstinline[language=Ruby]!:ctor!
+
+
+An optional key which presents a \C-side default parameterless type constructor.
+
+
+The expected \C\ function signature is: \meth{\st\ \emph{function}(void)}.
+
+
+The specified function is called whenever a new element is to be created within the data structure.
+
+
+If omitted, no construction will be performed. This basically means that the way the storage of a newly created element is initialized will be data structure-specific. In most cases (but not neccessarily) it will be simply filled with zeroes.
+
+
+\item \lstinline[language=Ruby]!:dtor!
+
+
+An optional key which presents a \C-side type destructor.
+
+
+The expected \C\ function signature is: \meth{void \emph{function}(\st)}.
+
+
+The specified function is called whenever an element is removed from container or destroyed prior the destruction of the container itself.
+
+
+If omitted, no destruction will be performed.
+
+
+\item \lstinline[language=Ruby]!:assign!
+
+
+An optional key which presents a \C-side copy constructor.
+
+
+The expected \C\ function signature is: \meth{\st\ \emph{function}(\st)}.
+
+
+The specified function is called whenever an element is passed into a container's method.
+This applies not only to the elements which are to be taken over by container, but also to any other elements of this type which cross the function's body (temporary values, for example).
+In the latter case, such elements will be released by calling the respective destructor on them prior exiting the function.
+
+
+If omitted, the default value assignment expression using the \C\ assignment operator \emph{=} is generated.
+
+
+\end{itemize}
+
+
+\subsection{Reference types with embedded reference counting}
+
+
+A proposed way to deal with values passed by reference is to use embedded reference counting scheme as described below.
+It worth noting that the generated data structures obey this scheme themselves allowing their reference values to be used as the elements for other data structures.
+
+
+Each type is represented by a \C\ struct which embeds an integer reference count field:
+
+
+\begin{cs}
+typedef struct Box Box;
+struct Box {
+	size_t ref_count;
+	...
+};
+\end{cs}
+
+
+The type creation function allocates space sufficiently large to hold the struct, calls the respective initializing constructor and sets the initial reference count:
+
+
+\begin{cs}
+Box* BoxNew(...) {
+	Box* box = (Box*)malloc(sizeof(Box));
+	BoxCtor(box, ...);
+	box->ref_count = 0;
+	return box;
+}
+\end{cs}
+
+
+The initial reference count is set to zero, meaning that the newly created value is unassigned (say, orphaned).
+Hence it must be manually assigned to a local variable which will reference it.
+
+
+\emph{This scheme allows for temporary values to be created and passed into functions which temporarily take ownership over the passed values and release them on exit. If this happens to be a value with no more other references exist outside the function, it will be automatically destroyed upon exit.}
+
+
+The assignment function (also called copy constructor) simply passes through the specified reference value bumping up its reference count:
+\begin{cs}
+Box* BoxAssign(Box* self) {
+	++self->ref_count;
+	return self;
+}
+\end{cs}
+
+
+The type destruction function decreases the reference count destroying the value and freeing the associated storage when the count hits zero:
+
+
+\begin{cs}
+void BoxDestroy(Box* self) {
+	if(!--self->ref_count) {
+		BoxDtor(self);
+		free(self);
+	}
+}
+\end{cs}
+
+
+A general rule of thumb for the type above is to manually assign local variables as a part of their initialization process and destroy them upon going out of scope as illustrated by the code excerpt below:
+
+
+\begin{cs}
+BoxSet* set;
+...
+{
+	Box* b = BoxAssign(BoxNew(...));
+	...
+	BoxSetContains(set, b);
+	...
+	BoxDestroy(b);
+}
+\end{cs}
+
+
+As mentioned above, this scheme allows the temporary values to be passed to functions as illustrated below:
+
+
+\begin{cs}
+BoxSet* set;
+...
+BoxSetContains(set, BoxNew(...));
+\end{cs}
+
+
+In the case above no assigned variable exists to the value created by the \meth{BoxNew()} hence it will be automatically destroyed upon the exit from \meth{BoxSetContains()}.
+
+
+In the reverse case of obtaining a reference from a function the safest way is to call assign on its result:
+\begin{cs}
+BoxSet* set;
+...
+{
+	Box* b = BoxAssign(BoxSetGet(box, ...));
+	...
+	BoxDestroy(b);
+}
+\end{cs}
+
+
+This way the reference \emph{b} will remain valid up to the respective call to \meth{BoxDestroy()} even if the set \emph{set} get destroyed along the way before \emph{b} goes out of scope.
+
+
+On the final note, for the case described above the \R-side type specification will be:
+
+
+\begin{rs}
+{
+	:type=>"Box*",
+	:forward=>"typedef struct Box Box;",
+	:assign=>"BoxAssign",
+	:dtor=>"BoxDestroy",
+	...
+}
+\end{rs}
+
+
 \section{Generated \C\ code}
 
 
@@ -192,6 +402,7 @@ Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 Frees the heap-allocated container destroying all contained elements.
+Calls the respective destructor \meth{\st Dtor()} behind the scenes.
 
 
 \item \meth{\st* \st Assign(\st* \sv)}
@@ -331,7 +542,7 @@ The container takes ownership over the element \ev.
 \section{\List\ container}
 
 
-\List\ data structure is a singly-linked list which supports insertion and removal operations at one end in a manner of the \Java's \lstinline[language=Java]{java.util.LinkedList<>} class.
+\List\ data structure is a singly-linked list which supports insertion and removal operations at one end similar to the \Cpp's recently standartized \lstinline[language=C++]{std::forward_list<>} or the \Java's \lstinline[language=Java]{java.util.LinkedList<>} classes.
 
 
 \subsection{\List\ interface}
