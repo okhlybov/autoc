@@ -273,7 +273,6 @@ end # ForwardCode
 ##
 # Internal base class for data structures which need one types specification, such as vectors, sets etc.
 class Structure < Code
-  # :nodoc:
   attr_reader :element
   # :nodoc:
   def initialize(type, element_info)
@@ -421,13 +420,16 @@ class Vector < Structure
     $
   end
   protected
+  # :nodoc:
   class ElementType < DataStructBuilder::Type
     include Assignable, Constructible, Destructible
   end # ElementType
+  # :nodoc:
   def new_element_type(hash)
     ElementType.new(hash)
   end
   private
+  # :nodoc:
   def construct_stmt(values, from, to)
     if element.ctor?
       %${
@@ -436,6 +438,7 @@ class Vector < Structure
       }$
     end
   end
+  # :nodoc:
   def destruct_stmt(values, from, to)
     if element.dtor?
       %${
@@ -447,7 +450,11 @@ class Vector < Structure
 end # Vector
 
 
+=begin rdoc
+Data structure representing singly-linked list.
+=end
 class List < Structure
+  # :nodoc:
   def write_intf(stream)
     super
     stream << %$
@@ -488,6 +495,7 @@ class List < Structure
       #{element.type} #{itNext}(#{it}*);
     $
   end
+  # :nodoc:
   def write_defs(stream)
     stream << %$
       void #{ctor}(#{type}* self) {
@@ -700,13 +708,16 @@ class List < Structure
     $
   end
   protected
+  # :nodoc:
   class ElementType < DataStructBuilder::Type
     include Assignable, Destructible, Comparable
   end # ElementType
+  # :nodoc:
   def new_element_type(hash)
     ElementType.new(hash)
   end
   private
+  # :nodoc:
   def destruct_stmt
     if element.dtor?
       %${
@@ -722,11 +733,16 @@ class List < Structure
 end # List
 
 
+=begin rdoc
+Data structure representing hashed set.
+=end
 class HashSet < Structure
+  # :nodoc:
   def initialize(type, element_info)
     super
     @bucket = new_bucket
   end
+  # :nodoc:
   def write_intf(stream)
     super
     @bucket.write_intf(stream)
@@ -764,6 +780,7 @@ class HashSet < Structure
       #{element.type} #{itNext}(#{it}*);
     $
   end
+  # :nodoc:
   def write_defs(stream)
     @bucket.write_defs(stream)
     stream << %$
@@ -958,27 +975,30 @@ class HashSet < Structure
     $
   end
   protected
+  # :nodoc:
   class ElementType < DataStructBuilder::Type
     include Assignable, Destructible, Hashable, Comparable
   end # ElementType
+  # :nodoc:
   def new_element_type(hash)
     @element_hash = hash
     ElementType.new(hash)
   end
+  # :nodoc:
   def new_bucket
     List.new("#{type}Bucket", @element_hash)
   end
 end # Set
 
 
+=begin rdoc
+Data structure representing hashed map.
+=end
 class HashMap < Code
   attr_reader :key, :value
-  def entities
-    result = [PrologueCode]
-    result << @key_forward unless @key_forward.nil?
-    result << @value_forward unless @value_forward.nil?
-    result
-  end
+  # :nodoc:
+  def entities; [PrologueCode, @key_forward, @value_forward].compact end
+  # :nodoc:
   def initialize(type, key_info, value_info)
     super(type)
     @entry_hash = {:type=>"#{entry}", :hash=>"#{entryHash}", :compare=>"#{entryCompare}", :assign=>"#{entryAssign}", :dtor=>"#{entryDtor}"}
@@ -989,6 +1009,7 @@ class HashMap < Code
     @key_forward = ForwardCode.new(key_info[:forward]) unless key_info[:forward].nil?
     @value_forward = ForwardCode.new(value_info[:forward]) unless value_info[:forward].nil?
   end
+  # :nodoc:
   def write_intf(stream)
     stream << @forward
     key.write_intf(stream)
@@ -1033,6 +1054,7 @@ class HashMap < Code
       #{@entry.type} #{itNext}(#{it}*);
     $
   end
+  # :nodoc:
   def write_defs(stream)
     stream << %$
       #{inline} #{@entry.type} #{entryKeyOnly}(#{key.type} key) {
@@ -1179,24 +1201,31 @@ class HashMap < Code
     $
   end
   protected
+  # :nodoc:
   class EntryType < DataStructBuilder::Type
     include Assignable, Destructible, Hashable, Comparable
   end # EntryType
+  # :nodoc:
   class KeyType < DataStructBuilder::Type
     include Assignable, Destructible, Hashable, Comparable
   end # KeyType
+  # :nodoc:
   class ValueType < DataStructBuilder::Type
     include Assignable, Destructible
   end # ValueType
+  # :nodoc:
   def new_entry_type
     EntryType.new(@entry_hash)
   end
+  # :nodoc:
   def new_key_type(hash)
     KeyType.new(hash)
   end
+  # :nodoc:
   def new_value_type(hash)
     ValueType.new(hash)
   end
+  # :nodoc:
   def new_entry_set
     HashSet.new("#{type}EntrySet", @entry_hash)
   end
