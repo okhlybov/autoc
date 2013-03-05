@@ -14,6 +14,9 @@
 \lstset{commentstyle=\itshape,stringstyle=\bfseries}
 
 
+\usepackage{parskip}
+
+
 \newcommand{\autoc}{\emph{AutoC}}
 
 
@@ -54,7 +57,9 @@
 \newcommand{\meth}[1]{#1}
 
 
-\addtolength{\parskip}{\baselineskip}
+%\addtolength{\parskip}{\baselineskip}
+
+
 \begin{document}
 
 
@@ -363,7 +368,7 @@ BoxSet* set;
 \end{cs}
 
 
-This way the reference \emph{b} will remain valid up to the respective call to \meth{BoxDestroy()} even if the set \emph{set} get destroyed along the way before \emph{b} goes out of scope.
+This way the reference \emph{b} will remain valid up to the respective call to \meth{BoxDestroy()} even if the set \emph{set} gets destroyed along the way before \emph{b} goes out of scope.
 
 
 On the final note, for the case described above the \R-side type specification will be:
@@ -470,7 +475,7 @@ The usual considerations apply to the order the iterated elements come in: \emph
 \subsection{Thread safety}
 
 
-As for now, no effort is made to make the generated data structures thread-safe.
+As of now, no effort is made to make the generated data structures thread-safe.
 Hence, care must be taken when using there structures in multithreaded environment.
 
 

@@ -257,6 +257,22 @@ void Box2BoxMapTest() {
 }
 
 
+void PChar2IntVectorMapTest() {
+    int i;
+    PChar2IntVectorMap* map;
+    IntVector* vec;
+    printf("\n*** PChar2IntVectorMap\n");
+    map = PChar2IntVectorMapNew();
+    PChar2IntVectorMapPut(map, "zero", IntVectorNew(3));
+    PChar2IntVectorMapPut(map, "one", IntVectorNew(3));
+    vec = PChar2IntVectorMapGet(map, "one"); for(i = 0; i < IntVectorSize(vec); ++i) {
+        IntVectorSet(vec, i, 1);
+    }
+    IntVectorResize(PChar2IntVectorMapGet(map, "one"), 5);
+    PChar2IntVectorMapDestroy(map);
+}
+
+
 int main(int argc, char** argv) {
     IntVectorTest();
     IntSetTest();
@@ -266,5 +282,6 @@ int main(int argc, char** argv) {
     BoxVectorTest();
     BoxListTest();
     Box2BoxMapTest();
+    PChar2IntVectorMapTest();
     return 0;
 }
