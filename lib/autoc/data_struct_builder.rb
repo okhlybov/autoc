@@ -85,17 +85,17 @@ module Assignable
   ##
   # Returns +true+ when used-defined assignment function is specified and +false+ otherwise.
   def assign?
-    !properties[:assign].nil?
+    !descriptor[:assign].nil?
   end
   ##
   # Returns string representing the C assignment expression for +obj+.
   # +obj+ is a string-like object containing the C expression to be injected.
   def assign(obj)
-    assign? ? "#{properties[:assign]}(#{obj})" : "(#{obj})"
+    assign? ? "#{descriptor[:assign]}(#{obj})" : "(#{obj})"
   end
   # :nodoc:
   def write_intf_assign(stream)
-    stream << "#{type} #{properties[:assign]}(#{type});" if assign?
+    stream << "#{type} #{descriptor[:assign]}(#{type});" if assign?
   end
 end # Assignable
 
@@ -112,16 +112,16 @@ module Comparable
   ##
   # Returns +true+ when used-defined equality testing function is specified and +false+ otherwise.
   def compare?
-    !properties[:compare].nil?
+    !descriptor[:compare].nil?
   end
   # Returns string representing the C expression comparison of +lt+ and +rt+.
   # +lt+ and +rt+ are the string-like objects containing the C expression to be injected.
   def compare(lt, rt)
-    compare? ? "#{properties[:compare]}(#{lt},#{rt})" : "((#{lt}==#{rt}) ? 0 : 1)"
+    compare? ? "#{descriptor[:compare]}(#{lt},#{rt})" : "((#{lt}==#{rt}) ? 0 : 1)"
   end
   # :nodoc:
   def write_intf_compare(stream)
-    stream << "int #{properties[:compare]}(#{type},#{type});" if compare?
+    stream << "int #{descriptor[:compare]}(#{type},#{type});" if compare?
   end
 end # Comparable
 
@@ -138,16 +138,16 @@ module Hashable
   ##
   # Returns +true+ when used-defined hashing function is specified and +false+ otherwise.
   def hash?
-    !properties[:hash].nil?
+    !descriptor[:hash].nil?
   end
   # Returns string representing the C hashing expression for +obj+.
   # +obj+ is a string-like object containing the C expression to be injected.
   def hash(obj)
-    hash? ? "#{properties[:hash]}(#{obj})" : "((size_t)(#{obj}))" # TODO really size_t?
+    hash? ? "#{descriptor[:hash]}(#{obj})" : "((size_t)(#{obj}))" # TODO really size_t?
   end
   # :nodoc:
   def write_intf_hash(stream)
-    stream << "size_t #{properties[:hash]}(#{type});" if hash?
+    stream << "size_t #{descriptor[:hash]}(#{type});" if hash?
   end
 end # Hashable
 
@@ -164,15 +164,15 @@ module Constructible
   ##
   # Returns +true+ when used-defined construction function is specified and +false+ otherwise.
   def ctor?
-    !properties[:ctor].nil?
+    !descriptor[:ctor].nil?
   end
   # Returns string representing the C construction expression.
   def ctor
-    ctor? ? "#{properties[:ctor]}()" : nil
+    ctor? ? "#{descriptor[:ctor]}()" : nil
   end
   # :nodoc:
   def write_intf_ctor(stream)
-    stream << "#{type} #{properties[:ctor]}(void);" if ctor?
+    stream << "#{type} #{descriptor[:ctor]}(void);" if ctor?
   end
 end # Constructible
 
@@ -188,13 +188,13 @@ The object destruction is performed prior the container destruction, on object r
 module Destructible
   Methods = [:dtor]
   def dtor?
-    !properties[:dtor].nil?
+    !descriptor[:dtor].nil?
   end
   def dtor(obj)
-    dtor? ? "#{properties[:dtor]}(#{obj})" : nil
+    dtor? ? "#{descriptor[:dtor]}(#{obj})" : nil
   end
   def write_intf_dtor(stream)
-    stream << "void #{properties[:dtor]}(#{type});" if dtor?
+    stream << "void #{descriptor[:dtor]}(#{type});" if dtor?
   end
 end # Destructible
 
@@ -210,7 +210,7 @@ class Type
   attr_reader :type
   ##
   # Constructs the user-defined data type.
-  # +hash+ is a +Hash+ object describing the type to be created.
+  # +descriptor+ is a +Hash+-like object describing the type to be created.
   # The only mandatory key is +:type+ which is set to the C type declaration.
   # The rest of specified keys is type-specific and is determined by included capability modules.
   #
@@ -224,9 +224,9 @@ class Type
   # [3] A pointer to a structure with reference semantics and used-defined operations:
   #     {:type=>'struct Point*', :assign=>'PointPtrAssign', :dtor=>'PointPtrDtor'}.
   #     A value of this type will be owned by container.
-  def initialize(hash)
-    @properties = hash
-    @type = properties[:type]
+  def initialize(descriptor)
+    @descriptor = descriptor
+    @type = descriptor[:type]
   end
   # :nodoc:
   def write_intf(stream)
@@ -241,10 +241,14 @@ class Type
       send("write_intf_#{m}", stream)
     end
   end
+  # May be nil.
+  def code
+    descriptor.is_a?(CodeBuilder::Code) ? descriptor : (descriptor[:forward] ? ForwardCode.new(descriptor[:forward]) : nil)
+  end
   protected
   ##
   # Used by included modules to retrieve the type description supplied to constructor.
-  attr_reader :properties
+  attr_reader :descriptor
 end # Type
 
 
@@ -275,13 +279,17 @@ end # ForwardCode
 class Structure < Code
   attr_reader :element
   # :nodoc:
-  def initialize(type, element_info)
+  def initialize(type, element_descriptor)
     super(type)
-    @element = new_element_type(element_info)
-    @element_forward = ForwardCode.new(element_info[:forward]) unless element_info[:forward].nil?
+    @element = new_element_type(element_descriptor)
+    @self_hash = {:type=>"#{type}*", :assign=>assign, :dtor=>destroy}
   end
   # :nodoc:
-  def entities; [PrologueCode, @element_forward].compact end
+  def [](symbol)
+    @self_hash[symbol]
+  end
+  # :nodoc:
+  def entities; [PrologueCode, @element.code].compact end
   # :nodoc:
   def write_intf(stream)
     element.write_intf(stream)
@@ -425,8 +433,8 @@ class Vector < Structure
     include Assignable, Constructible, Destructible
   end # ElementType
   # :nodoc:
-  def new_element_type(hash)
-    ElementType.new(hash)
+  def new_element_type(type)
+    ElementType.new(type)
   end
   private
   # :nodoc:
@@ -997,17 +1005,20 @@ Data structure representing hashed map.
 class HashMap < Code
   attr_reader :key, :value
   # :nodoc:
-  def entities; [PrologueCode, @key_forward, @value_forward].compact end
+  def entities; [PrologueCode, @key.code, @value.code, @entry.code].compact end
   # :nodoc:
-  def initialize(type, key_info, value_info)
+  def initialize(type, key_descriptor, value_descriptor)
     super(type)
-    @entry_hash = {:type=>"#{entry}", :hash=>"#{entryHash}", :compare=>"#{entryCompare}", :assign=>"#{entryAssign}", :dtor=>"#{entryDtor}"}
+    @entry_hash = {:type=>entry, :hash=>entryHash, :compare=>entryCompare, :assign=>entryAssign, :dtor=>entryDtor}
     @entry = new_entry_type
     @entrySet = new_entry_set
-    @key = new_key_type(key_info)
-    @value = new_value_type(value_info)
-    @key_forward = ForwardCode.new(key_info[:forward]) unless key_info[:forward].nil?
-    @value_forward = ForwardCode.new(value_info[:forward]) unless value_info[:forward].nil?
+    @key = new_key_type(key_descriptor)
+    @value = new_value_type(value_descriptor)
+    @self_hash = {:type=>"#{type}*", :assign=>assign, :dtor=>destroy}
+  end
+  # :nodoc:
+  def [](symbol)
+    @self_hash[symbol]
   end
   # :nodoc:
   def write_intf(stream)
@@ -1218,12 +1229,12 @@ class HashMap < Code
     EntryType.new(@entry_hash)
   end
   # :nodoc:
-  def new_key_type(hash)
-    KeyType.new(hash)
+  def new_key_type(type)
+    KeyType.new(type)
   end
   # :nodoc:
-  def new_value_type(hash)
-    ValueType.new(hash)
+  def new_value_type(type)
+    ValueType.new(type)
   end
   # :nodoc:
   def new_entry_set
