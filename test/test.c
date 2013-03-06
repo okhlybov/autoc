@@ -6,6 +6,17 @@
 #include "test_auto.h"
 
 
+void PrintIntVector(IntVector* vec) {
+    IntVectorIt it;
+    IntVectorItCtor(&it, vec);
+    printf("[ ");
+    while(IntVectorItHasNext(&it)) {
+        printf("%d ", IntVectorItNext(&it));
+    }
+    printf("]\n");
+}
+
+
 void IntVectorTest() {
     IntVector* vec;
     printf("\n*** IntVector\n");
@@ -47,8 +58,8 @@ size_t PCharHash(const char* s) {
 }
 
 
-int PCharCompare(const char* lt, const char* rt) {
-    return strcmp(lt, rt);
+int PCharEqual(const char* lt, const char* rt) {
+    return strcmp(lt, rt) == 0;
 }
 
 
@@ -123,10 +134,10 @@ Box* BoxAssign(Box* box) {
 }
 
 
-int BoxCompare(Box* lt, Box* rt) {
+int BoxEqual(Box* lt, Box* rt) {
     assert(lt);
     assert(rt);
-    return (lt->contents == rt->contents) ? 0 : (lt->contents < rt->contents ? +1 : -1);
+    return lt->contents == rt->contents;
 }
 
 
@@ -262,13 +273,17 @@ void PChar2IntVectorMapTest() {
     PChar2IntVectorMap* map;
     IntVector* vec;
     printf("\n*** PChar2IntVectorMap\n");
-    map = PChar2IntVectorMapNew();
+    map = PChar2IntVectorMapAssign(PChar2IntVectorMapNew());
     PChar2IntVectorMapPut(map, "zero", IntVectorNew(3));
     PChar2IntVectorMapPut(map, "one", IntVectorNew(3));
     vec = PChar2IntVectorMapGet(map, "one"); for(i = 0; i < IntVectorSize(vec); ++i) {
-        IntVectorSet(vec, i, 1);
+        IntVectorSet(vec, i, i);
     }
+    printf("size = %d\n", IntVectorSize(vec));
+    PrintIntVector(vec);
     IntVectorResize(PChar2IntVectorMapGet(map, "one"), 5);
+    printf("size = %d\n", IntVectorSize(vec));
+    PrintIntVector(vec);
     PChar2IntVectorMapDestroy(map);
 }
 

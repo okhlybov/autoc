@@ -102,28 +102,28 @@ end # Assignable
 
 =begin rdoc
 Indicates that the type class including this module provides the equality testing operation.
-The user-defined function is assigned to the key +:compare+
-and is expected to have the signature int _comparison-function_(+type+, +type+).
-The C function provided must return 0 when the values are considered equal and not zero otherwise.
+The user-defined function is assigned to the key +:equal+
+and is expected to have the signature int _equality-function_(+type+, +type+).
+The C function provided must return non-zero value when the values are considered equal and zero value otherwise.
 When no user-defined function is specified, this module generates simple value identity testing with == operator.
 =end
-module Comparable
-  Methods = [:compare] # :nodoc:
+module EqualityTestible
+  Methods = [:equal] # :nodoc:
   ##
   # Returns +true+ when used-defined equality testing function is specified and +false+ otherwise.
-  def compare?
-    !descriptor[:compare].nil?
+  def equal?
+    !descriptor[:equal].nil?
   end
   # Returns string representing the C expression comparison of +lt+ and +rt+.
   # +lt+ and +rt+ are the string-like objects containing the C expression to be injected.
-  def compare(lt, rt)
-    compare? ? "#{descriptor[:compare]}(#{lt},#{rt})" : "((#{lt}==#{rt}) ? 0 : 1)"
+  def equal(lt, rt)
+    equal? ? "#{descriptor[:equal]}(#{lt},#{rt})" : "(#{lt}==#{rt})"
   end
   # :nodoc:
-  def write_intf_compare(stream)
-    stream << "int #{descriptor[:compare]}(#{type},#{type});" if compare?
+  def write_intf_equal(stream)
+    stream << "int #{descriptor[:equal]}(#{type},#{type});" if equal?
   end
-end # Comparable
+end # EqualityTestible
 
 
 =begin rdoc
@@ -202,7 +202,7 @@ end # Destructible
 =begin rdoc
 Base class for user-defined data types intended to be put into the generated data containers.
 A descendant of this class is assumed to include one or more the following capability modules to indicate that
-the type supports specific operation: rdoc-ref:Assignable rdoc-ref:Comparable rdoc-ref:Hashable rdoc-ref:Constructible rdoc-ref:Destructible
+the type supports specific operation: rdoc-ref:Assignable rdoc-ref:Equal rdoc-ref:Hashable rdoc-ref:Constructible rdoc-ref:Destructible
 =end
 class Type
   ##
@@ -359,7 +359,7 @@ class Vector < Structure
         #{assert}(self);
         #{assert}(element_count > 0);
         self->element_count = element_count;
-        self->values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(self->values);
+        self->values = (#{element.type}*)#{calloc}(element_count, sizeof(#{element.type})); #{assert}(self->values);
         #{construct_stmt("self->values", 0, "self->element_count-1")};
       }
       void #{dtor}(#{type}* self) {
@@ -573,7 +573,7 @@ class List < Structure
         what = #{element.assign("what")};
         node = self->head_node;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("what")};
             return 1;
           }
@@ -589,7 +589,7 @@ class List < Structure
         #{assert}(#{contains}(self, what));
         node = self->head_node;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("what")};
             return node->element;
           }
@@ -604,7 +604,7 @@ class List < Structure
         with = #{element.assign("with")};
         node = self->head_node;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             node->element = #{element.assign("with")};
             #{element.dtor("what")};
@@ -625,7 +625,7 @@ class List < Structure
         with = #{element.assign("with")};
         node = self->head_node;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             node->element = #{element.assign("with")};
             ++count;
@@ -645,7 +645,7 @@ class List < Structure
         node = self->head_node;
         prev_node = NULL;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             if(prev_node) {
               prev_node->next_node = node->next_node ? node->next_node : NULL;
@@ -672,7 +672,7 @@ class List < Structure
         node = self->head_node;
         prev_node = NULL;
         while(node) {
-          if(#{element.compare("node->element", "what")} == 0) {
+          if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             if(prev_node) {
               prev_node->next_node = node->next_node ? node->next_node : NULL;
@@ -718,7 +718,7 @@ class List < Structure
   protected
   # :nodoc:
   class ElementType < DataStructBuilder::Type
-    include Assignable, Destructible, Comparable
+    include Assignable, Destructible, EqualityTestible
   end # ElementType
   # :nodoc:
   def new_element_type(hash)
@@ -985,7 +985,7 @@ class HashSet < Structure
   protected
   # :nodoc:
   class ElementType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, Comparable
+    include Assignable, Destructible, Hashable, EqualityTestible
   end # ElementType
   # :nodoc:
   def new_element_type(hash)
@@ -1009,7 +1009,7 @@ class HashMap < Code
   # :nodoc:
   def initialize(type, key_descriptor, value_descriptor)
     super(type)
-    @entry_hash = {:type=>entry, :hash=>entryHash, :compare=>entryCompare, :assign=>entryAssign, :dtor=>entryDtor}
+    @entry_hash = {:type=>entry, :hash=>entryHash, :equal=>entryEqual, :assign=>entryAssign, :dtor=>entryDtor}
     @entry = new_entry_type
     @entrySet = new_entry_set
     @key = new_key_type(key_descriptor)
@@ -1084,8 +1084,8 @@ class HashMap < Code
       size_t #{entryHash}(#{@entry.type} entry) {
         return #{key.hash("entry.key")};
       }
-      int #{entryCompare}(#{@entry.type} lt, #{@entry.type} rt) {
-        return #{key.compare("lt.key", "rt.key")};
+      int #{entryEqual}(#{@entry.type} lt, #{@entry.type} rt) {
+        return #{key.equal("lt.key", "rt.key")};
       }
       #{@entry.type} #{entryAssign}(#{@entry.type} entry) {
         entry.key = #{key.assign("entry.key")};
@@ -1214,11 +1214,11 @@ class HashMap < Code
   protected
   # :nodoc:
   class EntryType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, Comparable
+    include Assignable, Destructible, Hashable, EqualityTestible
   end # EntryType
   # :nodoc:
   class KeyType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, Comparable
+    include Assignable, Destructible, Hashable, EqualityTestible
   end # KeyType
   # :nodoc:
   class ValueType < DataStructBuilder::Type

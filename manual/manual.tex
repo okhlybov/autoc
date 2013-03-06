@@ -57,9 +57,6 @@
 \newcommand{\meth}[1]{#1}
 
 
-%\addtolength{\parskip}{\baselineskip}
-
-
 \begin{document}
 
 
@@ -68,6 +65,12 @@
 
 
 \maketitle
+
+
+\tableofcontents
+
+
+\newpage
 
 
 \part{Introduction}
@@ -80,7 +83,7 @@
 \part{\codebuilder\ module}
 
 
-This module contains a facility to help generate \C\ modules.
+This module contains a facility to generate multi-file \C\ modules.
 
 
 \newcommand{\datastructbuilder}{\emph{DataStructBuilder}}
@@ -185,8 +188,10 @@ In order to generate the appropriate \C\ source code a \R\ script is to be writt
 \subsection{Type specification}
 
 
-The custom type specification is supplied to the generator's constructor in form of the \emph{Hash} object.
-This hash contains the information regarding the \C-side type and function information in form of the sequence of associations \lstinline[language=Ruby]!{:key1=>value1, :key2=>value2, ...}!, for example \lstinline[language=Ruby]!{:type=>"const char*"}!. The keys must be the \R\ symbols while the associated values can be of any string-like type.
+The custom type specification is supplied to the generator's constructor in form of a \emph{Hash}-like object.
+It may be either \emph{Hash} instance or any other object responding to \lstinline[language=Ruby]![]! method.
+\emph{Note that the generated data structures themselves can also be used as the elements of other data structures.}
+This object contains the information regarding the \C-side type and function information in form of the sequence of associations \lstinline[language=Ruby]!{:key1=>value1, :key2=>value2, ...}!, for example \lstinline[language=Ruby]!{:type=>"const char*"}!. The keys must be the \R\ symbols while the associated values can be of any string-like type.
 The hash might contain the following keys:
 
 
@@ -197,6 +202,7 @@ The hash might contain the following keys:
 
 
 A \emph{mandatory} key specifying the \C-side type declaration \st.
+
 
 For example, \lstinline[language=Ruby]!:type=>"Box*"!.
 
@@ -263,7 +269,42 @@ In the latter case, such elements will be released by calling the respective des
 If omitted, the default value assignment expression using the \C\ assignment operator \emph{=} is generated.
 
 
+\item \lstinline[language=Ruby]!:hash!
+
+
+An optional key which presents a \C-side hashing function.
+This function will be used by the hash-based data structures, \emph{HashSet} and \emph{HashMap}.
+
+
+The expected \C\ function signature is: \meth{size\_t \emph{function}(\st)}.
+
+
+If omitted, the hash value will be represented by the value cast to \emph{size\_t}.
+\emph{Note that not all types can be automatically casted to an integer value resulting in a compile-time error.}
+Specifically, this will work for numbers, chars, reference values, but not for structs.
+In the latter case a custom hashing function must be provided.
+
+
+\item \lstinline[language=Ruby]!:equal!
+
+
+An optional key which presents a \C-side equality testing function.
+This function is used by the data containers to test for equality of two elements.
+
+
+The expected \C\ function signature is: \meth{int \emph{function}(\st, \st)}.
+
+
+The function specified must return non-zero value if two elements are considered equal and zero value otherwise.
+
+
+If omitted, a simple value comparison using the \C\ equality testing operator \lstinline[language=C]!==! is generated.
+
+
 \end{itemize}
+
+
+\subsection{Value types vs. reference types}
 
 
 \subsection{Reference types with embedded reference counting}
@@ -383,6 +424,9 @@ On the final note, for the case described above the \R-side type specification w
 	...
 }
 \end{rs}
+
+
+\subsection{Hash-based data structures}
 
 
 \section{Generated \C\ code}
@@ -821,7 +865,7 @@ On successful replacement the replaced value is destroyed.
 Removes the association \kv$\rightarrow$\vv\ of those contained in \sv\ with the key considered equal to the specified key \kv. 
 Returns non-zero value on successful removal (if there was such entry) and zero value otherwise.
 On successful removal both key and value are destroyed.
-It it not an error for a container not to contain \kv (in such a case the function will return zero).
+It it not an error for a container not to contain \kv\ (in such a case the function will return zero).
 
 
 \end{itemize}

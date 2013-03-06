@@ -6,8 +6,8 @@ include DataStructBuilder
 
 
 Int = {:type=>"int"}
-PChar = {:type=>"const char*", :compare=>"PCharCompare", :hash=>"PCharHash"}
-Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :assign=>"BoxAssign", :compare=>"BoxCompare", :hash=>"BoxHash", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
+PChar = {:type=>"const char*", :equal=>"PCharEqual", :hash=>"PCharHash"}
+Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :assign=>"BoxAssign", :equal=>"BoxEqual", :hash=>"BoxHash", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
 
 
 IntVector = Vector.new(:IntVector, Int)
