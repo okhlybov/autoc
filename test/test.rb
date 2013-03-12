@@ -23,6 +23,7 @@ CModule.generate!(:Test) do |m|
   m << HashMap.new(:Box2BoxMap, Box, Box)
   m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
   m << IntVector
+  m << Queue.new(:PCharQueue, PChar)
 end
 
 
