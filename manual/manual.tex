@@ -384,7 +384,7 @@ BoxSet* set;
 \end{cs}
 
 
-As mentioned above, this scheme allows the temporary values to be passed to functions as illustrated below:
+As mentioned above, this scheme allows the temporary values to be passed to functions as follows:
 
 
 \begin{cs}
@@ -441,12 +441,6 @@ On the final note, for the case described above the \R-side type specification w
 Destroys the container along with all contained elements.
 
 
-\item \meth{\st* \st New(size\_t \emph{size})}
-
-
-Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
-
-
 \item \meth{void \st Destroy(\st* \sv)}
 
 
@@ -496,7 +490,7 @@ All generated data structures have built-in iteration capability.
 The \autoc's iterators are modeled after the \Java's iterators.
 The current implementation is fairly simple and is not designed for the iterator objects to be passed around, shared etc.
 Moreover, the data structures \emph{must not} be modified or destroyed from within the iteration loop.
-While alterations of some data structures (notably \emph{lists}) are known not to invalidate the active iterators, this does not hold true in general and must be avoided.
+While alterations of some data structures (notably lists) are known not to invalidate the active iterators, this does not hold true in general and must be avoided.
 
 
 The code snippet below demonstrates the typical iterator usage scenario:
@@ -513,7 +507,7 @@ while(IntSetItHasNext(&it)) {
 \end{cs}
 
 
-The usual considerations apply to the order the iterated elements come in: \emph{vectors} and \emph{lists} are the ordered containers while \emph{sets} and \emph{maps} are not.
+The usual considerations apply to the order the iterated elements come in: vectors, lists and queues are ordered containers while sets and maps are not.
 
 
 \subsection{Thread safety}
@@ -545,6 +539,12 @@ Hence, care must be taken when using there structures in multithreaded environme
 Constructs the container with \emph{size} elements.
 The valid index range will be [0, \emph{size}).
 The elements are initialized with default constructor.
+
+
+\item \meth{\st* \st New(size\_t \emph{size})}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 \commonmethods
@@ -591,7 +591,7 @@ The container takes ownership over the element \ev.
 \section{\List\ container}
 
 
-\List\ data structure is a singly-linked list which supports insertion and removal operations at one end similar to the \Cpp's recently standartized \lstinline[language=C++]{std::forward_list<>} or the \Java's \lstinline[language=Java]{java.util.LinkedList<>} classes.
+\List\ data structure is a singly-linked list which supports insertion and removal operations at one end similar to the \Cpp's recently standartized \lstinline[language=C++]{std::forward_list<>} class.
 
 
 \subsection{\List\ interface}
@@ -604,6 +604,12 @@ The container takes ownership over the element \ev.
 
 
 Constructs empty container.
+
+
+\item \meth{\st* \st New(void)}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 \commonmethods
@@ -699,6 +705,148 @@ It it not an error for a container to contain no such elements (in such a case t
 %----------------------------------------------------------------------------------------------------------------------
 
 
+\newcommand{\Queue}{\emph{Queue}}
+\section{\Queue\ container}
+
+
+\Queue\ data structure is a doubly-linked list which supports insertion and removal operations at both ends similar to the \Cpp's \lstinline[language=C++]{std::list<>} or the \Java's \lstinline[language=Java]{java.util.LinkedList<>} classes.
+
+
+\subsection{\Queue\ interface}
+
+
+\begin{itemize}
+
+
+\item \meth{void \st Ctor(\st*\ \sv)}
+
+
+Constructs empty container.
+
+
+\item \meth{\st* \st New(void)}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
+
+
+\commonmethods
+
+
+\item \meth{void \st Purge}(\st* \sv)
+
+
+Removes and destroys all contained elements effectively emptying the container.
+
+
+\item \meth{int \st Empty}(\st* \sv)
+
+
+Returns non-zero value if container is empty (i.e. contains no elements) and zero value otherwise.
+
+
+\item \meth{\et\ \st Head(\st* \sv)}
+
+
+Returns head (first) element of a non-empty container.
+\emph{It is a run-time error to get top element of an empty container.}
+Container retains the ownership over the element returned.
+
+
+\item \meth{\et\ \st Tail(\st* \sv)}
+
+
+Returns tail (last) element of a non-empty container.
+\emph{It is a run-time error to get top element of an empty container.}
+Container retains the ownership over the element returned.
+
+
+\item \meth{void \st Append(\st* \sv, \et\ \ev)}
+
+
+Adds the element \ev\ at the queue's tail.
+The added element becomes the last in the queue.
+The container takes ownership over the element \ev.
+
+
+\item \meth{void \st Prepend(\st* \sv, \et\ \ev)}
+
+
+Adds the element \ev\ at the queue's head.
+The added element becomes the first in the queue.
+The container takes ownership over the element \ev.
+
+
+\item \meth{void \st ChopHead(\st* \sv)}
+
+
+Removes and destroys the head element of a non-empty container.
+\emph{It is a run-time error to call this function on an empty container.}
+
+
+\item \meth{void \st ChopTail(\st* \sv)}
+
+
+Removes and destroys the tail element of a non-empty container.
+\emph{It is a run-time error to call this function on an empty container.}
+
+
+\item \meth{int \st Contains(\st* \sv, \et\ \ev)}
+
+
+Returns non-zero value if container \sv\ contains one or more elements considered equal to the specified element \ev\ and zero value otherwise.
+
+
+\item \meth{\et\ \st Find(\st* \sv, \et\ \ev)}
+
+
+Returns the first element considered equal to the specified element \ev.
+\emph{It is a run-time error to call this function on a container which contains no such elements. Call the function \meth{\st Contains()} to check for their presence.}
+The container retains ownership over returned element.
+
+
+\item \meth{int \st Replace(\st* \sv, \et\ \ev)}
+
+
+Replaces the first element of those contained in \sv, which is considered equal to the specified element \ev, with this element.
+On successful replacement the container takes ownership over \ev.
+The replaced element is destroyed.
+Returns non-zero value on successful replacement (if there was such element) and zero value otherwise.
+It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
+\item \meth{int \st ReplaceAll(\st* \sv, \et\ \ev)}
+
+
+Replaces all the elements of those contained in \sv\ which are considered equal to the specified element \ev\ with this element.
+On successful replacement the container takes ownership over \ev.
+The replaced elements are destroyed.
+Returns the number of elements replaced.
+It it not an error for a container to contain no such elements (in such a case the function will return zero).
+
+
+\item \meth{int \st Remove(\st* \sv, \et\ \ev)}
+
+
+Removes and destroys the first element of those contained in \sv\ which is considered equal to the specified element \ev.
+Returns non-zero value on successful removal (if there was such element) and zero value otherwise.
+It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
+\item \meth{int \st RemoveAll(\st* \sv, \et\ \ev)}
+
+
+Removes and destroys all elements of those contained in \sv\ which are considered equal to the specified element \ev.
+Returns the number of elements removed.
+It it not an error for a container to contain no such elements (in such a case the function will return zero).
+
+
+\end{itemize}
+
+
+%----------------------------------------------------------------------------------------------------------------------
+
+
 \newcommand{\Hashset}{\emph{HashSet}}
 \section{\Hashset\ container}
 
@@ -717,6 +865,12 @@ Current implementation provides automatic capacity management.
 
 
 Constructs empty container.
+
+
+\item \meth{\st* \st New(void)}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 \commonmethods
@@ -804,6 +958,12 @@ Current implementation provides automatic capacity management.
 
 
 Constructs empty container.
+
+
+\item \meth{\st* \st New(void)}
+
+
+Returns a new heap-allocated container constructed with \meth{\st Ctor()}.
 
 
 \commonmethods

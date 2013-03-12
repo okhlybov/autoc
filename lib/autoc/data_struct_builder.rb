@@ -107,7 +107,7 @@ and is expected to have the signature int _equality-function_(+type+, +type+).
 The C function provided must return non-zero value when the values are considered equal and zero value otherwise.
 When no user-defined function is specified, this module generates simple value identity testing with == operator.
 =end
-module EqualityTestible
+module EqualityTestable
   Methods = [:equal] # :nodoc:
   ##
   # Returns +true+ when used-defined equality testing function is specified and +false+ otherwise.
@@ -123,7 +123,7 @@ module EqualityTestible
   def write_intf_equal(stream)
     stream << "int #{descriptor[:equal]}(#{type},#{type});" if equal?
   end
-end # EqualityTestible
+end # EqualityTestable
 
 
 =begin rdoc
@@ -483,7 +483,7 @@ class List < Structure
       };
       void #{ctor}(#{type}*);
       void #{dtor}(#{type}*);
-      void #{prune}(#{type}*);
+      void #{purge}(#{type}*);
       #{type}* #{new}(void);
       void #{destroy}(#{type}*);
       #{type}* #{assign}(#{type}*);
@@ -539,7 +539,7 @@ class List < Structure
         ++self->ref_count;
         return self;
       }
-      void #{prune}(#{type}* self) {
+      void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
       }
@@ -718,7 +718,7 @@ class List < Structure
   protected
   # :nodoc:
   class ElementType < DataStructBuilder::Type
-    include Assignable, Destructible, EqualityTestible
+    include Assignable, Destructible, EqualityTestable
   end # ElementType
   # :nodoc:
   def new_element_type(hash)
@@ -739,6 +739,342 @@ class List < Structure
     end
   end
 end # List
+
+
+=begin rdoc
+Data structure representing doubly-linked list.
+=end
+class Queue < Structure
+  # :nodoc:
+  def write_intf(stream)
+    super
+    stream << %$
+      typedef struct #{node} #{node};
+      typedef struct #{type} #{type};
+      typedef struct #{it} #{it};
+      struct #{type} {
+        #{node}* head_node;
+        #{node}* tail_node;
+        size_t node_count;
+        size_t ref_count;
+      };
+      struct #{it} {
+        #{node}* next_node;
+        int forward;
+      };
+      struct #{node} {
+        #{element.type} element;
+        #{node}* prev_node;
+        #{node}* next_node;
+      };
+      void #{ctor}(#{type}*);
+      void #{dtor}(#{type}*);
+      void #{purge}(#{type}*);
+      #{type}* #{new}(void);
+      void #{destroy}(#{type}*);
+      #{type}* #{assign}(#{type}*);
+      #{element.type} #{head}(#{type}*);
+      #{element.type} #{tail}(#{type}*);
+      void #{append}(#{type}*, #{element.type});
+      void #{prepend}(#{type}*, #{element.type});
+      void #{chopHead}(#{type}*);
+      void #{chopTail}(#{type}*);
+      int #{contains}(#{type}*, #{element.type});
+      #{element.type} #{find}(#{type}*, #{element.type});
+      int #{replace}(#{type}*, #{element.type}, #{element.type});
+      int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
+      int #{remove}(#{type}*, #{element.type});
+      int #{removeAll}(#{type}*, #{element.type});
+      size_t #{size}(#{type}*);
+      int #{empty}(#{type}*);
+      void #{itCtor}(#{it}*, #{type}*, int);
+      int #{itHasNext}(#{it}*);
+      #{element.type} #{itNext}(#{it}*);
+    $
+  end
+  # :nodoc:
+  def write_defs(stream)
+    stream << %$
+      void #{ctor}(#{type}* self) {
+        #{assert}(self);
+        self->head_node = self->tail_node = NULL;
+        self->node_count = 0;
+      }
+      void #{dtor}(#{type}* self) {
+        #{node}* node;
+        #{assert}(self);
+        #{destruct_stmt};
+        node = self->head_node;
+        while(node) {
+          #{node}* this_node = node;
+          node = node->next_node;
+          #{free}(this_node);
+        }
+      }
+      #{type}* #{new}(void) {
+        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
+        #{ctor}(self);
+        self->ref_count = 0;
+        return self;
+      }
+      void #{destroy}(#{type}* self) {
+        #{assert}(self);
+        if(!--self->ref_count) {
+          #{dtor}(self);
+          #{free}(self);
+        }
+      }
+      #{type}* #{assign}(#{type}* self) {
+        ++self->ref_count;
+        return self;
+      }
+      void #{purge}(#{type}* self) {
+        #{dtor}(self);
+        #{ctor}(self);
+      }
+      #{element.type} #{head}(#{type}* self) {
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        return self->head_node->element;
+      }
+      #{element.type} #{tail}(#{type}* self) {
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        return self->tail_node->element;
+      }
+      void #{chopHead}(#{type}* self) {
+        #{node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = self->head_node;
+        #{element.dtor("node->element")};
+        self->head_node = self->head_node->next_node;
+        self->head_node->prev_node = NULL;
+        --self->node_count;
+        #{free}(node);
+      }
+      void #{chopTail}(#{type}* self) {
+        #{node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = self->tail_node;
+        #{element.dtor("node->element")};
+        self->tail_node = self->tail_node->prev_node;
+        self->tail_node->next_node = NULL;
+        --self->node_count;
+        #{free}(node);
+      }
+      void #{append}(#{type}* self, #{element.type} element) {
+        #{node}* node;
+        #{assert}(self);
+        node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
+        node->element = #{element.assign("element")};
+        if(#{empty}(self)) {
+          node->prev_node = node->next_node = NULL;
+          self->tail_node = self->head_node = node;
+        } else {
+          node->next_node = NULL;
+          node->prev_node = self->tail_node;
+          self->tail_node->next_node = node;
+          self->tail_node = node;
+        }
+        ++self->node_count;
+      }
+      void #{prepend}(#{type}* self, #{element.type} element) {
+        #{node}* node;
+        #{assert}(self);
+        node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
+        node->element = #{element.assign("element")};
+        if(#{empty}(self)) {
+          node->prev_node = node->next_node = NULL;
+          self->tail_node = self->head_node = node;
+        } else {
+          node->prev_node = NULL;
+          node->next_node = self->head_node;
+          self->head_node->prev_node = node;
+          self->head_node = node;
+        }
+        ++self->node_count;
+      }
+      int #{contains}(#{type}* self, #{element.type} what) {
+        #{node}* node;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{element.dtor("what")};
+            return 1;
+          }
+          node = node->next_node;
+        }
+        #{element.dtor("what")};
+        return 0;
+      }
+      #{element.type} #{find}(#{type}* self, #{element.type} what) {
+        #{node}* node;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        #{assert}(#{contains}(self, what));
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{element.dtor("what")};
+            return node->element;
+          }
+          node = node->next_node;
+        }
+        #{abort}();
+      }
+      int #{replace}(#{type}* self, #{element.type} what, #{element.type} with) {
+        #{node}* node;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        with = #{element.assign("with")};
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{element.dtor("node->element")};
+            node->element = #{element.assign("with")};
+            #{element.dtor("what")};
+            #{element.dtor("with")};
+            return 1;
+          }
+          node = node->next_node;
+        }
+        #{element.dtor("what")};
+        #{element.dtor("with")};
+        return 0;
+      }
+      int #{replaceAll}(#{type}* self, #{element.type} what, #{element.type} with) {
+        #{node}* node;
+        int count = 0;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        with = #{element.assign("with")};
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{element.dtor("node->element")};
+            node->element = #{element.assign("with")};
+            ++count;
+          }
+          node = node->next_node;
+        }
+        #{element.dtor("what")};
+        #{element.dtor("with")};
+        return count;
+      }
+      int #{remove}(#{type}* self, #{element.type} what) {
+        #{node}* node;
+        int found = 0;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{node} *prev = node->prev_node, *next = node->next_node;
+            #{element.dtor("node->element")};
+            if(prev && next) {
+              prev->next_node = next;
+              next->prev_node = prev;
+            } else if(prev) {
+              prev->next_node = NULL;
+              self->tail_node = prev;
+            } else {
+              next->prev_node = NULL;
+              self->head_node = next;
+            }
+            --self->node_count;
+            #{free}(node);
+            found = 1;
+            break;
+          }
+          node = node->next_node;
+        }
+        #{element.dtor("what")};
+        return found;
+      }
+      int #{removeAll}(#{type}* self, #{element.type} what) {
+        #{node}* node;
+        int count = 0;
+        #{assert}(self);
+        what = #{element.assign("what")};
+        node = self->head_node;
+        while(node) {
+          if(#{element.equal("node->element", "what")}) {
+            #{node} *prev = node->prev_node, *next = node->next_node;
+            #{element.dtor("node->element")};
+            if(prev && next) {
+              prev->next_node = next;
+              next->prev_node = prev;
+            } else if(prev) {
+              prev->next_node = NULL;
+              self->tail_node = prev;
+            } else {
+              next->prev_node = NULL;
+              self->head_node = next;
+            }
+            --self->node_count;
+            #{free}(node);
+            ++count;
+          }
+          node = node->next_node;
+        }
+        #{element.dtor("what")};
+        return count;
+      }
+      size_t #{size}(#{type}* self) {
+        #{assert}(self);
+        return self->node_count;
+      }
+      int #{empty}(#{type}* self) {
+        #{assert}(self);
+        return !self->node_count;
+      }
+      void #{itCtor}(#{it}* self, #{type}* list, int forward) {
+        #{assert}(self);
+        #{assert}(list);
+        self->forward = forward;
+        self->next_node = forward ? list->head_node : list->tail_node;
+      }
+      int #{itHasNext}(#{it}* self) {
+        #{assert}(self);
+        return self->next_node != NULL;
+      }
+      #{element.type} #{itNext}(#{it}* self) {
+        #{node}* node;
+        #{assert}(self);
+        node = self->next_node;
+        self->next_node = self->forward ? self->next_node->next_node : self->next_node->prev_node;
+        return node->element;
+      }
+    $
+  end
+  protected
+  # :nodoc:
+  class ElementType < DataStructBuilder::Type
+    include Assignable, Destructible, EqualityTestable
+  end # ElementType
+  # :nodoc:
+  def new_element_type(hash)
+    ElementType.new(hash)
+  end
+  private
+  # :nodoc:
+  def destruct_stmt
+    if element.dtor?
+      %${
+        #{it} it;
+        #{itCtor}(&it, self);
+        while(#{itHasNext}(&it)) {
+          #{element.type} e = #{itNext}(&it);
+          #{element.dtor(:e)};
+        }
+      }$
+    end
+  end
+end # Queue
 
 
 =begin rdoc
@@ -985,7 +1321,7 @@ class HashSet < Structure
   protected
   # :nodoc:
   class ElementType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, EqualityTestible
+    include Assignable, Destructible, Hashable, EqualityTestable
   end # ElementType
   # :nodoc:
   def new_element_type(hash)
@@ -1214,11 +1550,11 @@ class HashMap < Code
   protected
   # :nodoc:
   class EntryType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, EqualityTestible
+    include Assignable, Destructible, Hashable, EqualityTestable
   end # EntryType
   # :nodoc:
   class KeyType < DataStructBuilder::Type
-    include Assignable, Destructible, Hashable, EqualityTestible
+    include Assignable, Destructible, Hashable, EqualityTestable
   end # KeyType
   # :nodoc:
   class ValueType < DataStructBuilder::Type

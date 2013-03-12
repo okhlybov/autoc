@@ -9,11 +9,10 @@
 void PrintIntVector(IntVector* vec) {
     IntVectorIt it;
     IntVectorItCtor(&it, vec);
-    printf("[ ");
     while(IntVectorItHasNext(&it)) {
         printf("%d ", IntVectorItNext(&it));
     }
-    printf("]\n");
+    printf("\n");
 }
 
 
@@ -212,7 +211,7 @@ void BoxListTest() {
     BoxListRemove(list, BoxMake(2));
     BoxListRemove(list, BoxMake(3));
     printf("size = %d\n", BoxListSize(list));
-    BoxListPrune(list);
+    BoxListPurge(list);
     BoxListAdd(list, BoxMake(7));
     BoxListAdd(list, b1);
     BoxListAdd(list, b1);
@@ -288,6 +287,42 @@ void PChar2IntVectorMapTest() {
 }
 
 
+void PrintPCharQueue(PCharQueue* queue, int fwd) {
+    PCharQueueIt it;
+    PCharQueueItCtor(&it, queue, fwd);
+    while(PCharQueueItHasNext(&it)) {
+        printf("%s ", PCharQueueItNext(&it));
+    }
+    printf("\n");
+}
+
+
+void PCharQueueTest() {
+    PCharQueue* queue;
+    printf("\n*** PCharQueue\n");
+    queue = PCharQueueAssign(PCharQueueNew());
+    PCharQueuePrepend(queue, "one");
+    PCharQueuePrepend(queue, "zero");
+    PCharQueueAppend(queue, "two");
+    PCharQueueAppend(queue, "three");
+    printf("contains(zero) == %d\n", PCharQueueContains(queue, "zero"));
+    printf("contains(four) == %d\n", PCharQueueContains(queue, "four"));
+    PrintPCharQueue(queue, 1);
+    PrintPCharQueue(queue, 0);
+    PCharQueueRemove(queue, "two");
+    printf("head = %s\n", PCharQueueHead(queue));
+    printf("tail = %s\n", PCharQueueTail(queue));
+    PCharQueueChopTail(queue);
+    PCharQueueChopHead(queue);
+    PrintPCharQueue(queue, 1);
+    PCharQueuePurge(queue);
+    PCharQueueAppend(queue, "zero");
+    printf("head = %s\n", PCharQueueHead(queue));
+    printf("tail = %s\n", PCharQueueTail(queue));
+    PCharQueueDestroy(queue);
+}
+
+
 int main(int argc, char** argv) {
     IntVectorTest();
     IntSetTest();
@@ -298,5 +333,6 @@ int main(int argc, char** argv) {
     BoxListTest();
     Box2BoxMapTest();
     PChar2IntVectorMapTest();
+    PCharQueueTest();
     return 0;
 }

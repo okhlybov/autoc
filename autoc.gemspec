@@ -1,6 +1,6 @@
 Gem::Specification.new do |g|
   g.name = "autoc"
-  g.version = "0.5"
+  g.version = "0.6"
   g.author = "Oleg A. Khlybov"
   g.email = "fougas@mail.ru"
   g.homepage = "http://autoc.sourceforge.net/"
