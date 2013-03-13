@@ -62,7 +62,7 @@ class Code < CodeBuilder::Code
     if @overrides.include?(method)
       @overrides[method]
     else
-      s = method.to_s
+      s = method.to_s.chomp('?')
       @type + s[0].capitalize + s[1..-1]
     end
   end
@@ -388,7 +388,7 @@ class Vector < Structure
         #{assert}(self);
         if(self->element_count != element_count) {
           size_t count;
-          #{element.type}* values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(values);
+          #{element.type}* values = (#{element.type}*)#{calloc}(element_count, sizeof(#{element.type})); #{assert}(values);
           if(self->element_count > element_count) {
             #{destruct_stmt("self->values", "element_count", "self->element_count-1")};
             count = element_count;
@@ -1119,6 +1119,10 @@ class HashSet < Structure
       int #{put}(#{type}*, #{element.type});
       void #{replace}(#{type}*, #{element.type});
       int #{remove}(#{type}*, #{element.type});
+      void #{not?}(#{type}*, #{type}*);
+      void #{and?}(#{type}*, #{type}*);
+      void #{or?}(#{type}*, #{type}*);
+      void #{xor?}(#{type}*, #{type}*);
       void #{itCtor}(#{it}*, #{type}*);
       int #{itHasNext}(#{it}*);
       #{element.type} #{itNext}(#{it}*);
@@ -1280,6 +1284,66 @@ class HashSet < Structure
         }
         #{element.dtor("what")};
         return removed;
+      }
+      void #{not?}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{assert}(self);
+        #{assert}(other);
+        #{itCtor}(&it, other);
+        while(#{itHasNext}(&it)) {
+          #{remove}(self, #{itNext}(&it));
+        }
+      }
+      void #{or?}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{assert}(self);
+        #{assert}(other);
+        #{itCtor}(&it, other);
+        while(#{itHasNext}(&it)) {
+          #{put}(self, #{itNext}(&it));
+        }
+      }
+      void #{and?}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{type} set;
+        #{assert}(self);
+        #{assert}(other);
+        #{ctor}(&set);
+        #{itCtor}(&it, self);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element = #{itNext}(&it);
+          if(#{contains}(other, element)) #{put}(&set, element);
+        }
+        #{itCtor}(&it, other);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element = #{itNext}(&it);
+          if(#{contains}(self, element)) #{put}(&set, element);
+        }
+        #{dtor}(self);
+        self->buckets = set.buckets;
+        #{rehash}(self);
+        /*#{dtor}(&set);*/
+      }
+      void #{xor?}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{type} set;
+        #{assert}(self);
+        #{assert}(other);
+        #{ctor}(&set);
+        #{itCtor}(&it, self);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element = #{itNext}(&it);
+          if(!#{contains}(other, element)) #{put}(&set, element);
+        }
+        #{itCtor}(&it, other);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element = #{itNext}(&it);
+          if(!#{contains}(self, element)) #{put}(&set, element);
+        }
+        #{dtor}(self);
+        self->buckets = set.buckets;
+        #{rehash}(self);
+        /*#{dtor}(&set);*/
       }
       void #{itCtor}(#{it}* self, #{type}* set) {
         #{assert}(self);
@@ -1574,7 +1638,7 @@ class HashMap < Code
   end
   # :nodoc:
   def new_entry_set
-    HashSet.new("#{type}EntrySet", @entry_hash)
+    HashSet.new(entrySet, @entry_hash)
   end
 end # Map
 
