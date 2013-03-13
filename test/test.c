@@ -62,10 +62,20 @@ int PCharEqual(const char* lt, const char* rt) {
 }
 
 
+void PrintPCharSet(PCharSet* set) {
+    PCharSetIt it;
+    PCharSetItCtor(&it, set);
+    while(PCharSetItHasNext(&it)) {
+        printf("%s ", PCharSetItNext(&it));
+    }
+    printf("\n");
+}
+
+
 void PCharSetTest() {
     PCharSet set;
     PCharSetIt it;
-    printf("\n*** PCharSet\n");
+    printf("\n*** PCharSet (I)\n");
     PCharSetCtor(&set);
     printf("size = %d\n", PCharSetSize(&set));
     PCharSetPut(&set, "cat");
@@ -82,6 +92,41 @@ void PCharSetTest() {
     printf("contains(snake) == %d\n", PCharSetContains(&set, "snake"));
     PCharSetPurge(&set);
     PCharSetDtor(&set);
+}
+
+
+void PCharSetTest2() {
+    PCharSet *a, *b, *c;
+    printf("\n*** PCharSet (II)\n");
+    a = PCharSetAssign(PCharSetNew());
+    b = PCharSetAssign(PCharSetNew());
+    c = PCharSetAssign(PCharSetNew());
+    PCharSetPut(a, "cat");
+    PCharSetPut(a, "dog");
+    PCharSetPut(a, "pig");
+    PCharSetPut(a, "rat");
+    PCharSetPut(b, "mouse");
+    PCharSetPut(b, "snake");
+    PCharSetPut(b, "rat");
+
+    PCharSetPurge(c);
+    PCharSetOr(c, a);
+    PCharSetAnd(c, b);
+    PrintPCharSet(c);
+
+    PCharSetPurge(c);
+    PCharSetOr(c, a);
+    PCharSetOr(c, b);
+    PrintPCharSet(c);
+
+    PCharSetPurge(c);
+    PCharSetOr(c, a);
+    PCharSetXor(c, b);
+    PrintPCharSet(c);
+
+    PCharSetDestroy(a);
+    PCharSetDestroy(b);
+    PCharSetDestroy(c);
 }
 
 
@@ -327,6 +372,7 @@ int main(int argc, char** argv) {
     IntVectorTest();
     IntSetTest();
     PCharSetTest();
+    PCharSetTest2();
     PChar2IntMapTest();
     BoxSetTest();
     BoxVectorTest();

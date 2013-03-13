@@ -49,6 +49,7 @@
 
 
 \newcommand{\sv}{\emph{self}}
+\newcommand{\ov}{\emph{other}}
 \newcommand{\ev}{\emph{element}}
 \newcommand{\kv}{\emph{key}}
 \newcommand{\vv}{\emph{value}}
@@ -932,6 +933,30 @@ On successful replacement the replaced element is destroyed.
 Removes and destroys the element of those contained in \sv\ which is considered equal to the specified element \ev.
 Returns non-zero value on successful removal (if there was such element) and zero value otherwise.
 It it not an error for a container not to contain such element (in such a case the function will return zero).
+
+
+\item \meth{void \st And(\st* \sv, \st* \ov)}
+
+
+Performs intersection operation \sv$\leftarrow$\sv$\cap$\ov, that is \sv\ will retain only those elements contained in \ov.
+
+
+\item \meth{void \st Or(\st* \sv, \st* \ov)}
+
+
+Performs union operation \sv$\leftarrow$\sv$\cup$\ov, that is \sv\ will also contain all elements from \ov.
+
+
+\item \meth{void \st Not(\st* \sv, \st* \ov)}
+
+
+Performs difference operation \sv$\leftarrow$\sv$\setminus$\ov, that is \sv\ will retain only those elements \emph{not} contained in \ov.
+
+
+\item \meth{void \st Xor(\st* \sv, \st* \ov)}
+
+
+Performs symmetric difference operation \sv$\leftarrow$\sv$\ominus$\ov, that is \sv\ will contain only the elements which are either in \sv\ or \ov, but not in both.
 
 
 \end{itemize}
