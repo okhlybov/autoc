@@ -282,7 +282,7 @@ class Structure < Code
   def initialize(type, element_descriptor)
     super(type)
     @element = new_element_type(element_descriptor)
-    @self_hash = {:type=>"#{type}*", :assign=>assign, :dtor=>destroy}
+    @self_hash = {:type=>"#{type}*", :assign=>assign, :ctor=>new, :dtor=>destroy}
   end
   # :nodoc:
   def [](symbol)
@@ -303,6 +303,10 @@ end # Struct
 Data structure representing simple light-weight vector with capabilities similar to C array, with optional bounds checking.
 =end
 class Vector < Structure
+  def initialize(*args)
+    super
+    @self_hash.delete(:ctor) # unlike other data structures, Vector has no parameterless constructor
+  end
   # :nodoc:
   def write_intf(stream)
     super
@@ -1414,7 +1418,7 @@ class HashMap < Code
     @entrySet = new_entry_set
     @key = new_key_type(key_descriptor)
     @value = new_value_type(value_descriptor)
-    @self_hash = {:type=>"#{type}*", :assign=>assign, :dtor=>destroy}
+    @self_hash = {:type=>"#{type}*", :assign=>assign, :ctor=>new, :dtor=>destroy}
   end
   # :nodoc:
   def [](symbol)
