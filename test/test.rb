@@ -5,7 +5,7 @@ include CodeBuilder
 include DataStructBuilder
 
 
-Int = {:type=>"int"}
+Int = {:type=>"int", :compare=>nil}
 PChar = {:type=>"const char*", :equal=>"PCharEqual", :hash=>"PCharHash"}
 Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :assign=>"BoxAssign", :equal=>"BoxEqual", :hash=>"BoxHash", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
 

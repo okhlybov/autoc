@@ -46,10 +46,8 @@ Base class for all C data container generators.
 =end
 class Code < CodeBuilder::Code
   undef abort;
-  ##
   # String-like prefix for generated data type. Must be a valid C identifier.
   attr_reader :type
-  ##
   # Setups the data structure generator.
   # +type+ is a C type name used as a prefix for generated container functions. It must be a valid C identifier.
   def initialize(type)
@@ -82,12 +80,10 @@ When no user-defined function is specified, this module generates simple value a
 =end
 module Assignable
   Methods = [:assign] # :nodoc:
-  ##
   # Returns +true+ when used-defined assignment function is specified and +false+ otherwise.
   def assign?
     !descriptor[:assign].nil?
   end
-  ##
   # Returns string representing the C assignment expression for +obj+.
   # +obj+ is a string-like object containing the C expression to be injected.
   def assign(obj)
@@ -109,7 +105,6 @@ When no user-defined function is specified, this module generates simple value i
 =end
 module EqualityTestable
   Methods = [:equal] # :nodoc:
-  ##
   # Returns +true+ when used-defined equality testing function is specified and +false+ otherwise.
   def equal?
     !descriptor[:equal].nil?
@@ -127,6 +122,35 @@ end # EqualityTestable
 
 
 =begin rdoc
+Indicates that the type class including this module provides the comparison operation.
+The user-defined function is assigned to the key +:compare+
+and is expected to have the signature int _compare-function_(+type+, +type+).
+The C function provided must return value greater than zero when the first argument is considered greater than the second,
+value less than zero when the first argument is considered smaller than the second and zero value when the two arguments are
+considered equal.
+When no user-defined function is specified, this module generates simple value comparison with < and > operators.
+=end
+module Comparable
+  Methods = [:compare] # :nodoc:
+  # Returns +true+ when wither used-defined or default equality testing function is specified and +false+ otherwise.
+  def compare?
+    descriptor.include?(:compare)
+  end
+  # Returns string representing the C expression comparison of +lt+ and +rt+.
+  # +lt+ and +rt+ are the string-like objects containing the C expression to be injected.
+  def compare(lt, rt)
+    compare = descriptor[:compare]
+    compare.nil? ? "(#{lt} > #{rt} ? +1 : (#{lt} < #{rt} ? -1 : 0))" : "#{compare}(#{lt},#{rt})"
+  end
+  # :nodoc:
+  def write_intf_compare(stream)
+    compare = descriptor[:compare]
+    stream << "int #{compare}(#{type},#{type});" unless compare.nil?
+  end
+end # Comparable
+
+
+=begin rdoc
 Indicates that the type class including this module provides the hash code calculation.
 The user-defined function is assigned to the key +:hash+
 and is expected to have the signature +size_t+ _hash-function_(+type+).
@@ -135,7 +159,6 @@ When no user-defined function is specified, this module generates simple casting
 =end
 module Hashable
   Methods = [:hash] # :nodoc:
-  ##
   # Returns +true+ when used-defined hashing function is specified and +false+ otherwise.
   def hash?
     !descriptor[:hash].nil?
@@ -161,7 +184,6 @@ When no user-defined function is specified, this module generates no code at all
 =end
 module Constructible
   Methods = [:ctor] # :nodoc:
-  ##
   # Returns +true+ when used-defined construction function is specified and +false+ otherwise.
   def ctor?
     !descriptor[:ctor].nil?
@@ -186,13 +208,16 @@ When no user-defined function is specified, this module generates no code at all
 The object destruction is performed prior the container destruction, on object removal/replacement.
 =end
 module Destructible
-  Methods = [:dtor]
+  Methods = [:dtor] # :nodoc:
+  # Returns +true+ when used-defined construction function is specified and +false+ otherwise.
   def dtor?
     !descriptor[:dtor].nil?
   end
+  # Returns string representing the C construction expression.
   def dtor(obj)
     dtor? ? "#{descriptor[:dtor]}(#{obj})" : nil
   end
+  # :nodoc:
   def write_intf_dtor(stream)
     stream << "void #{descriptor[:dtor]}(#{type});" if dtor?
   end
@@ -355,6 +380,7 @@ class Vector < Structure
         return self->element_count;
       }
     $
+    stream << %$void #{sort}(#{type}*);$ if element.compare?
   end
   # :nodoc:
   def write_defs(stream)
@@ -430,11 +456,20 @@ class Vector < Structure
         return #{get}(self->vector, self->index++);
       }
     $
+    stream << %$
+      static int #{comparator}(const void* lp, const void* rp) {
+        return #{element.compare("*(#{element.type}*)lp", "*(#{element.type}*)rp")};
+      }
+      void #{sort}(#{type}* self) {
+        #{assert}(self);
+        qsort(self->values, self->element_count, sizeof(#{element.type}), #{comparator});
+      }
+    $ if element.compare?
   end
   protected
   # :nodoc:
   class ElementType < DataStructBuilder::Type
-    include Assignable, Constructible, Destructible
+    include Assignable, Constructible, Destructible, Comparable
   end # ElementType
   # :nodoc:
   def new_element_type(type)

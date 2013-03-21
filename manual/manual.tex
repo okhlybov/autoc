@@ -299,7 +299,24 @@ The expected \C\ function signature is: \meth{int \emph{function}(\st, \st)}.
 The function specified must return non-zero value if two elements are considered equal and zero value otherwise.
 
 
-If omitted, a simple value comparison using the \C\ equality testing operator \lstinline[language=C]!==! is generated.
+If omitted, simple value equality testing using the \C\ equality testing operator \lstinline[language=C]!==! is generated.
+
+
+\item \lstinline[language=Ruby]!:compare!
+
+
+An optional key which presents a \C-side element comparison function.
+This function is used by the vector container to sort its contents.
+Note that this key must be explicitely set to either \C-side function name or \lstinline[language=Ruby]!nil! if one wants to have the respective functionality.
+
+
+The expected \C\ function signature is: \meth{int \emph{function}(\st, \st)}.
+
+
+Th function specified must return greater-than-zero value when the first argument is considered greater than the second argument, less-than-zero value when the first argument is considered smaller than the second argument and zero value when the two arguments are considered equal.
+
+
+If this key is set to \lstinline[language=Ruby]!nil!, simple value comparison algorithm using the \C\ operators \lstinline[language=C]!<! and \lstinline[language=C]!>! is generated.
 
 
 \end{itemize}
@@ -579,6 +596,15 @@ Sets the new value \ev\ at the valid index \emph{index}.
 \emph{It is a run-time error to set value at the index outside valid range.}
 The previously contained element at that index is destroyed.
 The container takes ownership over the element \ev.
+
+
+\item \meth{void \st Sort}(\st* \sv)
+
+
+Performs in-place sorting of the elements employing user-supplied comparison function.
+
+
+\emph{This is an optional function generated only when the key \lstinline[language=Ruby]!:compare! is specified explicitely.}
 
 
 \end{itemize}
