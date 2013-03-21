@@ -22,7 +22,19 @@ void IntVectorTest() {
     vec = IntVectorAssign(IntVectorNew(10));
     printf("size = %d\n", IntVectorSize(vec));
     IntVectorSet(vec, 0, 3);
+    IntVectorSet(vec, 1, 11);
+    IntVectorSet(vec, 2, 4);
+    IntVectorSet(vec, 3, 0);
+    IntVectorSet(vec, 4, 5);
+    IntVectorSet(vec, 5, 99);
+    IntVectorSet(vec, 6, 2);
+    IntVectorSet(vec, 7, 7);
+    IntVectorSet(vec, 8, 6);
+    IntVectorSet(vec, 9, 8);
+    PrintIntVector(vec);
     printf("vec[0] == %d\n", IntVectorGet(vec, 0));
+    IntVectorSort(vec);
+    PrintIntVector(vec);
     IntVectorDestroy(vec);
 }
 
