@@ -38,6 +38,11 @@ PrologueCode = Class.new(CodeBuilder::Code) do
       #endif
     $
   end
+  def write_defs(stream)
+    stream << %$
+      #include <stdio.h>
+    $ if $debug
+  end
 end.new # PrologueCode
 
 
@@ -1166,6 +1171,7 @@ class HashSet < Structure
       int #{itHasNext}(#{it}*);
       #{element.type} #{itNext}(#{it}*);
     $
+    stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
   end
   # :nodoc:
   def write_defs(stream)
@@ -1332,6 +1338,7 @@ class HashSet < Structure
         while(#{itHasNext}(&it)) {
           #{remove}(self, #{itNext}(&it));
         }
+        #{rehash}(self);
       }
       void #{or?}(#{type}* self, #{type}* other) {
         #{it} it;
@@ -1341,6 +1348,7 @@ class HashSet < Structure
         while(#{itHasNext}(&it)) {
           #{put}(self, #{itNext}(&it));
         }
+        #{rehash}(self);
       }
       void #{and?}(#{type}* self, #{type}* other) {
         #{it} it;
@@ -1360,6 +1368,7 @@ class HashSet < Structure
         }
         #{dtor}(self);
         self->buckets = set.buckets;
+        self->size = set.size;
         #{rehash}(self);
         /*#{dtor}(&set);*/
       }
@@ -1381,6 +1390,7 @@ class HashSet < Structure
         }
         #{dtor}(self);
         self->buckets = set.buckets;
+        self->size = set.size;
         #{rehash}(self);
         /*#{dtor}(&set);*/
       }
@@ -1420,6 +1430,24 @@ class HashSet < Structure
         }
       }
     $
+    stream << %$
+      void #{dumpStats}(#{type}* self, FILE* file) {
+        size_t index, min_size, max_size;
+        #{assert}(self);
+        #{assert}(file);
+        min_size = self->size;
+        max_size = 0;
+        fprintf(file, "element count = %d\\n", self->size);
+        fprintf(file, "bucket count = %d\\n", self->bucket_count);
+        for(index = 0; index < self->bucket_count; ++index) {
+          size_t bucket_size = #{@bucket.size}(&self->buckets[index]);
+          if(min_size > bucket_size) min_size = bucket_size;
+          if(max_size < bucket_size) max_size = bucket_size;
+          fprintf(file, "[%d] element count = %d (%.1f%%)\\n", index, bucket_size, (double)bucket_size*100/self->size);
+        }
+        fprintf(file, "element count = [%d ... %d]\\n", min_size, max_size);
+      }
+    $ if $debug
   end
   protected
   # :nodoc:
@@ -1503,6 +1531,7 @@ class HashMap < Code
       #{value.type} #{itNextElement}(#{it}*);
       #{@entry.type} #{itNext}(#{it}*);
     $
+    stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
   end
   # :nodoc:
   def write_defs(stream)
@@ -1649,6 +1678,13 @@ class HashMap < Code
         return #{@entrySet.itNext}(&self->it);
       }
     $
+    stream << %$
+      void #{dumpStats}(#{type}* self, FILE* file) {
+        #{assert}(self);
+        #{assert}(file);
+        #{@entrySet.dumpStats}(&self->entries, file);
+      }
+    $ if $debug
   end
   protected
   # :nodoc:
@@ -1682,4 +1718,4 @@ class HashMap < Code
 end # Map
 
 
-end # DataStruct
+end # DataStructBuilder
