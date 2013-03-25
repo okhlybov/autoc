@@ -37,8 +37,6 @@ PrologueCode = Class.new(CodeBuilder::Code) do
         #endif
       #endif
     $
-  end
-  def write_defs(stream)
     stream << %$
       #include <stdio.h>
     $ if $debug
