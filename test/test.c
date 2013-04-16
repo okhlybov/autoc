@@ -169,7 +169,7 @@ struct Box {
 
 
 Box* BoxNew() {
-    Box* box = malloc(sizeof(Box));
+    Box* box = (Box*)malloc(sizeof(Box));
     box->refs = 0;
     box->contents = -1;
     return box;
