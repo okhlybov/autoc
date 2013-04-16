@@ -8,5 +8,5 @@
 =end
 
 
-require 'autoc/code_builder'
-require 'autoc/data_struct_builder'
+require "autoc/code_builder"
+require "autoc/data_struct_builder"

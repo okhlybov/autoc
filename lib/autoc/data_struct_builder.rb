@@ -69,7 +69,7 @@ class Code < CodeBuilder::Code
   end
   # :nodoc:
   def setup_overrides
-    @overrides = {:malloc=>'malloc', :calloc=>'calloc', :free=>'free', :assert=>'assert', :abort=>'abort', :inline=>'__DATA_STRUCT_INLINE'}
+    @overrides = {:malloc=>"malloc", :calloc=>"calloc", :free=>"free", :assert=>"assert", :abort=>"abort", :inline=>"__DATA_STRUCT_INLINE"}
   end
 end # Code
 
@@ -339,6 +339,9 @@ class Vector < Structure
   def write_intf(stream)
     super
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -384,6 +387,11 @@ class Vector < Structure
       }
     $
     stream << %$void #{sort}(#{type}*);$ if element.compare?
+    stream << %$
+      #if defined(__cplusplus)
+        }
+      #endif
+    $
   end
   # :nodoc:
   def write_defs(stream)
@@ -508,6 +516,9 @@ class List < Structure
   def write_intf(stream)
     super
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{node} #{node};
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -543,6 +554,9 @@ class List < Structure
       void #{itCtor}(#{it}*, #{type}*);
       int #{itHasNext}(#{it}*);
       #{element.type} #{itNext}(#{it}*);
+      #if defined(__cplusplus)
+        }
+      #endif
     $
   end
   # :nodoc:
@@ -791,6 +805,9 @@ class Queue < Structure
   def write_intf(stream)
     super
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{node} #{node};
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -832,6 +849,9 @@ class Queue < Structure
       void #{itCtor}(#{it}*, #{type}*, int);
       int #{itHasNext}(#{it}*);
       #{element.type} #{itNext}(#{it}*);
+      #if defined(__cplusplus)
+        }
+      #endif
     $
   end
   # :nodoc:
@@ -1133,6 +1153,9 @@ class HashSet < Structure
     super
     @bucket.write_intf(stream)
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -1170,6 +1193,11 @@ class HashSet < Structure
       #{element.type} #{itNext}(#{it}*);
     $
     stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
+    stream << %$
+      #if defined(__cplusplus)
+        }
+      #endif
+    $
   end
   # :nodoc:
   def write_defs(stream)
@@ -1487,19 +1515,27 @@ class HashMap < Code
   end
   # :nodoc:
   def write_intf(stream)
-    stream << @forward
     key.write_intf(stream)
     value.write_intf(stream)
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{@entry.type} #{@entry.type};
       struct #{@entry.type} {
         #{key.type} key;
         #{value.type} value;
         int valid_value;
       };
+      #if defined(__cplusplus)
+        }
+      #endif
     $
     @entrySet.write_intf(stream)
     stream << %$
+      #if defined(__cplusplus)
+        extern "C" {
+      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -1530,6 +1566,11 @@ class HashMap < Code
       #{@entry.type} #{itNext}(#{it}*);
     $
     stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
+    stream << %$
+      #if defined(__cplusplus)
+        }
+      #endif
+    $
   end
   # :nodoc:
   def write_defs(stream)

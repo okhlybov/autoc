@@ -1,4 +1,4 @@
-require 'set'
+require "set"
 
 
 module CodeBuilder
@@ -207,7 +207,7 @@ class CModule < CodeBuilder::Module
       @guard_macro = "#{@module.name.upcase}_AUTO_H"
     end
     def new_stream
-      ::File.new(@file_name, 'wt')
+      ::File.new(@file_name, "wt")
     end
     def write(stream)
       stream << %$
@@ -228,7 +228,7 @@ class CModule < CodeBuilder::Module
       @file_name = @module.source_count > 1 ? "#{@module.name.downcase}_auto#{index}.c" : "#{@module.name.downcase}_auto.c"
     end
     def new_stream
-      ::File.new(@file_name, 'wt')
+      ::File.new(@file_name, "wt")
     end
     def write(stream)
       stream << %$
