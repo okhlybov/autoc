@@ -481,6 +481,14 @@ Returns the number of elements in container.
 }
 
 
+\subsection{Language conformance}
+
+The \autoc\ package generates strict \emph{ANSI C} code.
+Also, the generated code is designed to be "\Cpp\ clean" meaning that it can be successfully compiled by either \C\ or \Cpp\ compiler.
+When compiling in \Cpp\ mode all externally visible functions will have the \C\ linkage by default.
+\emph{Note that this does not apply to the user-supplied functions whose protoypes are emitted undecorated.}
+
+
 \subsection{Naming conventions}
 
 

@@ -36,6 +36,13 @@ PrologueCode = Class.new(CodeBuilder::Code) do
           #define __DATA_STRUCT_INLINE static inline
         #endif
       #endif
+      #ifndef __DATA_STRUCT_EXTERN
+        #if defined(__cplusplus)
+          #define __DATA_STRUCT_EXTERN extern "C"
+        #else
+          #define __DATA_STRUCT_EXTERN extern
+        #endif
+      #endif
     $
     stream << %$
       #include <stdio.h>
@@ -69,7 +76,7 @@ class Code < CodeBuilder::Code
   end
   # :nodoc:
   def setup_overrides
-    @overrides = {:malloc=>"malloc", :calloc=>"calloc", :free=>"free", :assert=>"assert", :abort=>"abort", :inline=>"__DATA_STRUCT_INLINE"}
+    @overrides = {:malloc=>"malloc", :calloc=>"calloc", :free=>"free", :assert=>"assert", :abort=>"abort", :public=>"__DATA_STRUCT_EXTERN", :inline=>"__DATA_STRUCT_INLINE"}
   end
 end # Code
 
@@ -339,9 +346,6 @@ class Vector < Structure
   def write_intf(stream)
     super
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -353,16 +357,16 @@ class Vector < Structure
         #{type}* vector;
         size_t index;
       };
-      void #{ctor}(#{type}*, size_t);
-      void #{dtor}(#{type}*);
-      #{type}* #{new}(size_t);
-      void #{destroy}(#{type}*);
-      #{type}* #{assign}(#{type}*);
-      void #{resize}(#{type}*, size_t);
-      int #{within}(#{type}*, size_t);
-      void #{itCtor}(#{it}*, #{type}*);
-      int #{itHasNext}(#{it}*);
-      #{element.type} #{itNext}(#{it}*);
+      #{public} void #{ctor}(#{type}*, size_t);
+      #{public} void #{dtor}(#{type}*);
+      #{public} #{type}* #{new}(size_t);
+      #{public} void #{destroy}(#{type}*);
+      #{public} #{type}* #{assign}(#{type}*);
+      #{public} void #{resize}(#{type}*, size_t);
+      #{public} int #{within}(#{type}*, size_t);
+      #{public} void #{itCtor}(#{it}*, #{type}*);
+      #{public} int #{itHasNext}(#{it}*);
+      #{public} #{element.type} #{itNext}(#{it}*);
       #{inline} #{element.type}* #{ref}(#{type}* self, size_t index) {
         #{assert}(self);
         #{assert}(#{within}(self, index));
@@ -386,12 +390,7 @@ class Vector < Structure
         return self->element_count;
       }
     $
-    stream << %$void #{sort}(#{type}*);$ if element.compare?
-    stream << %$
-      #if defined(__cplusplus)
-        }
-      #endif
-    $
+    stream << %$#{public} void #{sort}(#{type}*);$ if element.compare?
   end
   # :nodoc:
   def write_defs(stream)
@@ -516,9 +515,6 @@ class List < Structure
   def write_intf(stream)
     super
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{node} #{node};
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -534,29 +530,26 @@ class List < Structure
         #{element.type} element;
         #{node}* next_node;
       };
-      void #{ctor}(#{type}*);
-      void #{dtor}(#{type}*);
-      void #{purge}(#{type}*);
-      #{type}* #{new}(void);
-      void #{destroy}(#{type}*);
-      #{type}* #{assign}(#{type}*);
-      #{element.type} #{get}(#{type}*);
-      void #{add}(#{type}*, #{element.type});
-      void #{chop}(#{type}*);
-      int #{contains}(#{type}*, #{element.type});
-      #{element.type} #{find}(#{type}*, #{element.type});
-      int #{replace}(#{type}*, #{element.type}, #{element.type});
-      int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
-      int #{remove}(#{type}*, #{element.type});
-      int #{removeAll}(#{type}*, #{element.type});
-      size_t #{size}(#{type}*);
-      int #{empty}(#{type}*);
-      void #{itCtor}(#{it}*, #{type}*);
-      int #{itHasNext}(#{it}*);
-      #{element.type} #{itNext}(#{it}*);
-      #if defined(__cplusplus)
-        }
-      #endif
+      #{public} void #{ctor}(#{type}*);
+      #{public} void #{dtor}(#{type}*);
+      #{public} void #{purge}(#{type}*);
+      #{public} #{type}* #{new}(void);
+      #{public} void #{destroy}(#{type}*);
+      #{public} #{type}* #{assign}(#{type}*);
+      #{public} #{element.type} #{get}(#{type}*);
+      #{public} void #{add}(#{type}*, #{element.type});
+      #{public} void #{chop}(#{type}*);
+      #{public} int #{contains}(#{type}*, #{element.type});
+      #{public} #{element.type} #{find}(#{type}*, #{element.type});
+      #{public} int #{replace}(#{type}*, #{element.type}, #{element.type});
+      #{public} int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
+      #{public} int #{remove}(#{type}*, #{element.type});
+      #{public} int #{removeAll}(#{type}*, #{element.type});
+      #{public} size_t #{size}(#{type}*);
+      #{public} int #{empty}(#{type}*);
+      #{public} void #{itCtor}(#{it}*, #{type}*);
+      #{public} int #{itHasNext}(#{it}*);
+      #{public} #{element.type} #{itNext}(#{it}*);
     $
   end
   # :nodoc:
@@ -805,9 +798,6 @@ class Queue < Structure
   def write_intf(stream)
     super
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{node} #{node};
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -826,32 +816,29 @@ class Queue < Structure
         #{node}* prev_node;
         #{node}* next_node;
       };
-      void #{ctor}(#{type}*);
-      void #{dtor}(#{type}*);
-      void #{purge}(#{type}*);
-      #{type}* #{new}(void);
-      void #{destroy}(#{type}*);
-      #{type}* #{assign}(#{type}*);
-      #{element.type} #{head}(#{type}*);
-      #{element.type} #{tail}(#{type}*);
-      void #{append}(#{type}*, #{element.type});
-      void #{prepend}(#{type}*, #{element.type});
-      void #{chopHead}(#{type}*);
-      void #{chopTail}(#{type}*);
-      int #{contains}(#{type}*, #{element.type});
-      #{element.type} #{find}(#{type}*, #{element.type});
-      int #{replace}(#{type}*, #{element.type}, #{element.type});
-      int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
-      int #{remove}(#{type}*, #{element.type});
-      int #{removeAll}(#{type}*, #{element.type});
-      size_t #{size}(#{type}*);
-      int #{empty}(#{type}*);
-      void #{itCtor}(#{it}*, #{type}*, int);
-      int #{itHasNext}(#{it}*);
-      #{element.type} #{itNext}(#{it}*);
-      #if defined(__cplusplus)
-        }
-      #endif
+      #{public} void #{ctor}(#{type}*);
+      #{public} void #{dtor}(#{type}*);
+      #{public} void #{purge}(#{type}*);
+      #{public} #{type}* #{new}(void);
+      #{public} void #{destroy}(#{type}*);
+      #{public} #{type}* #{assign}(#{type}*);
+      #{public} #{element.type} #{head}(#{type}*);
+      #{public} #{element.type} #{tail}(#{type}*);
+      #{public} void #{append}(#{type}*, #{element.type});
+      #{public} void #{prepend}(#{type}*, #{element.type});
+      #{public} void #{chopHead}(#{type}*);
+      #{public} void #{chopTail}(#{type}*);
+      #{public} int #{contains}(#{type}*, #{element.type});
+      #{public} #{element.type} #{find}(#{type}*, #{element.type});
+      #{public} int #{replace}(#{type}*, #{element.type}, #{element.type});
+      #{public} int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
+      #{public} int #{remove}(#{type}*, #{element.type});
+      #{public} int #{removeAll}(#{type}*, #{element.type});
+      #{public} size_t #{size}(#{type}*);
+      #{public} int #{empty}(#{type}*);
+      #{public} void #{itCtor}(#{it}*, #{type}*, int);
+      #{public} int #{itHasNext}(#{it}*);
+      #{public} #{element.type} #{itNext}(#{it}*);
     $
   end
   # :nodoc:
@@ -1153,9 +1140,6 @@ class HashSet < Structure
     super
     @bucket.write_intf(stream)
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -1170,34 +1154,29 @@ class HashSet < Structure
         int bucket_index;
         #{@bucket.it} it;
       };
-      void #{ctor}(#{type}*);
-      void #{dtor}(#{type}*);
-      #{type}* #{new}(void);
-      void #{destroy}(#{type}*);
-      #{type}* #{assign}(#{type}*);
-      void #{purge}(#{type}*);
-      void #{rehash}(#{type}*);
-      int #{contains}(#{type}*, #{element.type});
-      #{element.type} #{get}(#{type}*, #{element.type});
-      size_t #{size}(#{type}*);
-      int #{empty}(#{type}*);
-      int #{put}(#{type}*, #{element.type});
-      void #{replace}(#{type}*, #{element.type});
-      int #{remove}(#{type}*, #{element.type});
-      void #{not?}(#{type}*, #{type}*);
-      void #{and?}(#{type}*, #{type}*);
-      void #{or?}(#{type}*, #{type}*);
-      void #{xor?}(#{type}*, #{type}*);
-      void #{itCtor}(#{it}*, #{type}*);
-      int #{itHasNext}(#{it}*);
-      #{element.type} #{itNext}(#{it}*);
+      #{public} void #{ctor}(#{type}*);
+      #{public} void #{dtor}(#{type}*);
+      #{public} #{type}* #{new}(void);
+      #{public} void #{destroy}(#{type}*);
+      #{public} #{type}* #{assign}(#{type}*);
+      #{public} void #{purge}(#{type}*);
+      #{public} void #{rehash}(#{type}*);
+      #{public} int #{contains}(#{type}*, #{element.type});
+      #{public} #{element.type} #{get}(#{type}*, #{element.type});
+      #{public} size_t #{size}(#{type}*);
+      #{public} int #{empty}(#{type}*);
+      #{public} int #{put}(#{type}*, #{element.type});
+      #{public} void #{replace}(#{type}*, #{element.type});
+      #{public} int #{remove}(#{type}*, #{element.type});
+      #{public} void #{not?}(#{type}*, #{type}*);
+      #{public} void #{and?}(#{type}*, #{type}*);
+      #{public} void #{or?}(#{type}*, #{type}*);
+      #{public} void #{xor?}(#{type}*, #{type}*);
+      #{public} void #{itCtor}(#{it}*, #{type}*);
+      #{public} int #{itHasNext}(#{it}*);
+      #{public} #{element.type} #{itNext}(#{it}*);
     $
-    stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
-    stream << %$
-      #if defined(__cplusplus)
-        }
-      #endif
-    $
+    stream << %$#{public} void #{dumpStats}(#{type}*, FILE*);$ if $debug
   end
   # :nodoc:
   def write_defs(stream)
@@ -1518,24 +1497,15 @@ class HashMap < Code
     key.write_intf(stream)
     value.write_intf(stream)
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{@entry.type} #{@entry.type};
       struct #{@entry.type} {
         #{key.type} key;
         #{value.type} value;
         int valid_value;
       };
-      #if defined(__cplusplus)
-        }
-      #endif
     $
     @entrySet.write_intf(stream)
     stream << %$
-      #if defined(__cplusplus)
-        extern "C" {
-      #endif
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
@@ -1545,32 +1515,27 @@ class HashMap < Code
       struct #{it} {
         #{@entrySet.it} it;
       };
-      void #{ctor}(#{type}*);
-      void #{dtor}(#{type}*);
-      #{type}* #{new}(void);
-      void #{destroy}(#{type}*);
-      #{type}* #{assign}(#{type}*);
-      void #{purge}(#{type}*);
-      void #{rehash}(#{type}*);
-      size_t #{size}(#{type}*);
-      int #{empty}(#{type}*);
-      int #{containsKey}(#{type}*, #{key.type});
-      #{value.type} #{get}(#{type}*, #{key.type});
-      int #{put}(#{type}*, #{key.type}, #{value.type});
-      void #{replace}(#{type}*, #{key.type}, #{value.type});
-      int #{remove}(#{type}*, #{key.type});
-      void #{itCtor}(#{it}*, #{type}*);
-      int #{itHasNext}(#{it}*);
-      #{key.type} #{itNextKey}(#{it}*);
-      #{value.type} #{itNextElement}(#{it}*);
-      #{@entry.type} #{itNext}(#{it}*);
+      #{public} void #{ctor}(#{type}*);
+      #{public} void #{dtor}(#{type}*);
+      #{public} #{type}* #{new}(void);
+      #{public} void #{destroy}(#{type}*);
+      #{public} #{type}* #{assign}(#{type}*);
+      #{public} void #{purge}(#{type}*);
+      #{public} void #{rehash}(#{type}*);
+      #{public} size_t #{size}(#{type}*);
+      #{public} int #{empty}(#{type}*);
+      #{public} int #{containsKey}(#{type}*, #{key.type});
+      #{public} #{value.type} #{get}(#{type}*, #{key.type});
+      #{public} int #{put}(#{type}*, #{key.type}, #{value.type});
+      #{public} void #{replace}(#{type}*, #{key.type}, #{value.type});
+      #{public} int #{remove}(#{type}*, #{key.type});
+      #{public} void #{itCtor}(#{it}*, #{type}*);
+      #{public} int #{itHasNext}(#{it}*);
+      #{public} #{key.type} #{itNextKey}(#{it}*);
+      #{public} #{value.type} #{itNextValue}(#{it}*);
+      #{public} #{@entry.type} #{itNext}(#{it}*);
     $
-    stream << %$void #{dumpStats}(#{type}*, FILE*);$ if $debug
-    stream << %$
-      #if defined(__cplusplus)
-        }
-      #endif
-    $
+    stream << %$#{public} void #{dumpStats}(#{type}*, FILE*);$ if $debug
   end
   # :nodoc:
   def write_defs(stream)
