@@ -32,7 +32,7 @@ PrologueCode = Class.new(CodeBuilder::Code) do
       #include <malloc.h>
       #include <assert.h>
       #ifndef __DATA_STRUCT_INLINE
-        #ifdef __STDC__
+        #if defined(__STDC__) || defined(_MSC_VER)
           #define __DATA_STRUCT_INLINE static
         #else
           #define __DATA_STRUCT_INLINE static inline
@@ -1246,8 +1246,8 @@ class HashSet < Structure
         self->min_bucket_count = 16;
         self->min_fill = 20;
         self->max_fill = 80;
-        self->min_size = (float)self->min_fill/100*self->min_bucket_count;
-        self->max_size = (float)self->max_fill/100*self->min_bucket_count;
+        self->min_size = (size_t)((float)self->min_fill/100*self->min_bucket_count);
+        self->max_size = (size_t)((float)self->max_fill/100*self->min_bucket_count);
         self->capacity_multiplier = 200;
         self->buckets = NULL;
         #{rehash}(self);
@@ -1293,18 +1293,18 @@ class HashSet < Structure
         #{assert}(self->min_bucket_count > 0);
         if(self->buckets) {
           if(self->min_size < self->size && self->size < self->max_size) return;
-          fill = (float)self->size/(float)self->bucket_count*100;
+          fill = (size_t)((float)self->size/self->bucket_count*100);
           if(fill > self->max_fill) {
-            bucket_count = (float)self->bucket_count/100*(float)self->capacity_multiplier;
+            bucket_count = (size_t)((float)self->bucket_count/100*self->capacity_multiplier);
           } else
           if(fill < self->min_fill && self->bucket_count > self->min_bucket_count) {
-            bucket_count = (float)self->bucket_count/(float)self->capacity_multiplier*100;
+            bucket_count = (size_t)((float)self->bucket_count/self->capacity_multiplier*100);
             if(bucket_count < self->min_bucket_count) bucket_count = self->min_bucket_count;
           } else
             return;
           size = self->size;
-          self->min_size = (float)self->min_fill/100*size;
-          self->max_size = (float)self->max_fill/100*size;
+          self->min_size = (size_t)((float)self->min_fill/100*size);
+          self->max_size = (size_t)((float)self->max_fill/100*size);
         } else {
           bucket_count = self->min_bucket_count;
           size = 0;
