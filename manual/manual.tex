@@ -322,7 +322,48 @@ If this key is set to \lstinline[language=Ruby]!nil!, simple value comparison al
 \end{itemize}
 
 
+\subsection{Interface visibility}
+
+
+Every data structure generator can be instructed to enforce the specific visibility of the interface part of the data structure to be generated.
+There are three possible visibility modes:
+
+
+\begin{itemize}
+
+
+\item :public
+
+This mode is used for normal operation of the generated data structure: all public declarations are put into public header file and are accessible by the client code.
+All public functions are generated with normal \C\ external linkage.
+\emph{This is the default mode.}
+
+
+\item :private
+
+
+This mode can be used by the generated data structure whose visibility is to be be restricted to the module itself in that they aren't to be visible to the client code.
+This basically means that the structure's interface part won't appear in public header file. Instead, it will be placed in the forward declaration part of the module implementation file.
+All public functions will still be generated with \C\ external linkage, however.
+
+
+\item :static
+
+
+The static mode is the most restrictive one and is to be used by the data structures which are a part of other data structures.
+In this case \emph{all} functions belonging to the data structure will be generated with \C\ static linkage and therefore won't be accessible from outside the module.
+
+
+\end{itemize}
+
+
+The visibility mode is passed in form of the \R\ symbol to constructor of the respective data structure generator, for example: \lstinline[language=Ruby]!DataStructBuilder::Vector.new(:IntVector, {:type=>"int"}, :private)!.
+
+
 \subsection{Value types vs. reference types}
+
+
+The generated data structures support both value type and reference type elements.
 
 
 \subsection{Reference types with embedded reference counting}
