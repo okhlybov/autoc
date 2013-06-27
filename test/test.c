@@ -325,7 +325,7 @@ void Box2BoxMapTest() {
 
 
 void PChar2IntVectorMapTest() {
-    int i;
+    size_t i;
     PChar2IntVectorMap* map;
     IntVector* vec;
     printf("\n*** PChar2IntVectorMap\n");
