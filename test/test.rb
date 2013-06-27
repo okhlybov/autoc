@@ -14,16 +14,16 @@ IntVector = Vector.new(:IntVector, Int)
 
 
 CModule.generate!(:Test) do |m|
-  m << HashSet.new(:IntSet, Int)
-  m << HashSet.new(:PCharSet, PChar)
-  m << HashMap.new(:PChar2IntMap, PChar, Int)
-  m << HashSet.new(:BoxSet, Box)
+  m << IntVector
   m << Vector.new(:BoxVector, Box)
   m << List.new(:BoxList, Box)
-  m << HashMap.new(:Box2BoxMap, Box, Box)
-  m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
-  m << IntVector
   m << Queue.new(:PCharQueue, PChar)
+  m << HashSet.new(:BoxSet, Box)
+  m << HashSet.new(:IntSet, Int)
+  m << HashSet.new(:PCharSet, PChar)
+  m << HashMap.new(:Box2BoxMap, Box, Box)
+  m << HashMap.new(:PChar2IntMap, PChar, Int)
+  m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
 end
 
 
