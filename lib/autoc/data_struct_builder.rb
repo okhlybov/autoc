@@ -32,10 +32,12 @@ PrologueCode = Class.new(CodeBuilder::Code) do
       #include <malloc.h>
       #include <assert.h>
       #ifndef __DATA_STRUCT_INLINE
-        #if defined(__STDC__) || defined(_MSC_VER)
-          #define __DATA_STRUCT_INLINE static
+        #if defined(_MSC_VER) || defined(__PGI)
+          #define __DATA_STRUCT_INLINE __inline static
+        #elif __STDC_VERSION__ >= 199901L && !defined(__DMC__)
+          #define __DATA_STRUCT_INLINE inline static
         #else
-          #define __DATA_STRUCT_INLINE static inline
+          #define __DATA_STRUCT_INLINE static
         #endif
       #endif
       #ifndef __DATA_STRUCT_EXTERN
@@ -58,27 +60,23 @@ Base class for all C data container generators.
 =end
 class Code < CodeBuilder::Code
   undef abort;
+  @@overrides = {:malloc=>"malloc", :calloc=>"calloc", :free=>"free", :assert=>"assert", :abort=>"abort", :extern=>"__DATA_STRUCT_EXTERN", :static=>"static", :inline=>"__DATA_STRUCT_INLINE"}
   # String-like prefix for generated data type. Must be a valid C identifier.
   attr_reader :type
   # Setups the data structure generator.
   # +type+ is a C type name used as a prefix for generated container functions. It must be a valid C identifier.
   def initialize(type)
     @type = type.to_s # TODO validate
-    setup_overrides
   end
   protected
   # :nodoc:
   def method_missing(method, *args)
-    if @overrides.include?(method)
-      @overrides[method]
+    if @@overrides.include?(method)
+      @@overrides[method]
     else
       s = method.to_s.chomp('?')
       @type + s[0].capitalize + s[1..-1]
     end
-  end
-  # :nodoc:
-  def setup_overrides
-    @overrides = {:malloc=>"malloc", :calloc=>"calloc", :free=>"free", :assert=>"assert", :abort=>"abort", :extern=>"__DATA_STRUCT_EXTERN", :static=>"static", :inline=>"__DATA_STRUCT_INLINE"}
   end
 end # Code
 

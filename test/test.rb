@@ -25,5 +25,3 @@ CModule.generate!(:Test) do |m|
   m << HashMap.new(:PChar2IntMap, PChar, Int)
   m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
 end
-
-
