@@ -83,9 +83,12 @@ class Module
     @sources = []
     (1..source_count).each {|i| @sources << new_source(i)}
     @main_source = @sources.first
+    @smallest_source = @main_source
+    # It appears that computing the size of a source might be a fairly expensive operation so do it only when neccessary
+    refresh_smallest_source = source_count > 1
     @entities.each do |e|
       @header << e
-      @smallest_source = @sources.sort_by {|s| s.size}.first
+      @smallest_source = @sources.sort_by {|s| s.size}.first if refresh_smallest_source
       @sources.each {|s| e.attach(s)}
     end
     @header.generate
