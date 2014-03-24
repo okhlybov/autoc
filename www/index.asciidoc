@@ -4,7 +4,7 @@
 
 == Introduction
 
-*AutoC* is a collection of *Ruby* modules devoted to the automatic generation of *C* source code.
+*AutoC* is a collection of *Ruby* modules dedicated to the automatic generation of *C* source code.
 
 Currently *AutoC* contains two modules:
 
@@ -22,7 +22,7 @@ Currently *AutoC* contains two modules:
 == Availability
 
 *AutoC* binary download page is http://sourceforge.net/projects/autoc/files[here] and source code repository is http://sourceforge.net/p/autoc/code/ci/default/tree/[here].
-It is also published on http://rubygems.org/gems/autoc[RubyGems]. To automatically fetech and install install it, issue the command:
+It is also published on http://rubygems.org/gems/autoc[RubyGems]. To automatically fetch and install install it, issue the command:
 
 [source,bash]
 $ gem install autoc
@@ -38,13 +38,10 @@ Here is a sample usage of *AutoC* to create a strongly-typed _list_ container fo
 * Create a *Ruby* script _`int_list.rb`_ containing the appropriate definitions.
 
 [source,ruby]
-int_list.rb
-----
 require "autoc"
 CodeBuilder::CModule.generate!(:Containers) do |m|
 	m << DataStructBuilder::List.new(:IntList, :type=>"int")
 end
-----
 
 * Call *Ruby* to generate the *C* source code.
 
@@ -61,9 +58,9 @@ This will emit the module definition header file _`containers_auto.h`_ accompani
 int main(int argc, char** argv) {
 	IntList list;
 	IntListCtor(&list);
-	IntListAppend(&list, 1);
-	IntListAppend(&list, 2);
-	IntListAppend(&list, 3);
+	IntListAdd(&list, 1);
+	IntListAdd(&list, 2);
+	IntListAdd(&list, 3);
 	printf("size=%d\n", IntListSize(&list));
 	IntListDtor(&list);
 	return 0;
@@ -75,3 +72,9 @@ The code above creates a list of integers data container on stack, puts three in
 
 [source,bash]
 $ cc -o runme main.c containers_auto.c
+
+== The END
+
+_Happy hacking and have fun!_
+
+Oleg A. Khlybov <fougas@mail.ru>
