@@ -1,0 +1,77 @@
+//:source-highlighter: CodeRay coderay
+
+= http://sourceforge.net/projects/autoc/files[*AutoC*] - a 100% *Ruby* collection of *C* source code generators
+
+== Introduction
+
+*AutoC* is a collection of *Ruby* modules devoted to the automatic generation of *C* source code.
+
+Currently *AutoC* contains two modules:
+
+* CodeBuilder - multifile *C* module generator
+* DataStructBuilder - strongly-typed *C* data container generators
+
+=== Avaliable data container generators
+
+* Vector
+* List
+* Queue
+* HashSet
+* HashMap
+
+== Availability
+
+*AutoC* binary download page is http://sourceforge.net/projects/autoc/files[here] and source code repository is http://sourceforge.net/p/autoc/code/ci/default/tree/[here].
+It is also published on http://rubygems.org/gems/autoc[RubyGems]. To automatically fetech and install install it, issue the command:
+
+[source,bash]
+$ gem install autoc
+
+== Documentation
+
+A complete documentation is available in the form of _PDF_ file _`manual/manual.pdf`_ included in the binary distribution.
+
+== Quick start
+
+Here is a sample usage of *AutoC* to create a strongly-typed _list_ container for _int_ data type similar to the *C++*'s _std::forward_list<int>_ templated class.
+
+* Create a *Ruby* script _`int_list.rb`_ containing the appropriate definitions.
+
+[source,ruby]
+int_list.rb
+----
+require "autoc"
+CodeBuilder::CModule.generate!(:Containers) do |m|
+	m << DataStructBuilder::List.new(:IntList, :type=>"int")
+end
+----
+
+* Call *Ruby* to generate the *C* source code.
+
+[source,bash]
+$ ruby int_list.rb
+
+This will emit the module definition header file _`containers_auto.h`_ accompanied by the module implementation source file _`containers_auto.c`_.
+
+* Create a *C* source code _`main.c`_ which uses the generated module.
+
+[source,c]
+#include <stdio.h>
+#include "containers_auto.h"
+int main(int argc, char** argv) {
+	IntList list;
+	IntListCtor(&list);
+	IntListAppend(&list, 1);
+	IntListAppend(&list, 2);
+	IntListAppend(&list, 3);
+	printf("size=%d\n", IntListSize(&list));
+	IntListDtor(&list);
+	return 0;
+}
+
+The code above creates a list of integers data container on stack, puts three integer values into it, prints the container's size and finally destroys the container.
+
+* Build the sample executable.
+
+[source,bash]
+$ cc -o runme main.c containers_auto.c
