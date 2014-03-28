@@ -2,22 +2,22 @@ require "autoc"
 
 
 include CodeBuilder
-include DataStructBuilder
+include AutoC
 
 
-Int = {:type=>"int", :compare=>nil}
-PChar = {:type=>"const char*", :equal=>"PCharEqual", :hash=>"PCharHash"}
-Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :assign=>"BoxAssign", :equal=>"BoxEqual", :hash=>"BoxHash", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
+Int = {:type=>"int"}
+PChar = {:type=>"const char*", :equal=>"PCharEqual", :identify=>"PCharHash"}
+Box = {:type=>"Box*", :forward=>"typedef struct Box Box;", :copy=>"BoxCopy", :equal=>"BoxEqual", :identify=>"BoxHash", :ctor=>"BoxNew", :dtor=>"BoxDestroy"}
 
 
 IntVector = Vector.new(:IntVector, Int)
 
 
 CModule.generate!(:Test) do |m|
-  m << IntVector
+  #m << IntVector
   m << Vector.new(:BoxVector, Box)
   m << List.new(:BoxList, Box)
-  m << Queue.new(:PCharQueue, PChar)
+  m << AutoC::Queue.new(:PCharQueue, PChar)
   m << HashSet.new(:BoxSet, Box)
   m << HashSet.new(:IntSet, Int)
   m << HashSet.new(:PCharSet, PChar)

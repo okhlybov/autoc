@@ -183,10 +183,9 @@ Box* BoxMake(int contents) {
 }
 
 
-Box* BoxAssign(Box* box) {
-    assert(box);
-    ++box->refs;
-    return box;
+void BoxCopy(Box* dst, Box* src) {
+    dst = src;
+    ++dst->refs;
 }
 
 
