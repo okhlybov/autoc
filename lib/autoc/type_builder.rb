@@ -43,6 +43,8 @@ class Type < CodeBuilder::Code
           #endif
         #endif
         #include <stddef.h>
+        #include <stdlib.h>
+        #include <assert.h>
       $
     end
   end.new
@@ -62,7 +64,7 @@ class Type < CodeBuilder::Code
       @type = opt.to_s
     elsif opt.is_a?(Hash)
       @type = opt[:type].nil? ? raise("type is not specified") : opt[:type].to_s
-      [:ctor, :dtor, :copy, :compare, :identify].each do |key|
+      [:ctor, :dtor, :copy, :equal, :less, :identify].each do |key|
         instance_variable_set("@#{key}".to_sym, Type.cid(opt[key])) unless opt[key].nil?
       end
       @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
@@ -90,8 +92,12 @@ class Type < CodeBuilder::Code
     @copy.nil? ? "#{dst} = #{src}" : "#{@copy}(#{dst}, #{src})"
   end
   
-  def compare(lt, rt)
-    @compare.nil? ? "#{lt} == #{rt}" : "#{@compare}(#{lt}, #{rt})"
+  def equal(lt, rt)
+    @equal.nil? ? "#{lt} == #{rt}" : "#{@equal}(#{lt}, #{rt})"
+  end
+  
+  def less(lt, rt)
+    @less.nil? ? "#{lt} < #{rt}" : "#{@less}(#{lt}, #{rt})"
   end
   
   def identify(obj)
@@ -145,6 +151,8 @@ class Type < CodeBuilder::Code
   def calloc; "calloc" end
   
   def free; "free" end
+  
+  def abort; "abort" end
   
 end # Type
 
