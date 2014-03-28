@@ -9,4 +9,5 @@
 
 
 require "autoc/code_builder"
-require "autoc/data_struct_builder"
+require "autoc/type_builder"
+require "autoc/collection_builder"

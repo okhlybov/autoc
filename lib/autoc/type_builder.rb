@@ -4,35 +4,34 @@ require "autoc/code_builder"
 module AutoC
   
 
-# :nodoc:  
-class PublicDeclaration < CodeBuilder::Code
-  def initialize(forward) @forward = forward.to_s end
-  def priority; CodeBuilder::Priority::MAX end
-  def hash; @forward.hash end
-  def eql?(other)
-    @forward == other.instance_variable_get(:@forward)
-  end
-  def write_intf(stream)
-    stream << "\n"
-    stream << @forward
-    stream << "\n"
-  end
-end # Forward
-
-
 class Type < CodeBuilder::Code
   
+  # :nodoc:  
+  class PublicDeclaration < CodeBuilder::Code
+    def initialize(forward) @forward = forward.to_s end
+    def priority; CodeBuilder::Priority::MAX end
+    def hash; @forward.hash end
+    def eql?(other)
+      @forward == other.instance_variable_get(:@forward)
+    end
+    def write_intf(stream)
+      stream << "\n"
+      stream << @forward
+      stream << "\n"
+    end
+  end # Forward
+
   # :nodoc:  
   CommonCode = Class.new(CodeBuilder::Code) do
     def write_intf(stream)
       stream << %$
         #ifndef AUTOC_INLINE
-          #if defined(_MSC_VER) || defined(__PGI)
-            #define AUTOC_INLINE __inline static
-          #elif __STDC_VERSION__ >= 199901L && !defined(__DMC__)
-            #define AUTOC_INLINE inline static
+          #if defined(_MSC_VER)
+            #define AUTOC_INLINE __inline
+          #elif __STDC_VERSION__ >= 199901L
+            #define AUTOC_INLINE inline AUTOC_STATIC
           #else
-            #define AUTOC_INLINE static
+            #define AUTOC_INLINE AUTOC_STATIC
           #endif
         #endif
         #ifndef AUTOC_EXTERN
@@ -40,6 +39,15 @@ class Type < CodeBuilder::Code
             #define AUTOC_EXTERN extern "C"
           #else
             #define AUTOC_EXTERN extern
+          #endif
+        #endif
+        #ifndef AUTOC_STATIC
+          #if defined(_MSC_VER)
+            #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
+          #elif defined(__GNUC__)
+            #define AUTOC_STATIC __attribute__((__used__)) static
+          #else
+            #define AUTOC_STATIC static
           #endif
         #endif
         #include <stddef.h>
@@ -65,7 +73,7 @@ class Type < CodeBuilder::Code
     elsif opt.is_a?(Hash)
       @type = opt[:type].nil? ? raise("type is not specified") : opt[:type].to_s
       [:ctor, :dtor, :copy, :equal, :less, :identify].each do |key|
-        instance_variable_set("@#{key}".to_sym, Type.cid(opt[key])) unless opt[key].nil?
+        instance_variable_set("@#{key}".to_sym, opt[key].to_s) unless opt[key].nil?
       end
       @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
       optv = opt[:visibility]
@@ -142,7 +150,7 @@ class Type < CodeBuilder::Code
   
   def inline; "AUTOC_INLINE" end
   
-  def static; "static" end
+  def static; "AUTOC_STATIC" end
   
   def assert; "assert" end
   
