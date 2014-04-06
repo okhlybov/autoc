@@ -7,15 +7,17 @@ module AutoC
 
 class Collection < Type
   
-  [:ctor, :dtor].each {|m| undef_method m}
+  def self.coerce(type)
+    type.is_a?(Type) ? type : UserDefinedType.new(type)
+  end
   
   attr_reader :element
   
   def entities; super + [element] end
   
   def initialize(type_name, element_type, visibility = :public)
-    super(type: type_name, visibility: visibility)
-    @element = Type.coerce(element_type)
+    super(type_name, visibility)
+    @element = Collection.coerce(element_type)
   end
   
 end # Collection
@@ -1096,15 +1098,9 @@ class HashMap < Collection
   
   def initialize(type, key_type, value_type, visibility = :public)
     super(type, value_type, visibility)
-    @key = Type.coerce(key_type)
-    @entry = Type.new(type: entry, identify: entryHash, equal: entryEqual, copy: entryCopy, dtor: entryDtor)
+    @key = Collection.coerce(key_type)
+    @entry = UserDefinedType.new(type: entry, identify: entryHash, equal: entryEqual, copy: entryCopy, dtor: entryDtor)
     @entry_set = HashSet.new(set, @entry)
-  end
-  
-  def write_intf(stream)
-    key.write_intf(stream)
-    value.write_intf(stream)
-    super
   end
   
   def write_exported_types(stream)
@@ -1176,9 +1172,8 @@ class HashMap < Collection
       }
       #define #{entryCopy}(dst, src) #{entryCopyP}(&dst, &src)
       static void #{entryCopyP}(#{@entry.type}* dst, #{@entry.type}* src) {
-        dst->valid_value = src->valid_value;
         #{key.copy("dst->key", "src->key")};
-        if(dst->valid_value) #{value.copy("dst->value", "src->value")};
+        if((dst->valid_value = src->valid_value)) #{value.copy("dst->value", "src->value")};
       }
       static void #{entryDtor}(#{@entry.type} entry) {
         #{key.dtor("entry.key")};
