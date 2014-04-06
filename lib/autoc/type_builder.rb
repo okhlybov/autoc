@@ -7,26 +7,11 @@ module AutoC
 class Type < CodeBuilder::Code
   
   # :nodoc:  
-  class PublicDeclaration < CodeBuilder::Code
-    def initialize(forward) @forward = forward.to_s end
-    def priority; CodeBuilder::Priority::MAX end
-    def hash; @forward.hash end
-    def eql?(other)
-      @forward == other.instance_variable_get(:@forward)
-    end
-    def write_intf(stream)
-      stream << "\n"
-      stream << @forward
-      stream << "\n"
-    end
-  end # Forward
-
-  # :nodoc:  
   CommonCode = Class.new(CodeBuilder::Code) do
     def write_intf(stream)
       stream << %$
         #ifndef AUTOC_INLINE
-          #if defined(_MSC_VER)
+          #ifdef _MSC_VER
             #define AUTOC_INLINE __inline
           #elif __STDC_VERSION__ >= 199901L
             #define AUTOC_INLINE inline AUTOC_STATIC
@@ -35,14 +20,14 @@ class Type < CodeBuilder::Code
           #endif
         #endif
         #ifndef AUTOC_EXTERN
-          #if defined(__cplusplus)
+          #ifdef __cplusplus
             #define AUTOC_EXTERN extern "C"
           #else
             #define AUTOC_EXTERN extern
           #endif
         #endif
         #ifndef AUTOC_STATIC
-          #if defined(_MSC_VER)
+          #ifdef _MSC_VER
             #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
           #elif defined(__GNUC__)
             #define AUTOC_STATIC __attribute__((__used__)) static
@@ -57,59 +42,25 @@ class Type < CodeBuilder::Code
     end
   end.new
 
-  def self.coerce(obj)
-    obj.is_a?(Type) ? obj : Type.new(obj)
-  end
-  
   attr_reader :type
   
-  def entities; [CommonCode] + @deps end
-  
-  def initialize(opt)
-    @deps = []
-    @visibility = :public
-    if [Symbol, String].include?(opt.class)
-      @type = opt.to_s
-    elsif opt.is_a?(Hash)
-      @type = opt[:type].nil? ? raise("type is not specified") : opt[:type].to_s
-      [:ctor, :dtor, :copy, :equal, :less, :identify].each do |key|
-        instance_variable_set("@#{key}".to_sym, opt[key].to_s) unless opt[key].nil?
-      end
-      @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-      optv = opt[:visibility]
-      @visibility = [:public, :private, :static].include?(optv) ? optv : raise("unsupported visibility") unless optv.nil?
-    else
-      raise "failed to decode the argument"
-    end
+  def entities; [CommonCode] end
+
+  def initialize(type, visibility = :public)
+    @type = type.to_s
+    @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
   end
   
   def method_missing(method, *args)
     str = method.to_s.chomp("?")
-    @type + str[0].capitalize + str[1..-1]
-  end
-  
-  def ctor(obj)
-    @ctor.nil? ? "#{obj} = 0" : "#{@ctor}(#{obj})"
-  end
-  
-  def dtor(obj)
-    @dtor.nil? ? "" : "#{@dtor}(#{obj})"
-  end
-  
-  def copy(dst, src)
-    @copy.nil? ? "#{dst} = #{src}" : "#{@copy}(#{dst}, #{src})"
-  end
-  
-  def equal(lt, rt)
-    @equal.nil? ? "#{lt} == #{rt}" : "#{@equal}(#{lt}, #{rt})"
-  end
-  
-  def less(lt, rt)
-    @less.nil? ? "#{lt} < #{rt}" : "#{@less}(#{lt}, #{rt})"
-  end
-  
-  def identify(obj)
-    @identify.nil? ? "(size_t)(#{obj})" : "#{@identify}(#{obj})"
+    func = @type + str[0].capitalize + str[1..-1]
+    if args.empty?
+      func # Emit bare function name
+    elsif args.size == 1 && args.first == nil
+      func + "()" # Use sole nil argument to emit function call with no arguments
+    else
+      func + "(" + args.join(", ") + ")" # Normal function call with supplied arguments
+    end
   end
   
   def write_intf(stream)
@@ -163,6 +114,68 @@ class Type < CodeBuilder::Code
   def abort; "abort" end
   
 end # Type
+
+
+class UserDefinedType < Type
+  
+  # :nodoc:  
+  class PublicDeclaration < CodeBuilder::Code
+    def initialize(forward) @forward = forward.to_s end
+    def priority; CodeBuilder::Priority::MAX end
+    def hash; @forward.hash end
+    def eql?(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
+    def write_intf(stream)
+      stream << "\n"
+      stream << @forward
+      stream << "\n"
+    end
+  end # PublicDeclaration
+
+  def entities; super + @deps end
+  
+  def initialize(opt)
+    @deps = []
+    if [Symbol, String].include?(opt.class)
+      t = opt
+    elsif opt.is_a?(Hash)
+      t = opt[:type].nil? ? raise("type is not specified") : opt[:type]
+      [:ctor, :dtor, :copy, :equal, :less, :identify].each do |key|
+        instance_variable_set("@#{key}".to_sym, opt[key].to_s) unless opt[key].nil?
+      end
+      @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
+      optv = opt[:visibility]
+      v = optv.nil? ? :public : optv
+    else
+      raise "failed to decode the argument"
+    end
+    super(t, v)
+  end
+  
+  def ctor(obj)
+    @ctor.nil? ? "#{obj} = 0" : "#{@ctor}(#{obj})"
+  end
+  
+  def dtor(obj)
+    @dtor.nil? ? "" : "#{@dtor}(#{obj})"
+  end
+  
+  def copy(dst, src)
+    @copy.nil? ? "#{dst} = #{src}" : "#{@copy}(#{dst}, #{src})"
+  end
+  
+  def equal(lt, rt)
+    @equal.nil? ? "#{lt} == #{rt}" : "#{@equal}(#{lt}, #{rt})"
+  end
+  
+  def less(lt, rt)
+    @less.nil? ? "#{lt} < #{rt}" : "#{@less}(#{lt}, #{rt})"
+  end
+  
+  def identify(obj)
+    @identify.nil? ? "(size_t)(#{obj})" : "#{@identify}(#{obj})"
+  end
+  
+end # UserDefinedType
 
 
 end # AutoC
