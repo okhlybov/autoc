@@ -23,5 +23,5 @@ CModule.generate!(:Test) do |m|
   m << HashSet.new(:PCharSet, PChar)
   m << HashMap.new(:Box2BoxMap, Box, Box)
   m << HashMap.new(:PChar2IntMap, PChar, Int)
-  #m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
+  m << HashMap.new(:PChar2IntVectorMap, PChar, IntVector)
 end

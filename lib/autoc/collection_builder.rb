@@ -45,8 +45,10 @@ class Vector < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*, size_t);
       #{declare} void #{dtor}(#{type}*);
+/*
       #{declare} #{type}* #{new}(size_t);
       #{declare} void #{destroy}(#{type}*);
+*/
       #{declare} void #{resize}(#{type}*, size_t);
       #{declare} int #{within}(#{type}*, size_t);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
@@ -98,6 +100,7 @@ class Vector < Collection
         }
         #{free}(self->values);
       }
+/*
       #{define} #{type}* #{new}(size_t element_count) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self, element_count);
@@ -111,6 +114,7 @@ class Vector < Collection
           #{free}(self);
         }
       }
+*/
       #{define} void #{resize}(#{type}* self, size_t element_count) {
         size_t i;
         #{assert}(self);
@@ -206,8 +210,10 @@ class List < Collection
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{purge}(#{type}*);
+/*
       #{declare} #{type}* #{new}(void);
       #{declare} void #{destroy}(#{type}*);
+*/
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{add}(#{type}*, #{element.type});
       #{declare} void #{chop}(#{type}*);
@@ -248,6 +254,7 @@ class List < Collection
           #{free}(this_node);
         }
       }
+/*
       #{define} #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
@@ -261,6 +268,7 @@ class List < Collection
           #{free}(self);
         }
       }
+*/
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
@@ -480,8 +488,10 @@ class Queue < Collection
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{purge}(#{type}*);
+/*
       #{declare} #{type}* #{new}(void);
       #{declare} void #{destroy}(#{type}*);
+*/
       #{declare} #{element.type} #{head}(#{type}*);
       #{declare} #{element.type} #{tail}(#{type}*);
       #{declare} void #{append}(#{type}*, #{element.type});
@@ -525,6 +535,7 @@ class Queue < Collection
           #{free}(this_node);
         }
       }
+/*
       #{define} #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
@@ -538,6 +549,7 @@ class Queue < Collection
           #{free}(self);
         }
       }
+*/
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
@@ -804,8 +816,10 @@ class HashSet < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+/*
       #{declare} #{type}* #{new}(void);
       #{declare} void #{destroy}(#{type}*);
+*/
       #{declare} void #{purge}(#{type}*);
       #{declare} void #{rehash}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
@@ -815,10 +829,10 @@ class HashSet < Collection
       #{declare} int #{put}(#{type}*, #{element.type});
       #{declare} void #{replace}(#{type}*, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
-      #{declare} void #{not?}(#{type}*, #{type}*);
-      #{declare} void #{and?}(#{type}*, #{type}*);
-      #{declare} void #{or?}(#{type}*, #{type}*);
-      #{declare} void #{xor?}(#{type}*, #{type}*);
+      #{declare} void #{not!}(#{type}*, #{type}*);
+      #{declare} void #{and!}(#{type}*, #{type}*);
+      #{declare} void #{or!}(#{type}*, #{type}*);
+      #{declare} void #{xor!}(#{type}*, #{type}*);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itHasNext}(#{it}*);
       #{declare} #{element.type} #{itNext}(#{it}*);
@@ -848,6 +862,7 @@ class HashSet < Collection
         }
         #{free}(self->buckets);
       }
+/*
       #{define} #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
@@ -861,6 +876,7 @@ class HashSet < Collection
           #{free}(self);
         }
       }
+*/
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
         #{dtor}(self);
@@ -983,7 +999,7 @@ class HashSet < Collection
         #{element.dtor("what")};
         return removed;
       }
-      #{define} void #{not?}(#{type}* self, #{type}* other) {
+      #{define} void #{not!}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
@@ -993,7 +1009,7 @@ class HashSet < Collection
         }
         #{rehash}(self);
       }
-      #{define} void #{or?}(#{type}* self, #{type}* other) {
+      #{define} void #{or!}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
@@ -1003,7 +1019,7 @@ class HashSet < Collection
         }
         #{rehash}(self);
       }
-      #{define} void #{and?}(#{type}* self, #{type}* other) {
+      #{define} void #{and!}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -1025,7 +1041,7 @@ class HashSet < Collection
         #{rehash}(self);
         /*#{dtor}(&set);*/
       }
-      #{define} void #{xor?}(#{type}* self, #{type}* other) {
+      #{define} void #{xor!}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -1130,8 +1146,10 @@ class HashMap < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+/*
       #{declare} #{type}* #{new}(void);
       #{declare} void #{destroy}(#{type}*);
+*/
       #{declare} void #{purge}(#{type}*);
       #{declare} void #{rehash}(#{type}*);
       #{declare} size_t #{size}(#{type}*);
@@ -1191,6 +1209,7 @@ class HashMap < Collection
         #{assert}(self);
         #{@entry_set.dtor}(&self->entries);
       }
+/*
       #{define} #{type}* #{new}(void) {
         #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
         #{ctor}(self);
@@ -1204,6 +1223,7 @@ class HashMap < Collection
           #{free}(self);
         }
       }
+*/
       #{define} void #{rehash}(#{type}* self) {
         #{assert}(self);
         #{@entry_set.rehash}(&self->entries);
