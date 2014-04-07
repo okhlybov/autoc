@@ -52,7 +52,7 @@ class Type < CodeBuilder::Code
   end
   
   def method_missing(method, *args)
-    str = method.to_s.chomp("?")
+    str = method.to_s.chomp("!")
     func = @type + str[0].capitalize + str[1..-1]
     if args.empty?
       func # Emit bare function name
