@@ -20,11 +20,73 @@ class Collection < Type
     @element = Collection.coerce(element_type)
   end
   
+  def ctor(*args)
+    if args.empty?
+      super()
+    else
+      check_args(args, 1)
+      obj = args.first
+      super() + "(&#{obj})"
+    end
+  end
+  
+  def dtor(*args)
+    if args.empty?
+      super()
+    else
+      check_args(args, 1)
+      obj = args.first
+      super() + "(&#{obj})"
+    end
+  end
+  
+  def copy(*args)
+    if args.empty?
+      super()
+    else
+      check_args(args, 2)
+      dst, src = args
+      super() + "(&#{dst}, &#{src})"
+    end
+  end
+  
+  def equal(*args)
+    args.empty? ? super() : raise("#{self.class} provides no equality testing functionality")
+  end
+  
+  def less(*args)
+    args.empty? ? super() : raise("#{self.class} provides no ordering functionality")
+  end
+  
+  def identify(*args)
+    args.empty? ? super() : raise("#{self.class} provides no hashing functionality")
+  end
+  
+  private
+  
+  def check_args(args, nargs)
+    raise "expected exactly #{nargs} argument(s)" unless args.size == nargs
+  end
+  
 end # Collection
 
 
 class Vector < Collection
 
+  def ctor(*args)
+    args.empty? ? super() : raise("#{self.class} provides no default constructor")
+  end
+  
+  def equal(*args)
+    if args.empty?
+      super()
+    else
+      check_args(args, 2)
+      lt, rt = args
+      super() + "(&#{lt}, &#{rt})"
+    end
+  end
+  
   def write_exported_types(stream)
     stream << %$
       typedef struct #{type} #{type};
@@ -45,15 +107,19 @@ class Vector < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*, size_t);
       #{declare} void #{dtor}(#{type}*);
-/*
-      #{declare} #{type}* #{new}(size_t);
-      #{declare} void #{destroy}(#{type}*);
-*/
+      #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} void #{resize}(#{type}*, size_t);
-      #{declare} int #{within}(#{type}*, size_t);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itHasNext}(#{it}*);
       #{declare} #{element.type} #{itNext}(#{it}*);
+      #{define} size_t #{size}(#{type}* self) {
+        #{assert}(self);
+        return self->element_count;
+      }
+      #{define} int #{within}(#{type}* self, size_t index) {
+        #{assert}(self);
+        return index < #{size}(self);
+      }
       #{define} #{element.type}* #{ref}(#{type}* self, size_t index) {
         #{assert}(self);
         #{assert}(#{within}(self, index));
@@ -65,87 +131,73 @@ class Vector < Collection
         return *#{ref}(self, index);
       }
       #{define} void #{set}(#{type}* self, size_t index, #{element.type} value) {
-        #{element.type}* ref;
         #{assert}(self);
         #{assert}(#{within}(self, index));
-        ref = #{ref}(self, index);
-        #{element.dtor("*ref")};
-        #{element.copy("*ref", "value")};
-      }
-      #{define} size_t #{size}(#{type}* self) {
-        #{assert}(self);
-        return self->element_count;
+        #{element.dtor("self->values[index]")};
+        #{element.copy("self->values[index]", "value")};
       }
       #{declare} void #{sort}(#{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
     $
   end
   
   def write_implementations(stream, define)
     stream << %$
-      #{define} void #{ctor}(#{type}* self, size_t element_count) {
-        size_t i;
+      static void #{allocate}(#{type}* self, size_t element_count) {
         #{assert}(self);
         #{assert}(element_count > 0);
         self->element_count = element_count;
         self->values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(self->values);
-        for(i = 0; i < self->element_count; ++i) {
-          #{element.ctor("self->values[i]")};
+      }
+      #{define} void #{ctor}(#{type}* self, size_t element_count) {
+        size_t index;
+        #{assert}(self);
+        #{allocate}(self, element_count);
+        for(index = 0; index < #{size}(self); ++index) {
+          #{element.ctor("self->values[index]")};
         }
       }
       #{define} void #{dtor}(#{type}* self) {
-        size_t i;
+        size_t index;
         #{assert}(self);
-        for(i = 0; i < self->element_count; ++i) {
-          #{element.dtor("self->values[i]")};
+        for(index = 0; index < #{size}(self); ++index) {
+          #{element.dtor("self->values[index]")};
         }
         #{free}(self->values);
       }
-/*
-      #{define} #{type}* #{new}(size_t element_count) {
-        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self, element_count);
-        self->ref_count = 0;
-        return self;
-      }
-      #{define} void #{destroy}(#{type}* self) {
-        #{assert}(self);
-        if(!--self->ref_count) {
-          #{dtor}(self);
-          #{free}(self);
+      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+        size_t index, size;
+        #{assert}(src);
+        #{assert}(dst);
+        #{allocate}(dst, size = #{size}(src));
+        for(index = 0; index < size; ++index) {
+          #{element.copy("dst->values[index]", "src->values[index]")};
         }
       }
-*/
       #{define} void #{resize}(#{type}* self, size_t element_count) {
-        size_t i;
+        size_t index;
         #{assert}(self);
-        if(self->element_count != element_count) {
+        if(#{size}(self) != element_count) {
           size_t count;
           #{element.type}* values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(values);
-          if(self->element_count > element_count) {
-            for(i = element_count; i < self->element_count; ++i) {
-              #{element.dtor("self->values[i]")};
+          if(#{size}(self) > element_count) {
+            for(index = element_count; index < #{size}(self); ++index) {
+              #{element.dtor("self->values[index]")};
             }
             count = element_count;
           } else {
-            for(i = element_count; i < self->element_count; ++i) {
-              #{element.ctor("self->values[i]")};
+            for(index = element_count; index < #{size}(self); ++index) {
+              #{element.ctor("self->values[index]")};
             }
-            count = self->element_count;
+            count = #{size}(self);
           }
-          {
-            size_t index;
-            for(index = 0; index < count; ++index) {
-              values[index] = self->values[index];
-            }
+          for(index = 0; index < count; ++index) {
+            values[index] = self->values[index];
           }
           #{free}(self->values);
           self->element_count = element_count;
           self->values = values;
         }
-      }
-      #{define} int #{within}(#{type}* self, size_t index) {
-        #{assert}(self);
-        return index < self->element_count;
       }
       #{define} void #{itCtor}(#{it}* self, #{type}* vector) {
         #{assert}(self);
@@ -175,7 +227,20 @@ class Vector < Collection
       #{define} void #{sort}(#{type}* self) {
         typedef int (*F)(const void*, const void*);
         #{assert}(self);
-        qsort(self->values, self->element_count, sizeof(#{element.type}), (F)#{comparator});
+        qsort(self->values, #{size}(self), sizeof(#{element.type}), (F)#{comparator});
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        size_t index, size;
+        #{assert}(lt);
+        #{assert}(rt);
+        if(#{size}(lt) == (size = #{size}(rt))) {
+          for(index = 0; index < size; ++index) {
+            if(!#{element.equal("lt->values[index]", "rt->values[index]")}) return 0;
+          }
+          return 1;
+        } else {
+          return 0;
+        }
       }
     $
   end
@@ -210,10 +275,6 @@ class List < Collection
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{purge}(#{type}*);
-/*
-      #{declare} #{type}* #{new}(void);
-      #{declare} void #{destroy}(#{type}*);
-*/
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{add}(#{type}*, #{element.type});
       #{declare} void #{chop}(#{type}*);
@@ -254,21 +315,6 @@ class List < Collection
           #{free}(this_node);
         }
       }
-/*
-      #{define} #{type}* #{new}(void) {
-        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self);
-        self->ref_count = 0;
-        return self;
-      }
-      #{define} void #{destroy}(#{type}* self) {
-        #{assert}(self);
-        if(!--self->ref_count) {
-          #{dtor}(self);
-          #{free}(self);
-        }
-      }
-*/
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
@@ -488,10 +534,6 @@ class Queue < Collection
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{purge}(#{type}*);
-/*
-      #{declare} #{type}* #{new}(void);
-      #{declare} void #{destroy}(#{type}*);
-*/
       #{declare} #{element.type} #{head}(#{type}*);
       #{declare} #{element.type} #{tail}(#{type}*);
       #{declare} void #{append}(#{type}*, #{element.type});
@@ -535,21 +577,6 @@ class Queue < Collection
           #{free}(this_node);
         }
       }
-/*
-      #{define} #{type}* #{new}(void) {
-        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self);
-        self->ref_count = 0;
-        return self;
-      }
-      #{define} void #{destroy}(#{type}* self) {
-        #{assert}(self);
-        if(!--self->ref_count) {
-          #{dtor}(self);
-          #{free}(self);
-        }
-      }
-*/
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
@@ -816,10 +843,6 @@ class HashSet < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
-/*
-      #{declare} #{type}* #{new}(void);
-      #{declare} void #{destroy}(#{type}*);
-*/
       #{declare} void #{purge}(#{type}*);
       #{declare} void #{rehash}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
@@ -862,21 +885,6 @@ class HashSet < Collection
         }
         #{free}(self->buckets);
       }
-/*
-      #{define} #{type}* #{new}(void) {
-        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self);
-        self->ref_count = 0;
-        return self;
-      }
-      #{define} void #{destroy}(#{type}* self) {
-        #{assert}(self);
-        if(!--self->ref_count) {
-          #{dtor}(self);
-          #{free}(self);
-        }
-      }
-*/
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
         #{dtor}(self);
@@ -1146,10 +1154,6 @@ class HashMap < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
-/*
-      #{declare} #{type}* #{new}(void);
-      #{declare} void #{destroy}(#{type}*);
-*/
       #{declare} void #{purge}(#{type}*);
       #{declare} void #{rehash}(#{type}*);
       #{declare} size_t #{size}(#{type}*);
@@ -1209,21 +1213,6 @@ class HashMap < Collection
         #{assert}(self);
         #{@entry_set.dtor}(&self->entries);
       }
-/*
-      #{define} #{type}* #{new}(void) {
-        #{type}* self = (#{type}*)#{malloc}(sizeof(#{type})); #{assert}(self);
-        #{ctor}(self);
-        self->ref_count = 0;
-        return self;
-      }
-      #{define} void #{destroy}(#{type}* self) {
-        #{assert}(self);
-        if(!--self->ref_count) {
-          #{dtor}(self);
-          #{free}(self);
-        }
-      }
-*/
       #{define} void #{rehash}(#{type}* self) {
         #{assert}(self);
         #{@entry_set.rehash}(&self->entries);
