@@ -59,7 +59,7 @@ class Type < CodeBuilder::Code
     elsif args.size == 1 && args.first == nil
       func + "()" # Use sole nil argument to emit function call with no arguments
     else
-      func + "(" + args.join(", ") + ")" # Normal function call with supplied arguments
+      func + "(" + args.join(", ") + ")" # Emit normal function call with supplied arguments
     end
   end
   
@@ -152,7 +152,7 @@ class UserDefinedType < Type
   end
   
   def ctor(obj)
-    @ctor.nil? ? "#{obj} = 0" : "#{@ctor}(#{obj})"
+    @ctor.nil? ? "(#{obj} = 0)" : "#{@ctor}(#{obj})"
   end
   
   def dtor(obj)
@@ -160,15 +160,15 @@ class UserDefinedType < Type
   end
   
   def copy(dst, src)
-    @copy.nil? ? "#{dst} = #{src}" : "#{@copy}(#{dst}, #{src})"
+    @copy.nil? ? "(#{dst} = #{src})" : "#{@copy}(#{dst}, #{src})"
   end
   
   def equal(lt, rt)
-    @equal.nil? ? "#{lt} == #{rt}" : "#{@equal}(#{lt}, #{rt})"
+    @equal.nil? ? "(#{lt} == #{rt})" : "#{@equal}(#{lt}, #{rt})"
   end
   
   def less(lt, rt)
-    @less.nil? ? "#{lt} < #{rt}" : "#{@less}(#{lt}, #{rt})"
+    @less.nil? ? "(#{lt} < #{rt})" : "#{@less}(#{lt}, #{rt})"
   end
   
   def identify(obj)
