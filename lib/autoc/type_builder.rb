@@ -120,8 +120,8 @@ class UserDefinedType < Type
   
   # :nodoc:  
   class PublicDeclaration < CodeBuilder::Code
+    def entities; super + [Type::CommonCode] end
     def initialize(forward) @forward = forward.to_s end
-    def priority; CodeBuilder::Priority::MAX end
     def hash; @forward.hash end
     def eql?(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
     def write_intf(stream)
@@ -135,6 +135,7 @@ class UserDefinedType < Type
   
   def initialize(opt)
     @deps = []
+    v = :public
     if [Symbol, String].include?(opt.class)
       t = opt
     elsif opt.is_a?(Hash)
@@ -156,7 +157,7 @@ class UserDefinedType < Type
   end
   
   def dtor(obj)
-    @dtor.nil? ? "" : "#{@dtor}(#{obj})"
+    @dtor.nil? ? nil : "#{@dtor}(#{obj})"
   end
   
   def copy(dst, src)

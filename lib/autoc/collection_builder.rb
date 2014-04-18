@@ -94,7 +94,6 @@ class Vector < Collection
       struct #{type} {
         #{element.type}* values;
         size_t element_count;
-        size_t ref_count;
       };
       struct #{it} {
         #{type}* vector;
@@ -120,15 +119,12 @@ class Vector < Collection
         #{assert}(self);
         return index < #{size}(self);
       }
-      #{define} #{element.type}* #{ref}(#{type}* self, size_t index) {
-        #{assert}(self);
-        #{assert}(#{within}(self, index));
-        return &self->values[index];
-      }
       #{define} #{element.type} #{get}(#{type}* self, size_t index) {
+        #{element.type} result;
         #{assert}(self);
         #{assert}(#{within}(self, index));
-        return *#{ref}(self, index);
+        #{element.copy("result", "self->values[index]")};
+        return result;
       }
       #{define} void #{set}(#{type}* self, size_t index, #{element.type} value) {
         #{assert}(self);
@@ -213,12 +209,12 @@ class Vector < Collection
         #{assert}(self);
         return #{get}(self->vector, self->index++);
       }
-      static int #{comparator}(void* _lp_, void* _rp_) {
-        #{element.type}* lp = (#{element.type}*)_lp_;
-        #{element.type}* rp = (#{element.type}*)_rp_;
-        if(#{element.equal("lp", "rp")}) {
+      static int #{comparator}(void* lp_, void* rp_) {
+        #{element.type}* lp = (#{element.type}*)lp_;
+        #{element.type}* rp = (#{element.type}*)rp_;
+        if(#{element.equal("*lp", "*rp")}) {
           return 0;
-        } else if(#{element.less("lp", "rp")}) {
+        } else if(#{element.less("*lp", "*rp")}) {
           return -1;
         } else {
           return +1;
@@ -258,7 +254,6 @@ class List < Collection
       struct #{type} {
         #{node}* head_node;
         size_t node_count;
-        size_t ref_count;
       };
       struct #{it} {
         #{node}* next_node;
@@ -515,7 +510,6 @@ class Queue < Collection
         #{node}* head_node;
         #{node}* tail_node;
         size_t node_count;
-        size_t ref_count;
       };
       struct #{it} {
         #{node}* next_node;
@@ -829,7 +823,6 @@ class HashSet < Collection
         size_t bucket_count, min_bucket_count;
         size_t size, min_size, max_size;
         unsigned min_fill, max_fill, capacity_multiplier; /* ?*1e-2 */
-        size_t ref_count;
       };
       struct #{it} {
         #{type}* set;
@@ -1142,7 +1135,6 @@ class HashMap < Collection
       typedef struct #{it} #{it};
       struct #{type} {
         #{@entry_set.type} entries;
-        size_t ref_count;
       };
       struct #{it} {
         #{@entry_set.it} it;
