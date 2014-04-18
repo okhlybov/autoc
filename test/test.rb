@@ -2,7 +2,7 @@ require "autoc"
 
 ValueType = {
   :type => :ValueType,
-  :forward => %$#include "test2.h"$,
+  :forward => %$#include "test.h"$,
   :ctor => :ValueTypeCtor,
   :dtor => :ValueTypeDtor,
   :copy => :ValueTypeCopy,
@@ -10,6 +10,6 @@ ValueType = {
   :less => :ValueTypeLess,
 }
 
-CodeBuilder::CModule.generate!(:Test2) do |m|
+CodeBuilder::CModule.generate!(:Test) do |m|
   m << AutoC::Vector.new(:ValueTypeVector, ValueType)
 end
