@@ -2,12 +2,12 @@
 #include <memory.h>
 
 
-#include "test2_auto.h"
+#include "test_auto.h"
 
 
 void _ValueTypeCtor(ValueType* self) {
     assert(self);
-    self->size = 16;
+    self->size = 1;
     self->block = malloc(self->size); assert(self->block);
 }
 
@@ -42,19 +42,41 @@ int _ValueTypeLess(ValueType* lt, ValueType* rt) {
 
 
 void ValueTypeVectorTest() {
-    ValueTypeVector vec;
-    ValueType v1;
-    ValueTypeVectorCtor(&vec, 3);
-    v1 = ValueTypeVectorGet(&vec, 0);
+    ValueType v1, v2;
+    ValueTypeVector vec1, vec2;
+    ValueTypeVectorCtor(&vec1, 3);
+    v1 = ValueTypeVectorGet(&vec1, 0);
     ValueTypeDtor(v1);
     ValueTypeCtor(v1);
-    ValueTypeVectorSet(&vec, 0, v1);
-    ValueTypeVectorSet(&vec, 2, v1);
+    ValueTypeVectorSet(&vec1, 0, v1);
+    ValueTypeVectorSet(&vec1, 2, v1);
+    ValueTypeCopy(v2, v1);
     ValueTypeDtor(v1);
-    ValueTypeVectorDtor(&vec);
+    ValueTypeVectorSort(&vec1);
+    ValueTypeVectorResize(&vec1, 2);
+    ValueTypeVectorSet(&vec1, 0, v2);
+    ValueTypeVectorCopy(&vec2, &vec1);
+    ValueTypeVectorDtor(&vec1);
+    ValueTypeVectorDtor(&vec2);
+    ValueTypeDtor(v2);
 }
+
+
+void ValueTypeListTest() {
+    ValueType v1, v2;
+    ValueTypeList l;
+}
+
+
+void ValueTypeQueueTest() {
+    ValueType v1, v2;
+    ValueTypeQueue q;
+}
+
 
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
+    ValueTypeListTest();
+    ValueTypeQueueTest();
     return 0;
 }

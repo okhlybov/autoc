@@ -51,7 +51,13 @@ class Collection < Type
   end
   
   def equal(*args)
-    args.empty? ? super() : raise("#{self.class} provides no equality testing functionality")
+    if args.empty?
+      super()
+    else
+      check_args(args, 2)
+      lt, rt = args
+      super() + "(&#{lt}, &#{rt})"
+    end
   end
   
   def less(*args)
@@ -77,16 +83,6 @@ class Vector < Collection
     args.empty? ? super() : raise("#{self.class} provides no default constructor")
   end
   
-  def equal(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 2)
-      lt, rt = args
-      super() + "(&#{lt}, &#{rt})"
-    end
-  end
-  
   def write_exported_types(stream)
     stream << %$
       typedef struct #{type} #{type};
@@ -107,6 +103,7 @@ class Vector < Collection
       #{declare} void #{ctor}(#{type}*, size_t);
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{copy}(#{type}*, #{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{resize}(#{type}*, size_t);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itHasNext}(#{it}*);
@@ -133,7 +130,6 @@ class Vector < Collection
         #{element.copy("self->values[index]", "value")};
       }
       #{declare} void #{sort}(#{type}*);
-      #{declare} int #{equal}(#{type}*, #{type}*);
     $
   end
   
@@ -168,6 +164,19 @@ class Vector < Collection
         #{allocate}(dst, size = #{size}(src));
         for(index = 0; index < size; ++index) {
           #{element.copy("dst->values[index]", "src->values[index]")};
+        }
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        size_t index, size;
+        #{assert}(lt);
+        #{assert}(rt);
+        if(#{size}(lt) == (size = #{size}(rt))) {
+          for(index = 0; index < size; ++index) {
+            if(!#{element.equal("lt->values[index]", "rt->values[index]")}) return 0;
+          }
+          return 1;
+        } else {
+          return 0;
         }
       }
       #{define} void #{resize}(#{type}* self, size_t element_count) {
@@ -225,19 +234,6 @@ class Vector < Collection
         #{assert}(self);
         qsort(self->values, #{size}(self), sizeof(#{element.type}), (F)#{comparator});
       }
-      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
-        size_t index, size;
-        #{assert}(lt);
-        #{assert}(rt);
-        if(#{size}(lt) == (size = #{size}(rt))) {
-          for(index = 0; index < size; ++index) {
-            if(!#{element.equal("lt->values[index]", "rt->values[index]")}) return 0;
-          }
-          return 1;
-        } else {
-          return 0;
-        }
-      }
     $
   end
   
@@ -269,6 +265,8 @@ class List < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+      #{declare} void #{copy}(#{type}*, #{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{add}(#{type}*, #{element.type});
@@ -295,29 +293,56 @@ class List < Collection
         self->node_count = 0;
       }
       #{define} void #{dtor}(#{type}* self) {
-        #{it} it;
         #{node}* node;
         #{assert}(self);
-        #{itCtor}(&it, self);
-        while(#{itHasNext}(&it)) {
-          #{element.type} e = #{itNext}(&it);
-          #{element.dtor("e")};
-        }
         node = self->head_node;
         while(node) {
           #{node}* this_node = node;
           node = node->next_node;
+          #{element.dtor("this_node->element")};
           #{free}(this_node);
         }
+      }
+      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+        #{it} it;
+        #{assert}(src);
+        #{assert}(dst);
+        #{ctor}(dst);
+        #{itCtor}(&it, src);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element;
+          #{add}(dst, element = #{itNext}(&it));
+          #{element.dtor("element")};
+        }
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        if(#{size}(lt) == #{size}(rt)) {
+          #{it} lit, rit;
+          #{itCtor}(&lit, lt);
+          #{itCtor}(&rit, rt);
+          while(#{itHasNext}(&lit) && #{itHasNext}(&rit)) {
+            int equal;
+            #{element.type} le, re;
+            le = #{itNext}(&lit);
+            re = #{itNext}(&rit);
+            equal = #{element.equal("le", "re")};
+            #{element.dtor("le")};
+            #{element.dtor("re")};
+            if(!equal) return 0;
+          }
+          return 1;
+        } else return 0;
       }
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
       }
       #{define} #{element.type} #{get}(#{type}* self) {
+        #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
-        return self->head_node->element;
+        #{element.copy("result", "self->head_node->element")};
+        return result;
       }
       #{define} void #{chop}(#{type}* self) {
         #{node}* node;
@@ -338,69 +363,72 @@ class List < Collection
         self->head_node = node;
         ++self->node_count;
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{contains}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
+        int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
-            #{element.dtor("what")};
-            return 1;
+            found = 1;
+            break;
           }
           node = node->next_node;
         }
         #{element.dtor("what")};
-        return 0;
+        return found;
       }
-      #{define} #{element.type} #{find}(#{type}* self, #{element.type} _what_) {
+      #{define} #{element.type} #{find}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         #{assert}(#{contains}(self, what));
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
+            #{element.type} result;
             #{element.dtor("what")};
-            return node->element;
+            #{element.copy("result", "node->element")};
+            return result;
           }
           node = node->next_node;
         }
-        /*#{element.dtor("what")};*/
+        #{element.dtor("what")};
         #{abort}();
       }
-      #{define} int #{replace}(#{type}* self, #{element.type} _what_, #{element.type} _with_) {
+      #{define} int #{replace}(#{type}* self, #{element.type} what_, #{element.type} with_) {
         #{node}* node;
         #{element.type} what;
         #{element.type} with;
+        int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
-        #{element.copy("with", "_with_")};
+        #{element.copy("what", "what_")};
+        #{element.copy("with", "with_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             #{element.copy("node->element", "with")};
-            #{element.dtor("what")};
-            #{element.dtor("with")};
-            return 1;
+            found = 1;
+            break;
           }
           node = node->next_node;
         }
         #{element.dtor("what")};
         #{element.dtor("with")};
-        return 0;
+        return found;
       }
-      #{define} int #{replaceAll}(#{type}* self, #{element.type} _what_, #{element.type} _with_) {
+      #{define} int #{replaceAll}(#{type}* self, #{element.type} what_, #{element.type} with_) {
         #{node}* node;
         #{element.type} what;
         #{element.type} with;
         int count = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
-        #{element.copy("with", "_with_")};
+        #{element.copy("what", "what_")};
+        #{element.copy("with", "with_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
@@ -414,13 +442,13 @@ class List < Collection
         #{element.dtor("with")};
         return count;
       }
-      #{define} int #{remove}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{remove}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{node}* prev_node;
         #{element.type} what;
         int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         prev_node = NULL;
         while(node) {
@@ -442,13 +470,13 @@ class List < Collection
         #{element.dtor("what")};
         return found;
       }
-      #{define} int #{removeAll}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{removeAll}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{node}* prev_node;
         #{element.type} what;
         int count = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         prev_node = NULL;
         while(node) {
@@ -488,10 +516,12 @@ class List < Collection
       }
       #{define} #{element.type} #{itNext}(#{it}* self) {
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
         node = self->next_node;
         self->next_node = self->next_node->next_node;
-        return node->element;
+        #{element.copy("result", "node->element")};
+        return result;
       }
     $
   end
@@ -527,6 +557,8 @@ class Queue < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+      #{declare} void #{copy}(#{type}*, #{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{head}(#{type}*);
       #{declare} #{element.type} #{tail}(#{type}*);
@@ -556,34 +588,63 @@ class Queue < Collection
         self->node_count = 0;
       }
       #{define} void #{dtor}(#{type}* self) {
-        #{it} it;
         #{node}* node;
         #{assert}(self);
-        #{itCtor}(&it, self, 1);
-        while(#{itHasNext}(&it)) {
-          #{element.type} e = #{itNext}(&it);
-          #{element.dtor("e")};
-        }
         node = self->head_node;
         while(node) {
           #{node}* this_node = node;
           node = node->next_node;
+          #{element.dtor("this_node->element")};
           #{free}(this_node);
         }
+      }
+      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+        #{it} it;
+        #{assert}(src);
+        #{assert}(dst);
+        #{ctor}(dst);
+        #{itCtor}(&it, src, 1);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element;
+          #{append}(dst, element = #{itNext}(&it));
+          #{element.dtor("element")};
+        }
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        if(#{size}(lt) == #{size}(rt)) {
+          #{it} lit, rit;
+          #{itCtor}(&lit, lt, 1);
+          #{itCtor}(&rit, rt, 1);
+          while(#{itHasNext}(&lit) && #{itHasNext}(&rit)) {
+            int equal;
+            #{element.type} le, re;
+            le = #{itNext}(&lit);
+            re = #{itNext}(&rit);
+            equal = #{element.equal("le", "re")};
+            #{element.dtor("le")};
+            #{element.dtor("re")};
+            if(!equal) return 0;
+          }
+          return 1;
+        } else return 0;
       }
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
         #{ctor}(self);
       }
       #{define} #{element.type} #{head}(#{type}* self) {
+        #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
-        return self->head_node->element;
+        #{element.copy("result", "self->head_node->element")};
+        return result;
       }
       #{define} #{element.type} #{tail}(#{type}* self) {
+        #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
-        return self->tail_node->element;
+        #{element.copy("result", "self->tail_node->element")};
+        return result;
       }
       #{define} void #{chopHead}(#{type}* self) {
         #{node}* node;
@@ -639,68 +700,72 @@ class Queue < Collection
         }
         ++self->node_count;
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{contains}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
+        int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
-            #{element.dtor("what")};
-            return 1;
+            found = 1;
+            break;
           }
           node = node->next_node;
         }
         #{element.dtor("what")};
-        return 0;
+        return found;
       }
-      #{define} #{element.type} #{find}(#{type}* self, #{element.type} _what_) {
+      #{define} #{element.type} #{find}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         #{assert}(#{contains}(self, what));
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
+            #{element.type} result;
             #{element.dtor("what")};
-            return node->element;
+            #{element.copy("result", "node->element")};
+            return result;
           }
           node = node->next_node;
         }
+        #{element.dtor("what")};
         #{abort}();
       }
-      #{define} int #{replace}(#{type}* self, #{element.type} _what_, #{element.type} _with_) {
+      #{define} int #{replace}(#{type}* self, #{element.type} what_, #{element.type} with_) {
         #{node}* node;
         #{element.type} what;
         #{element.type} with;
+        int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
-        #{element.copy("with", "_with_")};
+        #{element.copy("what", "what_")};
+        #{element.copy("with", "with_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
-            #{element.copy("node->element", "with")}
-            #{element.dtor("what")};
-            #{element.dtor("with")};
-            return 1;
+            #{element.copy("node->element", "with")};
+            found = 1;
+            break;
           }
           node = node->next_node;
         }
         #{element.dtor("what")};
         #{element.dtor("with")};
-        return 0;
+        return found;
       }
-      #{define} int #{replaceAll}(#{type}* self, #{element.type} _what_, #{element.type} _with_) {
+      #{define} int #{replaceAll}(#{type}* self, #{element.type} what_, #{element.type} with_) {
         #{node}* node;
         #{element.type} what;
         #{element.type} with;
         int count = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
-        #{element.copy("with", "_with_")};
+        #{element.copy("what", "what_")};
+        #{element.copy("with", "with_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
@@ -714,12 +779,12 @@ class Queue < Collection
         #{element.dtor("with")};
         return count;
       }
-      #{define} int #{remove}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{remove}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
         int found = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
@@ -745,12 +810,12 @@ class Queue < Collection
         #{element.dtor("what")};
         return found;
       }
-      #{define} int #{removeAll}(#{type}* self, #{element.type} _what_) {
+      #{define} int #{removeAll}(#{type}* self, #{element.type} what_) {
         #{node}* node;
         #{element.type} what;
         int count = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
+        #{element.copy("what", "what_")};
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
@@ -795,10 +860,12 @@ class Queue < Collection
       }
       #{define} #{element.type} #{itNext}(#{it}* self) {
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
         node = self->next_node;
         self->next_node = self->forward ? self->next_node->next_node : self->next_node->prev_node;
-        return node->element;
+        #{element.copy("result", "node->element")};
+        return result;
       }
     $
   end
