@@ -31,4 +31,8 @@ int _ValueTypeEqual(ValueType*, ValueType*);
 int _ValueTypeLess(ValueType*, ValueType*);
 
 
+#define ValueTypeIdentify(obj) _ValueTypeIdentify(&obj)
+size_t _ValueTypeIdentify(ValueType*);
+
+
 #endif

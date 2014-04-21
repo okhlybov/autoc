@@ -41,6 +41,11 @@ int _ValueTypeLess(ValueType* lt, ValueType* rt) {
 }
 
 
+size_t _ValueTypeIdentify(ValueType* self) {
+    assert(self);
+}
+
+
 void ValueTypeVectorTest() {
     ValueType v1, v2;
     ValueTypeVector vec1, vec2;
