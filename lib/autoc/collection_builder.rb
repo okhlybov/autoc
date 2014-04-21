@@ -175,9 +175,8 @@ class Vector < Collection
             if(!#{element.equal("lt->values[index]", "rt->values[index]")}) return 0;
           }
           return 1;
-        } else {
+        } else
           return 0;
-        }
       }
       #{define} void #{resize}(#{type}* self, size_t element_count) {
         size_t index;
@@ -331,7 +330,8 @@ class List < Collection
             if(!equal) return 0;
           }
           return 1;
-        } else return 0;
+        } else
+          return 0;
       }
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
@@ -626,7 +626,8 @@ class Queue < Collection
             if(!equal) return 0;
           }
           return 1;
-        } else return 0;
+        } else
+          return 0;
       }
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
@@ -903,6 +904,8 @@ class HashSet < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+      #{declare} void #{copy}(#{type}*, #{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} void #{rehash}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
@@ -910,7 +913,7 @@ class HashSet < Collection
       #{declare} size_t #{size}(#{type}*);
       #{declare} int #{empty}(#{type}*);
       #{declare} int #{put}(#{type}*, #{element.type});
-      #{declare} void #{replace}(#{type}*, #{element.type});
+      #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
       #{declare} void #{not!}(#{type}*, #{type}*);
       #{declare} void #{and!}(#{type}*, #{type}*);
@@ -945,6 +948,35 @@ class HashSet < Collection
         }
         #{free}(self->buckets);
       }
+      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+        #{it} it;
+        #{assert}(src);
+        #{assert}(dst);
+        #{ctor}(dst);
+        #{itCtor}(&it, src);
+        while(#{itHasNext}(&it)) {
+          #{element.type} element;
+          #{put}(dst, element = #{itNext}(&it));
+          #{element.dtor("element")};
+        }
+      }
+      static int #{containsAllOf}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{itCtor}(&it, self);
+        while(#{itHasNext}(&it)) {
+          int found = 0;
+          #{element.type} element = #{itNext}(&it);
+          if(#{contains}(other, element)) found = 1;
+          #{element.dtor("element")};
+          if(!found) return 0;
+        }
+        return 1;
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        #{assert}(lt);
+        #{assert}(rt);
+        return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
+      }
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
         #{dtor}(self);
@@ -953,7 +985,7 @@ class HashSet < Collection
       }
       #{define} void #{rehash}(#{type}* self) {
         #{@list.type}* buckets;
-        size_t i, bucket_count, size, fill;
+        size_t index, bucket_count, size, fill;
         #{assert}(self);
         #{assert}(self->min_fill > 0);
         #{assert}(self->max_fill > 0);
@@ -978,8 +1010,8 @@ class HashSet < Collection
           size = 0;
         }
         buckets = (#{@list.type}*)#{malloc}(bucket_count*sizeof(#{@list.type})); #{assert}(buckets);
-        for(i = 0; i < bucket_count; ++i) {
-          #{@list.ctor}(&buckets[i]);
+        for(index = 0; index < bucket_count; ++index) {
+          #{@list.ctor}(&buckets[index]);
         }
         if(self->buckets) {
           #{it} it;
@@ -989,6 +1021,7 @@ class HashSet < Collection
             #{element.type} element = #{itNext}(&it);
             bucket = &buckets[#{element.identify("element")} % bucket_count];
             #{@list.add}(bucket, element);
+            #{element.dtor("element")};
           }
           #{dtor}(self);
         }
@@ -996,20 +1029,20 @@ class HashSet < Collection
         self->bucket_count = bucket_count;
         self->size = size;
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} _element_) {
+      #{define} int #{contains}(#{type}* self, #{element.type} element_) {
         int result;
         #{element.type} element;
         #{assert}(self);
-        #{element.copy("element", "_element_")};
+        #{element.copy("element", "element_")};
         result = #{@list.contains}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
         #{element.dtor("element")};
         return result;
       }
-      #{define} #{element.type} #{get}(#{type}* self, #{element.type} _element_) {
+      #{define} #{element.type} #{get}(#{type}* self, #{element.type} element_) {
         #{element.type} result;
         #{element.type} element;
         #{assert}(self);
-        #{element.copy("element", "_element_")};
+        #{element.copy("element", "element_")};
         #{assert}(#{contains}(self, element));
         result = #{@list.find}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
         #{element.dtor("element")};
@@ -1023,12 +1056,12 @@ class HashSet < Collection
         #{assert}(self);
         return !self->size;
       }
-      #{define} int #{put}(#{type}* self, #{element.type} _element_) {
+      #{define} int #{put}(#{type}* self, #{element.type} element_) {
         #{element.type} element;
         #{@list.type}* bucket;
         int contained = 1;
         #{assert}(self);
-        #{element.copy("element", "_element_")};
+        #{element.copy("element", "element_")};
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(!#{@list.contains}(bucket, element)) {
           #{@list.add}(bucket, element);
@@ -1039,32 +1072,37 @@ class HashSet < Collection
         #{element.dtor("element")};
         return contained;
       }
-      #{define} void #{replace}(#{type}* self, #{element.type} _element_) {
-        #{element.type} element;
+      #{define} int #{replace}(#{type}* self, #{element.type} what_, #{element.type} with_) {
+        #{element.type} what, with;
         #{@list.type}* bucket;
+        int contained = 1;
         #{assert}(self);
-        #{element.copy("element", "_element_")};
-        bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
-        if(!#{@list.replace}(bucket, element, element)) {
-          #{@list.add}(bucket, element);
+        #{element.copy("what", "what_")};
+        #{element.copy("with", "with_")};
+        bucket = &self->buckets[#{element.identify("what")} % self->bucket_count];
+        if(!#{@list.replace}(bucket, what, with)) {
+          #{@list.add}(bucket, with);
           ++self->size;
+          contained = 0;
           #{rehash}(self);
         }
-        #{element.dtor("element")};
+        #{element.dtor("what")};
+        #{element.dtor("with")};
+        return contained;
       }
-      #{define} int #{remove}(#{type}* self, #{element.type} _what_) {
-        #{element.type} what;
+      #{define} int #{remove}(#{type}* self, #{element.type} element_) {
+        #{element.type} element;
         #{@list.type}* bucket;
         int removed = 0;
         #{assert}(self);
-        #{element.copy("what", "_what_")};
-        bucket = &self->buckets[#{element.identify("what")} % self->bucket_count];
-        if(#{@list.remove}(bucket, what)) {
+        #{element.copy("element", "element_")};
+        bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
+        if(#{@list.remove}(bucket, element)) {
           --self->size;
           removed = 1;
           #{rehash}(self);
         }
-        #{element.dtor("what")};
+        #{element.dtor("element")};
         return removed;
       }
       #{define} void #{not!}(#{type}* self, #{type}* other) {
@@ -1073,7 +1111,9 @@ class HashSet < Collection
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itHasNext}(&it)) {
-          #{remove}(self, #{itNext}(&it));
+          #{element.type} element;
+          #{remove}(self, element = #{itNext}(&it));
+          #{element.dtor("element")};
         }
         #{rehash}(self);
       }
@@ -1083,7 +1123,9 @@ class HashSet < Collection
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itHasNext}(&it)) {
-          #{put}(self, #{itNext}(&it));
+          #{element.type} element;
+          #{put}(self, element = #{itNext}(&it));
+          #{element.dtor("element")};
         }
         #{rehash}(self);
       }
@@ -1097,11 +1139,13 @@ class HashSet < Collection
         while(#{itHasNext}(&it)) {
           #{element.type} element = #{itNext}(&it);
           if(#{contains}(other, element)) #{put}(&set, element);
+          #{element.dtor("element")};
         }
         #{itCtor}(&it, other);
         while(#{itHasNext}(&it)) {
           #{element.type} element = #{itNext}(&it);
           if(#{contains}(self, element)) #{put}(&set, element);
+          #{element.dtor("element")};
         }
         #{dtor}(self);
         self->buckets = set.buckets;
@@ -1119,11 +1163,13 @@ class HashSet < Collection
         while(#{itHasNext}(&it)) {
           #{element.type} element = #{itNext}(&it);
           if(!#{contains}(other, element)) #{put}(&set, element);
+          #{element.dtor("element")};
         }
         #{itCtor}(&it, other);
         while(#{itHasNext}(&it)) {
           #{element.type} element = #{itNext}(&it);
           if(!#{contains}(self, element)) #{put}(&set, element);
+          #{element.dtor("element")};
         }
         #{dtor}(self);
         self->buckets = set.buckets;
@@ -1183,7 +1229,7 @@ class HashMap < Collection
   def initialize(type, key_type, value_type, visibility = :public)
     super(type, value_type, visibility)
     @key = Collection.coerce(key_type)
-    @entry = UserDefinedType.new(type: entry, identify: entryHash, equal: entryEqual, copy: entryCopy, dtor: entryDtor)
+    @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
     @entry_set = HashSet.new(set, @entry)
   end
   
