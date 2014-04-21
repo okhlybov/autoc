@@ -1291,14 +1291,14 @@ class HashMap < Collection
         entry.valid_value = 1;
         return entry;
       }
-      static size_t #{entryHash}(#{@entry.type} entry) {
+      static size_t #{entryIdentify}(#{@entry.type} entry) {
         return #{key.identify("entry.key")};
       }
       static int #{entryEqual}(#{@entry.type} lt, #{@entry.type} rt) {
         return #{key.equal("lt.key", "rt.key")};
       }
-      #define #{entryCopy}(dst, src) #{entryCopyP}(&dst, &src)
-      static void #{entryCopyP}(#{@entry.type}* dst, #{@entry.type}* src) {
+      #define #{entryCopy}(dst, src) #{entryCopy}(&dst, &src)
+      static void #{entryCopy}(#{@entry.type}* dst, #{@entry.type}* src) {
         #{key.copy("dst->key", "src->key")};
         if((dst->valid_value = src->valid_value)) #{value.copy("dst->value", "src->value")};
       }

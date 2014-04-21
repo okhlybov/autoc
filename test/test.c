@@ -7,7 +7,7 @@
 
 void _ValueTypeCtor(ValueType* self) {
     assert(self);
-    self->size = 1;
+    self->size = 16;
     self->block = malloc(self->size); assert(self->block);
 }
 
@@ -43,39 +43,69 @@ int _ValueTypeLess(ValueType* lt, ValueType* rt) {
 
 size_t _ValueTypeIdentify(ValueType* self) {
     assert(self);
+    return self->block;
 }
 
 
 void ValueTypeVectorTest() {
     ValueType v1, v2;
-    ValueTypeVector vec1, vec2;
-    ValueTypeVectorCtor(&vec1, 3);
-    v1 = ValueTypeVectorGet(&vec1, 0);
+    ValueTypeVector c1, c2;
+    ValueTypeVectorCtor(&c1, 3);
+    v1 = ValueTypeVectorGet(&c1, 0);
     ValueTypeDtor(v1);
     ValueTypeCtor(v1);
-    ValueTypeVectorSet(&vec1, 0, v1);
-    ValueTypeVectorSet(&vec1, 2, v1);
+    ValueTypeVectorSet(&c1, 0, v1);
+    ValueTypeVectorSet(&c1, 2, v1);
     ValueTypeCopy(v2, v1);
     ValueTypeDtor(v1);
-    ValueTypeVectorSort(&vec1);
-    ValueTypeVectorResize(&vec1, 2);
-    ValueTypeVectorSet(&vec1, 0, v2);
-    ValueTypeVectorCopy(&vec2, &vec1);
-    ValueTypeVectorDtor(&vec1);
-    ValueTypeVectorDtor(&vec2);
+    ValueTypeVectorSort(&c1);
+    ValueTypeVectorResize(&c1, 2);
+    ValueTypeVectorResize(&c1, 20);
+    ValueTypeVectorSet(&c1, 0, v2);
+    ValueTypeVectorCopy(&c2, &c1);
+    ValueTypeVectorDtor(&c1);
+    ValueTypeVectorDtor(&c2);
     ValueTypeDtor(v2);
 }
 
 
 void ValueTypeListTest() {
     ValueType v1, v2;
-    ValueTypeList l;
+    ValueTypeList c;
+    ValueTypeCtor(v1);
+    ValueTypeCtor(v2);
+    ValueTypeListCtor(&c);
+    ValueTypeListDtor(&c);
+    ValueTypeDtor(v1);
+    ValueTypeDtor(v2);
 }
 
 
 void ValueTypeQueueTest() {
     ValueType v1, v2;
-    ValueTypeQueue q;
+    ValueTypeQueue c;
+    ValueTypeCtor(v1);
+    ValueTypeCtor(v2);
+    ValueTypeQueueCtor(&c);
+    ValueTypeQueueDtor(&c);
+    ValueTypeDtor(v1);
+    ValueTypeDtor(v2);
+}
+
+
+void ValueTypeHashTest() {
+    ValueType v1, v2;
+    ValueTypeHash c;
+    ValueTypeHashCtor(&c);
+    ValueTypeCtor(v1);
+    ValueTypeCtor(v2);
+    ValueTypeHashPut(&c, v1);
+    ValueTypeHashPut(&c, v2);
+    ValueTypeHashPut(&c, v1);
+    ValueTypeDtor(v1);
+    ValueTypeDtor(v2);
+    ValueTypeHashPurge(&c);
+    ValueTypeHashDtor(&c);
 }
 
 
@@ -83,5 +113,6 @@ int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
     ValueTypeQueueTest();
+    ValueTypeHashTest();
     return 0;
 }
