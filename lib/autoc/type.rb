@@ -1,13 +1,13 @@
-require "autoc/code_builder"
+require "autoc/code"
 
 
 module AutoC
   
 
-class Type < CodeBuilder::Code
+class Type < Code
   
   # :nodoc:  
-  CommonCode = Class.new(CodeBuilder::Code) do
+  CommonCode = Class.new(Code) do
     def write_intf(stream)
       stream << %$
         #ifndef AUTOC_INLINE
@@ -119,7 +119,7 @@ end # Type
 class UserDefinedType < Type
   
   # :nodoc:  
-  class PublicDeclaration < CodeBuilder::Code
+  class PublicDeclaration < Code
     def entities; super + [Type::CommonCode] end
     def initialize(forward) @forward = forward.to_s end
     def hash; @forward.hash end

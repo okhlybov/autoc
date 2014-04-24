@@ -1,5 +1,5 @@
-require "autoc/code_builder"
-require "autoc/type_builder"
+require "autoc/code"
+require "autoc/type"
 
 
 module AutoC

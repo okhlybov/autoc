@@ -8,6 +8,6 @@
 =end
 
 
-require "autoc/code_builder"
-require "autoc/type_builder"
-require "autoc/collection_builder"
+require "autoc/code"
+require "autoc/type"
+require "autoc/collection"
