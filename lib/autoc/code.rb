@@ -1,7 +1,7 @@
 require "set"
 
 
-module CodeBuilder
+module AutoC
 
 
 # class Entity
@@ -116,7 +116,7 @@ def self.priority_sort(entities, reverse = false)
 end # priority_sort
 
 
-class File
+class Module::File
 
   attr_reader :entities
 
@@ -146,14 +146,14 @@ class File
 end # File
 
 
-class Header < File
+class Module::Header < Module::File
   def write(stream)
-    CodeBuilder.priority_sort(entities).each {|e| e.write_intf(stream)}
+    AutoC.priority_sort(entities).each {|e| e.write_intf(stream)}
   end
 end # Header
 
 
-class Source < File
+class Module::Source < Module::File
 
   attr_reader :index
 
@@ -163,7 +163,7 @@ class Source < File
   end
 
   def write(stream)
-    sorted = CodeBuilder.priority_sort(entities)
+    sorted = AutoC.priority_sort(entities)
     sorted.each {|e| e.write_decls(stream)}
     sorted.each {|e| e.write_defs(stream)}
   end
@@ -185,7 +185,7 @@ class Source < File
 end # Source
 
 
-class CModule < CodeBuilder::Module
+class CModule < AutoC::Module
   def self.generate!(name, &block)
     m = self.new(name)
     block.call(m)
@@ -202,7 +202,7 @@ class CModule < CodeBuilder::Module
   def new_source(index)
     Source.new(self, index)
   end
-  class Header < CodeBuilder::Header
+  class Header < Module::Header
     attr_reader :file_name
     def initialize(*args)
       super
@@ -224,7 +224,7 @@ class CModule < CodeBuilder::Module
       $
     end
   end # Header
-  class Source < CodeBuilder::Source
+  class Source < Module::Source
     attr_reader :file_name
     def initialize(*args)
       super
@@ -244,4 +244,4 @@ class CModule < CodeBuilder::Module
 end # Module
 
 
-end # CodeBuilder
+end # AutoC
