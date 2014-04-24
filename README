@@ -1,4 +1,5 @@
-AutoC - a collection of Ruby modules related to automatic C source code generation.
+== AutoC - a collection of Ruby modules related to automatic C source code generation.
+
 AutoC is a free software distributed under the terms of modified BSD license.
 
 Project home page is http://autoc.sourceforge.net/
@@ -10,8 +11,11 @@ AutoC is available via the RubyGems infrastructure; the easiest way to obtain is
 For offline user documentation refer to manual/manual.pdf
 
 Ad-hoc test build instructions:
-    cd test
-    cc -o test test.c test_auto.c
+[source,shell]
+----
+cd test
+cc -o test test.c test_auto.c
+----
 
 That's all for now, folks! Stay tuned.
 Oleg A. Khlybov <fougas@mail.ru>
