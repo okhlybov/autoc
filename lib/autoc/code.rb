@@ -55,13 +55,20 @@ end # Code
 
 class Module
 
-  attr_reader :header, :smallest_source, :main_source
+  def self.generate!(name, &block)
+    m = self.new(name)
+    block.call(m)
+    m.generate!
+  end
+  
+  attr_reader :name, :header, :smallest_source, :main_source
 
-  def initialize
+  def initialize(name)
     @entities = Set.new
     @source_size_threshold = 0
+    @name = name.to_s # TODO validate
   end
-
+  
   def <<(obj)
     unless @entities.include?(obj)
       @entities << obj
@@ -70,9 +77,13 @@ class Module
     self
   end
 
-  # def new_header()
-
-  # def new_source(index)
+  def new_header
+    Header.new(self)
+  end
+  
+  def new_source(index)
+    Source.new(self, index)
+  end
 
   def source_count=(count)
     @source_count = count
@@ -147,25 +158,42 @@ end # File
 
 
 class Module::Header < Module::File
-  def write(stream)
-    AutoC.priority_sort(entities).each {|e| e.write_intf(stream)}
+  
+  attr_reader :file_name
+  
+  def initialize(*args)
+    super
+    @file_name = "#{@module.name.downcase}_auto.h"
+    @guard_macro = "#{@module.name.upcase}_AUTO_H"
   end
+  
+  def new_stream
+    ::File.new(@file_name, "wt")
+  end
+  
+  def write(stream)
+    stream << %$
+      /* AUTOMATICALLY GENERATED HEADER FILE. DO NOT MODIFY. */
+      #ifndef #{@guard_macro}
+      #define #{@guard_macro}
+    $
+    AutoC.priority_sort(entities).each {|e| e.write_intf(stream)}
+    stream << %$
+      #endif
+    $
+  end
+  
 end # Header
 
 
 class Module::Source < Module::File
 
-  attr_reader :index
+  attr_reader :index, :file_name
 
   def initialize(m, i)
     super(m)
     @index = i
-  end
-
-  def write(stream)
-    sorted = AutoC.priority_sort(entities)
-    sorted.each {|e| e.write_decls(stream)}
-    sorted.each {|e| e.write_defs(stream)}
+    @file_name = @module.source_count > 1 ? "#{@module.name.downcase}_auto#{index}.c" : "#{@module.name.downcase}_auto.c"
   end
 
   def main?
@@ -182,66 +210,21 @@ class Module::Source < Module::File
     size
   end
 
+  def new_stream
+    ::File.new(@file_name, "wt")
+  end
+  
+  def write(stream)
+    stream << %$
+      /* AUTOMATICALLY GENERATED SOURCE FILE. DO NOT MODIFY. */
+      #include "#{@module.header.file_name}"
+    $
+    sorted = AutoC.priority_sort(entities)
+    sorted.each {|e| e.write_decls(stream)}
+    sorted.each {|e| e.write_defs(stream)}
+  end
+  
 end # Source
-
-
-class CModule < AutoC::Module
-  def self.generate!(name, &block)
-    m = self.new(name)
-    block.call(m)
-    m.generate!
-  end
-  attr_reader :name
-  def initialize(name)
-    super()
-    @name = name.to_s # TODO validate
-  end
-  def new_header
-    Header.new(self)
-  end
-  def new_source(index)
-    Source.new(self, index)
-  end
-  class Header < Module::Header
-    attr_reader :file_name
-    def initialize(*args)
-      super
-      @file_name = "#{@module.name.downcase}_auto.h"
-      @guard_macro = "#{@module.name.upcase}_AUTO_H"
-    end
-    def new_stream
-      ::File.new(@file_name, "wt")
-    end
-    def write(stream)
-      stream << %$
-        /* AUTOMATICALLY GENERATED HEADER FILE. DO NOT MODIFY. */
-        #ifndef #{@guard_macro}
-        #define #{@guard_macro}
-      $
-      super
-      stream << %$
-        #endif
-      $
-    end
-  end # Header
-  class Source < Module::Source
-    attr_reader :file_name
-    def initialize(*args)
-      super
-      @file_name = @module.source_count > 1 ? "#{@module.name.downcase}_auto#{index}.c" : "#{@module.name.downcase}_auto.c"
-    end
-    def new_stream
-      ::File.new(@file_name, "wt")
-    end
-    def write(stream)
-      stream << %$
-        /* AUTOMATICALLY GENERATED SOURCE FILE. DO NOT MODIFY. */
-        #include "#{@module.header.file_name}"
-      $
-      super
-    end
-  end # Source
-end # Module
 
 
 end # AutoC
