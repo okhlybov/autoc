@@ -11,3 +11,8 @@
 require "autoc/code"
 require "autoc/type"
 require "autoc/collection"
+require "autoc/collection/list"
+require "autoc/collection/queue"
+require "autoc/collection/vector"
+require "autoc/collection/hash_set"
+require "autoc/collection/hash_map"
