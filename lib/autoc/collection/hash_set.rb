@@ -5,6 +5,59 @@ require "autoc/collection/list"
 module AutoC
 
   
+=begin
+
+== Generated C interface
+
+=== Collection management
+
+- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+
+- *_void_* ~type~Ctor(*_Type_* * +self+)
+
+- *_void_* ~type~Dtor(*_Type_* * +self+)
+
+- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+
+=== Basic operations
+
+- *_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~Empty(*_Type_* * +self+)
+
+- *_E_* ~type~Get(*_Type_* * +self+)
+
+- *_void_* ~type~Purge(*_Type_* * +self+)
+
+- *_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
+
+- *_void_* ~type~Rehash(*_Type_* * +self+)
+
+- *_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+
+- *_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+
+- *_size_t_* ~type~Size(*_Type_* * +self+)
+
+=== Logical operations
+
+- *_void_* ~type~Not(*_Type_* * +self+, *_Type_* * +other+)
+
+- *_void_* ~type~And(*_Type_* * +self+, *_Type_* * +other+)
+
+- *_void_* ~type~Or(*_Type_* * +self+, *_Type_* * +other+)
+
+- *_void_* ~type~Xor(*_Type_* * +self+, *_Type_* * +other+)
+
+=== Iteration
+
+- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+
+- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+
+- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+
+=end
 class HashSet < Collection
 
   def initialize(*args)
@@ -151,7 +204,7 @@ class HashSet < Collection
             #{@list.type}* bucket;
             #{element.type} element = #{itNext}(&it);
             bucket = &buckets[#{element.identify("element")} % bucket_count];
-            #{@list.add}(bucket, element);
+            #{@list.put}(bucket, element);
             #{element.dtor("element")};
           }
           #{dtor}(self);
@@ -195,7 +248,7 @@ class HashSet < Collection
         #{element.copy("element", "element_")};
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(!#{@list.contains}(bucket, element)) {
-          #{@list.add}(bucket, element);
+          #{@list.put}(bucket, element);
           ++self->size;
           contained = 0;
           #{rehash}(self);
@@ -212,7 +265,7 @@ class HashSet < Collection
         #{element.copy("with", "with_")};
         bucket = &self->buckets[#{element.identify("what")} % self->bucket_count];
         if(!#{@list.replace}(bucket, what, with)) {
-          #{@list.add}(bucket, with);
+          #{@list.put}(bucket, with);
           ++self->size;
           contained = 0;
           #{rehash}(self);

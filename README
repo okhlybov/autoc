@@ -4,18 +4,19 @@ AutoC is a free software distributed under the terms of modified BSD license.
 
 Project home page is http://autoc.sourceforge.net/
 
-AutoC is available via the RubyGems infrastructure; the easiest way to obtain is
-
+AutoC is available via the RubyGems infrastructure; the easiest way to obtain it is:
+----
 > gem install autoc
+----
 
-For offline user documentation refer to manual/manual.pdf
+Offline user documentation in HTML form is in doc/ directory.
 
 Ad-hoc test build instructions:
-[source,shell]
 ----
-cd test
-cc -o test test.c test_auto.c
+> cd test
+> cc -o test test.c test_auto.c
 ----
 
 That's all for now, folks! Stay tuned.
+
 Oleg A. Khlybov <fougas@mail.ru>

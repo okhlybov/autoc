@@ -5,6 +5,31 @@ require "autoc/type"
 module AutoC
 
 
+=begin
+
+The following data structures are available:
+
+- {AutoC::Vector}
+
+  Fixed-sized array
+
+- {AutoC::List}
+
+  Single linked list
+
+- {AutoC::Queue}
+
+  Double linked list
+
+- {AutoC::HashSet}
+
+  Hash-based set
+
+- {AutoC::HashMap}
+
+  Hash-based map
+
+=end
 class Collection < Type
   
   def self.coerce(type)
