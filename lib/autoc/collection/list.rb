@@ -4,6 +4,55 @@ require "autoc/collection"
 module AutoC
   
 
+=begin
+
+== Generated C interface
+
+=== Collection management
+
+- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+
+- *_void_* ~type~Ctor(*_Type_* * +self+)
+
+- *_void_* ~type~Dtor(*_Type_* * +self+)
+
+- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+
+=== Basic operations
+
+- *_void_* ~type~Chop(*_Type_* * +self+)
+
+- *_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~Empty(*_Type_* * +self+)
+
+-  *_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
+
+- *_E_* ~type~Get(*_Type_* * +self+)
+
+- *_void_* ~type~Purge(*_Type_* * +self+)
+
+- *_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+
+- *_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+
+- *_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
+
+- *_size_t_* ~type~Size(*_Type_* * +self+)
+
+=== Iteration
+
+- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+
+- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+
+- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+
+=end
 class List < Collection
   
   def write_exported_types(stream)
@@ -33,7 +82,7 @@ class List < Collection
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{get}(#{type}*);
-      #{declare} void #{add}(#{type}*, #{element.type});
+      #{declare} void #{put}(#{type}*, #{element.type});
       #{declare} void #{chop}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
@@ -75,7 +124,7 @@ class List < Collection
         #{itCtor}(&it, src);
         while(#{itHasNext}(&it)) {
           #{element.type} element;
-          #{add}(dst, element = #{itNext}(&it));
+          #{put}(dst, element = #{itNext}(&it));
           #{element.dtor("element")};
         }
       }
@@ -119,7 +168,7 @@ class List < Collection
         --self->node_count;
         #{free}(node);
       }
-      #{define} void #{add}(#{type}* self, #{element.type} element) {
+      #{define} void #{put}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);

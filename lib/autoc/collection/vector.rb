@@ -6,37 +6,40 @@ module AutoC
   
 =begin
 
-== Vector interface
+== Generated C interface
 
-=== Basic operation
+=== Collection management
 
-  - *_void_* ~type~Ctor(*_Type_* * +self+, *_size_t_* +size+)
+- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
 
-  - *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+- *_void_* ~type~Ctor(*_Type_* * +self+, *_size_t_* +size+)
 
-  - *_void_* ~type~Dtor(*_Type_* * +self+)
+- *_void_* ~type~Dtor(*_Type_* * +self+)
 
-  - *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 
-  - *_E_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 
-  - *_void_* ~type~Resize(*_Type_* * +self+, *_size_t_* +size+)
+=== Basic operations
 
-  - *_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
+- *_E_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 
-  - *_size_t_* ~type~Size(*_Type_* * +self+)
+- *_void_* ~type~Resize(*_Type_* * +self+, *_size_t_* +size+)
 
-  - *_void_* ~type~Sort(*_Type_* * +self+)
+- *_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
 
-  - *_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
+- *_size_t_* ~type~Size(*_Type_* * +self+)
+
+- *_void_* ~type~Sort(*_Type_* * +self+)
+
+- *_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
 
 === Iteration
 
-  - *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-  - *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
 
-  - *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
 
 =end
 class Vector < Collection

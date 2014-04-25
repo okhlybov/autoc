@@ -4,6 +4,61 @@ require "autoc/collection"
 module AutoC
 
   
+=begin
+
+== Generated C interface
+
+=== Collection management
+
+- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+
+- *_void_* ~type~Ctor(*_Type_* * +self+)
+
+- *_void_* ~type~Dtor(*_Type_* * +self+)
+
+- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+
+=== Basic operations
+
+- *_void_* ~type~ChopHead(*_Type_* * +self+)
+
+- *_void_* ~type~ChopTail(*_Type_* * +self+)
+
+- *_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~Empty(*_Type_* * +self+)
+
+-  *_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
+
+- *_E_* ~type~GetHead(*_Type_* * +self+)
+
+- *_E_* ~type~GetTail(*_Type_* * +self+)
+
+- *_void_* ~type~Purge(*_Type_* * +self+)
+
+- *_void_* ~type~PutHead(*_Type_* * +self+, *_E_* +value+)
+
+- *_void_* ~type~PutTail(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+
+- *_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+
+- *_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+
+- *_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
+
+- *_size_t_* ~type~Size(*_Type_* * +self+)
+
+=== Iteration
+
+- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+
+- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+
+- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+
+=end
 class Queue < Collection
   
   def write_exported_types(stream)
@@ -35,10 +90,10 @@ class Queue < Collection
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
-      #{declare} #{element.type} #{head}(#{type}*);
-      #{declare} #{element.type} #{tail}(#{type}*);
-      #{declare} void #{append}(#{type}*, #{element.type});
-      #{declare} void #{prepend}(#{type}*, #{element.type});
+      #{declare} #{element.type} #{getHead}(#{type}*);
+      #{declare} #{element.type} #{getTail}(#{type}*);
+      #{declare} void #{putTail}(#{type}*, #{element.type});
+      #{declare} void #{putHead}(#{type}*, #{element.type});
       #{declare} void #{chopHead}(#{type}*);
       #{declare} void #{chopTail}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
@@ -81,7 +136,7 @@ class Queue < Collection
         #{itCtor}(&it, src, 1);
         while(#{itHasNext}(&it)) {
           #{element.type} element;
-          #{append}(dst, element = #{itNext}(&it));
+          #{putTail}(dst, element = #{itNext}(&it));
           #{element.dtor("element")};
         }
       }
@@ -108,14 +163,14 @@ class Queue < Collection
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{define} #{element.type} #{head}(#{type}* self) {
+      #{define} #{element.type} #{getHead}(#{type}* self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} #{element.type} #{tail}(#{type}* self) {
+      #{define} #{element.type} #{getTail}(#{type}* self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
@@ -144,7 +199,7 @@ class Queue < Collection
         --self->node_count;
         #{free}(node);
       }
-      #{define} void #{append}(#{type}* self, #{element.type} element) {
+      #{define} void #{putTail}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
@@ -160,7 +215,7 @@ class Queue < Collection
         }
         ++self->node_count;
       }
-      #{define} void #{prepend}(#{type}* self, #{element.type} element) {
+      #{define} void #{putHead}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
