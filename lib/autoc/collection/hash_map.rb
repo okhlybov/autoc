@@ -17,7 +17,7 @@ class HashMap < Collection
     super(type, value_type, visibility)
     @key = Collection.coerce(key_type)
     @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
-    @entry_set = HashSet.new(set, @entry)
+    @set = HashSet.new(set, @entry)
   end
   
   def write_exported_types(stream)
@@ -29,15 +29,15 @@ class HashMap < Collection
         int valid_value;
       };
     $
-    @entry_set.write_exported_types(stream)
+    @set.write_exported_types(stream)
     stream << %$
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
-        #{@entry_set.type} entries;
+        #{@set.type} entries;
       };
       struct #{it} {
-        #{@entry_set.it} it;
+        #{@set.it} it;
       };
     $
   end
@@ -67,127 +67,125 @@ class HashMap < Collection
     stream << %$
       static #{@entry.type} #{entryKeyOnly}(#{key.type} key) {
         #{@entry.type} entry;
-        entry.key = key;
+        #{key.copy("entry.key", "key")};
         entry.valid_value = 0;
         return entry;
       }
       static #{@entry.type} #{entryKeyValue}(#{key.type} key, #{value.type} value) {
         #{@entry.type} entry;
-        entry.key = key;
-        entry.value = value;
+        #{key.copy("entry.key", "key")};
+        #{value.copy("entry.value", "value")};
         entry.valid_value = 1;
         return entry;
       }
-      static size_t #{entryIdentify}(#{@entry.type} entry) {
-        return #{key.identify("entry.key")};
+      #define #{entryIdentify}(obj) #{entryIdentify_}(&obj)
+      static size_t #{entryIdentify_}(#{@entry.type}* entry) {
+        return #{key.identify("entry->key")};
       }
-      static int #{entryEqual}(#{@entry.type} lt, #{@entry.type} rt) {
-        return #{key.equal("lt.key", "rt.key")};
+      #define #{entryEqual}(lt, rt) #{entryEqual_}(&lt, &rt)
+      static int #{entryEqual_}(#{@entry.type}* lt, #{@entry.type}* rt) {
+        return #{key.equal("lt->key", "rt->key")};
       }
-      #define #{entryCopy}(dst, src) #{entryCopy}(&dst, &src)
-      static void #{entryCopy}(#{@entry.type}* dst, #{@entry.type}* src) {
+      #define #{entryCopy}(dst, src) #{entryCopy_}(&dst, &src)
+      static void #{entryCopy_}(#{@entry.type}* dst, #{@entry.type}* src) {
         #{key.copy("dst->key", "src->key")};
         if((dst->valid_value = src->valid_value)) #{value.copy("dst->value", "src->value")};
       }
-      static void #{entryDtor}(#{@entry.type} entry) {
-        #{key.dtor("entry.key")};
-        if(entry.valid_value) #{value.dtor("entry.value")};
+      #define #{entryDtor}(obj) #{entryDtor_}(&obj)
+      static void #{entryDtor_}(#{@entry.type}* entry) {
+        #{key.dtor("entry->key")};
+        if(entry->valid_value) #{value.dtor("entry->value")};
       }
     $
-    @entry_set.write_exported_declarations(stream, static, inline)
-    @entry_set.write_implementations(stream, static)
+    @set.write_exported_declarations(stream, static, inline)
+    @set.write_implementations(stream, static)
     stream << %$
       #{define} void #{ctor}(#{type}* self) {
         #{assert}(self);
-        #{@entry_set.ctor}(&self->entries);
+        #{@set.ctor}(&self->entries);
       }
       #{define} void #{dtor}(#{type}* self) {
         #{assert}(self);
-        #{@entry_set.dtor}(&self->entries);
+        #{@set.dtor}(&self->entries);
       }
       #{define} void #{rehash}(#{type}* self) {
         #{assert}(self);
-        #{@entry_set.rehash}(&self->entries);
+        #{@set.rehash}(&self->entries);
       }
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
-        #{@entry_set.purge}(&self->entries);
+        #{@set.purge}(&self->entries);
       }
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
-        return #{@entry_set.size}(&self->entries);
+        return #{@set.size}(&self->entries);
       }
       #{define} int #{empty}(#{type}* self) {
         #{assert}(self);
-        return #{@entry_set.empty}(&self->entries);
+        return #{@set.empty}(&self->entries);
       }
       #{define} int #{containsKey}(#{type}* self, #{key.type} key) {
         int result;
         #{@entry.type} entry;
         #{assert}(self);
-        entry = #{entryKeyOnly}(key);
-        result = #{@entry_set.contains}(&self->entries, entry);
+        result = #{@set.contains}(&self->entries, entry = #{entryKeyOnly}(key));
         #{@entry.dtor("entry")};
         return result;
       }
       #{define} #{value.type} #{get}(#{type}* self, #{key.type} key) {
         #{value.type} result;
-        #{@entry.type} entry;
+        #{@entry.type} entry, existing_entry;
         #{assert}(self);
-        entry = #{entryKeyOnly}(key);
         #{assert}(#{containsKey}(self, key));
-        result = #{@entry_set.get}(&self->entries, entry).value;
+        existing_entry = #{@set.get}(&self->entries, entry = #{entryKeyOnly}(key));
+        #{value.copy("result", "existing_entry.value")};
+        #{@entry.dtor("existing_entry")};
         #{@entry.dtor("entry")};
         return result;
       }
       #{define} int #{put}(#{type}* self, #{key.type} key, #{value.type} value) {
-        #{@entry.type} entry = #{entryKeyValue}(key, value);
+        int contains;
+        #{@entry.type} entry;
         #{assert}(self);
-        if(!#{containsKey}(self, key)) {
-          #{@entry_set.put}(&self->entries, entry);
-          #{@entry.dtor("entry")};
-          return 1;
-        } else {
-          #{@entry.dtor("entry")};
-          return 0;
-        }
+        if(!(contains = #{containsKey}(self, key))) #{@set.put}(&self->entries, entry = #{entryKeyValue}(key, value));
+        #{@entry.dtor("entry")};
+        return !contains;
       }
       #{define} void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
         #{@entry.type} entry;
         #{assert}(self);
         entry = #{entryKeyValue}(key, value);
-        #{@entry_set.replace}(&self->entries, entry);
+        #{@set.replace}(&self->entries, entry, entry);
         #{@entry.dtor("entry")};
       }
       #{define} int #{remove}(#{type}* self, #{key.type} key) {
         int removed;
         #{@entry.type} entry;
         #{assert}(self);
-        entry = #{entryKeyOnly}(key);
-        removed = #{@entry_set.remove}(&self->entries, entry);
+        removed = #{@set.remove}(&self->entries, entry = #{entryKeyOnly}(key));
         #{@entry.dtor("entry")};
         return removed;
       }
       #{define} void #{itCtor}(#{it}* self, #{type}* map) {
         #{assert}(self);
         #{assert}(map);
-        #{@entry_set.itCtor}(&self->it, &map->entries);
+        #{@set.itCtor}(&self->it, &map->entries);
       }
       #{define} int #{itHasNext}(#{it}* self) {
         #{assert}(self);
-        return #{@entry_set.itHasNext}(&self->it);
+        return #{@set.itHasNext}(&self->it);
       }
       #{define} #{key.type} #{itNextKey}(#{it}* self) {
         #{assert}(self);
-        return #{@entry_set.itNext}(&self->it).key;
+        return #{@set.itNext}(&self->it).key;
       }
       #{define} #{value.type} #{itNextValue}(#{it}* self) {
         #{assert}(self);
-        return #{@entry_set.itNext}(&self->it).value;
+        return #{@set.itNext}(&self->it).value;
       }
       #{define} #{@entry.type} #{itNext}(#{it}* self) {
         #{assert}(self);
-        return #{@entry_set.itNext}(&self->it);
+        return #{@set.itNext}(&self->it);
       }
     $
   end
