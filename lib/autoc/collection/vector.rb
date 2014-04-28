@@ -35,11 +35,11 @@ module AutoC
 
 === Iteration
 
-- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 
-- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
 
-- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+- *_E_* ~it~Next(*_IteratorType_* * +it+)
 
 =end
 class Vector < Collection
@@ -59,6 +59,7 @@ class Vector < Collection
       struct #{it} {
         #{type}* vector;
         size_t index;
+        int forward;
       };
     $
   end
@@ -70,9 +71,6 @@ class Vector < Collection
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{resize}(#{type}*, size_t);
-      #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itHasNext}(#{it}*);
-      #{declare} #{element.type} #{itNext}(#{it}*);
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
         return self->element_count;
@@ -95,6 +93,21 @@ class Vector < Collection
         #{element.copy("self->values[index]", "value")};
       }
       #{declare} void #{sort}(#{type}*);
+      #{define} void #{itCtor}(#{it}* self, #{type}* vector, int forward) {
+        #{assert}(self);
+        #{assert}(vector);
+        self->vector = vector;
+        self->forward = forward;
+        self->index = 0;
+      }
+      #{define} int #{itHasNext}(#{it}* self) {
+        #{assert}(self);
+        return self->forward ? self->index < #{size}(self->vector) : self->index > 0;
+      }
+      #{define} #{element.type} #{itNext}(#{it}* self) {
+        #{assert}(self);
+        return #{get}(self->vector, self->forward ? self->index++ : self->index--);
+      }
     $
   end
   
@@ -167,20 +180,6 @@ class Vector < Collection
           self->element_count = element_count;
           self->values = values;
         }
-      }
-      #{define} void #{itCtor}(#{it}* self, #{type}* vector) {
-        #{assert}(self);
-        #{assert}(vector);
-        self->vector = vector;
-        self->index = 0;
-      }
-      #{define} int #{itHasNext}(#{it}* self) {
-        #{assert}(self);
-        return self->index < #{size}(self->vector);
-      }
-      #{define} #{element.type} #{itNext}(#{it}* self) {
-        #{assert}(self);
-        return #{get}(self->vector, self->index++);
       }
       static int #{comparator}(void* lp_, void* rp_) {
         #{element.type}* lp = (#{element.type}*)lp_;

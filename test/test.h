@@ -6,9 +6,12 @@ typedef struct ValueType ValueType;
 
 
 struct ValueType {
-  int size;
+  int value;
   void* block;
 };
+
+
+void ValueTypeCtorEx(ValueType*, int);
 
 
 #define ValueTypeCtor(obj) _ValueTypeCtor(&obj)

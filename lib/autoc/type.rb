@@ -6,7 +6,7 @@ module AutoC
 
 class Type < Code
   
-  # :nodoc:  
+  # @private
   CommonCode = Class.new(Code) do
     def write_intf(stream)
       stream << %$
@@ -118,7 +118,7 @@ end # Type
 
 class UserDefinedType < Type
   
-  # :nodoc:  
+  # @private  
   class PublicDeclaration < Code
     def entities; super + [Type::CommonCode] end
     def initialize(forward) @forward = forward.to_s end
