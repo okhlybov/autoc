@@ -5,6 +5,49 @@ require "autoc/collection/hash_set"
 module AutoC
 
   
+=begin
+
+== Generated C interface
+
+=== Collection management
+
+- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+
+- *_void_* ~type~Ctor(*_Type_* * +self+)
+
+- *_void_* ~type~Dtor(*_Type_* * +self+)
+
+- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+
+=== Basic operations
+
+- *_int_* ~type~ContainsKey(*_Type_* * +self+, *_K_* +key+)
+
+- *_int_* ~type~Empty(*_Type_* * +self+)
+
+- *_E_* ~type~Get(*_Type_* * +self+, *_K_* +key+)
+
+- *_void_* ~type~Purge(*_Type_* * +self+)
+
+- *_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+
+- *_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+
+- *_int_* ~type~Remove(*_Type_* * +self+, *_K_* +key+)
+
+- *_size_t_* ~type~Size(*_Type_* * +self+)
+
+=== Iteration
+
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+
+- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+
+- *_K_* ~it~NextKey(*_IteratorType_* * +it+)
+
+- *_E_* ~it~NextValue(*_IteratorType_* * +it+)
+
+=end
 class HashMap < Collection
   
   attr_reader :key
@@ -46,8 +89,9 @@ class HashMap < Collection
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
+      #{declare} void #{copy}(#{type}*, #{type}*);
+      #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
-      #{declare} void #{rehash}(#{type}*);
       #{declare} size_t #{size}(#{type}*);
       #{declare} int #{empty}(#{type}*);
       #{declare} int #{containsKey}(#{type}*, #{key.type});
@@ -108,9 +152,47 @@ class HashMap < Collection
         #{assert}(self);
         #{@set.dtor}(&self->entries);
       }
-      #{define} void #{rehash}(#{type}* self) {
+      static int #{putEntry}(#{type}* self, #{@entry.type}* entry) {
+        int contains;
         #{assert}(self);
-        #{@set.rehash}(&self->entries);
+        #{assert}(entry);
+        if(!(contains = #{containsKey}(self, entry->key))) {
+          #{@set.put}(&self->entries, *entry);
+        }
+        return !contains;
+      }
+      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+        #{it} it;
+        #{assert}(src);
+        #{assert}(dst);
+        #{ctor}(dst);
+        #{itCtor}(&it, src);
+        while(#{itHasNext}(&it)) {
+          #{@entry.type} entry = #{itNext}(&it);
+          #{putEntry}(dst, &entry);
+          #{@entry.dtor("entry")};
+        }
+      }
+      static int #{containsAllOf}(#{type}* self, #{type}* other) {
+        #{it} it;
+        #{itCtor}(&it, self);
+        while(#{itHasNext}(&it)) {
+          int found = 0;
+          #{@entry.type} entry = #{itNext}(&it);
+          if(#{containsKey}(other, entry.key)) {
+            #{value.type} other_value = #{get}(other, entry.key);
+            found = #{value.equal("entry.value", "other_value")};
+            #{value.dtor("other_value")};
+          }
+          #{@entry.dtor("entry")};
+          if(!found) return 0;
+        }
+        return 1;
+      }
+      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+        #{assert}(lt);
+        #{assert}(rt);
+        return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
       }
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
@@ -144,12 +226,13 @@ class HashMap < Collection
         return result;
       }
       #{define} int #{put}(#{type}* self, #{key.type} key, #{value.type} value) {
-        int contains;
+        int result;
         #{@entry.type} entry;
         #{assert}(self);
-        if(!(contains = #{containsKey}(self, key))) #{@set.put}(&self->entries, entry = #{entryKeyValue}(key, value));
+        entry = #{entryKeyValue}(key, value);
+        result = #{putEntry}(self, &entry);
         #{@entry.dtor("entry")};
-        return !contains;
+        return result;
       }
       #{define} void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
         #{@entry.type} entry;

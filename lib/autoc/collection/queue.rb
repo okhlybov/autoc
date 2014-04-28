@@ -52,11 +52,11 @@ module AutoC
 
 === Iteration
 
-- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 
-- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
 
-- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+- *_E_* ~it~Next(*_IteratorType_* * +it+)
 
 =end
 class Queue < Collection

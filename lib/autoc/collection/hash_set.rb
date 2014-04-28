@@ -31,8 +31,6 @@ module AutoC
 
 - *_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
 
-- *_void_* ~type~Rehash(*_Type_* * +self+)
-
 - *_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 
 - *_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
@@ -51,11 +49,11 @@ module AutoC
 
 === Iteration
 
-- *_void_* ~type~ItCtor(*_IteratorType_* * +it+, *_Type_* * +self+)
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_void_* ~type~ItHasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
 
-- *_E_* ~type~ItNext(*_IteratorType_* * +it+)
+- *_E_* ~it~Next(*_IteratorType_* * +it+)
 
 =end
 class HashSet < Collection
@@ -91,7 +89,6 @@ class HashSet < Collection
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{purge}(#{type}*);
-      #{declare} void #{rehash}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{get}(#{type}*, #{element.type});
       #{declare} size_t #{size}(#{type}*);
@@ -113,6 +110,52 @@ class HashSet < Collection
     @list.write_exported_declarations(stream, static, inline)
     @list.write_implementations(stream, static)
     stream << %$
+      static void #{rehash}(#{type}* self) {
+        #{@list.type}* buckets;
+        size_t index, bucket_count, size, fill;
+        #{assert}(self);
+        #{assert}(self->min_fill > 0);
+        #{assert}(self->max_fill > 0);
+        #{assert}(self->min_fill < self->max_fill);
+        #{assert}(self->min_bucket_count > 0);
+        if(self->buckets) {
+          if(self->min_size < self->size && self->size < self->max_size) return;
+          fill = (size_t)((float)self->size/self->bucket_count*100);
+          if(fill > self->max_fill) {
+            bucket_count = (size_t)((float)self->bucket_count/100*self->capacity_multiplier);
+          } else
+          if(fill < self->min_fill && self->bucket_count > self->min_bucket_count) {
+            bucket_count = (size_t)((float)self->bucket_count/self->capacity_multiplier*100);
+            if(bucket_count < self->min_bucket_count) bucket_count = self->min_bucket_count;
+          } else
+            return;
+          size = self->size;
+          self->min_size = (size_t)((float)self->min_fill/100*size);
+          self->max_size = (size_t)((float)self->max_fill/100*size);
+        } else {
+          bucket_count = self->min_bucket_count;
+          size = 0;
+        }
+        buckets = (#{@list.type}*)#{malloc}(bucket_count*sizeof(#{@list.type})); #{assert}(buckets);
+        for(index = 0; index < bucket_count; ++index) {
+          #{@list.ctor}(&buckets[index]);
+        }
+        if(self->buckets) {
+          #{it} it;
+          #{itCtor}(&it, self);
+          while(#{itHasNext}(&it)) {
+            #{@list.type}* bucket;
+            #{element.type} element = #{itNext}(&it);
+            bucket = &buckets[#{element.identify("element")} % bucket_count];
+            #{@list.put}(bucket, element);
+            #{element.dtor("element")};
+          }
+          #{dtor}(self);
+        }
+        self->buckets = buckets;
+        self->bucket_count = bucket_count;
+        self->size = size;
+      }
       #{define} void #{ctor}(#{type}* self) {
         #{assert}(self);
         self->min_bucket_count = 16;
@@ -166,52 +209,6 @@ class HashSet < Collection
         #{dtor}(self);
         self->buckets = NULL;
         #{rehash}(self);
-      }
-      #{define} void #{rehash}(#{type}* self) {
-        #{@list.type}* buckets;
-        size_t index, bucket_count, size, fill;
-        #{assert}(self);
-        #{assert}(self->min_fill > 0);
-        #{assert}(self->max_fill > 0);
-        #{assert}(self->min_fill < self->max_fill);
-        #{assert}(self->min_bucket_count > 0);
-        if(self->buckets) {
-          if(self->min_size < self->size && self->size < self->max_size) return;
-          fill = (size_t)((float)self->size/self->bucket_count*100);
-          if(fill > self->max_fill) {
-            bucket_count = (size_t)((float)self->bucket_count/100*self->capacity_multiplier);
-          } else
-          if(fill < self->min_fill && self->bucket_count > self->min_bucket_count) {
-            bucket_count = (size_t)((float)self->bucket_count/self->capacity_multiplier*100);
-            if(bucket_count < self->min_bucket_count) bucket_count = self->min_bucket_count;
-          } else
-            return;
-          size = self->size;
-          self->min_size = (size_t)((float)self->min_fill/100*size);
-          self->max_size = (size_t)((float)self->max_fill/100*size);
-        } else {
-          bucket_count = self->min_bucket_count;
-          size = 0;
-        }
-        buckets = (#{@list.type}*)#{malloc}(bucket_count*sizeof(#{@list.type})); #{assert}(buckets);
-        for(index = 0; index < bucket_count; ++index) {
-          #{@list.ctor}(&buckets[index]);
-        }
-        if(self->buckets) {
-          #{it} it;
-          #{itCtor}(&it, self);
-          while(#{itHasNext}(&it)) {
-            #{@list.type}* bucket;
-            #{element.type} element = #{itNext}(&it);
-            bucket = &buckets[#{element.identify("element")} % bucket_count];
-            #{@list.put}(bucket, element);
-            #{element.dtor("element")};
-          }
-          #{dtor}(self);
-        }
-        self->buckets = buckets;
-        self->bucket_count = bucket_count;
-        self->size = size;
       }
       #{define} int #{contains}(#{type}* self, #{element.type} element_) {
         int result;
