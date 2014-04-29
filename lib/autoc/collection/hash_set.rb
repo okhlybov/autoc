@@ -96,10 +96,10 @@ class HashSet < Collection
       #{declare} int #{put}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
-      #{declare} void #{not!}(#{type}*, #{type}*);
-      #{declare} void #{and!}(#{type}*, #{type}*);
-      #{declare} void #{or!}(#{type}*, #{type}*);
-      #{declare} void #{xor!}(#{type}*, #{type}*);
+      #{declare} void #{self.not}(#{type}*, #{type}*);
+      #{declare} void #{self.and}(#{type}*, #{type}*);
+      #{declare} void #{self.or}(#{type}*, #{type}*);
+      #{declare} void #{self.xor}(#{type}*, #{type}*);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itHasNext}(#{it}*);
       #{declare} #{element.type} #{itNext}(#{it}*);
@@ -286,7 +286,7 @@ class HashSet < Collection
         #{element.dtor("element")};
         return removed;
       }
-      #{define} void #{not!}(#{type}* self, #{type}* other) {
+      #{define} void #{self.not}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
@@ -298,7 +298,7 @@ class HashSet < Collection
         }
         #{rehash}(self);
       }
-      #{define} void #{or!}(#{type}* self, #{type}* other) {
+      #{define} void #{self.or}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
@@ -310,7 +310,7 @@ class HashSet < Collection
         }
         #{rehash}(self);
       }
-      #{define} void #{and!}(#{type}* self, #{type}* other) {
+      #{define} void #{self.and}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -334,7 +334,7 @@ class HashSet < Collection
         #{rehash}(self);
         /*#{dtor}(&set);*/
       }
-      #{define} void #{xor!}(#{type}* self, #{type}* other) {
+      #{define} void #{self.xor}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);

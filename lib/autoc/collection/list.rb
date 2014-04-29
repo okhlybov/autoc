@@ -83,7 +83,7 @@ class List < Collection
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{put}(#{type}*, #{element.type});
-      #{declare} void #{chop}(#{type}*);
+      #{declare} void #{self.chop}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
@@ -158,7 +158,7 @@ class List < Collection
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} void #{chop}(#{type}* self) {
+      #{define} void #{self.chop}(#{type}* self) {
         #{node}* node;
         #{assert}(self);
         #{assert}(!#{empty}(self));
