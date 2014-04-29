@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 
+#include "test.h"
 #include "test_auto.h"
 
 
@@ -91,10 +92,16 @@ void C(Test)() {
     int i;
     ValueType v1, v2;
     ValueTypeList c;
+    ValueTypeListIt it;
     printf("\n*** List<ValueType>\n");
-    V(Ctor)(v1);
-    V(Ctor)(v2);
+    V(CtorEx)(&v1, 1);
+    V(CtorEx)(&v2, 2);
     C(Ctor)(&c);
+    C(ItCtor)(&it, &c);
+    while(C(ItMove)(&it)) {
+        ValueType v = C(ItGet)(&it);
+        V(Dtor)(v);
+    }
     C(Put)(&c, v1);
     C(Put)(&c, v2);
     C(Put)(&c, v1);
@@ -102,6 +109,11 @@ void C(Test)() {
     printf("contains=%d\n", i);
     i = C(Contains)(&c, v2);
     printf("contains=%d\n", i);
+    C(ItCtor)(&it, &c);
+    while(C(ItMove)(&it)) {
+        ValueType v = C(ItGet)(&it);
+        V(Dtor)(v);
+    }
     C(Dtor)(&c);
     V(Dtor)(v1);
     V(Dtor)(v2);
@@ -180,9 +192,9 @@ void C(Test)() {
 
 
 int main(int argc, char** argv) {
-    ValueTypeVectorTest();
+    /*ValueTypeVectorTest();
     ValueTypeListTest();
-    ValueTypeQueueTest();
+    ValueTypeQueueTest();*/
     ValueTypeSetTest();
     ValueTypeMapTest();
     return 0;

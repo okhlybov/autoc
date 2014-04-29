@@ -35,11 +35,13 @@ module AutoC
 
 === Iteration
 
-- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+- *_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 
-- *_E_* ~it~Next(*_IteratorType_* * +it+)
+- *_int_* ~it~Move(*_IteratorType_* * +it+)
+
+- *_E_* ~it~Get(*_IteratorType_* * +it+)
 
 =end
 class Vector < Collection
@@ -58,7 +60,7 @@ class Vector < Collection
       };
       struct #{it} {
         #{type}* vector;
-        size_t index;
+        int index;
         int forward;
       };
     $
@@ -93,20 +95,22 @@ class Vector < Collection
         #{element.copy("self->values[index]", "value")};
       }
       #{declare} void #{sort}(#{type}*);
-      #{define} void #{itCtor}(#{it}* self, #{type}* vector, int forward) {
+      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
+      #{define} void #{itCtorEx}(#{it}* self, #{type}* vector, int forward) {
         #{assert}(self);
         #{assert}(vector);
         self->vector = vector;
         self->forward = forward;
-        self->index = 0;
+        self->index = forward ? -1 : #{size}(vector);
       }
-      #{define} int #{itHasNext}(#{it}* self) {
+      #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        return self->forward ? self->index < #{size}(self->vector) : self->index > 0;
+        if(self->forward) ++self->index; else --self->index;
+        return #{within}(self->vector, self->index);
       }
-      #{define} #{element.type} #{itNext}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it}* self) {
         #{assert}(self);
-        return #{get}(self->vector, self->forward ? self->index++ : self->index--);
+        return #{get}(self->vector, self->index);
       }
     $
   end

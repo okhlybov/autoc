@@ -48,9 +48,9 @@ module AutoC
 
 - *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~Move(*_IteratorType_* * +it+)
 
-- *_E_* ~it~Next(*_IteratorType_* * +it+)
+- *_E_* ~it~Get(*_IteratorType_* * +it+)
 
 =end
 class List < Collection
@@ -65,7 +65,9 @@ class List < Collection
         size_t node_count;
       };
       struct #{it} {
-        #{node}* next_node;
+        int start;
+        #{type}* list;
+        #{node}* this_node;
       };
       struct #{node} {
         #{element.type} element;
@@ -93,8 +95,8 @@ class List < Collection
       #{declare} size_t #{size}(#{type}*);
       #{declare} int #{empty}(#{type}*);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itHasNext}(#{it}*);
-      #{declare} #{element.type} #{itNext}(#{it}*);
+      #{declare} int #{itMove}(#{it}*);
+      #{declare} #{element.type} #{itGet}(#{it}*);
     $
   end
   
@@ -122,9 +124,9 @@ class List < Collection
         #{assert}(dst);
         #{ctor}(dst);
         #{itCtor}(&it, src);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           #{element.type} element;
-          #{put}(dst, element = #{itNext}(&it));
+          #{put}(dst, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
       }
@@ -133,11 +135,11 @@ class List < Collection
           #{it} lit, rit;
           #{itCtor}(&lit, lt);
           #{itCtor}(&rit, rt);
-          while(#{itHasNext}(&lit) && #{itHasNext}(&rit)) {
+          while(#{itMove}(&lit) && #{itMove}(&rit)) {
             int equal;
             #{element.type} le, re;
-            le = #{itNext}(&lit);
-            re = #{itNext}(&rit);
+            le = #{itGet}(&lit);
+            re = #{itGet}(&rit);
             equal = #{element.equal("le", "re")};
             #{element.dtor("le")};
             #{element.dtor("re")};
@@ -322,19 +324,24 @@ class List < Collection
       #{define} void #{itCtor}(#{it}* self, #{type}* list) {
         #{assert}(self);
         #{assert}(list);
-        self->next_node = list->head_node;
+        self->start = 1;
+        self->list = list;
       }
-      #{define} int #{itHasNext}(#{it}* self) {
+      #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        return self->next_node != NULL;
+        if(self->start) {
+          self->this_node = self->list->head_node;
+          self->start = 0;
+        } else {
+          self->this_node = self->this_node ? self->this_node->next_node : NULL;
+        }
+        return self->this_node != NULL;
       }
-      #{define} #{element.type} #{itNext}(#{it}* self) {
-        #{node}* node;
+      #{define} #{element.type} #{itGet}(#{it}* self) {
         #{element.type} result;
         #{assert}(self);
-        node = self->next_node;
-        self->next_node = self->next_node->next_node;
-        #{element.copy("result", "node->element")};
+        #{assert}(self->this_node);
+        #{element.copy("result", "self->this_node->element")};
         return result;
       }
     $

@@ -41,11 +41,13 @@ module AutoC
 
 - *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~Move(*_IteratorType_* * +it+)
 
-- *_K_* ~it~NextKey(*_IteratorType_* * +it+)
+- *_K_* ~it~GetKey(*_IteratorType_* * +it+)
 
-- *_E_* ~it~NextValue(*_IteratorType_* * +it+)
+- *_E_* ~it~GetValue(*_IteratorType_* * +it+)
+
+- *_E_* ~it~Get(*_IteratorType_* * +it+)
 
 =end
 class HashMap < Collection
@@ -100,10 +102,10 @@ class HashMap < Collection
       #{declare} void #{replace}(#{type}*, #{key.type}, #{value.type});
       #{declare} int #{remove}(#{type}*, #{key.type});
       #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itHasNext}(#{it}*);
-      #{declare} #{key.type} #{itNextKey}(#{it}*);
-      #{declare} #{value.type} #{itNextValue}(#{it}*);
-      #{declare} #{@entry.type} #{itNext}(#{it}*);
+      #{declare} int #{itMove}(#{it}*);
+      #{declare} #{key.type} #{itGetKey}(#{it}*);
+      #{declare} #{value.type} #{itGetValue}(#{it}*);
+      #define #{itGet}(x) #{itGetValue}(x)
     $
   end
 
@@ -161,14 +163,15 @@ class HashMap < Collection
         }
         return !contains;
       }
+      static #{@entry.type} #{itGetEntry}(#{it}*);
       #{define} void #{copy}(#{type}* dst, #{type}* src) {
         #{it} it;
         #{assert}(src);
         #{assert}(dst);
         #{ctor}(dst);
         #{itCtor}(&it, src);
-        while(#{itHasNext}(&it)) {
-          #{@entry.type} entry = #{itNext}(&it);
+        while(#{itMove}(&it)) {
+          #{@entry.type} entry = #{itGetEntry}(&it);
           #{putEntry}(dst, &entry);
           #{@entry.dtor("entry")};
         }
@@ -176,9 +179,9 @@ class HashMap < Collection
       static int #{containsAllOf}(#{type}* self, #{type}* other) {
         #{it} it;
         #{itCtor}(&it, self);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           int found = 0;
-          #{@entry.type} entry = #{itNext}(&it);
+          #{@entry.type} entry = #{itGetEntry}(&it);
           if(#{containsKey}(other, entry.key)) {
             #{value.type} other_value = #{get}(other, entry.key);
             found = #{value.equal("entry.value", "other_value")};
@@ -254,21 +257,32 @@ class HashMap < Collection
         #{assert}(map);
         #{@set.itCtor}(&self->it, &map->entries);
       }
-      #{define} int #{itHasNext}(#{it}* self) {
+      #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        return #{@set.itHasNext}(&self->it);
+        return #{@set.itMove}(&self->it);
       }
-      #{define} #{key.type} #{itNextKey}(#{it}* self) {
+      static #{@entry.type} #{itGetEntry}(#{it}* self) {
         #{assert}(self);
-        return #{@set.itNext}(&self->it).key;
+        return #{@set.itGet}(&self->it);
       }
-      #{define} #{value.type} #{itNextValue}(#{it}* self) {
+      #{define} #{key.type} #{itGetKey}(#{it}* self) {
+        #{@entry.type} entry;
+        #{key.type} key;
         #{assert}(self);
-        return #{@set.itNext}(&self->it).value;
+        entry = #{@set.itGet}(&self->it);
+        #{key.copy("key", "entry.key")};
+        #{@entry.dtor("entry")};
+        return key;
       }
-      #{define} #{@entry.type} #{itNext}(#{it}* self) {
+      #{define} #{key.type} #{itGetValue}(#{it}* self) {
+        #{@entry.type} entry;
+        #{value.type} value;
         #{assert}(self);
-        return #{@set.itNext}(&self->it);
+        entry = #{@set.itGet}(&self->it);
+        #{assert}(entry.valid_value);
+        #{value.copy("value", "entry.value")};
+        #{@entry.dtor("entry")};
+        return value;
       }
     $
   end
