@@ -52,11 +52,13 @@ module AutoC
 
 === Iteration
 
-- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+- *_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 
-- *_E_* ~it~Next(*_IteratorType_* * +it+)
+- *_int_* ~it~Move(*_IteratorType_* * +it+)
+
+- *_E_* ~it~Get(*_IteratorType_* * +it+)
 
 =end
 class Queue < Collection
@@ -72,8 +74,9 @@ class Queue < Collection
         size_t node_count;
       };
       struct #{it} {
-        #{node}* next_node;
-        int forward;
+        int start, forward;
+        #{type}* queue;
+        #{node}* this_node;
       };
       struct #{node} {
         #{element.type} element;
@@ -104,9 +107,11 @@ class Queue < Collection
       #{declare} int #{removeAll}(#{type}*, #{element.type});
       #{declare} size_t #{size}(#{type}*);
       #{declare} int #{empty}(#{type}*);
-      #{declare} void #{itCtor}(#{it}*, #{type}*, int);
-      #{declare} int #{itHasNext}(#{it}*);
-      #{declare} #{element.type} #{itNext}(#{it}*);
+      #{declare} void #{itCtor}(#{it}*, #{type}*);
+      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
+      #{declare} void #{itCtorEx}(#{it}*, #{type}*, int);
+      #{declare} int #{itMove}(#{it}*);
+      #{declare} #{element.type} #{itGet}(#{it}*);
     $
   end
   
@@ -133,23 +138,23 @@ class Queue < Collection
         #{assert}(src);
         #{assert}(dst);
         #{ctor}(dst);
-        #{itCtor}(&it, src, 1);
-        while(#{itHasNext}(&it)) {
+        #{itCtor}(&it, src);
+        while(#{itMove}(&it)) {
           #{element.type} element;
-          #{putTail}(dst, element = #{itNext}(&it));
+          #{putTail}(dst, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
       }
       #{define} int #{equal}(#{type}* lt, #{type}* rt) {
         if(#{size}(lt) == #{size}(rt)) {
           #{it} lit, rit;
-          #{itCtor}(&lit, lt, 1);
-          #{itCtor}(&rit, rt, 1);
-          while(#{itHasNext}(&lit) && #{itHasNext}(&rit)) {
+          #{itCtor}(&lit, lt);
+          #{itCtor}(&rit, rt);
+          while(#{itMove}(&lit) && #{itMove}(&rit)) {
             int equal;
             #{element.type} le, re;
-            le = #{itNext}(&lit);
-            re = #{itNext}(&rit);
+            le = #{itGet}(&lit);
+            re = #{itGet}(&rit);
             equal = #{element.equal("le", "re")};
             #{element.dtor("le")};
             #{element.dtor("re")};
@@ -379,23 +384,28 @@ class Queue < Collection
         #{assert}(self);
         return !self->node_count;
       }
-      #{define} void #{itCtor}(#{it}* self, #{type}* list, int forward) {
+      #{define} void #{itCtorEx}(#{it}* self, #{type}* queue, int forward) {
         #{assert}(self);
-        #{assert}(list);
+        #{assert}(queue);
+        self->start = 1;
+        self->queue = queue;
         self->forward = forward;
-        self->next_node = forward ? list->head_node : list->tail_node;
       }
-      #{define} int #{itHasNext}(#{it}* self) {
+      #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        return self->next_node != NULL;
+        if(self->start) {
+          self->this_node = self->forward ? self->queue->head_node : self->queue->tail_node;
+          self->start = 0;
+        } else {
+          self->this_node = self->forward ? self->this_node->next_node : self->this_node->prev_node;
+        }
+        return self->this_node != NULL;
       }
-      #{define} #{element.type} #{itNext}(#{it}* self) {
-        #{node}* node;
+      #{define} #{element.type} #{itGet}(#{it}* self) {
         #{element.type} result;
         #{assert}(self);
-        node = self->next_node;
-        self->next_node = self->forward ? self->next_node->next_node : self->next_node->prev_node;
-        #{element.copy("result", "node->element")};
+        #{assert}(self->this_node);
+        #{element.copy("result", "self->this_node->element")};
         return result;
       }
     $

@@ -11,10 +11,10 @@ ValueType = {
   :identify => :ValueTypeIdentify,
 }
 
-AutoC::Module.generate!(:Test) do |m|
-  m << AutoC::Vector.new(:ValueTypeVector, ValueType)
-  m << AutoC::List.new(:ValueTypeList, ValueType)
-  m << AutoC::Queue.new(:ValueTypeQueue, ValueType)
-  m << AutoC::HashSet.new(:ValueTypeSet, ValueType)
-  m << AutoC::HashMap.new(:ValueTypeMap, ValueType, ValueType)
+AutoC::Module.generate!(:Test) do |c|
+  c << AutoC::Vector.new(:ValueTypeVector, ValueType)
+  c << AutoC::List.new(:ValueTypeList, ValueType)
+  c << AutoC::Queue.new(:ValueTypeQueue, ValueType)
+  c << AutoC::HashSet.new(:ValueTypeSet, ValueType)
+  c << AutoC::HashMap.new(:ValueTypeMap, ValueType, ValueType)
 end

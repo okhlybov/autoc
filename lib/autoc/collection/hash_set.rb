@@ -51,9 +51,9 @@ module AutoC
 
 - *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 
-- *_int_* ~it~HasNext(*_IteratorType_* * +it+)
+- *_int_* ~it~Move(*_IteratorType_* * +it+)
 
-- *_E_* ~it~Next(*_IteratorType_* * +it+)
+- *_E_* ~it~Get(*_IteratorType_* * +it+)
 
 =end
 class HashSet < Collection
@@ -101,8 +101,8 @@ class HashSet < Collection
       #{declare} void #{self.or}(#{type}*, #{type}*);
       #{declare} void #{self.xor}(#{type}*, #{type}*);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itHasNext}(#{it}*);
-      #{declare} #{element.type} #{itNext}(#{it}*);
+      #{declare} int #{itMove}(#{it}*);
+      #{declare} #{element.type} #{itGet}(#{it}*);
     $
   end
 
@@ -143,9 +143,9 @@ class HashSet < Collection
         if(self->buckets) {
           #{it} it;
           #{itCtor}(&it, self);
-          while(#{itHasNext}(&it)) {
+          while(#{itMove}(&it)) {
             #{@list.type}* bucket;
-            #{element.type} element = #{itNext}(&it);
+            #{element.type} element = #{itGet}(&it);
             bucket = &buckets[#{element.identify("element")} % bucket_count];
             #{@list.put}(bucket, element);
             #{element.dtor("element")};
@@ -181,18 +181,18 @@ class HashSet < Collection
         #{assert}(dst);
         #{ctor}(dst);
         #{itCtor}(&it, src);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           #{element.type} element;
-          #{put}(dst, element = #{itNext}(&it));
+          #{put}(dst, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
       }
       static int #{containsAllOf}(#{type}* self, #{type}* other) {
         #{it} it;
         #{itCtor}(&it, self);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           int found = 0;
-          #{element.type} element = #{itNext}(&it);
+          #{element.type} element = #{itGet}(&it);
           if(#{contains}(other, element)) found = 1;
           #{element.dtor("element")};
           if(!found) return 0;
@@ -291,9 +291,9 @@ class HashSet < Collection
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           #{element.type} element;
-          #{remove}(self, element = #{itNext}(&it));
+          #{remove}(self, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
         #{rehash}(self);
@@ -303,9 +303,9 @@ class HashSet < Collection
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
-        while(#{itHasNext}(&it)) {
+        while(#{itMove}(&it)) {
           #{element.type} element;
-          #{put}(self, element = #{itNext}(&it));
+          #{put}(self, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
         #{rehash}(self);
@@ -317,14 +317,14 @@ class HashSet < Collection
         #{assert}(other);
         #{ctor}(&set);
         #{itCtor}(&it, self);
-        while(#{itHasNext}(&it)) {
-          #{element.type} element = #{itNext}(&it);
+        while(#{itMove}(&it)) {
+          #{element.type} element = #{itGet}(&it);
           if(#{contains}(other, element)) #{put}(&set, element);
           #{element.dtor("element")};
         }
         #{itCtor}(&it, other);
-        while(#{itHasNext}(&it)) {
-          #{element.type} element = #{itNext}(&it);
+        while(#{itMove}(&it)) {
+          #{element.type} element = #{itGet}(&it);
           if(#{contains}(self, element)) #{put}(&set, element);
           #{element.dtor("element")};
         }
@@ -341,14 +341,14 @@ class HashSet < Collection
         #{assert}(other);
         #{ctor}(&set);
         #{itCtor}(&it, self);
-        while(#{itHasNext}(&it)) {
-          #{element.type} element = #{itNext}(&it);
+        while(#{itMove}(&it)) {
+          #{element.type} element = #{itGet}(&it);
           if(!#{contains}(other, element)) #{put}(&set, element);
           #{element.dtor("element")};
         }
         #{itCtor}(&it, other);
-        while(#{itHasNext}(&it)) {
-          #{element.type} element = #{itNext}(&it);
+        while(#{itMove}(&it)) {
+          #{element.type} element = #{itGet}(&it);
           if(!#{contains}(self, element)) #{put}(&set, element);
           #{element.dtor("element")};
         }
@@ -361,37 +361,23 @@ class HashSet < Collection
       #{define} void #{itCtor}(#{it}* self, #{type}* set) {
         #{assert}(self);
         self->set = set;
-        self->bucket_index = 0;
-        #{@list.itCtor}(&self->it, &set->buckets[0]);
+        self->bucket_index = -1;
       }
-      #{define} int #{itHasNext}(#{it}* self) {
+      #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        if(#{@list.itHasNext}(&self->it)) {
-          return 1;
-        } else {
-          size_t i; for(i = self->bucket_index+1; i < self->set->bucket_count; ++i) {
-            if(!#{@list.empty}(&self->set->buckets[i])) {
-              return 1;
-            }
-          }
-          return 0;
+        if(self->bucket_index < 0) {
+          #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
         }
+        if(#{@list.itMove}(&self->it)) return 1;
+        while(++self->bucket_index < self->set->bucket_count) {
+          #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index]);
+            if(#{@list.itMove}(&self->it)) return 1;
+        }
+        return 0;
       }
-      #{define} #{element.type} #{itNext}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it}* self) {
         #{assert}(self);
-        #{assert}(#{itHasNext}(self));
-          if(#{@list.itHasNext}(&self->it)) {
-            return #{@list.itNext}(&self->it);
-          } else {
-            size_t i; for(i = self->bucket_index+1; i < self->set->bucket_count; ++i) {
-            if(!#{@list.empty}(&self->set->buckets[i])) {
-            #{@list.itCtor}(&self->it, &self->set->buckets[i]);
-              self->bucket_index = i;
-              return #{@list.itNext}(&self->it);
-            }
-          }
-          #{abort}();
-        }
+        return #{@list.itGet}(&self->it);
       }
     $
   end
