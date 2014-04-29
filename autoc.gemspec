@@ -1,6 +1,8 @@
+$: << "lib"; require "autoc"
+
 Gem::Specification.new do |spec|
   spec.name = "autoc"
-  spec.version = "0.9"
+  spec.version = AutoC::VERSION
   spec.author = "Oleg A. Khlybov"
   spec.email = "fougas@mail.ru"
   spec.homepage = "http://autoc.sourceforge.net/"

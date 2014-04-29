@@ -7,27 +7,23 @@ module AutoC
 
 =begin
 
-The following data structures are available:
+== Available data structures
 
-- {AutoC::Vector}
+- {AutoC::Vector} a fixed-sized array
 
-  Fixed-sized array
+- {AutoC::List} a single linked list
 
-- {AutoC::List}
+- {AutoC::Queue} a double linked list
 
-  Single linked list
+- {AutoC::HashSet} a hash-based set
 
-- {AutoC::Queue}
+- {AutoC::HashMap} a hash-based map
 
-  Double linked list
+== Element types: values, references
 
-- {AutoC::HashSet}
+== Thread safety
 
-  Hash-based set
-
-- {AutoC::HashMap}
-
-  Hash-based map
+== Iteration
 
 =end
 class Collection < Type

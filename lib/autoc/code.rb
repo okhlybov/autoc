@@ -121,7 +121,7 @@ end # Module
 
 
 def self.priority_sort(entities, reverse = false)
-  list = entities.to_a.sort_by!{|e| e.priority}
+  list = entities.to_a.sort! {|a,b| a.priority <=> b.priority}
   list.reverse! unless reverse
   list
 end # priority_sort
@@ -168,7 +168,7 @@ class Module::Header < Module::File
   end
   
   def new_stream
-    ::File.new(@file_name, "wt")
+    ::File.new(@file_name, "w")
   end
   
   def write(stream)
@@ -211,7 +211,7 @@ class Module::Source < Module::File
   end
 
   def new_stream
-    ::File.new(@file_name, "wt")
+    ::File.new(@file_name, "w")
   end
   
   def write(stream)

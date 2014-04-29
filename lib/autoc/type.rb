@@ -52,8 +52,8 @@ class Type < Code
   end
   
   def method_missing(method, *args)
-    str = method.to_s.chomp("!")
-    func = @type + str[0].capitalize + str[1..-1]
+    str = method.to_s
+    func = @type + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
     if args.empty?
       func # Emit bare function name
     elsif args.size == 1 && args.first == nil
