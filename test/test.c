@@ -75,9 +75,7 @@ void C(Test)() {
     V(Dtor)(v1);
     C(Sort)(&c1);
     C(Resize)(&c1, 2);
-#if 0
     C(Resize)(&c1, 20);
-#endif
     C(Set)(&c1, 0, v2);
     C(Copy)(&c2, &c1);
     C(Dtor)(&c1);
@@ -192,9 +190,9 @@ void C(Test)() {
 
 
 int main(int argc, char** argv) {
-    /*ValueTypeVectorTest();
+    ValueTypeVectorTest();
     ValueTypeListTest();
-    ValueTypeQueueTest();*/
+    ValueTypeQueueTest();
     ValueTypeSetTest();
     ValueTypeMapTest();
     return 0;

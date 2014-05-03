@@ -160,31 +160,34 @@ class Vector < Collection
         } else
           return 0;
       }
-      #{define} void #{resize}(#{type}* self, size_t element_count) {
-        size_t index;
+      #define MIN(a,b) (a > b ? b : a)
+      #define MAX(a,b) (a > b ? a : b)
+      #{define} void #{resize}(#{type}* self, size_t new_element_count) {
+        size_t index, element_count, from, to;
         #{assert}(self);
-        if(#{size}(self) != element_count) {
-          size_t count;
-          #{element.type}* values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(values);
-          if(#{size}(self) > element_count) {
-            for(index = element_count; index < #{size}(self); ++index) {
-              #{element.dtor("self->values[index]")};
-            }
-            count = element_count;
-          } else {
-            for(index = element_count; index < #{size}(self); ++index) {
-              #{element.ctor("self->values[index]")};
-            }
-            count = #{size}(self);
-          }
-          for(index = 0; index < count; ++index) {
+        if((element_count = #{size}(self)) != new_element_count) {
+          #{element.type}* values = (#{element.type}*)#{malloc}(new_element_count*sizeof(#{element.type})); #{assert}(values);
+          from = MIN(element_count, new_element_count);
+          to = MAX(element_count, new_element_count);
+          for(index = 0; index < from; ++index) {
             values[index] = self->values[index];
           }
+          if(element_count > new_element_count) {
+            for(index = from; index < to; ++index) {
+              #{element.dtor("self->values[index]")};
+            }
+          } else {
+            for(index = from; index < to; ++index) {
+              #{element.ctor("values[index]")};
+            }
+          }
           #{free}(self->values);
-          self->element_count = element_count;
           self->values = values;
+          self->element_count = new_element_count;
         }
       }
+      #undef MIN
+      #undef MAX
       static int #{comparator}(void* lp_, void* rp_) {
         #{element.type}* lp = (#{element.type}*)lp_;
         #{element.type}* rp = (#{element.type}*)rp_;
