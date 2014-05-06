@@ -78,6 +78,8 @@ void C(Test)() {
     C(Resize)(&c1, 20);
     C(Set)(&c1, 0, v2);
     C(Copy)(&c2, &c1);
+    C(Identify)(&c1);
+    C(Identify)(&c2);
     C(Dtor)(&c1);
     C(Dtor)(&c2);
     V(Dtor)(v2);
@@ -112,6 +114,7 @@ void C(Test)() {
         ValueType v = C(ItGet)(&it);
         V(Dtor)(v);
     }
+    C(Identify)(&c);
     C(Dtor)(&c);
     V(Dtor)(v1);
     V(Dtor)(v2);
@@ -127,6 +130,7 @@ void C(Test)() {
     V(Ctor)(v1);
     V(Ctor)(v2);
     C(Ctor)(&c);
+    C(Identify)(&c);
     C(Dtor)(&c);
     V(Dtor)(v1);
     V(Dtor)(v2);
@@ -150,6 +154,7 @@ void C(Test)() {
     C(Put)(&c, v1);
     V(Dtor)(v1);
     V(Dtor)(v2);
+    C(Identify)(&c);
     C(Purge)(&c);
     C(Dtor)(&c);
 }
@@ -181,6 +186,7 @@ void C(Test)() {
     printf("i=%d\n", i);
     i = C(Equal)(&c, &c2);
     printf("equal=%d\n", i);
+    C(Identify)(&c);
     C(Dtor)(&c);
     V(Dtor)(v1);
     V(Dtor)(v2);

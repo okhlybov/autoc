@@ -19,6 +19,8 @@ module AutoC
 
 - *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 
+- *_size_t_* ~type~Identify(*_Type_* * +self+)
+
 === Basic operations
 
 - *_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
@@ -88,6 +90,7 @@ class HashSet < Collection
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
+      #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{get}(#{type}*, #{element.type});
@@ -110,6 +113,10 @@ class HashSet < Collection
     @list.write_exported_declarations(stream, static, inline)
     @list.write_implementations(stream, static)
     stream << %$
+      #{define} #{element.type}* #{itGetRef}(#{it}* self) {
+        #{assert}(self);
+        return #{@list.itGetRef}(&self->it);
+      }
       static void #{rehash}(#{type}* self) {
         #{@list.type}* buckets;
         size_t index, bucket_count, size, fill;
@@ -203,6 +210,18 @@ class HashSet < Collection
         #{assert}(lt);
         #{assert}(rt);
         return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
+      }
+      #{define} size_t #{identify}(#{type}* self) {
+        #{it} it;
+        size_t result = 0;
+        #{assert}(self);
+        #{itCtor}(&it, self);
+        while(#{itMove}(&it)) {
+          #{element.type}* p = #{itGetRef}(&it);
+          result ^= #{element.identify("*p")};
+          result = AUTOC_RCYCLE(result);
+        }
+        return result;
       }
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
@@ -365,13 +384,11 @@ class HashSet < Collection
       }
       #{define} int #{itMove}(#{it}* self) {
         #{assert}(self);
-        if(self->bucket_index < 0) {
-          #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
-        }
+        if(self->bucket_index < 0) #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
         if(#{@list.itMove}(&self->it)) return 1;
         while(++self->bucket_index < self->set->bucket_count) {
           #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index]);
-            if(#{@list.itMove}(&self->it)) return 1;
+          if(#{@list.itMove}(&self->it)) return 1;
         }
         return 0;
       }
