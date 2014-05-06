@@ -18,6 +18,8 @@ module AutoC
 
 - *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 
+- *_size_t_* ~type~Identify(*_Type_* * +self+)
+
 === Basic operations
 
 - *_void_* ~type~Chop(*_Type_* * +self+)
@@ -82,6 +84,7 @@ class List < Collection
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
+      #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{put}(#{type}*, #{element.type});
@@ -148,6 +151,16 @@ class List < Collection
           return 1;
         } else
           return 0;
+      }
+      #{define} size_t #{identify}(#{type}* self) {
+        #{node}* node;
+        size_t result = 0;
+        #{assert}(self);
+        for(node = self->head_node; node != NULL; node = node->next_node) {
+          result ^= #{element.identify("node->element")};
+          result = AUTOC_RCYCLE(result);
+        }
+        return result;
       }
       #{define} void #{purge}(#{type}* self) {
         #{dtor}(self);
@@ -343,6 +356,11 @@ class List < Collection
         #{assert}(self->this_node);
         #{element.copy("result", "self->this_node->element")};
         return result;
+      }
+      #{define} #{element.type}* #{itGetRef}(#{it}* self) {
+        #{assert}(self);
+        #{assert}(self->this_node);
+        return &self->this_node->element;
       }
     $
   end

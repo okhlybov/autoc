@@ -40,6 +40,14 @@ class Type < Code
         #include <assert.h>
       $
     end
+    def write_decls(stream)
+      stream << %$
+        #include <limits.h>
+        #define AUTOC_MIN(a,b) ((a) > (b) ? (b) : (a))
+        #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
+        #define AUTOC_RCYCLE(x) (((x) << 1) | ((x) >> (sizeof(x)*CHAR_BIT - 1))) /* NOTE : valid for unsigned types only */
+      $
+    end
   end.new
 
   attr_reader :type

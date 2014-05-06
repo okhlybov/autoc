@@ -18,6 +18,7 @@ module AutoC
 
 - *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 
+- *_size_t_* ~type~Identify(*_Type_* * +self+)
 
 === Basic operations
 
@@ -73,6 +74,7 @@ class Vector < Collection
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} void #{resize}(#{type}*, size_t);
+      #{declare} size_t #{identify}(#{type}*);
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
         return self->element_count;
@@ -160,15 +162,13 @@ class Vector < Collection
         } else
           return 0;
       }
-      #define MIN(a,b) (a > b ? b : a)
-      #define MAX(a,b) (a > b ? a : b)
       #{define} void #{resize}(#{type}* self, size_t new_element_count) {
         size_t index, element_count, from, to;
         #{assert}(self);
         if((element_count = #{size}(self)) != new_element_count) {
           #{element.type}* values = (#{element.type}*)#{malloc}(new_element_count*sizeof(#{element.type})); #{assert}(values);
-          from = MIN(element_count, new_element_count);
-          to = MAX(element_count, new_element_count);
+          from = AUTOC_MIN(element_count, new_element_count);
+          to = AUTOC_MAX(element_count, new_element_count);
           for(index = 0; index < from; ++index) {
             values[index] = self->values[index];
           }
@@ -186,8 +186,15 @@ class Vector < Collection
           self->element_count = new_element_count;
         }
       }
-      #undef MIN
-      #undef MAX
+      #{define} size_t #{identify}(#{type}* self) {
+        size_t index, result = 0;
+        #{assert}(self);
+        for(index = 0; index < self->element_count; ++index) {
+          result ^= #{element.identify("self->values[index]")};
+          result = AUTOC_RCYCLE(result);
+        }
+        return result;
+      }
       static int #{comparator}(void* lp_, void* rp_) {
         #{element.type}* lp = (#{element.type}*)lp_;
         #{element.type}* rp = (#{element.type}*)rp_;

@@ -19,6 +19,9 @@ module AutoC
 
 - *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 
+- *_size_t_* ~type~Identify(*_Type_* * +self+)
+
+
 === Basic operations
 
 - *_int_* ~type~ContainsKey(*_Type_* * +self+, *_K_* +key+)
@@ -93,6 +96,7 @@ class HashMap < Collection
       #{declare} void #{dtor}(#{type}*);
       #{declare} void #{copy}(#{type}*, #{type}*);
       #{declare} int #{equal}(#{type}*, #{type}*);
+      #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} size_t #{size}(#{type}*);
       #{declare} int #{empty}(#{type}*);
@@ -196,6 +200,10 @@ class HashMap < Collection
         #{assert}(lt);
         #{assert}(rt);
         return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
+      }
+      #{define} size_t #{identify}(#{type}* self) {
+        #{assert}(self);
+        return #{@set.identify}(&self->entries); /* TODO : make use of the values' hashes */
       }
       #{define} void #{purge}(#{type}* self) {
         #{assert}(self);
