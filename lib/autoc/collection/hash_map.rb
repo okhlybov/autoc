@@ -74,7 +74,7 @@ class HashMap < Collection
       struct #{@entry.type} {
         #{key.type} key;
         #{value.type} value;
-        int valid_value;
+        unsigned flags;
       };
     $
     @set.write_exported_types(stream)
@@ -115,41 +115,52 @@ class HashMap < Collection
 
   def write_implementations(stream, define)
     stream << %$
-      static #{@entry.type} #{entryKeyOnly}(#{key.type} key) {
+      #define AUTOC_VALID_VALUE 1
+      #define AUTOC_VALID_KEY 2
+      #define AUTOC_OWNED_VALUE 4
+      #define AUTOC_OWNED_KEY 8
+      static #{@entry.type} #{entryKeyOnlyRef}(#{key.type}* key) {
         #{@entry.type} entry;
-        #{key.copy("entry.key", "key")};
-        entry.valid_value = 0;
+        entry.key = *key;
+        entry.flags = AUTOC_VALID_KEY;
         return entry;
       }
-      static #{@entry.type} #{entryKeyValue}(#{key.type} key, #{value.type} value) {
+      static #{@entry.type} #{entryKeyValueRef}(#{key.type}* key, #{value.type}* value) {
         #{@entry.type} entry;
-        #{key.copy("entry.key", "key")};
-        #{value.copy("entry.value", "value")};
-        entry.valid_value = 1;
+        entry.key = *key;
+        entry.value = *value;
+        entry.flags = (AUTOC_VALID_KEY | AUTOC_VALID_VALUE);
         return entry;
       }
-      #define #{entryIdentify}(obj) #{entryIdentify_}(&obj)
-      static size_t #{entryIdentify_}(#{@entry.type}* entry) {
+      #define #{entryIdentify}(obj) #{entryIdentifyRef}(&obj)
+      static size_t #{entryIdentifyRef}(#{@entry.type}* entry) {
         return #{key.identify("entry->key")};
       }
-      #define #{entryEqual}(lt, rt) #{entryEqual_}(&lt, &rt)
-      static int #{entryEqual_}(#{@entry.type}* lt, #{@entry.type}* rt) {
+      #define #{entryEqual}(lt, rt) #{entryEqualRef}(&lt, &rt)
+      static int #{entryEqualRef}(#{@entry.type}* lt, #{@entry.type}* rt) {
         return #{key.equal("lt->key", "rt->key")};
       }
-      #define #{entryCopy}(dst, src) #{entryCopy_}(&dst, &src)
-      static void #{entryCopy_}(#{@entry.type}* dst, #{@entry.type}* src) {
+      #define #{entryCopy}(dst, src) #{entryCopyRef}(&dst, &src)
+      static void #{entryCopyRef}(#{@entry.type}* dst, #{@entry.type}* src) {
+        #{assert}(src->flags & AUTOC_VALID_KEY);
+        dst->flags = (AUTOC_VALID_KEY | AUTOC_OWNED_KEY);
         #{key.copy("dst->key", "src->key")};
-        if((dst->valid_value = src->valid_value)) #{value.copy("dst->value", "src->value")};
+        if(src->flags & AUTOC_VALID_VALUE) {
+          dst->flags |= (AUTOC_VALID_VALUE | AUTOC_OWNED_VALUE);
+          #{value.copy("dst->value", "src->value")};
+        }
       }
-      #define #{entryDtor}(obj) #{entryDtor_}(&obj)
-      static void #{entryDtor_}(#{@entry.type}* entry) {
-        #{key.dtor("entry->key")};
-        if(entry->valid_value) #{value.dtor("entry->value")};
+      #define #{entryDtor}(obj) #{entryDtorRef}(&obj)
+      static void #{entryDtorRef}(#{@entry.type}* entry) {
+        #{assert}(entry->flags & AUTOC_VALID_KEY);
+        if(entry->flags & AUTOC_OWNED_KEY) #{key.dtor("entry->key")};
+        if(entry->flags & AUTOC_VALID_VALUE && entry->flags & AUTOC_OWNED_VALUE) #{value.dtor("entry->value")};
       }
     $
     @set.write_exported_declarations(stream, static, inline)
     @set.write_implementations(stream, static)
     stream << %$
+      static #{@entry.type}* #{itGetEntryRef}(#{it}*);
       #{define} void #{ctor}(#{type}* self) {
         #{assert}(self);
         #{@set.ctor}(&self->entries);
@@ -158,16 +169,15 @@ class HashMap < Collection
         #{assert}(self);
         #{@set.dtor}(&self->entries);
       }
-      static int #{putEntry}(#{type}* self, #{@entry.type}* entry) {
-        int contains;
+      static int #{putEntryRef}(#{type}* self, #{@entry.type}* entry) {
+        int absent;
         #{assert}(self);
         #{assert}(entry);
-        if(!(contains = #{containsKey}(self, entry->key))) {
+        if((absent = !#{containsKey}(self, entry->key))) {
           #{@set.put}(&self->entries, *entry);
         }
-        return !contains;
+        return absent;
       }
-      static #{@entry.type} #{itGetEntry}(#{it}*);
       #{define} void #{copy}(#{type}* dst, #{type}* src) {
         #{it} it;
         #{assert}(src);
@@ -175,9 +185,8 @@ class HashMap < Collection
         #{ctor}(dst);
         #{itCtor}(&it, src);
         while(#{itMove}(&it)) {
-          #{@entry.type} entry = #{itGetEntry}(&it);
-          #{putEntry}(dst, &entry);
-          #{@entry.dtor("entry")};
+          #{@entry.type}* e = #{itGetEntryRef}(&it);
+          #{putEntryRef}(dst, e);
         }
       }
       static int #{containsAllOf}(#{type}* self, #{type}* other) {
@@ -185,13 +194,12 @@ class HashMap < Collection
         #{itCtor}(&it, self);
         while(#{itMove}(&it)) {
           int found = 0;
-          #{@entry.type} entry = #{itGetEntry}(&it);
-          if(#{containsKey}(other, entry.key)) {
-            #{value.type} other_value = #{get}(other, entry.key);
-            found = #{value.equal("entry.value", "other_value")};
+          #{@entry.type}* e = #{itGetEntryRef}(&it);
+          if(#{containsKey}(other, e->key)) {
+            #{value.type} other_value = #{get}(other, e->key);
+            found = #{value.equal("e->value", "other_value")};
             #{value.dtor("other_value")};
           }
-          #{@entry.dtor("entry")};
           if(!found) return 0;
         }
         return 1;
@@ -221,7 +229,7 @@ class HashMap < Collection
         int result;
         #{@entry.type} entry;
         #{assert}(self);
-        result = #{@set.contains}(&self->entries, entry = #{entryKeyOnly}(key));
+        result = #{@set.contains}(&self->entries, entry = #{entryKeyOnlyRef}(&key));
         #{@entry.dtor("entry")};
         return result;
       }
@@ -230,7 +238,7 @@ class HashMap < Collection
         #{@entry.type} entry, existing_entry;
         #{assert}(self);
         #{assert}(#{containsKey}(self, key));
-        existing_entry = #{@set.get}(&self->entries, entry = #{entryKeyOnly}(key));
+        existing_entry = #{@set.get}(&self->entries, entry = #{entryKeyOnlyRef}(&key));
         #{value.copy("result", "existing_entry.value")};
         #{@entry.dtor("existing_entry")};
         #{@entry.dtor("entry")};
@@ -240,15 +248,15 @@ class HashMap < Collection
         int result;
         #{@entry.type} entry;
         #{assert}(self);
-        entry = #{entryKeyValue}(key, value);
-        result = #{putEntry}(self, &entry);
+        entry = #{entryKeyValueRef}(&key, &value);
+        result = #{putEntryRef}(self, &entry);
         #{@entry.dtor("entry")};
         return result;
       }
       #{define} void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
         #{@entry.type} entry;
         #{assert}(self);
-        entry = #{entryKeyValue}(key, value);
+        entry = #{entryKeyValueRef}(&key, &value);
         #{@set.replace}(&self->entries, entry, entry);
         #{@entry.dtor("entry")};
       }
@@ -256,7 +264,7 @@ class HashMap < Collection
         int removed;
         #{@entry.type} entry;
         #{assert}(self);
-        removed = #{@set.remove}(&self->entries, entry = #{entryKeyOnly}(key));
+        removed = #{@set.remove}(&self->entries, entry = #{entryKeyOnlyRef}(&key));
         #{@entry.dtor("entry")};
         return removed;
       }
@@ -269,29 +277,31 @@ class HashMap < Collection
         #{assert}(self);
         return #{@set.itMove}(&self->it);
       }
-      static #{@entry.type} #{itGetEntry}(#{it}* self) {
-        #{assert}(self);
-        return #{@set.itGet}(&self->it);
-      }
       #{define} #{key.type} #{itGetKey}(#{it}* self) {
-        #{@entry.type} entry;
+        #{@entry.type}* e;
         #{key.type} key;
         #{assert}(self);
-        entry = #{@set.itGet}(&self->it);
-        #{key.copy("key", "entry.key")};
-        #{@entry.dtor("entry")};
+        e = #{itGetEntryRef}(self);
+        #{key.copy("key", "e->key")};
         return key;
       }
       #{define} #{key.type} #{itGetValue}(#{it}* self) {
-        #{@entry.type} entry;
+        #{@entry.type}* e;
         #{value.type} value;
         #{assert}(self);
-        entry = #{@set.itGet}(&self->it);
-        #{assert}(entry.valid_value);
-        #{value.copy("value", "entry.value")};
-        #{@entry.dtor("entry")};
+        e = #{itGetEntryRef}(self);
+        #{assert}(e->flags & AUTOC_VALID_VALUE);
+        #{value.copy("value", "e->value")};
         return value;
       }
+      static #{@entry.type}* #{itGetEntryRef}(#{it}* self) {
+        #{assert}(self);
+        return #{@set.itGetRef}(&self->it);
+      }
+      #undef AUTOC_VALID_VALUE
+      #undef AUTOC_VALID_KEY
+      #undef AUTOC_OWNED_VALUE
+      #undef AUTOC_OWNED_KEY
     $
   end
   
