@@ -11,46 +11,73 @@ module AutoC
 
 === Collection management
 
-- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+[cols=2*]
+|===
+|*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+|
 
-- *_void_* ~type~Ctor(*_Type_* * +self+)
+|*_void_* ~type~Ctor(*_Type_* * +self+)
+|
 
-- *_void_* ~type~Dtor(*_Type_* * +self+)
+|*_void_* ~type~Dtor(*_Type_* * +self+)
+|
 
-- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|
 
-- *_size_t_* ~type~Identify(*_Type_* * +self+)
-
+|*_size_t_* ~type~Identify(*_Type_* * +self+)
+|
+|===
 
 === Basic operations
 
-- *_int_* ~type~ContainsKey(*_Type_* * +self+, *_K_* +key+)
+[cols=2*]
+|===
+|*_int_* ~type~ContainsKey(*_Type_* * +self+, *_K_* +key+)
+|
 
-- *_int_* ~type~Empty(*_Type_* * +self+)
+|*_int_* ~type~Empty(*_Type_* * +self+)
+|
 
-- *_E_* ~type~Get(*_Type_* * +self+, *_K_* +key+)
+|*_E_* ~type~Get(*_Type_* * +self+, *_K_* +key+)
+|
 
-- *_void_* ~type~Purge(*_Type_* * +self+)
+|*_void_* ~type~Purge(*_Type_* * +self+)
+|
 
-- *_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+|*_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+|
 
-- *_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+|*_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+|
 
-- *_int_* ~type~Remove(*_Type_* * +self+, *_K_* +key+)
+|*_int_* ~type~Remove(*_Type_* * +self+, *_K_* +key+)
+|
 
-- *_size_t_* ~type~Size(*_Type_* * +self+)
+|*_size_t_* ~type~Size(*_Type_* * +self+)
+|
+|===
 
 === Iteration
 
-- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+[cols=2*]
+|===
+|*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+|
 
-- *_int_* ~it~Move(*_IteratorType_* * +it+)
+|*_int_* ~it~Move(*_IteratorType_* * +it+)
+|
 
-- *_K_* ~it~GetKey(*_IteratorType_* * +it+)
+|*_K_* ~it~GetKey(*_IteratorType_* * +it+)
+|
 
-- *_E_* ~it~GetValue(*_IteratorType_* * +it+)
+|*_E_* ~it~GetValue(*_IteratorType_* * +it+)
+|
 
-- *_E_* ~it~Get(*_IteratorType_* * +it+)
+|*_E_* ~it~Get(*_IteratorType_* * +it+)
+|
+Alias for ~it~GetValue().
+|===
 
 =end
 class HashMap < Collection
@@ -65,10 +92,15 @@ class HashMap < Collection
     super(type, value_type, visibility)
     @key = Collection.coerce(key_type)
     @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
-    @set = HashSet.new(set, @entry)
+    @set = HashSet.new(set, @entry, :static)
   end
   
   def write_exported_types(stream)
+    stream << %$
+      /***
+      **** #{type}<#{key.type},#{value.type}> (#{self.class})
+      ***/
+    $ if public?
     stream << %$
       typedef struct #{@entry.type} #{@entry.type};
       struct #{@entry.type} {

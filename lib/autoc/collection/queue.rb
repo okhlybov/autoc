@@ -10,62 +10,100 @@ module AutoC
 
 === Collection management
 
-- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+[cols=2*]
+|===
+|*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+|
 
-- *_void_* ~type~Ctor(*_Type_* * +self+)
+|*_void_* ~type~Ctor(*_Type_* * +self+)
+|
 
-- *_void_* ~type~Dtor(*_Type_* * +self+)
+|*_void_* ~type~Dtor(*_Type_* * +self+)
+|
 
-- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|
 
-- *_size_t_* ~type~Identify(*_Type_* * +self+)
+|*_size_t_* ~type~Identify(*_Type_* * +self+)
+|
+|===
 
 === Basic operations
 
-- *_void_* ~type~ChopHead(*_Type_* * +self+)
+[cols=2*]
+|===
+|*_void_* ~type~ChopHead(*_Type_* * +self+)
+|
 
-- *_void_* ~type~ChopTail(*_Type_* * +self+)
+|*_void_* ~type~ChopTail(*_Type_* * +self+)
+|
 
-- *_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_int_* ~type~Empty(*_Type_* * +self+)
+|*_int_* ~type~Empty(*_Type_* * +self+)
+|
 
--  *_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
+|*_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_E_* ~type~GetHead(*_Type_* * +self+)
+|*_E_* ~type~GetHead(*_Type_* * +self+)
+|
 
-- *_E_* ~type~GetTail(*_Type_* * +self+)
+|*_E_* ~type~GetTail(*_Type_* * +self+)
+|
 
-- *_void_* ~type~Purge(*_Type_* * +self+)
+|*_void_* ~type~Purge(*_Type_* * +self+)
+|
 
-- *_void_* ~type~PutHead(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PutHead(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_void_* ~type~PutTail(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PutTail(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|
 
-- *_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|*_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|
 
-- *_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
+|
 
-- *_size_t_* ~type~Size(*_Type_* * +self+)
+|*_size_t_* ~type~Size(*_Type_* * +self+)
+|
+|===
 
 === Iteration
 
-- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+[cols=2*]
+|===
+|*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+|
 
-- *_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+|*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+|
 
-- *_int_* ~it~Move(*_IteratorType_* * +it+)
+|*_int_* ~it~Move(*_IteratorType_* * +it+)
+|
 
-- *_E_* ~it~Get(*_IteratorType_* * +it+)
+|*_E_* ~it~Get(*_IteratorType_* * +it+)
+|
+|===
 
 =end
 class Queue < Collection
   
   def write_exported_types(stream)
+    stream << %$
+      /***
+      **** #{type}<#{element.type}> (#{self.class})
+      ***/
+    $ if public?
     stream << %$
       typedef struct #{node} #{node};
       typedef struct #{type} #{type};
