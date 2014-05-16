@@ -121,6 +121,14 @@ class Type < Code
   
   def abort; "abort" end
   
+  protected
+  
+  def public?; @visibility == :public end
+    
+  def private?; @visibility == :private end
+  
+  def static?; @visibility == :static end
+
 end # Type
 
 

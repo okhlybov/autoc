@@ -10,39 +10,105 @@ module AutoC
 
 === Collection management
 
-- *_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+[cols="2*"]
+|===
+|*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+|
+Create a new vector +dst+ with the contents of +src+.
+A copy operation is performed on every element of +src+.
 
-- *_void_* ~type~Ctor(*_Type_* * +self+, *_size_t_* +size+)
+NOTE: Previous contents of +dst+ is overwritten.
 
-- *_void_* ~type~Dtor(*_Type_* * +self+)
+|*_void_* ~type~Ctor(*_Type_* * +self+, *_size_t_* +size+)
+|
+Create a new vector +self+ of size +size+.
+The elements are initialized with either supplied or generated default parameterless constructor.
 
-- *_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+WARNING: +size+ must be greater than zero.
 
-- *_size_t_* ~type~Identify(*_Type_* * +self+)
+NOTE: Previous contents of +self+ is overwritten.
+
+|*_void_* ~type~Dtor(*_Type_* * +self+)
+|
+Destroy a vector +self+.
+Contained elements are destroyed as well by calling the respective destructors.
+
+|*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|
+Return non-zero value if vectors +lt+ and +rt+ are considered equal by contents and zero value otherwise.
+
+|*_size_t_* ~type~Identify(*_Type_* * +self+)
+|
+Return hash code for vector +self+.
+|===
 
 === Basic operations
 
-- *_E_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
+[cols=2*]
+|===
+|*_E_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
+|
+Return a _copy_ of the element contained in +self+ at position +index+.
 
-- *_void_* ~type~Resize(*_Type_* * +self+, *_size_t_* +size+)
+WARNING: +index+ must be a valid index otherwise the behavior is undefined. See ~type~Within().
 
-- *_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
+|*_void_* ~type~Resize(*_Type_* * +self+, *_size_t_* +size+)
+|
+Set new size of vector +self+ to +size+.
 
-- *_size_t_* ~type~Size(*_Type_* * +self+)
+If new size is greater than the old one, extra elements are created with default parameterless constructors.
+If new size is smaller the the old one, excessive elements are destroyed.
 
-- *_void_* ~type~Sort(*_Type_* * +self+)
+WARNING: +size+ must be greater than zero.
 
-- *_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
+|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
+|
+
+Store a _copy_ of the +value+ in vector +self+ at position +index+ destroying previous contents.
+
+WARNING: +index+ must be a valid index otherwise the behavior is undefined. See ~type~Within().
+
+|*_size_t_* ~type~Size(*_Type_* * +self+)
+|
+Return number of elements currently contained in vector +self+.
+
+|*_void_* ~type~Sort(*_Type_* * +self+)
+|
+Perform a sorting operation on the contents of vector +self+ utilizing either generated of user supplied ordering functions.
+
+|*_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
+|
+Return non-zero value if +index+ is a valid index and zero value otherwise.
+Valid index belongs to the range 0 ... ~type~Size()-1.
+|===
 
 === Iteration
 
-- *_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+[cols=2*]
+|===
+|*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+|
+Create a new forward iterator +it+ on vector +self+.
 
-- *_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+NOTE: Previous contents of +it+ is overwritten.
 
-- *_int_* ~it~Move(*_IteratorType_* * +it+)
+|*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+|
+Create a new iterator +it+ on vector +self+.
+Non-zero value of +forward+ creates a forward iterator, zero value create a backward iterator.
 
-- *_E_* ~it~Get(*_IteratorType_* * +it+)
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_int_* ~it~Move(*_IteratorType_* * +it+)
+|
+Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
+
+|*_E_* ~it~Get(*_IteratorType_* * +it+)
+|
+Return a _copy_ of current element pointed to by the iterator +it+.
+
+WARNING: current position must be valid otherwise the behavior is undefined. See ~it~Move().
+|===
 
 =end
 class Vector < Collection
@@ -52,6 +118,11 @@ class Vector < Collection
   end
   
   def write_exported_types(stream)
+    stream << %$
+      /***
+      **** #{type}<#{element.type}> (#{self.class})
+      ***/
+    $ if public?
     stream << %$
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
