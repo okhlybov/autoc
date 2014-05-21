@@ -15,18 +15,18 @@ void ValueTypeCtorEx(ValueType* self, int value) {
 }
 
 
-void _ValueTypeCtor(ValueType* self) {
+void ValueTypeCtorRef(ValueType* self) {
     ValueTypeCtorEx(self, 0);
 }
 
 
-void _ValueTypeDtor(ValueType* self) {
+void ValueTypeDtorRef(ValueType* self) {
     assert(self);
     free(self->block);
 }
 
 
-void _ValueTypeCopy(ValueType* dst, ValueType* src) {
+void ValueTypeCopyRef(ValueType* dst, ValueType* src) {
     assert(src);
     assert(dst);
     dst->block = malloc(SIZE); assert(dst->block);
@@ -35,21 +35,21 @@ void _ValueTypeCopy(ValueType* dst, ValueType* src) {
 }
 
 
-int _ValueTypeEqual(ValueType* lt, ValueType* rt) {
+int ValueTypeEqualRef(ValueType* lt, ValueType* rt) {
     assert(lt);
     assert(rt);
     return lt->value == rt->value;
 }
 
 
-int _ValueTypeLess(ValueType* lt, ValueType* rt) {
+int ValueTypeLessRef(ValueType* lt, ValueType* rt) {
     assert(lt);
     assert(rt);
     return lt->value < rt->value;
 }
 
 
-size_t _ValueTypeIdentify(ValueType* self) {
+size_t ValueTypeIdentifyRef(ValueType* self) {
     assert(self);
     return (size_t)self->value;
 }

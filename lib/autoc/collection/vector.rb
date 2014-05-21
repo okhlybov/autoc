@@ -14,8 +14,8 @@ module AutoC
 |===
 |*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
 |
-Create a new vector +dst+ with the contents of +src+.
-A copy operation is performed on every element of +src+.
+Create a new vector +dst+ filled with the contents of +src+.
+A copy operation is performed on every element in +src+.
 
 NOTE: Previous contents of +dst+ is overwritten.
 
@@ -30,7 +30,7 @@ NOTE: Previous contents of +self+ is overwritten.
 
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
-Destroy a vector +self+.
+Destroy vector +self+.
 Contained elements are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
@@ -50,7 +50,7 @@ Return hash code for vector +self+.
 |
 Return a _copy_ of the element contained in +self+ at position +index+.
 
-WARNING: +index+ must be a valid index otherwise the behavior is undefined. See ~type~Within().
+WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
 |*_void_* ~type~Resize(*_Type_* * +self+, *_size_t_* +size+)
 |
@@ -59,18 +59,18 @@ Set new size of vector +self+ to +size+.
 If new size is greater than the old one, extra elements are created with default parameterless constructors.
 If new size is smaller the the old one, excessive elements are destroyed.
 
-WARNING: +size+ must be greater than zero.
+WARNING: +size+ *must* be greater than zero.
 
 |*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
 |
 
 Store a _copy_ of the +value+ in vector +self+ at position +index+ destroying previous contents.
 
-WARNING: +index+ must be a valid index otherwise the behavior is undefined. See ~type~Within().
+WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
-Return number of elements currently contained in vector +self+.
+Return number of elements contained in vector +self+.
 
 |*_void_* ~type~Sort(*_Type_* * +self+)
 |
@@ -95,7 +95,7 @@ NOTE: Previous contents of +it+ is overwritten.
 |*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 |
 Create a new iterator +it+ on vector +self+.
-Non-zero value of +forward+ creates a forward iterator, zero value create a backward iterator.
+Non-zero value of +forward+ creates a forward iterator, zero value creates a backward iterator.
 
 NOTE: Previous contents of +it+ is overwritten.
 
@@ -107,7 +107,7 @@ Advance iterator position of +it+ *and* return non-zero value if a new position 
 |
 Return a _copy_ of current element pointed to by the iterator +it+.
 
-WARNING: current position must be valid otherwise the behavior is undefined. See ~it~Move().
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 |===
 
 =end

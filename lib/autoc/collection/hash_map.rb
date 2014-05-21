@@ -15,18 +15,29 @@ module AutoC
 |===
 |*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
 |
+Create a new map +dst+ filled with the contents of +src+.
+A copy operation is performed on all keys and values in +src+.
+
+NOTE: Previous contents of +dst+ is overwritten.
 
 |*_void_* ~type~Ctor(*_Type_* * +self+)
 |
+Create a new empty map +self+.
+
+NOTE: Previous contents of +self+ is overwritten.
 
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
+Destroy map +self+.
+Contained keys and values are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
+Return non-zero value if maps +lt+ and +rt+ are considered equal by contents and zero value otherwise.
 
 |*_size_t_* ~type~Identify(*_Type_* * +self+)
 |
+Return hash code for map +self+.
 |===
 
 === Basic operations
@@ -35,27 +46,45 @@ module AutoC
 |===
 |*_int_* ~type~ContainsKey(*_Type_* * +self+, *_K_* +key+)
 |
+Return non-zero value if map +self+ contains an entry with a key considered equal to the key +key+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
+Return non-zero value if map +self+ contains no entries and zero value otherwise.
 
 |*_E_* ~type~Get(*_Type_* * +self+, *_K_* +key+)
 |
+Return a _copy_ of the element in +self+ bound to a key which is considered equal to the key +key+.
+
+WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See ~type~Contains().
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
+Remove and destroy all keys and values in +self+.
 
 |*_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
+Put a _copy_ of the element +value+ bound to a _copy_ of the key +key+ into +self+ *only if* there is no such key in +self+ which is considered equal to +key+.
+
+Return non-zero value on successful put and zero value otherwise.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
+If map +self+ contains an element which is considered equal to the element +what+, replace that element with a _copy_ of the element +with+,
+otherwise simply put a _copy_ of +with+ into +self+. Replaced element is destroyed.
+
+Return non-zero value if the replacement was performed and zero value otherwise.
 
 |*_int_* ~type~Remove(*_Type_* * +self+, *_K_* +key+)
 |
+Remove and destroy a key which is considered equal to the key +key+.
+Destroy an element bound to that key.
+
+Return non-zero value if a key/element pair was removed and zero value otherwise.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
+Return number of key/element pairs contained in +self+.
 |===
 
 === Iteration
@@ -64,15 +93,27 @@ module AutoC
 |===
 |*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 |
+Create a new iterator +it+ on map +self+.
+
+NOTE: As the map is an unordered sequence, the traversal order is unspecified.
+
+NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
+Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
 
 |*_K_* ~it~GetKey(*_IteratorType_* * +it+)
 |
+Return a _copy_ of the key from a key/value pair pointed to by the iterator +it+.
+
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 
 |*_E_* ~it~GetValue(*_IteratorType_* * +it+)
 |
+Return a _copy_ of the element from a key/element pair to by the iterator +it+.
+
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |
