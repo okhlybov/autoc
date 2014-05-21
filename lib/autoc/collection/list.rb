@@ -14,18 +14,29 @@ module AutoC
 |===
 |*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
 |
+Create a new list +dst+ filled with the contents of +src+.
+A copy operation is performed on every element in +src+.
+
+NOTE: Previous contents of +dst+ is overwritten.
 
 |*_void_* ~type~Ctor(*_Type_* * +self+)
 |
+Create a new empty list +self+.
+
+NOTE: Previous contents of +self+ is overwritten.
 
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
+Destroy list +self+.
+Contained elements are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
+Return non-zero value if lists +lt+ and +rt+ are considered equal by contents and zero value otherwise.
 
 |*_size_t_* ~type~Identify(*_Type_* * +self+)
 |
+Return hash code for list +self+.
 |===
 
 === Basic operations
@@ -34,39 +45,67 @@ module AutoC
 |===
 |*_void_* ~type~Chop(*_Type_* * +self+)
 |
+Remove and destroy head element of +self+.
+
+WARNING: list *must not* be empty otherwise the behavior is undefined.
 
 |*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
 |
+Return non-zero value if list +self+ contains one or more elements considered equal to +value+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
+Return non-zero value if list +self+ contains no elements and zero value otherwise.
 
 |*_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
 |
+Return _first_ element of contained in +self+ which is considered equal to +value+.
+
+WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
 |*_E_* ~type~Get(*_Type_* * +self+)
 |
+Return head element of +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Contains().
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
+Remove and destroy all elements in +self+.
 
 |*_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
 |
+Place a _copy_ of the element +value+ to the head of +self+.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 |
+Find the first occurrence of +what+ in +self+ and replace it with a _copy_ of the element +with+.
+Replaced element is destroyed.
+
+Return non-zero value on successful replacement and zero value if no suitable element was found.
 
 |*_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 |
+Find all occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
+All replaced elements are destroyed.
+
+Return number of successful replacements.
 
 |*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
 |
+Remove and destroy the first occurrence of the element +value+ in +self+.
+
+Return non-zero value if element was removed and zero value otherwise.
 
 |*_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
 |
+Remove and destroy all occurrences of the element +value+ in +self+.
+
+Return number of elements removed.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
+Return number of elements contained in +self+.
 |===
 
 === Iteration
@@ -75,12 +114,19 @@ module AutoC
 |===
 |*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 |
+Create a new iterator +it+ on list +self+.
+
+NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
+Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |
+Return a _copy_ of current element pointed to by the iterator +it+.
+
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 |===
 
 =end

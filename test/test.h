@@ -14,28 +14,28 @@ struct ValueType {
 void ValueTypeCtorEx(ValueType*, int);
 
 
-#define ValueTypeCtor(obj) _ValueTypeCtor(&obj)
-void _ValueTypeCtor(ValueType*);
+#define ValueTypeCtor(obj) ValueTypeCtorRef(&obj)
+void ValueTypeCtorRef(ValueType*);
 
 
-#define ValueTypeDtor(obj) _ValueTypeDtor(&obj)
-void _ValueTypeDtor(ValueType*);
+#define ValueTypeDtor(obj) ValueTypeDtorRef(&obj)
+void ValueTypeDtorRef(ValueType*);
 
 
-#define ValueTypeCopy(dst, src) _ValueTypeCopy(&dst, &src)
-void _ValueTypeCopy(ValueType*, ValueType*);
+#define ValueTypeCopy(dst, src) ValueTypeCopyRef(&dst, &src)
+void ValueTypeCopyRef(ValueType*, ValueType*);
 
 
-#define ValueTypeEqual(lt, rt) _ValueTypeEqual(&lt, &rt)
-int _ValueTypeEqual(ValueType*, ValueType*);
+#define ValueTypeEqual(lt, rt) ValueTypeEqualRef(&lt, &rt)
+int ValueTypeEqualRef(ValueType*, ValueType*);
 
 
-#define ValueTypeLess(lt, rt) _ValueTypeLess(&lt, &rt)
-int _ValueTypeLess(ValueType*, ValueType*);
+#define ValueTypeLess(lt, rt) ValueTypeLessRef(&lt, &rt)
+int ValueTypeLessRef(ValueType*, ValueType*);
 
 
-#define ValueTypeIdentify(obj) _ValueTypeIdentify(&obj)
-size_t _ValueTypeIdentify(ValueType*);
+#define ValueTypeIdentify(obj) ValueTypeIdentifyRef(&obj)
+size_t ValueTypeIdentifyRef(ValueType*);
 
 
 #endif
