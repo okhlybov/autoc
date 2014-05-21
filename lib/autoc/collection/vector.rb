@@ -6,6 +6,10 @@ module AutoC
   
 =begin
 
+Vector is an ordered sequence container.
+
+The collection's C++ counterpart is +std::vector<>+ template class.
+
 == Generated C interface
 
 === Collection management
@@ -95,7 +99,7 @@ NOTE: Previous contents of +it+ is overwritten.
 |*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 |
 Create a new iterator +it+ on vector +self+.
-Non-zero value of +forward+ creates a forward iterator, zero value creates a backward iterator.
+Non-zero value of +forward+ specifies a forward iterator, zero value specifies a backward iterator.
 
 NOTE: Previous contents of +it+ is overwritten.
 

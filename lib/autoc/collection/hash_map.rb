@@ -7,6 +7,10 @@ module AutoC
   
 =begin
 
+HashSet is a hash-based unordered container holding unique keys with every key having an element bound to it.
+
+The collection's C++ counterpart is +std::unordered_map<>+ template class.
+
 == Generated C interface
 
 === Collection management
@@ -70,17 +74,19 @@ Return non-zero value on successful put and zero value otherwise.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
-If map +self+ contains an element which is considered equal to the element +what+, replace that element with a _copy_ of the element +with+,
-otherwise simply put a _copy_ of +with+ into +self+. Replaced element is destroyed.
 
-Return non-zero value if the replacement was performed and zero value otherwise.
+If map +self+ contains a key which is considered equal to the key +key+, replace the element bound to that key with +value+,
+otherwise simply put a new key/element pair into +self+ in the way of ~type~Put().
+Replaced element is destroyed.
+
+Return non-zero value on successful replacement and zero value otherwise.
 
 |*_int_* ~type~Remove(*_Type_* * +self+, *_K_* +key+)
 |
 Remove and destroy a key which is considered equal to the key +key+.
 Destroy an element bound to that key.
 
-Return non-zero value if a key/element pair was removed and zero value otherwise.
+Return non-zero value on successful key/element pair removal and zero value otherwise.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |

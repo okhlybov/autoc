@@ -6,6 +6,11 @@ module AutoC
   
 =begin
 
+Queue is an ordered sequence container.
+List supports addition/removal operations from both ends therefore it can be used as either LIFO or FIFO container.
+
+The collection's C++ counterpart is +std::list<>+ template class.
+
 == Generated C interface
 
 === Collection management
@@ -49,19 +54,19 @@ Alias for ~type~ChopHead().
 
 |*_void_* ~type~ChopHead(*_Type_* * +self+)
 |
-Remove and destroy head element of +self+.
+Remove and destroy the head element of non-empty queue +self+.
 
-WARNING: list *must not* be empty otherwise the behavior is undefined.
+Return non-zero value if element was removed and zero value otherwise.
 
 |*_void_* ~type~ChopTail(*_Type_* * +self+)
 |
-Remove and destroy tail element of +self+.
+Remove and destroy the tail element of non-empty queue +self+.
 
-WARNING: list *must not* be empty otherwise the behavior is undefined.
+Return non-zero value if element was removed and zero value otherwise.
 
 |*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
 |
-Return non-zero value if queue +self+ contains one or more elements considered equal to +value+ and zero value otherwise.
+Return non-zero value if queue +self+ contains (at least) one element considered equal to +value+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
@@ -79,15 +84,15 @@ Alias for ~type~GetHead().
 
 |*_E_* ~type~GetHead(*_Type_* * +self+)
 |
-Return head element of +self+.
+Return the head element of +self+.
 
-WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Contains().
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
 |*_E_* ~type~GetTail(*_Type_* * +self+)
 |
-Return tail element of +self+.
+Return the tail element of +self+.
 
-WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Contains().
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
@@ -149,7 +154,7 @@ NOTE: Previous contents of +it+ is overwritten.
 |*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
 |
 Create a new iterator +it+ on queue +self+.
-Non-zero value of +forward+ creates a forward iterator, zero value creates a backward iterator.
+Non-zero value of +forward+ specifies a forward iterator, zero value specifies a backward iterator.
 
 NOTE: Previous contents of +it+ is overwritten.
 
@@ -210,8 +215,8 @@ class Queue < Collection
       #{declare} void #{putTail}(#{type}*, #{element.type});
       #{declare} void #{putHead}(#{type}*, #{element.type});
       #define #{self.chop}(self) #{chopHead}(self)
-      #{declare} void #{chopHead}(#{type}*);
-      #{declare} void #{chopTail}(#{type}*);
+      #{declare} int #{chopHead}(#{type}*);
+      #{declare} int #{chopTail}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
@@ -304,27 +309,29 @@ class Queue < Collection
         #{element.copy("result", "self->tail_node->element")};
         return result;
       }
-      #{define} void #{chopHead}(#{type}* self) {
+      #{define} int #{chopHead}(#{type}* self) {
         #{node}* node;
         #{assert}(self);
-        #{assert}(!#{empty}(self));
+        if(#{empty}(self)) return 0;
         node = self->head_node;
         #{element.dtor("node->element")};
         self->head_node = self->head_node->next_node;
         self->head_node->prev_node = NULL;
         --self->node_count;
         #{free}(node);
+        return 1;
       }
-      #{define} void #{chopTail}(#{type}* self) {
+      #{define} int #{chopTail}(#{type}* self) {
         #{node}* node;
         #{assert}(self);
-        #{assert}(!#{empty}(self));
+        if(#{empty}(self)) return 0;
         node = self->tail_node;
         #{element.dtor("node->element")};
         self->tail_node = self->tail_node->prev_node;
         self->tail_node->next_node = NULL;
         --self->node_count;
         #{free}(node);
+        return 1;
       }
       #{define} void #{putTail}(#{type}* self, #{element.type} element) {
         #{node}* node;

@@ -6,6 +6,11 @@ module AutoC
 
 =begin
 
+List is an ordered sequence container.
+List supports addition/removal operations from one end therefore it can be used as a LIFO container.
+
+The collection's C++ counterpart is +std::forward_list<>+ template class.
+
 == Generated C interface
 
 === Collection management
@@ -43,15 +48,15 @@ Return hash code for list +self+.
 
 [cols=2*]
 |===
-|*_void_* ~type~Chop(*_Type_* * +self+)
+|*_int_* ~type~Chop(*_Type_* * +self+)
 |
-Remove and destroy head element of +self+.
+Remove and destroy the head element of non-empty list +self+.
 
-WARNING: list *must not* be empty otherwise the behavior is undefined.
+Return non-zero value if element was removed and zero value otherwise.
 
 |*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
 |
-Return non-zero value if list +self+ contains one or more elements considered equal to +value+ and zero value otherwise.
+Return non-zero value if list +self+ contains (at least) one element considered equal to +value+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
@@ -65,9 +70,9 @@ WARNING: +self+ *must* contain such element otherwise the behavior is undefined.
 
 |*_E_* ~type~Get(*_Type_* * +self+)
 |
-Return head element of +self+.
+Return the head element of +self+.
 
-WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Contains().
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
@@ -168,7 +173,7 @@ class List < Collection
       #{declare} void #{purge}(#{type}*);
       #{declare} #{element.type} #{get}(#{type}*);
       #{declare} void #{put}(#{type}*, #{element.type});
-      #{declare} void #{self.chop}(#{type}*);
+      #{declare} int #{self.chop}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
@@ -250,16 +255,17 @@ class List < Collection
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} void #{self.chop}(#{type}* self) {
+      #{define} int #{self.chop}(#{type}* self) {
         #{node}* node;
         #{assert}(self);
-        #{assert}(!#{empty}(self));
+        if(#{empty}(self)) return 0;
         node = self->head_node;
         #{element.dtor("node->element")};
         self->head_node = self->head_node->next_node;
         --self->node_count;
         #{free}(node);
-      }
+        return 1;
+        }
       #{define} void #{put}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);

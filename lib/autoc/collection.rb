@@ -7,7 +7,7 @@ module AutoC
 
 =begin
 
-== Available data structures
+== Implemented collections
 
 - {AutoC::Vector} a fixed-sized array
 
@@ -19,12 +19,48 @@ module AutoC
 
 - {AutoC::HashMap} a hash-based map
 
-== Element types: values, references
+== Ruby side operation
 
-== Thread safety
+.Complete example for generation of a list of integers collection:
+[source,ruby]
+----
+require "autoc"
+AutoC::Module.generate!(:Test) do |c|
+  c << AutoC::List.new(:IntList, :int)
+end
+----
+In the above example a C module Test represented by the C header +test_auto.h+ and the C source +test_auto.c+ are generated.
+The C++ counterpart of the generated collection is +std::forward_list<int>+.
 
-== Iteration
+== C interface
 
+=== Element types: values, references
+
+=== Thread safety
+
+WARNING: In its current state the implemented collections are *not* thread-safe.
+
+=== Iteration
+
+At the moment a fairly simple iteration functionality is implemented.
+The iterators are modeled after the C# language.
+All implemented iterators do not require destruction after use.
+
+.Basic iterator usage example:
+[source,c]
+----
+MyVector c;
+MyVectorIt it;
+...
+MyVectorItCtor(&it, &c);
+while(MyVectorItMove(&it)) {
+  Element e = MyVectorItGet(&it);
+  ...
+  ElementDtor(e);
+}
+----
+
+WARNING: the collection being iterated *must not* be modified in any way otherwise the iterator behavior is undefined.
 =end
 class Collection < Type
   
