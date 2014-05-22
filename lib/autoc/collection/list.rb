@@ -33,7 +33,7 @@ NOTE: Previous contents of +self+ is overwritten.
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
 Destroy list +self+.
-Contained elements are destroyed as well by calling the respective destructors.
+Stored elements are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
@@ -64,7 +64,7 @@ Return non-zero value if list +self+ contains no elements and zero value otherwi
 
 |*_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
 |
-Return _first_ element of contained in +self+ which is considered equal to +value+.
+Return _first_ element of stored in +self+ which is considered equal to +value+.
 
 WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
@@ -84,33 +84,33 @@ Place a _copy_ of the element +value+ to the head of +self+.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 |
-Find the first occurrence of +what+ in +self+ and replace it with a _copy_ of the element +with+.
+Find the _first_ occurrence of +what+ in +self+ and replace it with a _copy_ of the element +with+.
 Replaced element is destroyed.
 
 Return non-zero value on successful replacement and zero value if no suitable element was found.
 
 |*_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 |
-Find all occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
+Find _all_ occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
 All replaced elements are destroyed.
 
 Return number of successful replacements.
 
 |*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
 |
-Remove and destroy the first occurrence of the element +value+ in +self+.
+Remove and destroy the _first_ occurrence of the element +value+ in +self+.
 
 Return non-zero value if element was removed and zero value otherwise.
 
 |*_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
 |
-Remove and destroy all occurrences of the element +value+ in +self+.
+Remove and destroy _all_ occurrences of the element +value+ in +self+.
 
 Return number of elements removed.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
-Return number of elements contained in +self+.
+Return number of elements stored in +self+.
 |===
 
 === Iteration
@@ -125,7 +125,7 @@ NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
-Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |
@@ -181,7 +181,7 @@ class List < Collection
       #{declare} int #{remove}(#{type}*, #{element.type});
       #{declare} int #{removeAll}(#{type}*, #{element.type});
       #{declare} size_t #{size}(#{type}*);
-      #{declare} int #{empty}(#{type}*);
+      #define #{empty}(self) (#{size}(self) == 0)
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itMove}(#{it}*);
       #{declare} #{element.type} #{itGet}(#{it}*);
@@ -387,10 +387,6 @@ class List < Collection
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
         return self->node_count;
-      }
-      #{define} int #{empty}(#{type}* self) {
-        #{assert}(self);
-        return !self->node_count;
       }
       #{define} void #{itCtor}(#{it}* self, #{type}* list) {
         #{assert}(self);

@@ -35,7 +35,7 @@ NOTE: Previous contents of +self+ is overwritten.
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
 Destroy vector +self+.
-Contained elements are destroyed as well by calling the respective destructors.
+Stored elements are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
@@ -52,7 +52,7 @@ Return hash code for vector +self+.
 |===
 |*_E_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 |
-Return a _copy_ of the element contained in +self+ at position +index+.
+Return a _copy_ of the element stored in +self+ at position +index+.
 
 WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
@@ -74,7 +74,7 @@ WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. Se
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
-Return number of elements contained in vector +self+.
+Return number of elements stored in vector +self+.
 
 |*_void_* ~type~Sort(*_Type_* * +self+)
 |
@@ -105,7 +105,7 @@ NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
-Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |

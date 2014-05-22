@@ -33,7 +33,7 @@ NOTE: Previous contents of +self+ is overwritten.
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
 Destroy set +self+.
-Contained elements are destroyed as well by calling the respective destructors.
+Stored elements are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
@@ -87,7 +87,7 @@ Return non-zero value on successful element removal and zero value otherwise.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
-Return number of elements contained in +self+.
+Return number of elements stored in +self+.
 |===
 
 === Logical operations
@@ -133,7 +133,7 @@ NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
-Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |
@@ -185,7 +185,7 @@ class HashSet < Collection
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{get}(#{type}*, #{element.type});
       #{declare} size_t #{size}(#{type}*);
-      #{declare} int #{empty}(#{type}*);
+      #define #{empty}(self) (#{size}(self) == 0)
       #{declare} int #{put}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
@@ -326,10 +326,6 @@ class HashSet < Collection
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
         return self->size;
-      }
-      #{define} int #{empty}(#{type}* self) {
-        #{assert}(self);
-        return !self->size;
       }
       #{define} int #{put}(#{type}* self, #{element.type} element) {
         #{@list.type}* bucket;
