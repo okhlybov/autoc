@@ -33,7 +33,7 @@ NOTE: Previous contents of +self+ is overwritten.
 |*_void_* ~type~Dtor(*_Type_* * +self+)
 |
 Destroy map +self+.
-Contained keys and values are destroyed as well by calling the respective destructors.
+Stored keys and values are destroyed as well by calling the respective destructors.
 
 |*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
 |
@@ -90,7 +90,7 @@ Return non-zero value on successful key/element pair removal and zero value othe
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
-Return number of key/element pairs contained in +self+.
+Return number of key/element pairs stored in +self+.
 |===
 
 === Iteration
@@ -107,7 +107,7 @@ NOTE: Previous contents of +it+ is overwritten.
 
 |*_int_* ~it~Move(*_IteratorType_* * +it+)
 |
-Advance iterator position of +it+ *and* return non-zero value if a new position is valid and zero value otherwise.
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
 
 |*_K_* ~it~GetKey(*_IteratorType_* * +it+)
 |
@@ -178,7 +178,7 @@ class HashMap < Collection
       #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
       #{declare} size_t #{size}(#{type}*);
-      #{declare} int #{empty}(#{type}*);
+      #define #{empty}(self) (#{size}(self) == 0)
       #{declare} int #{containsKey}(#{type}*, #{key.type});
       #{declare} #{value.type} #{get}(#{type}*, #{key.type});
       #{declare} int #{put}(#{type}*, #{key.type}, #{value.type});
@@ -299,10 +299,6 @@ class HashMap < Collection
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
         return #{@set.size}(&self->entries);
-      }
-      #{define} int #{empty}(#{type}* self) {
-        #{assert}(self);
-        return #{@set.empty}(&self->entries);
       }
       #{define} int #{containsKey}(#{type}* self, #{key.type} key) {
         int result;
