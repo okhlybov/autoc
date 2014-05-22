@@ -64,7 +64,7 @@ WARNING: +self+ *must* contain such element otherwise the behavior is undefined.
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
-Remove and destroy all elements in +self+.
+Remove and destroy all elements stored in +self+.
 
 |*_int_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
 |

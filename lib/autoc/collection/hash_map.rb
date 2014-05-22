@@ -64,7 +64,7 @@ WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
-Remove and destroy all keys and values in +self+.
+Remove and destroy all keys and elements stored in +self+.
 
 |*_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
@@ -115,15 +115,15 @@ Return a _copy_ of the key from a key/value pair pointed to by the iterator +it+
 
 WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 
-|*_E_* ~it~GetValue(*_IteratorType_* * +it+)
+|*_E_* ~it~GetElement(*_IteratorType_* * +it+)
 |
-Return a _copy_ of the element from a key/element pair to by the iterator +it+.
+Return a _copy_ of the element from a key/element pair pointed to by the iterator +it+.
 
 WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 
 |*_E_* ~it~Get(*_IteratorType_* * +it+)
 |
-Alias for ~it~GetValue().
+Alias for ~it~GetElement().
 |===
 
 =end
@@ -187,8 +187,8 @@ class HashMap < Collection
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itMove}(#{it}*);
       #{declare} #{key.type} #{itGetKey}(#{it}*);
-      #{declare} #{value.type} #{itGetValue}(#{it}*);
-      #define #{itGet}(it) #{itGetValue}(it)
+      #{declare} #{value.type} #{itGetElement}(#{it}*);
+      #define #{itGet}(it) #{itGetelement}(it)
     $
   end
 
@@ -360,7 +360,7 @@ class HashMap < Collection
         #{key.copy("key", "e->key")};
         return key;
       }
-      #{define} #{key.type} #{itGetValue}(#{it}* self) {
+      #{define} #{key.type} #{itGetElement}(#{it}* self) {
         #{@entry.type}* e;
         #{value.type} value;
         #{assert}(self);
