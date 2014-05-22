@@ -6,8 +6,10 @@ module AutoC
   
 =begin
 
-Queue is an ordered sequence container.
-List supports addition/removal operations from both ends therefore it can be used as either LIFO or FIFO container.
+Queue is an ordered bidirectional sequence container.
+Queue supports addition/removal operations from both ends.
+However, it is intended to be used as a FIFO container as opposed to {AutoC::List}
+since submission and polling operations are performed on the opposite ends.
 
 The collection's C++ counterpart is +std::list<>+ template class.
 
@@ -48,22 +50,6 @@ Return hash code for queue +self+.
 
 [cols=2*]
 |===
-|*_void_* ~type~Chop(*_Type_* * +self+)
-|
-Alias for ~type~ChopHead().
-
-|*_void_* ~type~ChopHead(*_Type_* * +self+)
-|
-Remove and destroy the head element of non-empty queue +self+.
-
-Return non-zero value if element was removed and zero value otherwise.
-
-|*_void_* ~type~ChopTail(*_Type_* * +self+)
-|
-Remove and destroy the tail element of non-empty queue +self+.
-
-Return non-zero value if element was removed and zero value otherwise.
-
 |*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
 |
 Return non-zero value if queue +self+ contains (at least) one element considered equal to +value+ and zero value otherwise.
@@ -78,19 +64,39 @@ Return _first_ element of stored in +self+ which is considered equal to +value+.
 
 WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
-|*_E_* ~type~Get(*_Type_* * +self+)
+|*_E_* ~type~Peek(*_Type_* * +self+)
 |
-Alias for ~type~GetHead().
+Alias for ~type~PeekHead().
 
-|*_E_* ~type~GetHead(*_Type_* * +self+)
+|*_E_* ~type~PeekHead(*_Type_* * +self+)
 |
-Return the head element of +self+.
+Return a _copy_ of the head element of +self+.
 
 WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
-|*_E_* ~type~GetTail(*_Type_* * +self+)
+|*_E_* ~type~PeekTail(*_Type_* * +self+)
 |
-Return the tail element of +self+.
+Return a _copy_ of the tail element of +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_E_* ~type~Pop(*_Type_* * +self+)
+|
+Alias for ~type~PopHead().
+
+|*_E_* ~type~PopHead(*_Type_* * +self+)
+|
+Remove head element of +self+ *and* return it.
+
+NOTE: The function returns the element itself, *not* a copy.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_E_* ~type~PopTail(*_Type_* * +self+)
+|
+Remove tail element of +self+ *and* return it.
+
+NOTE: The function returns the element itself, *not* a copy.
 
 WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
@@ -98,15 +104,15 @@ WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~ty
 |
 Remove and destroy all elements in +self+.
 
-|*_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~Push(*_Type_* * +self+, *_E_* +value+)
 |
-Alias for ~type~PutHead().
+Alias for ~type~PushTail().
 
-|*_void_* ~type~PutHead(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PushHead(*_Type_* * +self+, *_E_* +value+)
 |
 Place a _copy_ of the element +value+ to the head of +self+.
 
-|*_void_* ~type~PutTail(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PushTail(*_Type_* * +self+, *_E_* +value+)
 |
 Place a _copy_ of the element +value+ to the tail of +self+.
 
@@ -208,15 +214,15 @@ class Queue < Collection
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
-      #define #{get}(self) #{getHead}(self)
-      #{declare} #{element.type} #{getHead}(#{type}*);
-      #{declare} #{element.type} #{getTail}(#{type}*);
-      #define #{put}(self, element) #{putHead}(self, element)
-      #{declare} void #{putTail}(#{type}*, #{element.type});
-      #{declare} void #{putHead}(#{type}*, #{element.type});
-      #define #{self.chop}(self) #{chopHead}(self)
-      #{declare} int #{chopHead}(#{type}*);
-      #{declare} int #{chopTail}(#{type}*);
+      #define #{peek}(self) #{peekHead}(self)
+      #{declare} #{element.type} #{peekHead}(#{type}*);
+      #{declare} #{element.type} #{peekTail}(#{type}*);
+      #define #{push}(self, element) #{pushTail}(self, element)
+      #{declare} void #{pushTail}(#{type}*, #{element.type});
+      #{declare} void #{pushHead}(#{type}*, #{element.type});
+      #define #{pop}(self) #{popHead}(self)
+      #{declare} #{element.type} #{popHead}(#{type}*);
+      #{declare} #{element.type} #{popTail}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
@@ -260,7 +266,7 @@ class Queue < Collection
         #{itCtor}(&it, src);
         while(#{itMove}(&it)) {
           #{element.type} element;
-          #{putTail}(dst, element = #{itGet}(&it));
+          #{pushTail}(dst, element = #{itGet}(&it));
           #{element.dtor("element")};
         }
       }
@@ -295,45 +301,47 @@ class Queue < Collection
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{define} #{element.type} #{getHead}(#{type}* self) {
+      #{define} #{element.type} #{peekHead}(#{type}* self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} #{element.type} #{getTail}(#{type}* self) {
+      #{define} #{element.type} #{peekTail}(#{type}* self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->tail_node->element")};
         return result;
       }
-      #{define} int #{chopHead}(#{type}* self) {
+      #{define} #{element.type} #{popHead}(#{type}* self) {
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
-        if(#{empty}(self)) return 0;
+        #{assert}(!#{empty}(self));
         node = self->head_node;
-        #{element.dtor("node->element")};
+        result = node->element;
         self->head_node = self->head_node->next_node;
         self->head_node->prev_node = NULL;
         --self->node_count;
         #{free}(node);
-        return 1;
+        return result;
       }
-      #{define} int #{chopTail}(#{type}* self) {
+      #{define} #{element.type} #{popTail}(#{type}* self) {
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
-        if(#{empty}(self)) return 0;
+        #{assert}(!#{empty}(self));
         node = self->tail_node;
-        #{element.dtor("node->element")};
+        result = node->element;
         self->tail_node = self->tail_node->prev_node;
         self->tail_node->next_node = NULL;
         --self->node_count;
         #{free}(node);
-        return 1;
+        return result;
       }
-      #{define} void #{putTail}(#{type}* self, #{element.type} element) {
+      #{define} void #{pushTail}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
@@ -349,7 +357,7 @@ class Queue < Collection
         }
         ++self->node_count;
       }
-      #{define} void #{putHead}(#{type}* self, #{element.type} element) {
+      #{define} void #{pushHead}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);

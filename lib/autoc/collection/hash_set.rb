@@ -77,7 +77,7 @@ Return non-zero value on successful put and zero value otherwise.
 If set +self+ contains an element which is considered equal to the element +what+, replace that element with a _copy_ of the element +with+,
 otherwise simply put a _copy_ of +with+ into +self+ in the way of ~type~Put(). Replaced element is destroyed.
 
-Return non-zero value on successful replacement and zero value otherwise.
+Return non-zero value if the replacement was actually performed and zero value otherwise.
 
 |*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
 |
@@ -241,7 +241,7 @@ class HashSet < Collection
             #{@list.type}* bucket;
             #{element.type} element = #{itGet}(&it);
             bucket = &buckets[#{element.identify("element")} % bucket_count];
-            #{@list.put}(bucket, element);
+            #{@list.push}(bucket, element);
             #{element.dtor("element")};
           }
           #{dtor}(self);
@@ -333,7 +333,7 @@ class HashSet < Collection
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(!#{@list.contains}(bucket, element)) {
-          #{@list.put}(bucket, element);
+          #{@list.push}(bucket, element);
           ++self->size;
           contained = 0;
           #{rehash}(self);
@@ -346,7 +346,7 @@ class HashSet < Collection
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("what")} % self->bucket_count];
         if(!#{@list.replace}(bucket, what, with)) {
-          #{@list.put}(bucket, with);
+          #{@list.push}(bucket, with);
           ++self->size;
           contained = 0;
           #{rehash}(self);
