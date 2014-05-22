@@ -102,7 +102,7 @@ WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~ty
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
-Remove and destroy all elements in +self+.
+Remove and destroy all elements stored in +self+.
 
 |*_void_* ~type~Push(*_Type_* * +self+, *_E_* +value+)
 |
