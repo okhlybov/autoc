@@ -6,7 +6,7 @@ module AutoC
   
 =begin
 
-Vector is an ordered sequence container.
+Vector is an ordered random access sequence container.
 
 The collection's C++ counterpart is +std::vector<>+ template class.
 

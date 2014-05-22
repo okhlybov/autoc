@@ -102,9 +102,9 @@ void C(Test)() {
         ValueType v = C(ItGet)(&it);
         V(Dtor)(v);
     }
-    C(Put)(&c, v1);
-    C(Put)(&c, v2);
-    C(Put)(&c, v1);
+    C(Push)(&c, v1);
+    C(Push)(&c, v2);
+    C(Push)(&c, v1);
     i = C(Contains)(&c, v1);
     printf("contains=%d\n", i);
     i = C(Contains)(&c, v2);

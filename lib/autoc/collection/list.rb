@@ -6,8 +6,8 @@ module AutoC
 
 =begin
 
-List is an ordered sequence container.
-List supports addition/removal operations from one end therefore it can be used as a LIFO container.
+List is an ordered unidirectional sequence container.
+List supports submission/polling operations on the same end hence it can be used as a LIFO container.
 
 The collection's C++ counterpart is +std::forward_list<>+ template class.
 
@@ -48,12 +48,6 @@ Return hash code for list +self+.
 
 [cols=2*]
 |===
-|*_int_* ~type~Chop(*_Type_* * +self+)
-|
-Remove and destroy the head element of non-empty list +self+.
-
-Return non-zero value if element was removed and zero value otherwise.
-
 |*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
 |
 Return non-zero value if list +self+ contains (at least) one element considered equal to +value+ and zero value otherwise.
@@ -68,9 +62,17 @@ Return _first_ element of stored in +self+ which is considered equal to +value+.
 
 WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
-|*_E_* ~type~Get(*_Type_* * +self+)
+|*_E_* ~type~Peek(*_Type_* * +self+)
 |
-Return the head element of +self+.
+Return a _copy_ of the head element of +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_E_* ~type~Pop(*_Type_* * +self+)
+|
+Remove head element of +self+ *and* return it.
+
+NOTE: The function returns the element itself, *not* a copy.
 
 WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
 
@@ -78,7 +80,7 @@ WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~ty
 |
 Remove and destroy all elements in +self+.
 
-|*_void_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~Push(*_Type_* * +self+, *_E_* +value+)
 |
 Place a _copy_ of the element +value+ to the head of +self+.
 
@@ -171,9 +173,9 @@ class List < Collection
       #{declare} int #{equal}(#{type}*, #{type}*);
       #{declare} size_t #{identify}(#{type}*);
       #{declare} void #{purge}(#{type}*);
-      #{declare} #{element.type} #{get}(#{type}*);
-      #{declare} void #{put}(#{type}*, #{element.type});
-      #{declare} int #{self.chop}(#{type}*);
+      #{declare} #{element.type} #{peek}(#{type}*);
+      #{declare} #{element.type} #{pop}(#{type}*);
+      #{declare} void #{push}(#{type}*, #{element.type});
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
@@ -214,7 +216,7 @@ class List < Collection
         #{ctor}(dst);
         #{itCtor}(&it, src);
         while(#{itMove}(&it)) {
-          #{put}(dst, *#{itGetRef}(&it));
+          #{push}(dst, *#{itGetRef}(&it));
         }
       }
       #{define} int #{equal}(#{type}* lt, #{type}* rt) {
@@ -248,25 +250,26 @@ class List < Collection
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{define} #{element.type} #{get}(#{type}* self) {
+      #{define} #{element.type} #{peek}(#{type}* self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} int #{self.chop}(#{type}* self) {
+      #{define} #{element.type} #{pop}(#{type}* self) {
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
-        if(#{empty}(self)) return 0;
+        #{assert}(!#{empty}(self));
         node = self->head_node;
-        #{element.dtor("node->element")};
+        result = node->element;
         self->head_node = self->head_node->next_node;
         --self->node_count;
         #{free}(node);
-        return 1;
-        }
-      #{define} void #{put}(#{type}* self, #{element.type} element) {
+        return result;
+      }
+      #{define} void #{push}(#{type}* self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
