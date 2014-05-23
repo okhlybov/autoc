@@ -1,3 +1,12 @@
+/*
+ * This test is intended to be run under memory debugger such as Valgrind or Dr.Memory.
+ * Normally it should complete without errors and should exhibit no memory-related issues.
+ * The test should be compilable with any ANSI C compiler.
+ * 
+ * > cc test.c test_auto.c
+*/
+
+
 #include <assert.h>
 #include <memory.h>
 #include <stdio.h>
@@ -55,143 +64,186 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 }
 
 
-#undef V
-#define V(x) ValueType##x
+#undef element
+#define element(x) ValueType##x
 
 
-#undef C
-#define C(x) ValueTypeVector##x
-void C(Test)() {
-    ValueType v1, v2;
+#undef type
+#define type(x) ValueTypeVector##x
+#undef it
+#define it(x) ValueTypeVectorIt##x
+
+
+void type(Test)() {
+    ValueType e1, e2;
     ValueTypeVector c1, c2;
-    printf("\n*** Vector<ValueType>\n");
-    C(Ctor)(&c1, 3);
-    v1 = C(Get)(&c1, 0);
-    V(Dtor)(v1);
-    V(Ctor)(v1);
-    C(Set)(&c1, 0, v1);
-    C(Set)(&c1, 2, v1);
-    V(Copy)(v2, v1);
-    V(Dtor)(v1);
-    C(Sort)(&c1);
-    C(Resize)(&c1, 2);
-    C(Resize)(&c1, 20);
-    C(Set)(&c1, 0, v2);
-    C(Copy)(&c2, &c1);
-    C(Identify)(&c1);
-    C(Identify)(&c2);
-    C(Dtor)(&c1);
-    C(Dtor)(&c2);
-    V(Dtor)(v2);
+    ValueTypeVectorIt it;
+    
+    type(Ctor)(&c1, 3);
+    type(Copy)(&c2, &c1);
+    
+    type(Resize)(&c1, 5);
+    type(Size)(&c1);
+    type(Equal)(&c1, &c2);
+    type(Resize)(&c1, 3);
+    type(Size)(&c1);
+    type(Equal)(&c1, &c2);
+    
+    type(Within)(&c1, 0);
+    type(Within)(&c1, 10);
+    
+    element(CtorEx)(&e1, -1);
+    element(CtorEx)(&e2, +1);
+    type(Set)(&c1, 2, e1);
+    type(Set)(&c1, 0, e2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        e1 = it(Get)(&it);
+        element(Dtor)(e1);
+    }
+    
+    it(CtorEx)(&it, &c2, 0);
+    while(it(Move)(&it)) {
+        e1 = it(Get)(&it);
+        element(Dtor)(e1);
+    }
+
+    type(Sort)(&c1);
+    type(Sort)(&c2);
+    
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+    
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
 }
 
 
-#undef C
-#define C(x) ValueTypeList##x
-void C(Test)() {
+#undef type
+#define type(x) ValueTypeList##x
+#undef it
+#define it(x) ValueTypeListIt##x
+
+
+void type(Test)() {
     int i;
-    ValueType v1, v2;
-    ValueTypeList c;
+    ValueType e1, e2;
+    ValueTypeList c1, c2;
     ValueTypeListIt it;
-    printf("\n*** List<ValueType>\n");
-    V(CtorEx)(&v1, 1);
-    V(CtorEx)(&v2, 2);
-    C(Ctor)(&c);
-    C(ItCtor)(&it, &c);
-    while(C(ItMove)(&it)) {
-        ValueType v = C(ItGet)(&it);
-        V(Dtor)(v);
+    
+    type(Ctor)(&c1);
+    type(Copy)(&c2, &c1);
+    
+    type(Equal)(&c1, &c2);
+    type(Empty)(&c1);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        e1 = it(Get)(&it);
+        element(Dtor)(e1);
     }
-    C(Push)(&c, v1);
-    C(Push)(&c, v2);
-    C(Push)(&c, v1);
-    i = C(Contains)(&c, v1);
-    printf("contains=%d\n", i);
-    i = C(Contains)(&c, v2);
-    printf("contains=%d\n", i);
-    C(ItCtor)(&it, &c);
-    while(C(ItMove)(&it)) {
-        ValueType v = C(ItGet)(&it);
-        V(Dtor)(v);
+    
+    element(CtorEx)(&e1, -1);
+    element(CtorEx)(&e2, +1);
+    
+    /* !!! memory error detected */
+    type(Push)(&c1, e1);
+    type(Push)(&c2, e2);
+    type(Contains)(&c1, e1);
+    type(Contains)(&c2, e1);
+    type(Empty)(&c1);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        e1 = it(Get)(&it);
+        element(Dtor)(e1);
     }
-    C(Identify)(&c);
-    C(Dtor)(&c);
-    V(Dtor)(v1);
-    V(Dtor)(v2);
+
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
 }
 
 
-#undef C
-#define C(x) ValueTypeQueue##x
-void C(Test)() {
-    ValueType v1, v2;
+#undef type
+#define type(x) ValueTypeQueue##x
+void type(Test)() {
+    ValueType e1, e2;
     ValueTypeQueue c;
     printf("\n*** Queue<ValueType>\n");
-    V(Ctor)(v1);
-    V(Ctor)(v2);
-    C(Ctor)(&c);
-    C(Identify)(&c);
-    C(Dtor)(&c);
-    V(Dtor)(v1);
-    V(Dtor)(v2);
+    element(Ctor)(e1);
+    element(Ctor)(e2);
+    type(Ctor)(&c);
+    type(Identify)(&c);
+    type(Dtor)(&c);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
 }
 
 
-#undef C
-#define C(x) ValueTypeSet##x
-void C(Test)() {
+#undef type
+#define type(x) ValueTypeSet##x
+void type(Test)() {
     int i;
-    ValueType v1, v2;
+    ValueType e1, e2;
     ValueTypeSet c;
     printf("\n*** HashSet<ValueType>\n");
-    C(Ctor)(&c);
-    V(Ctor)(v1);
-    V(Ctor)(v2);
-    C(Put)(&c, v1);
-    i = ValueTypeSetContains(&c, v1);
+    type(Ctor)(&c);
+    element(Ctor)(e1);
+    element(Ctor)(e2);
+    type(Put)(&c, e1);
+    i = ValueTypeSetContains(&c, e1);
     printf("contains=%d\n", i);
-    C(Put)(&c, v2);
-    C(Put)(&c, v1);
-    V(Dtor)(v1);
-    V(Dtor)(v2);
-    C(Identify)(&c);
-    C(Purge)(&c);
-    C(Dtor)(&c);
+    type(Put)(&c, e2);
+    type(Put)(&c, e1);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+    type(Identify)(&c);
+    type(Purge)(&c);
+    type(Dtor)(&c);
 }
 
 
-#undef C
-#define C(x) ValueTypeMap##x
-void C(Test)() {
+#undef type
+#define type(x) ValueTypeMap##x
+void type(Test)() {
     int i;
-    ValueType v1, v2, v3;
+    ValueType e1, e2, v3;
     ValueTypeMap c, c2;
     printf("\n*** HashMap<ValueType->ValueType>\n");
-    V(CtorEx)(&v1, 1);
-    V(CtorEx)(&v2, 2);
-    C(Ctor)(&c);
-    i = C(ContainsKey)(&c, v1);
+    element(CtorEx)(&e1, 1);
+    element(CtorEx)(&e2, 2);
+    type(Ctor)(&c);
+    i = type(ContainsKey)(&c, e1);
     printf("contains=%d\n", i);
-    i = C(Put)(&c, v1, v2);
+    i = type(Put)(&c, e1, e2);
     printf("i=%d\n", i);
-    i = C(Put)(&c, v2, v1);
+    i = type(Put)(&c, e2, e1);
     printf("i=%d\n", i);
-    i = C(Put)(&c, v2, v1);
+    i = type(Put)(&c, e2, e1);
     printf("i=%d\n", i);
-    i = C(ContainsKey)(&c, v2);
+    i = type(ContainsKey)(&c, e2);
     printf("contains=%d\n", i);
-    v3 = C(Get)(&c, v2);
-    C(Copy)(&c2, &c);
-    i = C(Remove)(&c, v1);
+    v3 = type(Get)(&c, e2);
+    type(Copy)(&c2, &c);
+    i = type(Remove)(&c, e1);
     printf("i=%d\n", i);
-    i = C(Equal)(&c, &c2);
+    i = type(Equal)(&c, &c2);
     printf("equal=%d\n", i);
-    C(Identify)(&c);
-    C(Dtor)(&c);
-    V(Dtor)(v1);
-    V(Dtor)(v2);
-    V(Dtor)(v3);
-    C(Dtor)(&c2);
+    type(Identify)(&c);
+    type(Dtor)(&c);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+    element(Dtor)(v3);
+    type(Dtor)(&c2);
 }
 
 

@@ -311,10 +311,8 @@ class HashSet < Collection
         #{rehash}(self);
       }
       #{define} int #{contains}(#{type}* self, #{element.type} element) {
-        int result;
         #{assert}(self);
-        result = #{@list.contains}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
-        return result;
+        return #{@list.contains}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
       }
       #{define} #{element.type} #{get}(#{type}* self, #{element.type} element) {
         #{element.type} result;
