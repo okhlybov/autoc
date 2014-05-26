@@ -68,6 +68,10 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 #define element(x) ValueType##x
 
 
+#undef Type
+#define Type ValueTypeVector
+#undef TypeIt
+#define TypeIt ValueTypeVectorIt
 #undef type
 #define type(x) ValueTypeVector##x
 #undef it
@@ -76,8 +80,8 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 
 void type(Test)() {
     ValueType e1, e2;
-    ValueTypeVector c1, c2;
-    ValueTypeVectorIt it;
+    Type c1, c2;
+    TypeIt it;
     
     type(Ctor)(&c1, 3);
     type(Copy)(&c2, &c1);
@@ -101,14 +105,14 @@ void type(Test)() {
     
     it(Ctor)(&it, &c1);
     while(it(Move)(&it)) {
-        e1 = it(Get)(&it);
-        element(Dtor)(e1);
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
     }
     
     it(CtorEx)(&it, &c2, 0);
     while(it(Move)(&it)) {
-        e1 = it(Get)(&it);
-        element(Dtor)(e1);
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
     }
 
     type(Sort)(&c1);
@@ -122,6 +126,10 @@ void type(Test)() {
 }
 
 
+#undef Type
+#define Type ValueTypeList
+#undef TypeIt
+#define TypeIt ValueTypeListIt
 #undef type
 #define type(x) ValueTypeList##x
 #undef it
@@ -129,10 +137,9 @@ void type(Test)() {
 
 
 void type(Test)() {
-    int i;
     ValueType e1, e2;
-    ValueTypeList c1, c2;
-    ValueTypeListIt it;
+    Type c1, c2;
+    TypeIt it;
     
     type(Ctor)(&c1);
     type(Copy)(&c2, &c1);
@@ -142,29 +149,60 @@ void type(Test)() {
     
     it(Ctor)(&it, &c1);
     while(it(Move)(&it)) {
-        e1 = it(Get)(&it);
-        element(Dtor)(e1);
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
     }
     
     element(CtorEx)(&e1, -1);
     element(CtorEx)(&e2, +1);
     
-    /* !!! memory error detected */
     type(Push)(&c1, e1);
     type(Push)(&c2, e2);
     type(Contains)(&c1, e1);
     type(Contains)(&c2, e1);
+    type(Push)(&c1, e2);
+    type(Push)(&c2, e1);
     type(Empty)(&c1);
+    
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+
+    e1 = type(Peek)(&c1);
+    e2 = type(Peek)(&c2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
     
     it(Ctor)(&it, &c1);
     while(it(Move)(&it)) {
-        e1 = it(Get)(&it);
-        element(Dtor)(e1);
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
     }
 
     type(Identify)(&c1);
     type(Identify)(&c2);
 
+    e1 = type(Pop)(&c1);
+    e2 = type(Pop)(&c2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+
+    type(Purge)(&c1);
+    type(Purge)(&c2);
+
+    element(CtorEx)(&e1, 3);
+    element(CtorEx)(&e2, -3);
+    type(Push)(&c1, e1);
+    type(Push)(&c1, e2);
+    type(Push)(&c1, e1);
+    type(Push)(&c2, e2);
+    type(Push)(&c2, e2);
+    type(Push)(&c2, e2);
+    type(Replace)(&c2, e2, e1);
+    type(ReplaceAll)(&c2, e2, e1);
+    type(Remove)(&c1, e2);
+    type(Remove)(&c1, e1);
+    type(Remove)(&c2, e1);
+    type(RemoveAll)(&c2, e2);
     element(Dtor)(e1);
     element(Dtor)(e2);
 
@@ -173,19 +211,92 @@ void type(Test)() {
 }
 
 
+#undef Type
+#define Type ValueTypeQueue
+#undef TypeIt
+#define TypeIt ValueTypeQueueIt
 #undef type
 #define type(x) ValueTypeQueue##x
+#undef it
+#define it(x) ValueTypeQueueIt##x
+
+
+/*
+ *  Queue is a non-strict superset of List
+ * so the test case for the latter can be reused as-is 
+ */
 void type(Test)() {
     ValueType e1, e2;
-    ValueTypeQueue c;
-    printf("\n*** Queue<ValueType>\n");
-    element(Ctor)(e1);
-    element(Ctor)(e2);
-    type(Ctor)(&c);
-    type(Identify)(&c);
-    type(Dtor)(&c);
+    Type c1, c2;
+    TypeIt it;
+    
+    type(Ctor)(&c1);
+    type(Copy)(&c2, &c1);
+    
+    type(Equal)(&c1, &c2);
+    type(Empty)(&c1);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
+    }
+    
+    element(CtorEx)(&e1, -1);
+    element(CtorEx)(&e2, +1);
+    
+    type(Push)(&c1, e1);
+    type(Push)(&c2, e2);
+    type(Contains)(&c1, e1);
+    type(Contains)(&c2, e1);
+    type(Push)(&c1, e2);
+    type(Push)(&c2, e1);
+    type(Empty)(&c1);
+    
     element(Dtor)(e1);
     element(Dtor)(e2);
+
+    e1 = type(Peek)(&c1);
+    e2 = type(Peek)(&c2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
+    }
+
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+
+    e1 = type(Pop)(&c1);
+    e2 = type(Pop)(&c2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+
+    type(Purge)(&c1);
+    type(Purge)(&c2);
+
+    element(CtorEx)(&e1, 3);
+    element(CtorEx)(&e2, -3);
+    type(Push)(&c1, e1);
+    type(Push)(&c1, e2);
+    type(Push)(&c1, e1);
+    type(Push)(&c2, e2);
+    type(Push)(&c2, e2);
+    type(Push)(&c2, e2);
+    type(Replace)(&c2, e2, e1);
+    type(ReplaceAll)(&c2, e2, e1);
+    type(Remove)(&c1, e2);
+    type(Remove)(&c1, e1);
+    type(Remove)(&c2, e1);
+    type(RemoveAll)(&c2, e2);
+    element(Dtor)(e1);
+    element(Dtor)(e2);
+
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
 }
 
 

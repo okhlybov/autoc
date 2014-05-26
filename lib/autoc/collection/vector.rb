@@ -65,10 +65,10 @@ If new size is smaller the the old one, excessive elements are destroyed.
 
 WARNING: +size+ *must* be greater than zero.
 
-|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +value+)
+|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_E_* +what+)
 |
 
-Store a _copy_ of the +value+ in vector +self+ at position +index+ destroying previous contents.
+Store a _copy_ of the element +what+ in vector +self+ at position +index+ destroying previous contents.
 
 WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
