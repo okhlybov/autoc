@@ -7,7 +7,7 @@ module AutoC
 =begin
 
 Queue is an ordered bidirectional sequence container.
-Queue supports addition/removal operations from both ends.
+Queue supports addition/removal operations at both ends.
 However, it is intended to be used as a FIFO container as opposed to {AutoC::List}
 since submission and polling operations are performed on the opposite ends.
 
@@ -50,17 +50,17 @@ Return hash code for queue +self+.
 
 [cols=2*]
 |===
-|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +what+)
 |
-Return non-zero value if queue +self+ contains (at least) one element considered equal to +value+ and zero value otherwise.
+Return non-zero value if queue +self+ contains (at least) one element considered equal to +what+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
 Return non-zero value if queue +self+ contains no elements and zero value otherwise.
 
-|*_E_* ~type~Find(*_Type_* * +self+, *_E_* +value+)
+|*_E_* ~type~Find(*_Type_* * +self+, *_E_* +what+)
 |
-Return _first_ element of stored in +self+ which is considered equal to +value+.
+Return the _first_ element of stored in +self+ which is considered equal to +what+.
 
 WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
@@ -104,17 +104,17 @@ WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~ty
 |
 Remove and destroy all elements stored in +self+.
 
-|*_void_* ~type~Push(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~Push(*_Type_* * +self+, *_E_* +what+)
 |
 Alias for ~type~PushTail().
 
-|*_void_* ~type~PushHead(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PushHead(*_Type_* * +self+, *_E_* +what+)
 |
-Place a _copy_ of the element +value+ to the head of +self+.
+Place a _copy_ of the element +what+ to the head of +self+.
 
-|*_void_* ~type~PushTail(*_Type_* * +self+, *_E_* +value+)
+|*_void_* ~type~PushTail(*_Type_* * +self+, *_E_* +what+)
 |
-Place a _copy_ of the element +value+ to the tail of +self+.
+Place a _copy_ of the element +what+ to the tail of +self+.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
 |
@@ -130,17 +130,32 @@ All replaced elements are destroyed.
 
 Return number of successful replacements.
 
-|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~ReplaceEx(*_Type_* * +self+, *_E_* +what+, *_E_* +with+, *_int_* count)
 |
-Remove and destroy the _first_ occurrence of the element +value+ in +self+.
+Find at most +count+ occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
+If +count+ is negative, _all_ occurrences are replaced instead.
+All replaced elements are destroyed.
+
+Return number of successful replacements.
+
+|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +what+)
+|
+Remove and destroy the _first_ occurrence of the element +what+ in +self+.
 
 Return non-zero value if element was removed and zero value otherwise.
 
-|*_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~RemoveAll(*_Type_* * +self+, *_E_* +what+)
 |
-Remove and destroy _all_ occurrences of the element +value+ in +self+.
+Remove and destroy _all_ occurrences of the element +what+ in +self+.
 
-Return number of elements removed.
+Return number of elements actually removed.
+
+|*_int_* ~type~RemoveEx(*_Type_* * +self+, *_E_* +what+, *_int_* count)
+|
+Remove and destroy at most +count+ occurrences of the element +what+ in +self+.
+If +count+ is negative, _all_ occurrences are removed instead.
+
+Return number of elements actually removed.
 
 |*_size_t_* ~type~Size(*_Type_* * +self+)
 |
@@ -225,10 +240,12 @@ class Queue < Collection
       #{declare} #{element.type} #{popTail}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
-      #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
-      #{declare} int #{replaceAll}(#{type}*, #{element.type}, #{element.type});
-      #{declare} int #{remove}(#{type}*, #{element.type});
-      #{declare} int #{removeAll}(#{type}*, #{element.type});
+      #define #{replace}(self, what, with) #{replaceEx}(self, what, with, 1)
+      #define #{replaceAll}(self, what, with) #{replaceEx}(self, what, with, -1)
+      #{declare} int #{replaceEx}(#{type}*, #{element.type}, #{element.type}, int);
+      #define #{remove}(self, what) #{removeEx}(self, what, 1)
+      #define #{removeAll}(self, what) #{removeEx}(self, what, -1)
+      #{declare} int #{removeEx}(#{type}*, #{element.type}, int);
       #{declare} size_t #{size}(#{type}*);
       #define #{empty}(self) (#{size}(self) == 0)
       #{declare} void #{itCtor}(#{it}*, #{type}*);
@@ -402,91 +419,58 @@ class Queue < Collection
         }
         #{abort}();
       }
-      #{define} int #{replace}(#{type}* self, #{element.type} what, #{element.type} with) {
+      #{define} int #{replaceEx}(#{type}* self, #{element.type} what, #{element.type} with, int count) {
         #{node}* node;
-        int found = 0;
+        int replaced = 0;
         #{assert}(self);
+        if(count == 0) return 0;
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
             #{element.dtor("node->element")};
             #{element.copy("node->element", "with")};
-            found = 1;
-            break;
+            ++replaced;
+            if(count > 0 && replaced >= count) break;
           }
           node = node->next_node;
         }
-        return found;
+        return replaced;
       }
-      #{define} int #{replaceAll}(#{type}* self, #{element.type} what, #{element.type} with) {
+      #{define} int #{removeEx}(#{type}* self, #{element.type} what, int count) {
         #{node}* node;
-        int count = 0;
+        int removed = 0;
         #{assert}(self);
+        if(count == 0) return 0;
         node = self->head_node;
         while(node) {
           if(#{element.equal("node->element", "what")}) {
-            #{element.dtor("node->element")};
-            #{element.copy("node->element", "with")};
-            ++count;
-          }
-          node = node->next_node;
-        }
-        return count;
-      }
-      #{define} int #{remove}(#{type}* self, #{element.type} what) {
-        #{node}* node;
-        int found = 0;
-        #{assert}(self);
-        node = self->head_node;
-        while(node) {
-          if(#{element.equal("node->element", "what")}) {
-            #{node} *prev = node->prev_node, *next = node->next_node;
-            #{element.dtor("node->element")};
-            if(prev && next) {
-              prev->next_node = next;
-              next->prev_node = prev;
-            } else if(prev) {
-              prev->next_node = NULL;
-              self->tail_node = prev;
+            #{node}* this_node;
+            if(node == self->head_node) {
+              #{assert}(!node->prev_node);
+              this_node = self->head_node = node->next_node;
+              if(self->head_node) self->head_node->prev_node = NULL;
+            } else if(node == self->tail_node) {
+              #{assert}(!node->next_node);
+              self->tail_node = node->prev_node;
+              this_node = self->tail_node->next_node = NULL;
             } else {
-              next->prev_node = NULL;
-              self->head_node = next;
+              #{assert}(node->prev_node);
+              #{assert}(node->next_node);
+              this_node = node->next_node;
+              node->next_node->prev_node = node->prev_node;
+              node->prev_node->next_node = node->next_node;
             }
+            ++removed;
             --self->node_count;
-            #{free}(node);
-            found = 1;
-            break;
-          }
-          node = node->next_node;
-        }
-        return found;
-      }
-      #{define} int #{removeAll}(#{type}* self, #{element.type} what) {
-        #{node}* node;
-        int count = 0;
-        #{assert}(self);
-        node = self->head_node;
-        while(node) {
-          if(#{element.equal("node->element", "what")}) {
-            #{node} *prev = node->prev_node, *next = node->next_node;
             #{element.dtor("node->element")};
-            if(prev && next) {
-              prev->next_node = next;
-              next->prev_node = prev;
-            } else if(prev) {
-              prev->next_node = NULL;
-              self->tail_node = prev;
-            } else {
-              next->prev_node = NULL;
-              self->head_node = next;
-            }
-            --self->node_count;
             #{free}(node);
-            ++count;
+            node = this_node;
+            if(count > 0 && removed >= count) break;
+          } else {
+            node = node->next_node;
           }
-          node = node->next_node;
         }
-        return count;
+        return removed;
       }
       #{define} size_t #{size}(#{type}* self) {
         #{assert}(self);
