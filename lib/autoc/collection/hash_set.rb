@@ -48,17 +48,17 @@ Return hash code for set +self+.
 
 [cols=2*]
 |===
-|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +what+)
 |
-Return non-zero value if set +self+ contains an element considered equal to the element +value+ and zero value otherwise.
+Return non-zero value if set +self+ contains an element considered equal to the element +what+ and zero value otherwise.
 
 |*_int_* ~type~Empty(*_Type_* * +self+)
 |
 Return non-zero value if set +self+ contains no elements and zero value otherwise.
 
-|*_E_* ~type~Get(*_Type_* * +self+, *_E_* +value+)
+|*_E_* ~type~Get(*_Type_* * +self+, *_E_* +what+)
 |
-Return a _copy_ of the element in +self+ considered equal to the element +value+.
+Return a _copy_ of the element in +self+ considered equal to the element +what+.
 
 WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
 
@@ -66,22 +66,23 @@ WARNING: +self+ *must* contain such element otherwise the behavior is undefined.
 |
 Remove and destroy all elements stored in +self+.
 
-|*_int_* ~type~Put(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Put(*_Type_* * +self+, *_E_* +what+)
 |
-Put a _copy_ of the element +value+ into +self+ *only if* there is no such element in +self+ which is considered equal to +value+.
+Put a _copy_ of the element +what+ into +self+ *only if* there is no such element in +self+ which is considered equal to +what+.
 
-Return non-zero value on successful put and zero value otherwise.
+Return non-zero value on successful element put and zero value otherwise.
 
-|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +with+)
 |
-If set +self+ contains an element which is considered equal to the element +what+, replace that element with a _copy_ of the element +with+,
-otherwise simply put a _copy_ of +with+ into +self+ in the way of ~type~Put(). Replaced element is destroyed.
+*If* +self+ contains an element which is considered equal to the element +with+,
+replace that element with a _copy_ of +with+, otherwise do nothing.
+Replaced element is destroyed.
 
 Return non-zero value if the replacement was actually performed and zero value otherwise.
 
-|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +value+)
+|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +what+)
 |
-Remove and destroy an element in +self+ which is considered equal to the element +value+.
+Remove and destroy an element in +self+ which is considered equal to the element +what+.
 
 Return non-zero value on successful element removal and zero value otherwise.
 
@@ -187,7 +188,7 @@ class HashSet < Collection
       #{declare} size_t #{size}(#{type}*);
       #define #{empty}(self) (#{size}(self) == 0)
       #{declare} int #{put}(#{type}*, #{element.type});
-      #{declare} int #{replace}(#{type}*, #{element.type}, #{element.type});
+      #{declare} int #{replace}(#{type}*, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
       #{declare} void #{self.not}(#{type}*, #{type}*);
       #{declare} void #{self.and}(#{type}*, #{type}*);
@@ -327,41 +328,32 @@ class HashSet < Collection
       }
       #{define} int #{put}(#{type}* self, #{element.type} element) {
         #{@list.type}* bucket;
-        int contained = 1;
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(!#{@list.contains}(bucket, element)) {
           #{@list.push}(bucket, element);
           ++self->size;
-          contained = 0;
           #{rehash}(self);
+          return 1;
         }
-        return contained;
+        return 0;
       }
-      #{define} int #{replace}(#{type}* self, #{element.type} what, #{element.type} with) {
+      #{define} int #{replace}(#{type}* self, #{element.type} element) {
         #{@list.type}* bucket;
-        int contained = 1;
         #{assert}(self);
-        bucket = &self->buckets[#{element.identify("what")} % self->bucket_count];
-        if(!#{@list.replace}(bucket, what, with)) {
-          #{@list.push}(bucket, with);
-          ++self->size;
-          contained = 0;
-          #{rehash}(self);
-        }
-        return contained;
+        bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
+        return #{@list.replace}(bucket, element);
       }
       #{define} int #{remove}(#{type}* self, #{element.type} element) {
         #{@list.type}* bucket;
-        int removed = 0;
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(#{@list.remove}(bucket, element)) {
           --self->size;
-          removed = 1;
           #{rehash}(self);
+          return 1;
         }
-        return removed;
+        return 0;
       }
       #{define} void #{self.not}(#{type}* self, #{type}* other) {
         #{it} it;

@@ -7,7 +7,7 @@ module AutoC
 =begin
 
 List is an ordered unidirectional sequence container.
-List supports submission/polling operations on the same end hence it can be used as a LIFO container.
+List supports submission/polling operations at one end hence it can be used as a LIFO container.
 
 The collection's C++ counterpart is +std::forward_list<>+ template class.
 
@@ -84,23 +84,23 @@ Remove and destroy all elements stored in +self+.
 |
 Place a _copy_ of the element +what+ to the head of +self+.
 
-|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +with+)
 |
-Find the _first_ occurrence of +what+ in +self+ and replace it with a _copy_ of the element +with+.
+Find the _first_ occurrence of +with+ in +self+ and replace it with a _copy_ of the element +with+.
 Replaced element is destroyed.
 
 Return non-zero value on successful replacement and zero value if no suitable element was found.
 
-|*_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +what+, *_E_* +with+)
+|*_int_* ~type~ReplaceAll(*_Type_* * +self+, *_E_* +with+)
 |
-Find _all_ occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
+Find _all_ occurrences of +with+ in +self+ and replace them with _copies_ of the element +with+.
 All replaced elements are destroyed.
 
 Return number of successful replacements.
 
-|*_int_* ~type~ReplaceEx(*_Type_* * +self+, *_E_* +what+, *_E_* +with+, *_int_* count)
+|*_int_* ~type~ReplaceEx(*_Type_* * +self+, *_E_* +with+, *_int_* count)
 |
-Find at most +count+ occurrences of +what+ in +self+ and replace them with _copies_ of the element +with+.
+Find at most +count+ occurrences of +with+ in +self+ and replace them with _copies_ of the element +with+.
 If +count+ is negative, _all_ occurrences are replaced instead.
 All replaced elements are destroyed.
 
@@ -193,9 +193,9 @@ class List < Collection
       #{declare} void #{push}(#{type}*, #{element.type});
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
-      #define #{replace}(self, what, with) #{replaceEx}(self, what, with, 1)
-      #define #{replaceAll}(self, what, with) #{replaceEx}(self, what, with, -1)
-      #{declare} int #{replaceEx}(#{type}*, #{element.type}, #{element.type}, int);
+      #define #{replace}(self, with) #{replaceEx}(self, with, 1)
+      #define #{replaceAll}(self, with) #{replaceEx}(self, with, -1)
+      #{declare} int #{replaceEx}(#{type}*, #{element.type}, int);
       #define #{remove}(self, what) #{removeEx}(self, what, 1)
       #define #{removeAll}(self, what) #{removeEx}(self, what, -1)
       #{declare} int #{removeEx}(#{type}*, #{element.type}, int);
@@ -324,14 +324,14 @@ class List < Collection
         }
         #{abort}();
       }
-      #{define} int #{replaceEx}(#{type}* self, #{element.type} what, #{element.type} with, int count) {
+      #{define} int #{replaceEx}(#{type}* self, #{element.type} with, int count) {
         #{node}* node;
         int replaced = 0;
         #{assert}(self);
         if(count == 0) return 0;
         node = self->head_node;
         while(node) {
-          if(#{element.equal("node->element", "what")}) {
+          if(#{element.equal("node->element", "with")}) {
             #{element.dtor("node->element")};
             #{element.copy("node->element", "with")};
             ++replaced;

@@ -137,7 +137,7 @@ void type(Test)() {
 
 
 void type(Test)() {
-    ValueType e1, e2;
+    ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
     
@@ -191,20 +191,22 @@ void type(Test)() {
 
     element(CtorEx)(&e1, 3);
     element(CtorEx)(&e2, -3);
+    element(Copy)(e3, e2);
     type(Push)(&c1, e1);
     type(Push)(&c1, e2);
     type(Push)(&c1, e1);
     type(Push)(&c2, e2);
     type(Push)(&c2, e2);
     type(Push)(&c2, e2);
-    type(Replace)(&c2, e2, e1);
-    type(ReplaceAll)(&c2, e2, e1);
+    type(Replace)(&c2, e3);
+    type(ReplaceAll)(&c2, e3);
     type(Remove)(&c1, e2);
     type(Remove)(&c1, e1);
     type(Remove)(&c2, e1);
     type(RemoveAll)(&c2, e2);
     element(Dtor)(e1);
     element(Dtor)(e2);
+    element(Dtor)(e3);
 
     type(Dtor)(&c1);
     type(Dtor)(&c2);
@@ -222,11 +224,11 @@ void type(Test)() {
 
 
 /*
- *  Queue is a non-strict superset of List
+ * Queue is a non-strict superset of List
  * so the test case for the latter can be reused as-is 
  */
 void type(Test)() {
-    ValueType e1, e2;
+    ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
     
@@ -280,46 +282,103 @@ void type(Test)() {
 
     element(CtorEx)(&e1, 3);
     element(CtorEx)(&e2, -3);
+    element(Copy)(e3, e2);
     type(Push)(&c1, e1);
     type(Push)(&c1, e2);
     type(Push)(&c1, e1);
     type(Push)(&c2, e2);
     type(Push)(&c2, e2);
     type(Push)(&c2, e2);
-    type(Replace)(&c2, e2, e1);
-    type(ReplaceAll)(&c2, e2, e1);
+    type(Replace)(&c2, e3);
+    type(ReplaceAll)(&c2, e3);
     type(Remove)(&c1, e2);
     type(Remove)(&c1, e1);
     type(Remove)(&c2, e1);
     type(RemoveAll)(&c2, e2);
     element(Dtor)(e1);
     element(Dtor)(e2);
+    element(Dtor)(e3);
 
     type(Dtor)(&c1);
     type(Dtor)(&c2);
 }
 
 
+#undef Type
+#define Type ValueTypeSet
+#undef TypeIt
+#define TypeIt ValueTypeSetIt
 #undef type
 #define type(x) ValueTypeSet##x
+#undef it
+#define it(x) ValueTypeSetIt##x
+
+
 void type(Test)() {
-    int i;
-    ValueType e1, e2;
-    ValueTypeSet c;
-    printf("\n*** HashSet<ValueType>\n");
-    type(Ctor)(&c);
-    element(Ctor)(e1);
-    element(Ctor)(e2);
-    type(Put)(&c, e1);
-    i = ValueTypeSetContains(&c, e1);
-    printf("contains=%d\n", i);
-    type(Put)(&c, e2);
-    type(Put)(&c, e1);
+    ValueType e1, e2, e3;
+    Type c1, c2;
+    TypeIt it;
+    
+    type(Ctor)(&c1);
+    type(Copy)(&c2, &c1);
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        ValueType e = it(Get)(&it);
+        element(Dtor)(e);
+    }
+
+    type(Equal)(&c1, &c2);
+    type(Empty)(&c1);
+    type(Size)(&c1);
+    
+    element(CtorEx)(&e1, -1);
+    element(CtorEx)(&e2, +1);
+    element(CtorEx)(&e3, 0);
+
+    type(Put)(&c1, e1);
+    type(Put)(&c2, e1);
+    type(Equal)(&c1, &c2);
+    type(Put)(&c1, e2);
+    type(Put)(&c2, e3);
+    type(Equal)(&c1, &c2);
+    type(Contains)(&c1, e1);
+    type(Contains)(&c2, e2);
+    {
+        ValueType e = type(Get)(&c2, e3);
+        element(Dtor)(e);
+    }
+    type(Replace)(&c1, e2);
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+
     element(Dtor)(e1);
     element(Dtor)(e2);
-    type(Identify)(&c);
-    type(Purge)(&c);
-    type(Dtor)(&c);
+    element(Dtor)(e3);
+    
+    {
+        int i;
+        ValueType e;
+        for(i = 0; i < 100; ++i) {
+            element(CtorEx)(&e, i);
+            type(Put)(&c1, e);
+            element(Dtor)(e);
+        }
+        for(i = 0; i < 100; i += 2) {
+            element(CtorEx)(&e, i);
+            type(Remove)(&c1, e);
+            element(Dtor)(e);
+        }
+        it(Ctor)(&it, &c1);
+        while(it(Move)(&it)) {
+            ValueType e = it(Get)(&it);
+            element(Dtor)(e);
+        }
+    }
+    
+    type(Purge)(&c1);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
 }
 
 
