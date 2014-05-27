@@ -240,9 +240,9 @@ class Queue < Collection
       #{declare} #{element.type} #{popTail}(#{type}*);
       #{declare} int #{contains}(#{type}*, #{element.type});
       #{declare} #{element.type} #{find}(#{type}*, #{element.type});
-      #define #{replace}(self, what, with) #{replaceEx}(self, what, with, 1)
-      #define #{replaceAll}(self, what, with) #{replaceEx}(self, what, with, -1)
-      #{declare} int #{replaceEx}(#{type}*, #{element.type}, #{element.type}, int);
+      #define #{replace}(self, with) #{replaceEx}(self, with, 1)
+      #define #{replaceAll}(self,  with) #{replaceEx}(self, with, -1)
+      #{declare} int #{replaceEx}(#{type}*, #{element.type}, int);
       #define #{remove}(self, what) #{removeEx}(self, what, 1)
       #define #{removeAll}(self, what) #{removeEx}(self, what, -1)
       #{declare} int #{removeEx}(#{type}*, #{element.type}, int);
@@ -419,14 +419,14 @@ class Queue < Collection
         }
         #{abort}();
       }
-      #{define} int #{replaceEx}(#{type}* self, #{element.type} what, #{element.type} with, int count) {
+      #{define} int #{replaceEx}(#{type}* self, #{element.type} with, int count) {
         #{node}* node;
         int replaced = 0;
         #{assert}(self);
         if(count == 0) return 0;
         node = self->head_node;
         while(node) {
-          if(#{element.equal("node->element", "what")}) {
+          if(#{element.equal("node->element", "with")}) {
             #{element.dtor("node->element")};
             #{element.copy("node->element", "with")};
             ++replaced;

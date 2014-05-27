@@ -66,7 +66,7 @@ WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See
 |
 Remove and destroy all keys and elements stored in +self+.
 
-|*_void_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
+|*_int_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
 Put a _copy_ of the element +value+ bound to a _copy_ of the key +key+ into +self+ *only if* there is no such key in +self+ which is considered equal to +key+.
 
@@ -74,7 +74,7 @@ Return non-zero value on successful put and zero value otherwise.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
-If map +self+ contains a key which is considered equal to the key +key+,
+If +self+ contains a key which is considered equal to the key +key+,
 remove and destroy that key along with an element bound to it
 and put a new pair built of the _copies_ of +key+ and +value+,
 otherwise simply put a new key/element pair into +self+ in the way of ~type~Put().
@@ -182,7 +182,7 @@ class HashMap < Collection
       #{declare} int #{containsKey}(#{type}*, #{key.type});
       #{declare} #{value.type} #{get}(#{type}*, #{key.type});
       #{declare} int #{put}(#{type}*, #{key.type}, #{value.type});
-      #{declare} void #{replace}(#{type}*, #{key.type}, #{value.type});
+      #{declare} int #{replace}(#{type}*, #{key.type}, #{value.type});
       #{declare} int #{remove}(#{type}*, #{key.type});
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itMove}(#{it}*);
@@ -328,20 +328,22 @@ class HashMap < Collection
         #{@entry.dtor("entry")};
         return result;
       }
-      #{define} void #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
+      #{define} int #{replace}(#{type}* self, #{key.type} key, #{value.type} value) {
+        int result;
         #{@entry.type} entry;
         #{assert}(self);
         entry = #{entryKeyValueRef}(&key, &value);
-        #{@set.replace}(&self->entries, entry, entry);
+        result = #{@set.replace}(&self->entries, entry);
         #{@entry.dtor("entry")};
+        return result;
       }
       #{define} int #{remove}(#{type}* self, #{key.type} key) {
-        int removed;
+        int result;
         #{@entry.type} entry;
         #{assert}(self);
-        removed = #{@set.remove}(&self->entries, entry = #{entryKeyOnlyRef}(&key));
+        result = #{@set.remove}(&self->entries, entry = #{entryKeyOnlyRef}(&key));
         #{@entry.dtor("entry")};
-        return removed;
+        return result;
       }
       #{define} void #{itCtor}(#{it}* self, #{type}* map) {
         #{assert}(self);
