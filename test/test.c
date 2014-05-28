@@ -316,7 +316,7 @@ void type(Test)() {
 
 void type(Test)() {
     ValueType e1, e2, e3;
-    Type c1, c2;
+    Type c1, c2, cc1, cc2;
     TypeIt it;
     
     type(Ctor)(&c1);
@@ -349,9 +349,11 @@ void type(Test)() {
         element(Dtor)(e);
     }
     type(Replace)(&c1, e2);
-    type(Identify)(&c1);
-    type(Identify)(&c2);
 
+    type(Put)(&c2, e1);
+    type(Put)(&c2, e2);
+    type(Put)(&c2, e3);
+    
     element(Dtor)(e1);
     element(Dtor)(e2);
     element(Dtor)(e3);
@@ -376,43 +378,149 @@ void type(Test)() {
         }
     }
     
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(And)(&cc1, &cc2);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+    
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(And)(&cc2, &cc1);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Or)(&cc1, &cc2);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+    
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Or)(&cc2, &cc1);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Not)(&cc1, &cc2);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+    
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Not)(&cc2, &cc1);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Xor)(&cc1, &cc2);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+    
+    {
+        type(Copy)(&cc1, &c1);
+        type(Copy)(&cc2, &c2);
+        type(Xor)(&cc2, &cc1);
+        type(Dtor)(&cc1);
+        type(Dtor)(&cc2);
+    }
+
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+
     type(Purge)(&c1);
     type(Dtor)(&c1);
     type(Dtor)(&c2);
 }
 
 
+#undef Type
+#define Type ValueTypeMap
+#undef TypeIt
+#define TypeIt ValueTypeMapIt
 #undef type
 #define type(x) ValueTypeMap##x
+#undef it
+#define it(x) ValueTypeMapIt##x
+
+
 void type(Test)() {
-    int i;
-    ValueType e1, e2, v3;
-    ValueTypeMap c, c2;
-    printf("\n*** HashMap<ValueType->ValueType>\n");
-    element(CtorEx)(&e1, 1);
-    element(CtorEx)(&e2, 2);
-    type(Ctor)(&c);
-    i = type(ContainsKey)(&c, e1);
-    printf("contains=%d\n", i);
-    i = type(Put)(&c, e1, e2);
-    printf("i=%d\n", i);
-    i = type(Put)(&c, e2, e1);
-    printf("i=%d\n", i);
-    i = type(Put)(&c, e2, e1);
-    printf("i=%d\n", i);
-    i = type(ContainsKey)(&c, e2);
-    printf("contains=%d\n", i);
-    v3 = type(Get)(&c, e2);
-    type(Copy)(&c2, &c);
-    i = type(Remove)(&c, e1);
-    printf("i=%d\n", i);
-    i = type(Equal)(&c, &c2);
-    printf("equal=%d\n", i);
-    type(Identify)(&c);
-    type(Dtor)(&c);
+    ValueType e1, e2, e3;
+    Type c1, c2, cc1, cc2;
+    TypeIt it;
+    
+    element(CtorEx)(&e1, -1);
+    element(CtorEx)(&e2, +1);
+    element(CtorEx)(&e3, 0);
+
+    type(Ctor)(&c1);
+    type(Put)(&c1, e1, e3);
+    type(Put)(&c1, e2, e3);
+    type(Copy)(&c2, &c1);
+    
+    type(Put)(&c1, e1, e2);
+    type(Put)(&c2, e2, e1);
+
+    {
+        int i;
+        ValueType e;
+        for(i = 0; i < 100; ++i) {
+            element(CtorEx)(&e, i);
+            type(Put)(&c1, e, e);
+            element(Dtor)(e);
+        }
+        for(i = 0; i < 100; i += 2) {
+            element(CtorEx)(&e, i);
+            type(Remove)(&c1, e);
+            element(Dtor)(e);
+        }
+        for(i = 1; i < 10; ++i) {
+            ValueType k;
+            element(CtorEx)(&k, i);
+            element(CtorEx)(&e, -i);
+            type(Replace)(&c1, k, e);
+            element(Dtor)(k);
+            element(Dtor)(e);
+        }
+    }
+    
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        ValueType k = it(GetKey)(&it), e = it(GetElement)(&it);
+        element(Dtor)(k);
+        element(Dtor)(e);
+    }
+
     element(Dtor)(e1);
     element(Dtor)(e2);
-    element(Dtor)(v3);
+    element(Dtor)(e3);
+
+    type(Equal)(&c1, &c2);
+    type(Empty)(&c1);
+    type(Size)(&c1);
+    
+    type(Identify)(&c1);
+    type(Identify)(&c2);
+
+    type(Purge)(&c1);
+    type(Dtor)(&c1);
     type(Dtor)(&c2);
 }
 

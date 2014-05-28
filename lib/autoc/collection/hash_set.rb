@@ -361,7 +361,6 @@ class HashSet < Collection
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{remove}(self, *#{itGetRef}(&it));
-        #{rehash}(self);
       }
       #{define} void #{self.or}(#{type}* self, #{type}* other) {
         #{it} it;
@@ -369,7 +368,6 @@ class HashSet < Collection
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{put}(self, *#{itGetRef}(&it));
-        #{rehash}(self);
       }
       #{define} void #{self.and}(#{type}* self, #{type}* other) {
         #{it} it;
@@ -382,16 +380,8 @@ class HashSet < Collection
           #{element.type}* e = #{itGetRef}(&it);
           if(#{contains}(other, *e)) #{put}(&set, *e);
         }
-        #{itCtor}(&it, other);
-        while(#{itMove}(&it)) {
-          #{element.type}* e = #{itGetRef}(&it);
-          if(#{contains}(self, *e)) #{put}(&set, *e);
-        }
         #{dtor}(self);
-        self->buckets = set.buckets;
-        self->size = set.size;
-        #{rehash}(self);
-        /*#{dtor}(&set);*/
+        *self = set;
       }
       #{define} void #{self.xor}(#{type}* self, #{type}* other) {
         #{it} it;
@@ -410,10 +400,7 @@ class HashSet < Collection
           if(!#{contains}(self, *e)) #{put}(&set, *e);
         }
         #{dtor}(self);
-        self->buckets = set.buckets;
-        self->size = set.size;
-        #{rehash}(self);
-        /*#{dtor}(&set);*/
+        *self = set;
       }
       #{define} void #{itCtor}(#{it}* self, #{type}* set) {
         #{assert}(self);
