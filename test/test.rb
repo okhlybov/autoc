@@ -2,13 +2,13 @@ require "autoc"
 
 ValueType = {
   :type => :ValueType,
-  :forward => %$#include "test.h"$,
   :ctor => :ValueTypeCtor,
   :dtor => :ValueTypeDtor,
   :copy => :ValueTypeCopy,
   :equal => :ValueTypeEqual,
   :less => :ValueTypeLess,
   :identify => :ValueTypeIdentify,
+  :forward => %$#include "test.h"$,
 }
 
 AutoC::Module.generate!(:Test) do |c|
@@ -17,4 +17,5 @@ AutoC::Module.generate!(:Test) do |c|
   c << AutoC::Queue.new(:ValueTypeQueue, ValueType)
   c << AutoC::HashSet.new(:ValueTypeSet, ValueType)
   c << AutoC::HashMap.new(:ValueTypeMap, ValueType, ValueType)
+  c << AutoC::HashSet.new(:IntSet, :int)
 end

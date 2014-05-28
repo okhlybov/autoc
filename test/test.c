@@ -78,7 +78,7 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 #define it(x) ValueTypeVectorIt##x
 
 
-void type(Test)() {
+static void type(Test)() {
     ValueType e1, e2;
     Type c1, c2;
     TypeIt it;
@@ -136,7 +136,7 @@ void type(Test)() {
 #define it(x) ValueTypeListIt##x
 
 
-void type(Test)() {
+static void type(Test)() {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -227,7 +227,7 @@ void type(Test)() {
  * Queue is a non-strict superset of List
  * so the test case for the latter can be reused as-is 
  */
-void type(Test)() {
+static void type(Test)() {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -314,7 +314,7 @@ void type(Test)() {
 #define it(x) ValueTypeSetIt##x
 
 
-void type(Test)() {
+static void type(Test)() {
     ValueType e1, e2, e3;
     Type c1, c2, cc1, cc2;
     TypeIt it;
@@ -461,9 +461,9 @@ void type(Test)() {
 #define it(x) ValueTypeMapIt##x
 
 
-void type(Test)() {
+static void type(Test)() {
     ValueType e1, e2, e3;
-    Type c1, c2, cc1, cc2;
+    Type c1, c2;
     TypeIt it;
     
     element(CtorEx)(&e1, -1);
@@ -525,11 +525,314 @@ void type(Test)() {
 }
 
 
+#undef Type
+#define Type IntSet
+#undef TypeIt
+#define TypeIt IntSetIt
+#undef type
+#define type(x) IntSet##x
+#undef it
+#define it(x) IntSetIt##x
+
+
+/* {1,2,3} & {2,3,4} == {2,3} */
+static void type(TestAnd)() {
+    Type r, c1, c2, cc1, cc2;
+    
+    type(Ctor)(&r);
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+
+    type(Put)(&c1, 1); type(Put)(&c1, 3);
+    type(Put)(&c1, 2);
+    type(Put)(&c1, 3); type(Put)(&c1, 1);
+
+    assert(type(Size)(&c1) == 3);
+
+    type(Copy)(&cc1, &c1);
+
+    type(Put)(&c2, 2);
+    type(Put)(&c2, 3);
+    type(Put)(&c2, 4);
+
+    assert(type(Size)(&c2) == 3);
+
+    type(Copy)(&cc2, &c2);
+
+    assert(!type(Equal)(&c1, &c2));
+    assert(!type(Equal)(&c2, &c1));
+
+    type(And)(&c1, &c2);
+    type(And)(&cc2, &cc1);
+
+    assert(type(Size)(&c1) == 2);
+    assert(type(Size)(&cc2) == 2);
+
+    type(Put)(&r, 3);
+    type(Put)(&r, 2);
+
+    assert(type(Size)(&r) == 2);
+
+    assert(!type(Empty)(&r));
+    assert(!type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+
+    assert(type(Equal)(&c1, &r));
+    assert(type(Equal)(&r, &c1));
+
+    assert(type(Equal)(&cc2, &c1));
+    assert(type(Equal)(&c1, &cc2));
+
+    type(Dtor)(&r);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+    type(Dtor)(&cc1);
+    type(Dtor)(&cc2);
+}
+
+
+/* {1,2,3} | {2,3,4} == {1,2,3,4} */
+static void type(TestOr)() {
+    Type r, c1, c2, cc1, cc2;
+    
+    type(Ctor)(&r);
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+
+    type(Put)(&c1, 1); type(Put)(&c1, 3);
+    type(Put)(&c1, 2);
+    type(Put)(&c1, 3); type(Put)(&c1, 1);
+
+    assert(type(Size)(&c1) == 3);
+
+    type(Copy)(&cc1, &c1);
+
+    type(Put)(&c2, 2);
+    type(Put)(&c2, 3);
+    type(Put)(&c2, 4);
+
+    assert(type(Size)(&c2) == 3);
+
+    type(Copy)(&cc2, &c2);
+
+    assert(!type(Equal)(&c1, &c2));
+    assert(!type(Equal)(&c2, &c1));
+
+    type(Or)(&c1, &c2);
+    type(Or)(&cc2, &cc1);
+
+    assert(type(Size)(&c1) == 4);
+    assert(type(Size)(&cc2) == 4);
+
+    type(Put)(&r, 3);
+    type(Put)(&r, 2);
+    type(Put)(&r, 1);
+    type(Put)(&r, 4);
+
+    assert(type(Size)(&r) == 4);
+
+    assert(!type(Empty)(&r));
+    assert(!type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+
+    assert(type(Equal)(&c1, &r));
+    assert(type(Equal)(&r, &c1));
+
+    assert(type(Equal)(&cc2, &c1));
+    assert(type(Equal)(&c1, &cc2));
+
+    type(Dtor)(&r);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+    type(Dtor)(&cc1);
+    type(Dtor)(&cc2);
+}
+
+
+/* {1,2,3} ^ {2,3,4} == {1,4} */
+static void type(TestXor)() {
+    Type r, c1, c2, cc1, cc2;
+    
+    type(Ctor)(&r);
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+
+    type(Put)(&c1, 1); type(Put)(&c1, 3);
+    type(Put)(&c1, 2);
+    type(Put)(&c1, 3); type(Put)(&c1, 1);
+
+    assert(type(Size)(&c1) == 3);
+
+    type(Copy)(&cc1, &c1);
+
+    type(Put)(&c2, 2);
+    type(Put)(&c2, 3);
+    type(Put)(&c2, 4);
+
+    assert(type(Size)(&c2) == 3);
+
+    type(Copy)(&cc2, &c2);
+
+    assert(!type(Equal)(&c1, &c2));
+    assert(!type(Equal)(&c2, &c1));
+
+    type(Xor)(&c1, &c2);
+    type(Xor)(&cc2, &cc1);
+
+    assert(type(Size)(&c1) == 2);
+    assert(type(Size)(&cc2) == 2);
+
+    type(Put)(&r, 4);
+    type(Put)(&r, 1);
+
+    assert(type(Size)(&r) == 2);
+
+    assert(!type(Empty)(&r));
+    assert(!type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+
+    assert(type(Equal)(&c1, &r));
+    assert(type(Equal)(&r, &c1));
+
+    assert(type(Equal)(&cc2, &c1));
+    assert(type(Equal)(&c1, &cc2));
+
+    type(Dtor)(&r);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+    type(Dtor)(&cc1);
+    type(Dtor)(&cc2);
+}
+
+
+/* {1,2,3} - {2,3,4} == {1} */
+static void type(TestNot1)() {
+    Type r, c1, c2, cc1, cc2;
+    
+    type(Ctor)(&r);
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+
+    type(Put)(&c1, 1); type(Put)(&c1, 3);
+    type(Put)(&c1, 2);
+    type(Put)(&c1, 3); type(Put)(&c1, 1);
+
+    assert(type(Size)(&c1) == 3);
+
+    type(Copy)(&cc1, &c1);
+
+    type(Put)(&c2, 2);
+    type(Put)(&c2, 3);
+    type(Put)(&c2, 4);
+
+    assert(type(Size)(&c2) == 3);
+
+    type(Copy)(&cc2, &c2);
+
+    assert(!type(Equal)(&c1, &c2));
+    assert(!type(Equal)(&c2, &c1));
+
+    type(Not)(&c1, &c2);
+    type(Not)(&cc2, &cc1);
+
+    assert(type(Size)(&c1) == 1);
+    assert(type(Size)(&cc2) == 1);
+
+    type(Put)(&r, 1);
+
+    assert(type(Size)(&r) == 1);
+
+    assert(!type(Empty)(&r));
+    assert(!type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+
+    assert(type(Equal)(&c1, &r));
+    assert(type(Equal)(&r, &c1));
+
+    assert(!type(Equal)(&cc2, &c1));
+    assert(!type(Equal)(&c1, &cc2));
+
+    type(Dtor)(&r);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+    type(Dtor)(&cc1);
+    type(Dtor)(&cc2);
+}
+
+
+/* {1,2,3} - {1,2,3,4} == {} */
+static void type(TestNot2)() {
+    Type r, c1, c2;
+    
+    type(Ctor)(&r);
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+
+    type(Put)(&c1, 1); type(Put)(&c1, 3);
+    type(Put)(&c1, 2);
+    type(Put)(&c1, 3); type(Put)(&c1, 1);
+
+    assert(type(Size)(&c1) == 3);
+
+    type(Put)(&c2, 1);
+    type(Put)(&c2, 2);
+    type(Put)(&c2, 3);
+    type(Put)(&c2, 4);
+
+    assert(type(Size)(&c2) == 4);
+
+    assert(!type(Equal)(&c1, &c2));
+    assert(!type(Equal)(&c2, &c1));
+
+    type(Not)(&c1, &c2);
+
+    assert(type(Size)(&c1) == 0);
+
+    assert(type(Size)(&r) == 0);
+
+    assert(type(Empty)(&r));
+    assert(type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+
+    assert(type(Equal)(&c1, &r));
+    assert(type(Equal)(&r, &c1));
+
+    type(Dtor)(&r);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+}
+
+
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
     ValueTypeQueueTest();
     ValueTypeSetTest();
     ValueTypeMapTest();
+    IntSetTestAnd();
+    IntSetTestOr();
+    IntSetTestXor();
+    IntSetTestNot1();
+    IntSetTestNot2();
     return 0;
 }

@@ -115,7 +115,7 @@ Perform the union operation that is +self+ contains the elements from both +self
 
 |*_void_* ~type~Xor(*_Type_* * +self+, *_Type_* * +other+)
 |
-Perform the symmetric difference operation that is +self+ retains the elements contained in either +self+ or +other+, but not both.
+Perform the symmetric difference operation that is +self+ retains the elements contained in either +self+ or +other+, but not in both.
 
 Removed elements are destroyed, extra elements are _copied_.
 |===
