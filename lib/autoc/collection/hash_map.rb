@@ -188,7 +188,7 @@ class HashMap < Collection
       #{declare} int #{itMove}(#{it}*);
       #{declare} #{key.type} #{itGetKey}(#{it}*);
       #{declare} #{value.type} #{itGetElement}(#{it}*);
-      #define #{itGet}(it) #{itGetelement}(it)
+      #define #{itGet}(it) #{itGetElement}(it)
     $
   end
 
@@ -362,7 +362,7 @@ class HashMap < Collection
         #{key.copy("key", "e->key")};
         return key;
       }
-      #{define} #{key.type} #{itGetElement}(#{it}* self) {
+      #{define} #{value.type} #{itGetElement}(#{it}* self) {
         #{@entry.type}* e;
         #{value.type} value;
         #{assert}(self);

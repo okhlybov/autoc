@@ -11,7 +11,7 @@ Queue supports addition/removal operations at both ends.
 However, it is intended to be used as a FIFO container as opposed to {AutoC::List}
 since submission and polling operations are performed on the opposite ends.
 
-The collection's C++ counterparts are +std::list<>+ and +std::queue<>+ template classes.
+This collection is a synergy of C++ +std::list<>+ and +std::queue<>+ template classes.
 
 == Generated C interface
 

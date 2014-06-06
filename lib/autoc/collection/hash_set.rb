@@ -95,29 +95,28 @@ Return number of elements stored in +self+.
 
 [cols=2*]
 |===
-|*_void_* ~type~Not(*_Type_* * +self+, *_Type_* * +other+)
+|*_void_* ~type~Exclude(*_Type_* * +self+, *_Type_* * +other+)
 |
-Perform the difference operation that is +self+ retains only the elements not contained in +other+.
+Perform the difference operation that is +self+ will retain only the elements not contained in +other+.
 
 Removed elements are destroyed.
-
-|*_void_* ~type~And(*_Type_* * +self+, *_Type_* * +other+)
+|*_void_* ~type~Include(*_Type_* * +self+, *_Type_* * +other+)
 |
-Perform the intersection operation that is +self+ retains only the elements contained in both +self+ and +other+.
-
-Removed elements are destroyed.
-
-|*_void_* ~type~Or(*_Type_* * +self+, *_Type_* * +other+)
-|
-Perform the union operation that is +self+ contains the elements from both +self+ and +other+.
+Perform the union operation that is +self+ will contain the elements from both +self+ and +other+.
 
 +self+ receives the _copies_ of extra elements in +other+.
 
-|*_void_* ~type~Xor(*_Type_* * +self+, *_Type_* * +other+)
+|*_void_* ~type~Invert(*_Type_* * +self+, *_Type_* * +other+)
 |
-Perform the symmetric difference operation that is +self+ retains the elements contained in either +self+ or +other+, but not in both.
+Perform the symmetric difference operation that is +self+ will retain the elements contained in either +self+ or +other+, but not in both.
 
 Removed elements are destroyed, extra elements are _copied_.
+
+|*_void_* ~type~Retain(*_Type_* * +self+, *_Type_* * +other+)
+|
+Perform the intersection operation that is +self+ will retain only the elements contained in both +self+ and +other+.
+
+Removed elements are destroyed.
 |===
 
 === Iteration
@@ -190,10 +189,10 @@ class HashSet < Collection
       #{declare} int #{put}(#{type}*, #{element.type});
       #{declare} int #{replace}(#{type}*, #{element.type});
       #{declare} int #{remove}(#{type}*, #{element.type});
-      #{declare} void #{self.not}(#{type}*, #{type}*);
-      #{declare} void #{self.and}(#{type}*, #{type}*);
-      #{declare} void #{self.or}(#{type}*, #{type}*);
-      #{declare} void #{self.xor}(#{type}*, #{type}*);
+      #{declare} void #{exclude}(#{type}*, #{type}*);
+      #{declare} void #{retain}(#{type}*, #{type}*);
+      #{declare} void #{include}(#{type}*, #{type}*);
+      #{declare} void #{invert}(#{type}*, #{type}*);
       #{declare} void #{itCtor}(#{it}*, #{type}*);
       #{declare} int #{itMove}(#{it}*);
       #{declare} #{element.type} #{itGet}(#{it}*);
@@ -355,21 +354,21 @@ class HashSet < Collection
         }
         return 0;
       }
-      #{define} void #{self.not}(#{type}* self, #{type}* other) {
+      #{define} void #{exclude}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{remove}(self, *#{itGetRef}(&it));
       }
-      #{define} void #{self.or}(#{type}* self, #{type}* other) {
+      #{define} void #{include}(#{type}* self, #{type}* other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{put}(self, *#{itGetRef}(&it));
       }
-      #{define} void #{self.and}(#{type}* self, #{type}* other) {
+      #{define} void #{retain}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -383,7 +382,7 @@ class HashSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      #{define} void #{self.xor}(#{type}* self, #{type}* other) {
+      #{define} void #{invert}(#{type}* self, #{type}* other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
