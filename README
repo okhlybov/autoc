@@ -11,6 +11,8 @@ AutoC is available via the RubyGems infrastructure; the easiest way to obtain it
 
 Offline user documentation in HTML form is in doc/ directory.
 
+For more information refer to {::AutoC}.
+
 Ad-hoc test build instructions:
 ----
 > cd test
