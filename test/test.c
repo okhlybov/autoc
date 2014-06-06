@@ -381,7 +381,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(And)(&cc1, &cc2);
+        type(Retain)(&cc1, &cc2);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -389,7 +389,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(And)(&cc2, &cc1);
+        type(Retain)(&cc2, &cc1);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -397,7 +397,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Or)(&cc1, &cc2);
+        type(Include)(&cc1, &cc2);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -405,7 +405,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Or)(&cc2, &cc1);
+        type(Include)(&cc2, &cc1);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -413,7 +413,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Not)(&cc1, &cc2);
+        type(Exclude)(&cc1, &cc2);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -421,7 +421,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Not)(&cc2, &cc1);
+        type(Exclude)(&cc2, &cc1);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -429,7 +429,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Xor)(&cc1, &cc2);
+        type(Invert)(&cc1, &cc2);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -437,7 +437,7 @@ static void type(Test)() {
     {
         type(Copy)(&cc1, &c1);
         type(Copy)(&cc2, &c2);
-        type(Xor)(&cc2, &cc1);
+        type(Invert)(&cc2, &cc1);
         type(Dtor)(&cc1);
         type(Dtor)(&cc2);
     }
@@ -566,8 +566,8 @@ static void type(TestAnd)() {
     assert(!type(Equal)(&c1, &c2));
     assert(!type(Equal)(&c2, &c1));
 
-    type(And)(&c1, &c2);
-    type(And)(&cc2, &cc1);
+    type(Retain)(&c1, &c2);
+    type(Retain)(&cc2, &cc1);
 
     assert(type(Size)(&c1) == 2);
     assert(type(Size)(&cc2) == 2);
@@ -626,8 +626,8 @@ static void type(TestOr)() {
     assert(!type(Equal)(&c1, &c2));
     assert(!type(Equal)(&c2, &c1));
 
-    type(Or)(&c1, &c2);
-    type(Or)(&cc2, &cc1);
+    type(Include)(&c1, &c2);
+    type(Include)(&cc2, &cc1);
 
     assert(type(Size)(&c1) == 4);
     assert(type(Size)(&cc2) == 4);
@@ -688,8 +688,8 @@ static void type(TestXor)() {
     assert(!type(Equal)(&c1, &c2));
     assert(!type(Equal)(&c2, &c1));
 
-    type(Xor)(&c1, &c2);
-    type(Xor)(&cc2, &cc1);
+    type(Invert)(&c1, &c2);
+    type(Invert)(&cc2, &cc1);
 
     assert(type(Size)(&c1) == 2);
     assert(type(Size)(&cc2) == 2);
@@ -748,8 +748,8 @@ static void type(TestNot1)() {
     assert(!type(Equal)(&c1, &c2));
     assert(!type(Equal)(&c2, &c1));
 
-    type(Not)(&c1, &c2);
-    type(Not)(&cc2, &cc1);
+    type(Exclude)(&c1, &c2);
+    type(Exclude)(&cc2, &cc1);
 
     assert(type(Size)(&c1) == 1);
     assert(type(Size)(&cc2) == 1);
@@ -804,7 +804,7 @@ static void type(TestNot2)() {
     assert(!type(Equal)(&c1, &c2));
     assert(!type(Equal)(&c2, &c1));
 
-    type(Not)(&c1, &c2);
+    type(Exclude)(&c1, &c2);
 
     assert(type(Size)(&c1) == 0);
 
@@ -823,6 +823,88 @@ static void type(TestNot2)() {
 }
 
 
+#undef Type
+#define Type IntStrMap
+#undef TypeIt
+#define TypeIt IntStrMapIt
+#undef type
+#define type(x) IntStrMap##x
+#undef it
+#define it(x) IntStrMapIt##x
+
+
+static const char* zero = "zero";
+static const char* one = "one";
+static const char* two = "two";
+
+
+static void type(Test)() {
+    Type c1, c2;
+    TypeIt it;
+    int i;
+    
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+
+    assert(type(Empty)(&c1));
+    assert(type(Empty)(&c2));
+    assert(type(Equal)(&c1, &c2));
+    
+    assert(type(Put)(&c1, 0, zero));
+    assert(type(Put)(&c1, 1, one));
+    assert(type(Put)(&c1, 2, two));
+    assert(!type(Put)(&c1, 2, two));
+    
+    assert(type(Put)(&c2, 2, two));
+    assert(type(Put)(&c2, 0, zero));
+    assert(type(Put)(&c2, 1, one));
+    assert(!type(Put)(&c2, 0, zero));
+
+    assert(!type(Empty)(&c1));
+    assert(!type(Empty)(&c2));
+    assert(type(Size)(&c1) == type(Size)(&c2));
+    assert(type(Equal)(&c1, &c2));
+    
+    assert(type(ContainsKey)(&c1, 0));
+    assert(type(Remove)(&c1, 0));
+    assert(!type(Remove)(&c1, 0));
+    assert(!type(ContainsKey)(&c1, 0));
+    assert(type(ContainsKey)(&c2, 2));
+    assert(type(Remove)(&c2, 2));
+    assert(!type(ContainsKey)(&c2, 2));
+    assert(type(Size)(&c1) == type(Size)(&c2));
+    assert(!type(Equal)(&c1, &c2));
+
+    type(Purge)(&c1);
+    
+    assert(type(Put)(&c1, 0, zero));
+    assert(type(Put)(&c1, 1, one));
+    assert(type(Put)(&c1, 2, two));
+
+    assert(type(Replace)(&c1, 0, two));
+    assert(type(Replace)(&c1, 2, zero));
+    
+    assert(type(Get)(&c1, 0) == two);
+    assert(type(Get)(&c1, 2) == zero);
+    assert(type(Get)(&c1, 1) == one);
+    
+    i = 0;
+    it(Ctor)(&it, &c1);
+    while(it(Move)(&it)) {
+        int k;
+        const char* e;
+        k = it(GetKey)(&it);
+        e = it(Get)(&it);
+        ++i;
+    }
+    assert(i == 3);
+    
+    type(Purge)(&c2);
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+}
+
+
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
@@ -834,5 +916,6 @@ int main(int argc, char** argv) {
     IntSetTestXor();
     IntSetTestNot1();
     IntSetTestNot2();
+    IntStrMapTest();
     return 0;
 }
