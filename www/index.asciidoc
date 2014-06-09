@@ -6,10 +6,11 @@
 
 *AutoC* is a collection of *Ruby* modules dedicated to the task of automatic generation of *C* source code.
 
-Currently *AutoC* contains two modules:
+Currently *AutoC* consists of two parts:
 
-* CodeBuilder - multifile *C* module generator
-* DataStructBuilder - strongly-typed *C* data container generators
+1) {AutoC::Code} - generic C multi-source module generator.
+2) {AutoC::Collection} - strongly-typed data structure generators similar
+to the C++ STL container classes.
 
 === Avaliable data container generators
 
@@ -31,7 +32,7 @@ $ gem install autoc
 
 == Documentation
 
-A complete documentation is available in the form of _PDF_ file _`manual/manual.pdf`_ included in the binary distribution.
+A complete documentation is available in HTML form. Refer to `doc/index.html`.
 
 == Quick start
 
@@ -60,9 +61,9 @@ This will emit the module definition header file _`containers_auto.h`_ accompani
 int main(int argc, char** argv) {
 	IntList list;
 	IntListCtor(&list);
-	IntListAdd(&list, 1);
-	IntListAdd(&list, 2);
-	IntListAdd(&list, 3);
+	IntListPush(&list, 1);
+	IntListPush(&list, 2);
+	IntListPush(&list, 3);
 	printf("size=%d\n", IntListSize(&list));
 	IntListDtor(&list);
 	return 0;
