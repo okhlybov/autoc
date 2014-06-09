@@ -1,1 +1,2 @@
--m asciidoc --no-private
+--markup asciidoc
+--no-private

@@ -21,7 +21,7 @@ Should the major incompatible changes be made, the new release 2.0 will be intro
 
 =end
 module AutoC
-  VERSION = "1.0"
+  VERSION = "1.1"
 end # AutoC
 
 
