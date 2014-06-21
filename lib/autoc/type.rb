@@ -1,3 +1,4 @@
+require "set"
 require "autoc/code"
 
 
@@ -50,13 +51,16 @@ class Type < Code
     end
   end.new
 
+  @@caps = [:ctor, :dtor, :copy, :equal, :less, :identify]
+  
   attr_reader :type
   
-  def entities; [CommonCode] end
+  def entities; super << CommonCode end
 
   def initialize(type, visibility = :public)
     @type = type.to_s
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
+    @capability = Set.new(@@caps)
   end
   
   def method_missing(method, *args)
@@ -121,14 +125,24 @@ class Type < Code
   
   def abort; "abort" end
   
-  protected
-  
   def public?; @visibility == :public end
     
   def private?; @visibility == :private end
   
   def static?; @visibility == :static end
 
+  def constructible?; @capability.include?(:ctor) end
+  
+  def destructible?; @capability.include?(:dtor) end
+  
+  def copyable?; @capability.include?(:copy) end
+  
+  def comparable?; @capability.include?(:equal) end
+
+  def orderable?; comparable? && @capability.include?(:less) end
+
+  def hashable?; comparable? && @capability.include?(:identify) end
+  
 end # Type
 
 
@@ -136,7 +150,7 @@ class UserDefinedType < Type
   
   # @private  
   class PublicDeclaration < Code
-    def entities; super + [Type::CommonCode] end
+    def entities; super << Type::CommonCode end
     def initialize(forward) @forward = forward.to_s end
     def hash; @forward.hash end
     def eql?(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
@@ -156,7 +170,7 @@ class UserDefinedType < Type
       t = opt
     elsif opt.is_a?(Hash)
       t = opt[:type].nil? ? raise("type is not specified") : opt[:type]
-      [:ctor, :dtor, :copy, :equal, :less, :identify].each do |key|
+      @@caps.each do |key|
         instance_variable_set("@#{key}".to_sym, opt[key].to_s) unless opt[key].nil?
       end
       @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
@@ -169,7 +183,7 @@ class UserDefinedType < Type
   end
   
   def ctor(obj)
-    @ctor.nil? ? "(#{obj} = 0)" : "#{@ctor}(#{obj})"
+    @ctor.nil? ? "((#{obj}) = 0)" : "#{@ctor}(#{obj})"
   end
   
   def dtor(obj)
@@ -177,19 +191,19 @@ class UserDefinedType < Type
   end
   
   def copy(dst, src)
-    @copy.nil? ? "(#{dst} = #{src})" : "#{@copy}(#{dst}, #{src})"
+    @copy.nil? ? "((#{dst}) = (#{src}))" : "#{@copy}(#{dst}, #{src})"
   end
   
   def equal(lt, rt)
-    @equal.nil? ? "(#{lt} == #{rt})" : "#{@equal}(#{lt}, #{rt})"
+    @equal.nil? ? "((#{lt}) == (#{rt}))" : "#{@equal}(#{lt}, #{rt})"
   end
   
   def less(lt, rt)
-    @less.nil? ? "(#{lt} < #{rt})" : "#{@less}(#{lt}, #{rt})"
+    @less.nil? ? "((#{lt}) < (#{rt}))" : "#{@less}(#{lt}, #{rt})"
   end
   
   def identify(obj)
-    @identify.nil? ? "(size_t)(#{obj})" : "#{@identify}(#{obj})"
+    @identify.nil? ? "((size_t)(#{obj}))" : "#{@identify}(#{obj})"
   end
   
 end # UserDefinedType

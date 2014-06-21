@@ -133,13 +133,15 @@ class HashMap < Collection
 
   alias :value :element
   
-  def entities; super + [key] end
+  def entities; super << key end
   
   def initialize(type, key_type, value_type, visibility = :public)
     super(type, value_type, visibility)
     @key = Collection.coerce(key_type)
     @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
     @set = HashSet.new(set, @entry, :static)
+    @capability.subtract [:less]
+    raise "type #{key.type} (#{key}) must be hashable" unless key.hashable?
   end
   
   def write_exported_types(stream)

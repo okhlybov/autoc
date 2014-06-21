@@ -72,7 +72,7 @@ class Collection < Type
   
   attr_reader :element
   
-  def entities; super + [element] end
+  def entities; super << element end
   
   def initialize(type_name, element_type, visibility = :public)
     super(type_name, visibility)
@@ -130,7 +130,13 @@ class Collection < Type
   end
 
   def less(*args)
-    args.empty? ? super() : raise("#{self.class} provides no ordering functionality")
+    if args.empty?
+      super()
+    else
+      check_args(args, 2)
+      lt, rt = args
+      super() + "(&#{lt}, &#{rt})"
+    end
   end
   
   private

@@ -78,7 +78,11 @@ Return number of elements stored in vector +self+.
 
 |*_void_* ~type~Sort(*_Type_* * +self+)
 |
+NOTE : optional operation.
+
 Perform a sorting operation on the contents of vector +self+ utilizing either generated of user supplied ordering functions.
+
+Note that this operation is defined only if element type is orderable, e.g. has equality testing and comparison operations defined.
 
 |*_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
 |
@@ -117,8 +121,10 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class Vector < Collection
 
-  def ctor(*args)
-    args.empty? ? super() : raise("#{self.class} provides no default constructor")
+  def initialize(*args)
+    super
+    @capability.subtract [:ctor, :less]
+    raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
   end
   
   def write_exported_types(stream)
@@ -171,7 +177,6 @@ class Vector < Collection
         #{element.dtor("self->values[index]")};
         #{element.copy("self->values[index]", "value")};
       }
-      #{declare} void #{sort}(#{type}*);
       #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
       #{define} void #{itCtorEx}(#{it}* self, #{type}* vector, int forward) {
         #{assert}(self);
@@ -190,6 +195,15 @@ class Vector < Collection
         return #{get}(self->vector, self->index);
       }
     $
+    stream << if element.orderable?
+      %$
+        #{declare} void #{sort}(#{type}*);
+      $
+    else
+      %$
+        /* No #{sort}() defined since #{element.type} is not orderable */
+      $
+    end
   end
   
   def write_implementations(stream, define)
@@ -270,6 +284,8 @@ class Vector < Collection
         }
         return result;
       }
+    $
+    stream << %$
       static int #{comparator}(void* lp_, void* rp_) {
         #{element.type}* lp = (#{element.type}*)lp_;
         #{element.type}* rp = (#{element.type}*)rp_;
@@ -286,7 +302,7 @@ class Vector < Collection
         #{assert}(self);
         qsort(self->values, #{size}(self), sizeof(#{element.type}), (F)#{comparator});
       }
-    $
+    $ if element.orderable?
   end
   
 end # Vector

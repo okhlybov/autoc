@@ -19,6 +19,8 @@ Ad-hoc test build instructions:
 > cc -o test test.c test_auto.c
 ----
 
+For (in)complete list of changes refer to {file:CHANGES}.
+
 That's all for now, folks! Stay tuned.
 
 Oleg A. Khlybov <fougas@mail.ru>
