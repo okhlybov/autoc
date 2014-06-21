@@ -905,6 +905,40 @@ static void type(Test)() {
 }
 
 
+#undef Type
+#define Type ListIntSet
+#undef TypeIt
+#define TypeIt ListIntSetIt
+#undef type
+#define type(x) ListIntSet##x
+#undef it
+#define it(x) ListIntSetIt##x
+#undef Element
+#define Element IntSet
+#undef element
+#define element(x) IntSet##x
+
+
+static void type(Test)() {
+    Type c1, c2;
+    Element e;
+    
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+    
+    element(Ctor)(&e);
+    type(Push)(&c1, e);
+    element(Put)(&e, 3);
+    element(Put)(&e, 2);
+    element(Put)(&e, 1);
+    type(Push)(&c2, e);
+    element(Dtor)(&e);
+    
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+}
+
+
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
@@ -917,5 +951,6 @@ int main(int argc, char** argv) {
     IntSetTestNot1();
     IntSetTestNot2();
     IntStrMapTest();
+    ListIntSetTest();
     return 0;
 }
