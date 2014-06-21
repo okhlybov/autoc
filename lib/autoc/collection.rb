@@ -29,12 +29,14 @@ AutoC::Module.generate!(:Test) do |c|
   c << AutoC::List.new(:IntList, :int)
 end
 ----
-In the above example a C module Test represented by the C header +test_auto.h+ and the C source +test_auto.c+ are generated.
+In the above example a C module Test represented by the C header +test_auto.h+ and the C source +test_auto.c+ is generated.
 The C++ counterpart of the generated collection is +std::forward_list<int>+.
 
 == C interface
 
 === Element types: values, references
+
+Collections may contain both value and reference types, including other collections.
 
 === Thread safety
 
@@ -117,12 +119,18 @@ class Collection < Type
     end
   end
   
+  def identify(*args)
+    if args.empty?
+      super()
+    else
+      check_args(args, 1)
+      obj = args.first
+      super() + "(&#{obj})"
+    end
+  end
+
   def less(*args)
     args.empty? ? super() : raise("#{self.class} provides no ordering functionality")
-  end
-  
-  def identify(*args)
-    args.empty? ? super() : raise("#{self.class} provides no hashing functionality")
   end
   
   private
