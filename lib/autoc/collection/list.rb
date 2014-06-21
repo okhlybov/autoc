@@ -154,6 +154,11 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class List < Collection
   
+  def initialize(*args)
+    super
+    @capability.subtract [:less]
+  end
+  
   def write_exported_types(stream)
     stream << %$
       /***

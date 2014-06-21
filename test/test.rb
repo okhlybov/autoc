@@ -25,3 +25,4 @@ AutoC::Module.generate!(:Test) do |c|
   c << ListIntSet
   c << IntSet
 end
+

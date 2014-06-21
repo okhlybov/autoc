@@ -1,0 +1,12 @@
+== 1.2
+
+Introduced type capabilities and optional operations for collections.
+AutoC::Vector#sort() is now optional operation.
+
+== 1.1
+
+Fixed online documentation generation issues.
+
+== 1.0
+
+Initial release of version 1.

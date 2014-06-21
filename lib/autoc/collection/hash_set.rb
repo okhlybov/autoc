@@ -148,6 +148,8 @@ class HashSet < Collection
   def initialize(*args)
     super
     @list = List.new(list, element, :static)
+    @capability.subtract [:less]
+    raise "type #{key.type} (#{key}) must be hashable" unless element.hashable?
   end
   
   def write_exported_types(stream)
