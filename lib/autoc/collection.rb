@@ -66,17 +66,13 @@ WARNING: the collection being iterated *must not* be modified in any way otherwi
 =end
 class Collection < Type
   
-  def self.coerce(type)
-    type.is_a?(Type) ? type : UserDefinedType.new(type)
-  end
-  
   attr_reader :element
   
   def entities; super << element end
   
   def initialize(type_name, element_type, visibility = :public)
     super(type_name, visibility)
-    @element = Collection.coerce(element_type)
+    @element = Type.coerce(element_type)
   end
   
   def ctor(*args)

@@ -1,6 +1,7 @@
 == 1.2
 
-Introduced type capabilities and optional operations for collections.
+Introduced type capabilities/restrictions and optional operations for collections.
+
 AutoC::Vector#sort() is now optional operation.
 
 == 1.1

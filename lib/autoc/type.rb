@@ -51,21 +51,34 @@ class Type < Code
     end
   end.new
 
+  def self.coerce(type)
+    type.is_a?(Type) ? type : UserDefinedType.new(type)
+  end
+  
   @@caps = [:ctor, :dtor, :copy, :equal, :less, :identify]
   
-  attr_reader :type
+  attr_reader :type, :prefix
   
   def entities; super << CommonCode end
 
-  def initialize(type, visibility = :public)
+  def initialize(type, visibility = :public, prefix = nil)
     @type = type.to_s
+    @prefix = prefix.nil? ? @type : prefix.to_s
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
     @capability = Set.new(@@caps)
   end
   
+  def prefix
+    if @prefix.nil?
+      @prefix = type.to_s
+      raise "prefix must be a valid C identifier" unless @prefix =~ /^[a-zA-Z_]\w*$/
+    end
+    @prefix
+  end
+  
   def method_missing(method, *args)
     str = method.to_s
-    func = @type + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
+    func = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
     if args.empty?
       func # Emit bare function name
     elsif args.size == 1 && args.first == nil
@@ -166,6 +179,7 @@ class UserDefinedType < Type
   def initialize(opt)
     @deps = []
     v = :public
+    p = nil
     if [Symbol, String].include?(opt.class)
       t = opt
     elsif opt.is_a?(Hash)
@@ -176,10 +190,11 @@ class UserDefinedType < Type
       @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
       optv = opt[:visibility]
       v = optv.nil? ? :public : optv
+      p = opt[:prefix] # This handles nil case as well
     else
       raise "failed to decode the argument"
     end
-    super(t, v)
+    super(t, v, p.nil? ? t : p)
   end
   
   def ctor(obj)
