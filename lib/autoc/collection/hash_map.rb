@@ -137,7 +137,7 @@ class HashMap < Collection
   
   def initialize(type, key_type, value_type, visibility = :public)
     super(type, value_type, visibility)
-    @key = Collection.coerce(key_type)
+    @key = Type.coerce(key_type)
     @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
     @set = HashSet.new(set, @entry, :static)
     @capability.subtract [:less]
