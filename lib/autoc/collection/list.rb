@@ -248,7 +248,8 @@ class List < Collection
           #{itCtor}(&rit, rt);
           while(#{itMove}(&lit) && #{itMove}(&rit)) {
             int equal;
-            #{element.type} *le, *re;
+            #{element.type} *le;
+            #{element.type} *re;
             le = #{itGetRef}(&lit);
             re = #{itGetRef}(&rit);
             equal = #{element.equal("*le", "*re")};

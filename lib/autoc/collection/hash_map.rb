@@ -133,6 +133,14 @@ class HashMap < Collection
 
   alias :value :element
   
+  def hash; super ^ key.hash end
+  
+  alias :eql? :==
+
+  def ==(other)
+    super && key == other.key
+  end
+  
   def entities; super << key end
   
   def initialize(type, key_type, value_type, visibility = :public)
