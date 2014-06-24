@@ -68,6 +68,14 @@ class Collection < Type
   
   attr_reader :element
   
+  def hash; super ^ element.hash end
+  
+  alias :eql? :==
+
+  def ==(other)
+    super && element == other.element
+  end
+  
   def entities; super << element end
   
   def initialize(type_name, element_type, visibility = :public)

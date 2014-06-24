@@ -70,10 +70,7 @@ class Module
   end
   
   def <<(obj)
-    unless @entities.include?(obj)
-      @entities << obj
-      obj.entities.each {|e| self << e}
-    end
+    obj.entities.each {|e| self << e} unless @entities.add?(obj).nil?
     self
   end
 
@@ -95,7 +92,7 @@ class Module
     (1..source_count).each {|i| @sources << new_source(i)}
     @main_source = @sources.first
     @smallest_source = @main_source
-    # It appears that computing the size of a source might be a fairly expensive operation so do it only when neccessary
+    # It appears that computing the size of a source might be a fairly expensive operation so do it only when necessary
     refresh_smallest_source = source_count > 1
     @entities.each do |e|
       @header << e

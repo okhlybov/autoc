@@ -59,6 +59,12 @@ class Type < Code
   
   attr_reader :type, :prefix
   
+  def hash; self.class.hash ^ type.hash end
+  
+  def ==(other)
+    self.class == other.class && type == other.type
+  end
+  
   def entities; super << CommonCode end
 
   def initialize(type, visibility = :public, prefix = nil)
@@ -77,7 +83,7 @@ class Type < Code
   end
   
   def method_missing(method, *args)
-    str = method.to_s
+    str = method.to_s.sub(/[!\?]$/, "") # Strip trailing ? or !
     func = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
     if args.empty?
       func # Emit bare function name
@@ -89,30 +95,27 @@ class Type < Code
   end
   
   def write_intf(stream)
-    case @visibility
-      when :public
-        write_exported_types(stream)
-        write_exported_declarations(stream, extern, inline)
+    if public?
+      write_exported_types(stream)
+      write_exported_declarations(stream, extern, inline)
     end
   end
   
   def write_decls(stream)
-    case @visibility
-      when :private
-        write_exported_types(stream)
-        write_exported_declarations(stream, extern, inline)
-      when :static
-        write_exported_types(stream)
-        write_exported_declarations(stream, static, inline)
+    if private?
+      write_exported_types(stream)
+      write_exported_declarations(stream, extern, inline)
+    elsif static?
+      write_exported_types(stream)
+      write_exported_declarations(stream, static, inline)
     end
   end
   
   def write_defs(stream)
-    case @visibility
-      when :public, :private
-        write_implementations(stream, nil)
-      when :static
-        write_implementations(stream, static)
+    if public? || private?
+      write_implementations(stream, nil)
+    elsif static?
+      write_implementations(stream, static)
     end
   end
   
@@ -222,6 +225,94 @@ class UserDefinedType < Type
   end
   
 end # UserDefinedType
+
+
+require "forwardable"
+
+
+class Reference < Type
+  
+  extend Forwardable
+  
+  def_delegators :@target,
+    :prefix, :hash,
+    :public?, :private?, :static?,
+    :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
+  
+  def initialize(target)
+    @target = Type.coerce(target)
+    super("#{@target.type}*")
+  end
+  
+  alias :eql? :==
+  
+  def ==(other)
+    super && @target == other.instance_variable_get(:@target)
+  end
+  
+  def entities; super << @target end
+  
+  def write_exported_declarations(stream, declare, define)
+    stream << %$
+      /***
+      ****  <#{type}> (#{self.class})
+      ***/
+      #{declare} #{type} #{new?}();
+      #{declare} #{type} #{ref?}(#{type});
+      #{declare} void #{free?}(#{type});
+    $
+  end
+  
+  def write_implementations(stream, define)
+    stream << %$
+    #define AUTOC_COUNTER(p) (*(size_t*)((char*)(p) + sizeof(#{@target.type})))
+      #{define} #{type} #{new?}() {
+        #{type} self = (#{type})#{malloc}(sizeof(#{@target.type}) + sizeof(size_t)); #{assert}(self);
+        #{@target.ctor("*self")};
+        AUTOC_COUNTER(self) = 1;
+        return self;
+      }
+      #{define} #{type} #{ref?}(#{type} self) {
+        #{assert}(self);
+        ++AUTOC_COUNTER(self);
+        return self;
+      }
+      #{define} void #{free?}(#{type} self) {
+        #{assert}(self);
+        if(--AUTOC_COUNTER(self) == 0) {
+          #{@target.dtor("*self")};
+          #{free}(self);
+        }
+      }
+      #undef AUTOC_COUNTER
+    $
+  end
+  
+  def ctor(obj)
+    "((#{obj}) = #{new?}())";
+  end
+  
+  def dtor(obj)
+    "#{free?}(#{obj})"
+  end
+  
+  def copy(dst, src)
+    "((#{dst}) = #{ref?}(#{src}))"
+  end
+  
+  def equal(lt, rt)
+    @target.equal("*#{lt}", "*#{rt}")
+  end
+  
+  def less(lt, rt)
+    @target.less("*#{lt}", "*#{rt}")
+  end
+  
+  def identify(obj)
+    @target.identify("*#{obj}")
+  end
+  
+end
 
 
 end # AutoC
