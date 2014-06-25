@@ -152,13 +152,13 @@ class HashSet < Collection
     raise "type #{key.type} (#{key}) must be hashable" unless element.hashable?
   end
   
-  def write_exported_types(stream)
+  def write_intf_types(stream)
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
       ***/
     $ if public?
-    @list.write_exported_types(stream)
+    @list.write_intf_types(stream)
     stream << %$
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -176,7 +176,7 @@ class HashSet < Collection
     $
   end
   
-  def write_exported_declarations(stream, declare, define)
+  def write_intf_decls(stream, declare, define)
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
@@ -201,9 +201,9 @@ class HashSet < Collection
     $
   end
 
-  def write_implementations(stream, define)
-    @list.write_exported_declarations(stream, static, inline)
-    @list.write_implementations(stream, static)
+  def write_impls(stream, define)
+    @list.write_intf_decls(stream, static, inline)
+    @list.write_impls(stream, static)
     stream << %$
       #{define} #{element.type}* #{itGetRef}(#{it}*);
       static void #{rehash}(#{type}* self) {

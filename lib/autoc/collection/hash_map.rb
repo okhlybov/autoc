@@ -152,7 +152,7 @@ class HashMap < Collection
     raise "type #{key.type} (#{key}) must be hashable" unless key.hashable?
   end
   
-  def write_exported_types(stream)
+  def write_intf_types(stream)
     stream << %$
       /***
       **** #{type}<#{key.type},#{value.type}> (#{self.class})
@@ -166,7 +166,7 @@ class HashMap < Collection
         unsigned flags;
       };
     $
-    @set.write_exported_types(stream)
+    @set.write_intf_types(stream)
     stream << %$
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -179,7 +179,7 @@ class HashMap < Collection
     $
   end
 
-  def write_exported_declarations(stream, declare, define)
+  def write_intf_decls(stream, declare, define)
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
@@ -202,7 +202,7 @@ class HashMap < Collection
     $
   end
 
-  def write_implementations(stream, define)
+  def write_impls(stream, define)
     stream << %$
       #define AUTOC_VALID_VALUE 1
       #define AUTOC_VALID_KEY 2
@@ -246,8 +246,8 @@ class HashMap < Collection
         if(entry->flags & AUTOC_VALID_VALUE && entry->flags & AUTOC_OWNED_VALUE) #{value.dtor("entry->value")};
       }
     $
-    @set.write_exported_declarations(stream, static, inline)
-    @set.write_implementations(stream, static)
+    @set.write_intf_decls(stream, static, inline)
+    @set.write_impls(stream, static)
     stream << %$
       static #{@entry.type}* #{itGetEntryRef}(#{it}*);
       #{define} void #{ctor}(#{type}* self) {

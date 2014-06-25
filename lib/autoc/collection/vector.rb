@@ -127,7 +127,7 @@ class Vector < Collection
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
   end
   
-  def write_exported_types(stream)
+  def write_intf_types(stream)
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
@@ -148,7 +148,7 @@ class Vector < Collection
     $
   end
   
-  def write_exported_declarations(stream, declare, define)
+  def write_intf_decls(stream, declare, define)
     stream << %$
       #{declare} void #{ctor}(#{type}*, size_t);
       #{declare} void #{dtor}(#{type}*);
@@ -206,7 +206,7 @@ class Vector < Collection
     end
   end
   
-  def write_implementations(stream, define)
+  def write_impls(stream, define)
     stream << %$
       static void #{allocate}(#{type}* self, size_t element_count) {
         #{assert}(self);

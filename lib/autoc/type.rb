@@ -96,34 +96,34 @@ class Type < Code
   
   def write_intf(stream)
     if public?
-      write_exported_types(stream)
-      write_exported_declarations(stream, extern, inline)
+      write_intf_types(stream)
+      write_intf_decls(stream, extern, inline)
     end
   end
   
   def write_decls(stream)
     if private?
-      write_exported_types(stream)
-      write_exported_declarations(stream, extern, inline)
+      write_intf_types(stream)
+      write_intf_decls(stream, extern, inline)
     elsif static?
-      write_exported_types(stream)
-      write_exported_declarations(stream, static, inline)
+      write_intf_types(stream)
+      write_intf_decls(stream, static, inline)
     end
   end
   
   def write_defs(stream)
     if public? || private?
-      write_implementations(stream, nil)
+      write_impls(stream, nil)
     elsif static?
-      write_implementations(stream, static)
+      write_impls(stream, static)
     end
   end
   
-  def write_exported_types(stream) end
+  def write_intf_types(stream) end
   
-  def write_exported_declarations(stream, declare, define) end
+  def write_intf_decls(stream, declare, define) end
   
-  def write_implementations(stream, define) end
+  def write_impls(stream, define) end
   
   def extern; "AUTOC_EXTERN" end
   
@@ -252,7 +252,7 @@ class Reference < Type
   
   def entities; super << @target end
   
-  def write_exported_declarations(stream, declare, define)
+  def write_intf_decls(stream, declare, define)
     stream << %$
       /***
       ****  <#{type}> (#{self.class})
@@ -263,7 +263,7 @@ class Reference < Type
     $
   end
   
-  def write_implementations(stream, define)
+  def write_impls(stream, define)
     stream << %$
     #define AUTOC_COUNTER(p) (*(size_t*)((char*)(p) + sizeof(#{@target.type})))
       #{define} #{type} #{new?}() {
