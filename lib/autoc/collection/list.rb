@@ -159,7 +159,7 @@ class List < Collection
     @capability.subtract [:less]
   end
   
-  def write_exported_types(stream)
+  def write_intf_types(stream)
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
@@ -185,7 +185,7 @@ class List < Collection
     $
   end
   
-  def write_exported_declarations(stream, declare, define)
+  def write_intf_decls(stream, declare, define)
     stream << %$
       #{declare} void #{ctor}(#{type}*);
       #{declare} void #{dtor}(#{type}*);
@@ -212,7 +212,7 @@ class List < Collection
     $
   end
   
-  def write_implementations(stream, define)
+  def write_impls(stream, define)
     stream << %$
       #{define} #{element.type}* #{itGetRef}(#{it}*);
       #{define} void #{ctor}(#{type}* self) {
