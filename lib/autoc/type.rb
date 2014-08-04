@@ -5,6 +5,47 @@ require "autoc/code"
 module AutoC
   
 
+  class Function
+
+  attr_reader :name, :args, :result
+  
+  def initialize(name, args = [], result = nil)
+    # TODO test the C type/name conformance
+    @name = name.to_s
+    @result = (result.nil? ? :void : result).to_s
+    @args = args.collect {|x| x.to_s}
+  end
+  
+  def with(new_name)
+    Method.new(new_name, args, result)
+  end
+  
+  def to_s; name; end
+
+  def args_dec
+    args.join(",")
+  end
+  
+  def args_def
+    i = 0
+    args.collect {|x| "#{x} arg#{i+=1}"}.join(",")
+  end
+  
+  def args_call
+    (1..args.size).collect {|i| "arg#{i}"}.join(",")
+  end
+  
+  def declaration
+    "#{result} #{name}(#{args_dec})"
+  end
+  
+  def definition
+    "#{result} #{name}(#{args_def})"
+  end
+  
+end # Function
+
+
 class Type < Code
   
   # @private
@@ -83,14 +124,14 @@ class Type < Code
   end
   
   def method_missing(method, *args)
-    str = method.to_s.sub(/[!\?]$/, "") # Strip trailing ? or !
+    str = method.to_s.sub(/[\!\?]$/, "") # Strip trailing ? or !
     func = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
     if args.empty?
       func # Emit bare function name
     elsif args.size == 1 && args.first == nil
       func + "()" # Use sole nil argument to emit function call with no arguments
     else
-      func + "(" + args.join(", ") + ")" # Emit normal function call with supplied arguments
+      func + "(" + args.join(",") + ")" # Emit normal function call with supplied arguments
     end
   end
   
