@@ -5,48 +5,71 @@ require "autoc/code"
 module AutoC
   
 
-  class Function
+class Function
 
-  attr_reader :name, :args, :result
+  attr_reader :name, :params, :result
   
-  def initialize(name, args = [], result = nil)
+  def initialize(name, params = [], result = nil)
     # TODO test the C type/name conformance
     @name = name.to_s
     @result = (result.nil? ? :void : result).to_s
-    @args = args.collect {|x| x.to_s}
+    @params = params.collect {|x| x.to_s}
   end
   
-  def with(new_name)
-    Method.new(new_name, args, result)
+  def rename(new_name)
+    Function.new(new_name, params, result)
   end
   
-  def to_s; name; end
+  def to_s
+    @name
+  end
 
-  def args_dec
-    args.join(",")
-  end
-  
-  def args_def
-    i = 0
-    args.collect {|x| "#{x} arg#{i+=1}"}.join(",")
-  end
-  
-  def args_call
-    (1..args.size).collect {|i| "arg#{i}"}.join(",")
-  end
-  
   def declaration
-    "#{result} #{name}(#{args_dec})"
+    "#{result} #{name}(#{param_dec})"
   end
   
   def definition
-    "#{result} #{name}(#{args_def})"
+    "#{result} #{name}(#{param_def})"
+  end
+  
+  def call(*args)
+    "#{name}(#{args.join(',')})"
+  end
+
+  def dispatch(*args)
+    if args.empty?
+      self
+    else
+      args = [] if args.size == 1 && args.first.nil?
+      call(*args)
+    end
+  end
+  
+  private
+  
+  def param_dec
+    params.join(',')
+  end
+  
+  def param_def
+    i = 0; params.collect {|x| "#{x} _#{i+=1}"}.join(',')
+  end
+  
+  def param_call
+    (1..params.size).collect {|i| "_#{i}"}.join(',')
   end
   
 end # Function
 
-
 class Type < Code
+  
+  def self.def_method(name, params = [], result = nil)
+    define_method name do |*args|
+      f = instance_variable_get(n = "@#{name}".to_sym)
+      instance_variable_set(n, f = Function.new(method_missing(name), params, result)) if f.nil?
+      f.dispatch(*args)
+    end
+  end
   
   # @private
   CommonCode = Class.new(Code) do
