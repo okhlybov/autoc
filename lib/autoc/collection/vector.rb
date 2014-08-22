@@ -121,17 +121,15 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class Vector < Collection
 
-  def_dispatcher :ctor, :dtor, :copy, :equal, :identify
-  
   def initialize(*args)
     super
     @capability.subtract [:ctor, :less]
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
-    set_method(:ctor, [ [type_ref,:self],[:size_t,:element_count] ])
-    set_method(:dtor, [ [type_ref,:self] ])
-    set_method(:copy, [ [type_ref,:dst],[type_ref,:src] ])
-    set_method(:equal, [ [type_ref,:lt],[type_ref,:rt]], :int)
-    set_method(:identify, [ [type_ref,:self] ], :size_t)
+    @ctor = Class.new(Function) do
+      def call(obj, size)
+        super("&#{obj}", size)
+      end
+    end.new(method_missing(:ctor), [ [type_ref,:self],[:size_t,:element_count] ])
   end
   
   def write_intf_types(stream)
@@ -258,6 +256,15 @@ class Vector < Collection
         } else
           return 0;
       }
+      #{define} #{identify.definition} {
+        size_t index, result = 0;
+        #{assert}(self);
+        for(index = 0; index < self->element_count; ++index) {
+          result ^= #{element.identify("self->values[index]")};
+          result = AUTOC_RCYCLE(result);
+        }
+        return result;
+      }
       #{define} void #{resize}(#{type_ref} self, size_t new_element_count) {
         size_t index, element_count, from, to;
         #{assert}(self);
@@ -281,15 +288,6 @@ class Vector < Collection
           self->values = values;
           self->element_count = new_element_count;
         }
-      }
-      #{define} size_t #{identify}(#{type_ref} self) {
-        size_t index, result = 0;
-        #{assert}(self);
-        for(index = 0; index < self->element_count; ++index) {
-          result ^= #{element.identify("self->values[index]")};
-          result = AUTOC_RCYCLE(result);
-        }
-        return result;
       }
     $
     stream << %$

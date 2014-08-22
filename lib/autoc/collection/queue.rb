@@ -215,7 +215,7 @@ class Queue < Collection
       };
       struct #{it} {
         int start, forward;
-        #{type}* queue;
+        #{type_ref} queue;
         #{node}* this_node;
       };
       struct #{node} {
@@ -228,48 +228,48 @@ class Queue < Collection
   
   def write_intf_decls(stream, declare, define)
     stream << %$
-      #{declare} void #{ctor}(#{type}*);
-      #{declare} void #{dtor}(#{type}*);
-      #{declare} void #{copy}(#{type}*, #{type}*);
-      #{declare} int #{equal}(#{type}*, #{type}*);
-      #{declare} size_t #{identify}(#{type}*);
-      #{declare} void #{purge}(#{type}*);
+      #{declare} #{ctor.declaration};
+      #{declare} #{dtor.declaration};
+      #{declare} #{copy.declaration};
+      #{declare} #{equal.declaration};
+      #{declare} #{identify.declaration};
+      #{declare} void #{purge}(#{type_ref});
       #define #{peek}(self) #{peekHead}(self)
-      #{declare} #{element.type} #{peekHead}(#{type}*);
-      #{declare} #{element.type} #{peekTail}(#{type}*);
+      #{declare} #{element.type} #{peekHead}(#{type_ref});
+      #{declare} #{element.type} #{peekTail}(#{type_ref});
       #define #{push}(self, element) #{pushTail}(self, element)
-      #{declare} void #{pushTail}(#{type}*, #{element.type});
-      #{declare} void #{pushHead}(#{type}*, #{element.type});
+      #{declare} void #{pushTail}(#{type_ref}, #{element.type});
+      #{declare} void #{pushHead}(#{type_ref}, #{element.type});
       #define #{pop}(self) #{popHead}(self)
-      #{declare} #{element.type} #{popHead}(#{type}*);
-      #{declare} #{element.type} #{popTail}(#{type}*);
-      #{declare} int #{contains}(#{type}*, #{element.type});
-      #{declare} #{element.type} #{find}(#{type}*, #{element.type});
+      #{declare} #{element.type} #{popHead}(#{type_ref});
+      #{declare} #{element.type} #{popTail}(#{type_ref});
+      #{declare} int #{contains}(#{type_ref}, #{element.type});
+      #{declare} #{element.type} #{find}(#{type_ref}, #{element.type});
       #define #{replace}(self, with) #{replaceEx}(self, with, 1)
       #define #{replaceAll}(self,  with) #{replaceEx}(self, with, -1)
-      #{declare} int #{replaceEx}(#{type}*, #{element.type}, int);
+      #{declare} int #{replaceEx}(#{type_ref}, #{element.type}, int);
       #define #{remove}(self, what) #{removeEx}(self, what, 1)
       #define #{removeAll}(self, what) #{removeEx}(self, what, -1)
-      #{declare} int #{removeEx}(#{type}*, #{element.type}, int);
-      #{declare} size_t #{size}(#{type}*);
+      #{declare} int #{removeEx}(#{type_ref}, #{element.type}, int);
+      #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} void #{itCtor}(#{it}*, #{type}*);
+      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
       #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
-      #{declare} void #{itCtorEx}(#{it}*, #{type}*, int);
-      #{declare} int #{itMove}(#{it}*);
-      #{declare} #{element.type} #{itGet}(#{it}*);
+      #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
+      #{declare} int #{itMove}(#{it_ref});
+      #{declare} #{element.type} #{itGet}(#{it_ref});
     $
   end
   
   def write_impls(stream, define)
     stream << %$
-      #{define} #{element.type}* #{itGetRef}(#{it}*);
-      #{define} void #{ctor}(#{type}* self) {
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
+      #{define} #{ctor.definition} {
         #{assert}(self);
         self->head_node = self->tail_node = NULL;
         self->node_count = 0;
       }
-      #{define} void #{dtor}(#{type}* self) {
+      #{define} #{dtor.definition} {
         #{node}* node;
         #{assert}(self);
         node = self->head_node;
@@ -280,7 +280,7 @@ class Queue < Collection
           #{free}(this_node);
         }
       }
-      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+      #{define} #{copy.definition} {
         #{it} it;
         #{assert}(src);
         #{assert}(dst);
@@ -292,7 +292,7 @@ class Queue < Collection
           #{element.dtor("element")};
         }
       }
-      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+      #{define} #{equal.definition} {
         if(#{size}(lt) == #{size}(rt)) {
           #{it} lit, rit;
           #{itCtor}(&lit, lt);
@@ -309,7 +309,7 @@ class Queue < Collection
         } else
           return 0;
       }
-      #{define} size_t #{identify}(#{type}* self) {
+      #{define} #{identify.definition} {
         #{node}* node;
         size_t result = 0;
         #{assert}(self);
@@ -319,25 +319,25 @@ class Queue < Collection
         }
         return result;
       }
-      #{define} void #{purge}(#{type}* self) {
+      #{define} void #{purge}(#{type_ref} self) {
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{define} #{element.type} #{peekHead}(#{type}* self) {
+      #{define} #{element.type} #{peekHead}(#{type_ref} self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} #{element.type} #{peekTail}(#{type}* self) {
+      #{define} #{element.type} #{peekTail}(#{type_ref} self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->tail_node->element")};
         return result;
       }
-      #{define} #{element.type} #{popHead}(#{type}* self) {
+      #{define} #{element.type} #{popHead}(#{type_ref} self) {
         #{node}* node;
         #{element.type} result;
         #{assert}(self);
@@ -350,7 +350,7 @@ class Queue < Collection
         #{free}(node);
         return result;
       }
-      #{define} #{element.type} #{popTail}(#{type}* self) {
+      #{define} #{element.type} #{popTail}(#{type_ref} self) {
         #{node}* node;
         #{element.type} result;
         #{assert}(self);
@@ -363,7 +363,7 @@ class Queue < Collection
         #{free}(node);
         return result;
       }
-      #{define} void #{pushTail}(#{type}* self, #{element.type} element) {
+      #{define} void #{pushTail}(#{type_ref} self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
@@ -379,7 +379,7 @@ class Queue < Collection
         }
         ++self->node_count;
       }
-      #{define} void #{pushHead}(#{type}* self, #{element.type} element) {
+      #{define} void #{pushHead}(#{type_ref} self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
@@ -395,7 +395,7 @@ class Queue < Collection
         }
         ++self->node_count;
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} what) {
+      #{define} int #{contains}(#{type_ref} self, #{element.type} what) {
         #{node}* node;
         int found = 0;
         #{assert}(self);
@@ -409,7 +409,7 @@ class Queue < Collection
         }
         return found;
       }
-      #{define} #{element.type} #{find}(#{type}* self, #{element.type} what) {
+      #{define} #{element.type} #{find}(#{type_ref} self, #{element.type} what) {
         #{node}* node;
         #{assert}(self);
         #{assert}(#{contains}(self, what));
@@ -424,7 +424,7 @@ class Queue < Collection
         }
         #{abort}();
       }
-      #{define} int #{replaceEx}(#{type}* self, #{element.type} with, int count) {
+      #{define} int #{replaceEx}(#{type_ref} self, #{element.type} with, int count) {
         #{node}* node;
         int replaced = 0;
         #{assert}(self);
@@ -441,7 +441,7 @@ class Queue < Collection
         }
         return replaced;
       }
-      #{define} int #{removeEx}(#{type}* self, #{element.type} what, int count) {
+      #{define} int #{removeEx}(#{type_ref} self, #{element.type} what, int count) {
         #{node}* node;
         int removed = 0;
         #{assert}(self);
@@ -477,18 +477,18 @@ class Queue < Collection
         }
         return removed;
       }
-      #{define} size_t #{size}(#{type}* self) {
+      #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         return self->node_count;
       }
-      #{define} void #{itCtorEx}(#{it}* self, #{type}* queue, int forward) {
+      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} queue, int forward) {
         #{assert}(self);
         #{assert}(queue);
         self->start = 1;
         self->queue = queue;
         self->forward = forward;
       }
-      #{define} int #{itMove}(#{it}* self) {
+      #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
         if(self->start) {
           self->this_node = self->forward ? self->queue->head_node : self->queue->tail_node;
@@ -498,14 +498,14 @@ class Queue < Collection
         }
         return self->this_node != NULL;
       }
-      #{define} #{element.type} #{itGet}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it_ref} self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(self->this_node);
         #{element.copy("result", "self->this_node->element")};
         return result;
       }
-      #{define} #{element.type}* #{itGetRef}(#{it}* self) {
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         #{assert}(self->this_node);
         return &self->this_node->element;

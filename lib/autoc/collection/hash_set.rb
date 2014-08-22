@@ -163,13 +163,13 @@ class HashSet < Collection
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
-        #{@list.type}* buckets;
+        #{@list.type_ref} buckets;
         size_t bucket_count, min_bucket_count;
         size_t size, min_size, max_size;
         unsigned min_fill, max_fill, capacity_multiplier; /* ?*1e-2 */
       };
       struct #{it} {
-        #{type}* set;
+        #{type_ref} set;
         int bucket_index;
         #{@list.it} it;
       };
@@ -178,26 +178,26 @@ class HashSet < Collection
   
   def write_intf_decls(stream, declare, define)
     stream << %$
-      #{declare} void #{ctor}(#{type}*);
-      #{declare} void #{dtor}(#{type}*);
-      #{declare} void #{copy}(#{type}*, #{type}*);
-      #{declare} int #{equal}(#{type}*, #{type}*);
-      #{declare} size_t #{identify}(#{type}*);
-      #{declare} void #{purge}(#{type}*);
-      #{declare} int #{contains}(#{type}*, #{element.type});
-      #{declare} #{element.type} #{get}(#{type}*, #{element.type});
-      #{declare} size_t #{size}(#{type}*);
+      #{declare} #{ctor.declaration};
+      #{declare} #{dtor.declaration};
+      #{declare} #{copy.declaration};
+      #{declare} #{equal.declaration};
+      #{declare} #{identify.declaration};
+      #{declare} void #{purge}(#{type_ref});
+      #{declare} int #{contains}(#{type_ref}, #{element.type});
+      #{declare} #{element.type} #{get}(#{type_ref}, #{element.type});
+      #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} int #{put}(#{type}*, #{element.type});
-      #{declare} int #{replace}(#{type}*, #{element.type});
-      #{declare} int #{remove}(#{type}*, #{element.type});
-      #{declare} void #{exclude}(#{type}*, #{type}*);
-      #{declare} void #{retain}(#{type}*, #{type}*);
-      #{declare} void #{include}(#{type}*, #{type}*);
-      #{declare} void #{invert}(#{type}*, #{type}*);
-      #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itMove}(#{it}*);
-      #{declare} #{element.type} #{itGet}(#{it}*);
+      #{declare} int #{put}(#{type_ref}, #{element.type});
+      #{declare} int #{replace}(#{type_ref}, #{element.type});
+      #{declare} int #{remove}(#{type_ref}, #{element.type});
+      #{declare} void #{exclude}(#{type_ref}, #{type_ref});
+      #{declare} void #{retain}(#{type_ref}, #{type_ref});
+      #{declare} void #{include}(#{type_ref}, #{type_ref});
+      #{declare} void #{invert}(#{type_ref}, #{type_ref});
+      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
+      #{declare} int #{itMove}(#{it_ref});
+      #{declare} #{element.type} #{itGet}(#{it_ref});
     $
   end
 
@@ -205,9 +205,9 @@ class HashSet < Collection
     @list.write_intf_decls(stream, static, inline)
     @list.write_impls(stream, static)
     stream << %$
-      #{define} #{element.type}* #{itGetRef}(#{it}*);
-      static void #{rehash}(#{type}* self) {
-        #{@list.type}* buckets;
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
+      static void #{rehash}(#{type_ref} self) {
+        #{@list.type_ref} buckets;
         size_t index, bucket_count, size, fill;
         #{assert}(self);
         #{assert}(self->min_fill > 0);
@@ -232,7 +232,7 @@ class HashSet < Collection
           bucket_count = self->min_bucket_count;
           size = 0;
         }
-        buckets = (#{@list.type}*)#{malloc}(bucket_count*sizeof(#{@list.type})); #{assert}(buckets);
+        buckets = (#{@list.type_ref})#{malloc}(bucket_count*sizeof(#{@list.type})); #{assert}(buckets);
         for(index = 0; index < bucket_count; ++index) {
           #{@list.ctor}(&buckets[index]);
         }
@@ -252,7 +252,17 @@ class HashSet < Collection
         self->bucket_count = bucket_count;
         self->size = size;
       }
-      #{define} void #{ctor}(#{type}* self) {
+      static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
+        #{it} it;
+        #{itCtor}(&it, self);
+        while(#{itMove}(&it)) {
+          int found = 0;
+          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
+          if(!found) return 0;
+        }
+        return 1;
+      }
+      #{define} #{ctor.definition} {
         #{assert}(self);
         self->min_bucket_count = 16;
         self->min_fill = 20;
@@ -263,7 +273,7 @@ class HashSet < Collection
         self->buckets = NULL;
         #{rehash}(self);
       }
-      #{define} void #{dtor}(#{type}* self) {
+      #{define} #{dtor.definition} {
         size_t i;
         #{assert}(self);
         for(i = 0; i < self->bucket_count; ++i) {
@@ -271,7 +281,7 @@ class HashSet < Collection
         }
         #{free}(self->buckets);
       }
-      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+      #{define} #{copy.definition} {
         #{it} it;
         #{assert}(src);
         #{assert}(dst);
@@ -279,22 +289,12 @@ class HashSet < Collection
         #{itCtor}(&it, src);
         while(#{itMove}(&it)) #{put}(dst, *#{itGetRef}(&it));
       }
-      static int #{containsAllOf}(#{type}* self, #{type}* other) {
-        #{it} it;
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          int found = 0;
-          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
-          if(!found) return 0;
-        }
-        return 1;
-      }
-      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+      #{define} #{equal.definition} {
         #{assert}(lt);
         #{assert}(rt);
         return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
       }
-      #{define} size_t #{identify}(#{type}* self) {
+      #{define} #{identify.definition} {
         #{it} it;
         size_t result = 0;
         #{assert}(self);
@@ -306,29 +306,29 @@ class HashSet < Collection
         }
         return result;
       }
-      #{define} void #{purge}(#{type}* self) {
+      #{define} void #{purge}(#{type_ref} self) {
         #{assert}(self);
         #{dtor}(self);
         self->buckets = NULL;
         #{rehash}(self);
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} element) {
+      #{define} int #{contains}(#{type_ref} self, #{element.type} element) {
         #{assert}(self);
         return #{@list.contains}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
       }
-      #{define} #{element.type} #{get}(#{type}* self, #{element.type} element) {
+      #{define} #{element.type} #{get}(#{type_ref} self, #{element.type} element) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(#{contains}(self, element));
         result = #{@list.find}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
         return result;
       }
-      #{define} size_t #{size}(#{type}* self) {
+      #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         return self->size;
       }
-      #{define} int #{put}(#{type}* self, #{element.type} element) {
-        #{@list.type}* bucket;
+      #{define} int #{put}(#{type_ref} self, #{element.type} element) {
+        #{@list.type_ref} bucket;
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(!#{@list.contains}(bucket, element)) {
@@ -339,14 +339,14 @@ class HashSet < Collection
         }
         return 0;
       }
-      #{define} int #{replace}(#{type}* self, #{element.type} element) {
-        #{@list.type}* bucket;
+      #{define} int #{replace}(#{type_ref} self, #{element.type} element) {
+        #{@list.type_ref} bucket;
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         return #{@list.replace}(bucket, element);
       }
-      #{define} int #{remove}(#{type}* self, #{element.type} element) {
-        #{@list.type}* bucket;
+      #{define} int #{remove}(#{type_ref} self, #{element.type} element) {
+        #{@list.type_ref} bucket;
         #{assert}(self);
         bucket = &self->buckets[#{element.identify("element")} % self->bucket_count];
         if(#{@list.remove}(bucket, element)) {
@@ -356,21 +356,21 @@ class HashSet < Collection
         }
         return 0;
       }
-      #{define} void #{exclude}(#{type}* self, #{type}* other) {
+      #{define} void #{exclude}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{remove}(self, *#{itGetRef}(&it));
       }
-      #{define} void #{include}(#{type}* self, #{type}* other) {
+      #{define} void #{include}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
         #{assert}(self);
         #{assert}(other);
         #{itCtor}(&it, other);
         while(#{itMove}(&it)) #{put}(self, *#{itGetRef}(&it));
       }
-      #{define} void #{retain}(#{type}* self, #{type}* other) {
+      #{define} void #{retain}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -384,7 +384,7 @@ class HashSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      #{define} void #{invert}(#{type}* self, #{type}* other) {
+      #{define} void #{invert}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
         #{type} set;
         #{assert}(self);
@@ -403,12 +403,12 @@ class HashSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      #{define} void #{itCtor}(#{it}* self, #{type}* set) {
+      #{define} void #{itCtor}(#{it_ref} self, #{type_ref} set) {
         #{assert}(self);
         self->set = set;
         self->bucket_index = -1;
       }
-      #{define} int #{itMove}(#{it}* self) {
+      #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
         if(self->bucket_index < 0) #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
         if(#{@list.itMove}(&self->it)) return 1;
@@ -418,11 +418,11 @@ class HashSet < Collection
         }
         return 0;
       }
-      #{define} #{element.type} #{itGet}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it_ref} self) {
         #{assert}(self);
         return #{@list.itGet}(&self->it);
       }
-      #{define} #{element.type}* #{itGetRef}(#{it}* self) {
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         return #{@list.itGetRef}(&self->it);
       }
