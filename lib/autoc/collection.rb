@@ -66,6 +66,13 @@ WARNING: the collection being iterated *must not* be modified in any way otherwi
 =end
 class Collection < Type
 
+  # @private
+  class Unref < AutoC::Function
+    def call(*args)
+      super(*args.collect {|x| "&#{x}"})
+    end
+  end
+  
   attr_reader :element, :it_ref
   
   def hash; super ^ element.hash end
@@ -78,76 +85,18 @@ class Collection < Type
   
   def entities; super << element end
   
+  def_dispatcher :ctor, :dtor, :copy, :equal, :identify, :less
+  
   def initialize(type_name, element_type, visibility = :public)
     super(type_name, visibility)
     @element = Type.coerce(element_type)
     @it_ref = "#{it}*"
-  end
-  
-  def ctor(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 1)
-      obj = args.first
-      super() + "(&#{obj})"
-    end
-  end
-  
-  def dtor(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 1)
-      obj = args.first
-      super() + "(&#{obj})"
-    end
-  end
-  
-  def copy(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 2)
-      dst, src = args
-      super() + "(&#{dst}, &#{src})"
-    end
-  end
-  
-  def equal(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 2)
-      lt, rt = args
-      super() + "(&#{lt}, &#{rt})"
-    end
-  end
-  
-  def identify(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 1)
-      obj = args.first
-      super() + "(&#{obj})"
-    end
-  end
-
-  def less(*args)
-    if args.empty?
-      super()
-    else
-      check_args(args, 2)
-      lt, rt = args
-      super() + "(&#{lt}, &#{rt})"
-    end
-  end
-  
-  private
-  
-  def check_args(args, nargs)
-    raise "expected exactly #{nargs} argument(s)" unless args.size == nargs
+    @ctor = Unref.new(method_missing(:ctor), [ [type_ref,:self] ])
+    @dtor = Unref.new(method_missing(:dtor), [ [type_ref,:self] ])
+    @copy = Unref.new(method_missing(:copy), [ [type_ref,:dst],[type_ref,:src] ])
+    @equal = Unref.new(method_missing(:equal), [ [type_ref,:lt],[type_ref,:rt]], :int)
+    @identify = Unref.new(method_missing(:identify), [ [type_ref,:self] ], :size_t)
+    @less = Unref.new(method_missing(:less), [ [type_ref,:lt],[type_ref,:rt]], :int)
   end
   
 end # Collection

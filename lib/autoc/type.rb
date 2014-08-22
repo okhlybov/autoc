@@ -239,10 +239,6 @@ private
   
   extend Dispatcher
   
-  def set_method(name, params = [], result = nil)
-    instance_variable_set(iv = "@#{name}".to_sym, Function.new(method_missing(name), params, result))
-  end
-  
 end # Type
 
 

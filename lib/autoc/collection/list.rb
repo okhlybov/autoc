@@ -175,7 +175,7 @@ class List < Collection
       };
       struct #{it} {
         int start;
-        #{type}* list;
+        #{type_ref} list;
         #{node}* this_node;
       };
       struct #{node} {
@@ -187,40 +187,40 @@ class List < Collection
   
   def write_intf_decls(stream, declare, define)
     stream << %$
-      #{declare} void #{ctor}(#{type}*);
-      #{declare} void #{dtor}(#{type}*);
-      #{declare} void #{copy}(#{type}*, #{type}*);
-      #{declare} int #{equal}(#{type}*, #{type}*);
-      #{declare} size_t #{identify}(#{type}*);
-      #{declare} void #{purge}(#{type}*);
-      #{declare} #{element.type} #{peek}(#{type}*);
-      #{declare} #{element.type} #{pop}(#{type}*);
-      #{declare} void #{push}(#{type}*, #{element.type});
-      #{declare} int #{contains}(#{type}*, #{element.type});
-      #{declare} #{element.type} #{find}(#{type}*, #{element.type});
+      #{declare} #{ctor.declaration};
+      #{declare} #{dtor.declaration};
+      #{declare} #{copy.declaration};
+      #{declare} #{equal.declaration};
+      #{declare} #{identify.declaration};
+      #{declare} void #{purge}(#{type_ref});
+      #{declare} #{element.type} #{peek}(#{type_ref});
+      #{declare} #{element.type} #{pop}(#{type_ref});
+      #{declare} void #{push}(#{type_ref}, #{element.type});
+      #{declare} int #{contains}(#{type_ref}, #{element.type});
+      #{declare} #{element.type} #{find}(#{type_ref}, #{element.type});
       #define #{replace}(self, with) #{replaceEx}(self, with, 1)
       #define #{replaceAll}(self, with) #{replaceEx}(self, with, -1)
-      #{declare} int #{replaceEx}(#{type}*, #{element.type}, int);
+      #{declare} int #{replaceEx}(#{type_ref}, #{element.type}, int);
       #define #{remove}(self, what) #{removeEx}(self, what, 1)
       #define #{removeAll}(self, what) #{removeEx}(self, what, -1)
-      #{declare} int #{removeEx}(#{type}*, #{element.type}, int);
-      #{declare} size_t #{size}(#{type}*);
+      #{declare} int #{removeEx}(#{type_ref}, #{element.type}, int);
+      #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} void #{itCtor}(#{it}*, #{type}*);
-      #{declare} int #{itMove}(#{it}*);
-      #{declare} #{element.type} #{itGet}(#{it}*);
+      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
+      #{declare} int #{itMove}(#{it_ref});
+      #{declare} #{element.type} #{itGet}(#{it_ref});
     $
   end
   
   def write_impls(stream, define)
     stream << %$
-      #{define} #{element.type}* #{itGetRef}(#{it}*);
-      #{define} void #{ctor}(#{type}* self) {
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
+      #{define} #{ctor.definition} {
         #{assert}(self);
         self->head_node = NULL;
         self->node_count = 0;
       }
-      #{define} void #{dtor}(#{type}* self) {
+      #{define} #{dtor.definition} {
         #{node}* node;
         #{assert}(self);
         node = self->head_node;
@@ -231,7 +231,7 @@ class List < Collection
           #{free}(this_node);
         }
       }
-      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+      #{define} #{copy.definition} {
         #{it} it;
         #{assert}(src);
         #{assert}(dst);
@@ -241,15 +241,15 @@ class List < Collection
           #{push}(dst, *#{itGetRef}(&it));
         }
       }
-      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+      #{define} #{equal.definition} {
         if(#{size}(lt) == #{size}(rt)) {
           #{it} lit, rit;
           #{itCtor}(&lit, lt);
           #{itCtor}(&rit, rt);
           while(#{itMove}(&lit) && #{itMove}(&rit)) {
             int equal;
-            #{element.type} *le;
-            #{element.type} *re;
+            #{element.type_ref} le;
+            #{element.type_ref} re;
             le = #{itGetRef}(&lit);
             re = #{itGetRef}(&rit);
             equal = #{element.equal("*le", "*re")};
@@ -259,7 +259,7 @@ class List < Collection
         } else
           return 0;
       }
-      #{define} size_t #{identify}(#{type}* self) {
+      #{define} #{identify.definition} {
         #{node}* node;
         size_t result = 0;
         #{assert}(self);
@@ -269,18 +269,18 @@ class List < Collection
         }
         return result;
       }
-      #{define} void #{purge}(#{type}* self) {
+      #{define} void #{purge}(#{type_ref} self) {
         #{dtor}(self);
         #{ctor}(self);
       }
-      #{define} #{element.type} #{peek}(#{type}* self) {
+      #{define} #{element.type} #{peek}(#{type_ref} self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         #{element.copy("result", "self->head_node->element")};
         return result;
       }
-      #{define} #{element.type} #{pop}(#{type}* self) {
+      #{define} #{element.type} #{pop}(#{type_ref} self) {
         #{node}* node;
         #{element.type} result;
         #{assert}(self);
@@ -292,7 +292,7 @@ class List < Collection
         #{free}(node);
         return result;
       }
-      #{define} void #{push}(#{type}* self, #{element.type} element) {
+      #{define} void #{push}(#{type_ref} self, #{element.type} element) {
         #{node}* node;
         #{assert}(self);
         node = (#{node}*)#{malloc}(sizeof(#{node})); #{assert}(node);
@@ -301,7 +301,7 @@ class List < Collection
         self->head_node = node;
         ++self->node_count;
       }
-      #{define} int #{contains}(#{type}* self, #{element.type} what) {
+      #{define} int #{contains}(#{type_ref} self, #{element.type} what) {
         #{node}* node;
         int found = 0;
         #{assert}(self);
@@ -315,7 +315,7 @@ class List < Collection
         }
         return found;
       }
-      #{define} #{element.type} #{find}(#{type}* self, #{element.type} what) {
+      #{define} #{element.type} #{find}(#{type_ref} self, #{element.type} what) {
         #{node}* node;
         #{assert}(self);
         #{assert}(#{contains}(self, what));
@@ -330,7 +330,7 @@ class List < Collection
         }
         #{abort}();
       }
-      #{define} int #{replaceEx}(#{type}* self, #{element.type} with, int count) {
+      #{define} int #{replaceEx}(#{type_ref} self, #{element.type} with, int count) {
         #{node}* node;
         int replaced = 0;
         #{assert}(self);
@@ -347,7 +347,7 @@ class List < Collection
         }
         return replaced;
       }
-      #{define} int #{removeEx}(#{type}* self, #{element.type} what, int count) {
+      #{define} int #{removeEx}(#{type_ref} self, #{element.type} what, int count) {
         #{node} *node, *prev_node;
         int removed = 0;
         #{assert}(self);
@@ -375,17 +375,17 @@ class List < Collection
         }
         return removed;
       }
-      #{define} size_t #{size}(#{type}* self) {
+      #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         return self->node_count;
       }
-      #{define} void #{itCtor}(#{it}* self, #{type}* list) {
+      #{define} void #{itCtor}(#{it_ref} self, #{type_ref} list) {
         #{assert}(self);
         #{assert}(list);
         self->start = 1;
         self->list = list;
       }
-      #{define} int #{itMove}(#{it}* self) {
+      #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
         if(self->start) {
           self->this_node = self->list->head_node;
@@ -395,14 +395,14 @@ class List < Collection
         }
         return self->this_node != NULL;
       }
-      #{define} #{element.type} #{itGet}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it_ref} self) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(self->this_node);
         #{element.copy("result", "self->this_node->element")};
         return result;
       }
-      #{define} #{element.type}* #{itGetRef}(#{it}* self) {
+      #{define} #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         #{assert}(self->this_node);
         return &self->this_node->element;
