@@ -65,8 +65,8 @@ while(MyVectorItMove(&it)) {
 WARNING: the collection being iterated *must not* be modified in any way otherwise the iterator behavior is undefined.
 =end
 class Collection < Type
-  
-  attr_reader :element
+
+  attr_reader :element, :it_ref
   
   def hash; super ^ element.hash end
   
@@ -81,6 +81,7 @@ class Collection < Type
   def initialize(type_name, element_type, visibility = :public)
     super(type_name, visibility)
     @element = Type.coerce(element_type)
+    @it_ref = "#{it}*"
   end
   
   def ctor(*args)

@@ -121,10 +121,17 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class Vector < Collection
 
+  def_dispatcher :ctor, :dtor, :copy, :equal, :identify
+  
   def initialize(*args)
     super
     @capability.subtract [:ctor, :less]
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
+    set_method(:ctor, [ [type_ref,:self],[:size_t,:element_count] ])
+    set_method(:dtor, [ [type_ref,:self] ])
+    set_method(:copy, [ [type_ref,:dst],[type_ref,:src] ])
+    set_method(:equal, [ [type_ref,:lt],[type_ref,:rt]], :int)
+    set_method(:identify, [ [type_ref,:self] ], :size_t)
   end
   
   def write_intf_types(stream)
@@ -137,11 +144,11 @@ class Vector < Collection
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
       struct #{type} {
-        #{element.type}* values;
+        #{element.type_ref} values;
         size_t element_count;
       };
       struct #{it} {
-        #{type}* vector;
+        #{type_ref} vector;
         int index;
         int forward;
       };
@@ -150,54 +157,54 @@ class Vector < Collection
   
   def write_intf_decls(stream, declare, define)
     stream << %$
-      #{declare} void #{ctor}(#{type}*, size_t);
-      #{declare} void #{dtor}(#{type}*);
-      #{declare} void #{copy}(#{type}*, #{type}*);
-      #{declare} int #{equal}(#{type}*, #{type}*);
-      #{declare} void #{resize}(#{type}*, size_t);
-      #{declare} size_t #{identify}(#{type}*);
-      #{define} size_t #{size}(#{type}* self) {
+      #{declare} #{ctor.declaration};
+      #{declare} #{dtor.declaration};
+      #{declare} #{copy.declaration};
+      #{declare} #{equal.declaration};
+      #{declare} #{identify.declaration};
+      #{declare} void #{resize}(#{type_ref}, size_t);
+      #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         return self->element_count;
       }
-      #{define} int #{within}(#{type}* self, size_t index) {
+      #{define} int #{within}(#{type_ref} self, size_t index) {
         #{assert}(self);
         return index < #{size}(self);
       }
-      #{define} #{element.type} #{get}(#{type}* self, size_t index) {
+      #{define} #{element.type} #{get}(#{type_ref} self, size_t index) {
         #{element.type} result;
         #{assert}(self);
         #{assert}(#{within}(self, index));
         #{element.copy("result", "self->values[index]")};
         return result;
       }
-      #{define} void #{set}(#{type}* self, size_t index, #{element.type} value) {
+      #{define} void #{set}(#{type_ref} self, size_t index, #{element.type} value) {
         #{assert}(self);
         #{assert}(#{within}(self, index));
         #{element.dtor("self->values[index]")};
         #{element.copy("self->values[index]", "value")};
       }
       #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
-      #{define} void #{itCtorEx}(#{it}* self, #{type}* vector, int forward) {
+      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} vector, int forward) {
         #{assert}(self);
         #{assert}(vector);
         self->vector = vector;
         self->forward = forward;
         self->index = forward ? -1 : #{size}(vector);
       }
-      #{define} int #{itMove}(#{it}* self) {
+      #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
         if(self->forward) ++self->index; else --self->index;
         return #{within}(self->vector, self->index);
       }
-      #{define} #{element.type} #{itGet}(#{it}* self) {
+      #{define} #{element.type} #{itGet}(#{it_ref} self) {
         #{assert}(self);
         return #{get}(self->vector, self->index);
       }
     $
     stream << if element.orderable?
       %$
-        #{declare} void #{sort}(#{type}*);
+        #{declare} void #{sort}(#{type_ref});
       $
     else
       %$
@@ -208,13 +215,13 @@ class Vector < Collection
   
   def write_impls(stream, define)
     stream << %$
-      static void #{allocate}(#{type}* self, size_t element_count) {
+      static void #{allocate}(#{type_ref} self, size_t element_count) {
         #{assert}(self);
         #{assert}(element_count > 0);
         self->element_count = element_count;
         self->values = (#{element.type}*)#{malloc}(element_count*sizeof(#{element.type})); #{assert}(self->values);
       }
-      #{define} void #{ctor}(#{type}* self, size_t element_count) {
+      #{define} #{ctor.definition} {
         size_t index;
         #{assert}(self);
         #{allocate}(self, element_count);
@@ -222,7 +229,7 @@ class Vector < Collection
           #{element.ctor("self->values[index]")};
         }
       }
-      #{define} void #{dtor}(#{type}* self) {
+      #{define} #{dtor.definition} {
         size_t index;
         #{assert}(self);
         for(index = 0; index < #{size}(self); ++index) {
@@ -230,7 +237,7 @@ class Vector < Collection
         }
         #{free}(self->values);
       }
-      #{define} void #{copy}(#{type}* dst, #{type}* src) {
+      #{define} #{copy.definition} {
         size_t index, size;
         #{assert}(src);
         #{assert}(dst);
@@ -239,7 +246,7 @@ class Vector < Collection
           #{element.copy("dst->values[index]", "src->values[index]")};
         }
       }
-      #{define} int #{equal}(#{type}* lt, #{type}* rt) {
+      #{define} #{equal.definition} {
         size_t index, size;
         #{assert}(lt);
         #{assert}(rt);
@@ -251,11 +258,11 @@ class Vector < Collection
         } else
           return 0;
       }
-      #{define} void #{resize}(#{type}* self, size_t new_element_count) {
+      #{define} void #{resize}(#{type_ref} self, size_t new_element_count) {
         size_t index, element_count, from, to;
         #{assert}(self);
         if((element_count = #{size}(self)) != new_element_count) {
-          #{element.type}* values = (#{element.type}*)#{malloc}(new_element_count*sizeof(#{element.type})); #{assert}(values);
+          #{element.type_ref} values = (#{element.type_ref})#{malloc}(new_element_count*sizeof(#{element.type})); #{assert}(values);
           from = AUTOC_MIN(element_count, new_element_count);
           to = AUTOC_MAX(element_count, new_element_count);
           for(index = 0; index < from; ++index) {
@@ -275,7 +282,7 @@ class Vector < Collection
           self->element_count = new_element_count;
         }
       }
-      #{define} size_t #{identify}(#{type}* self) {
+      #{define} size_t #{identify}(#{type_ref} self) {
         size_t index, result = 0;
         #{assert}(self);
         for(index = 0; index < self->element_count; ++index) {
@@ -287,8 +294,8 @@ class Vector < Collection
     $
     stream << %$
       static int #{comparator}(void* lp_, void* rp_) {
-        #{element.type}* lp = (#{element.type}*)lp_;
-        #{element.type}* rp = (#{element.type}*)rp_;
+        #{element.type_ref} lp = (#{element.type_ref})lp_;
+        #{element.type_ref} rp = (#{element.type_ref})rp_;
         if(#{element.equal("*lp", "*rp")}) {
           return 0;
         } else if(#{element.less("*lp", "*rp")}) {
@@ -297,7 +304,7 @@ class Vector < Collection
           return +1;
         }
       }
-      #{define} void #{sort}(#{type}* self) {
+      #{define} void #{sort}(#{type_ref} self) {
         typedef int (*F)(const void*, const void*);
         #{assert}(self);
         qsort(self->values, #{size}(self), sizeof(#{element.type}), (F)#{comparator});
