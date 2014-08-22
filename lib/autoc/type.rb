@@ -5,6 +5,7 @@ require "autoc/code"
 module AutoC
   
 
+# @private
 class Function
 
   attr_reader :name, :params, :result
@@ -13,16 +14,24 @@ class Function
     # TODO test the C type/name conformance
     @name = name.to_s
     @result = (result.nil? ? :void : result).to_s
-    @params = params.collect {|x| x.to_s}
+    i = 0; @params = params.collect do |x|
+      i += 1
+      if x.is_a?(Array)
+        t = x.first
+        n = x.last
+      else
+        t = x
+        n = "_#{i}"
+      end
+      [t, n]
+    end
   end
   
   def rename(new_name)
     Function.new(new_name, params, result)
   end
   
-  def to_s
-    @name
-  end
+  def to_s; @name end
 
   def declaration
     "#{result} #{name}(#{param_dec})"
@@ -48,28 +57,20 @@ class Function
   private
   
   def param_dec
-    params.join(',')
+    params.collect {|x| x.first}.join(',')
   end
   
   def param_def
-    i = 0; params.collect {|x| "#{x} _#{i+=1}"}.join(',')
+    params.collect {|x| "#{x.first} #{x.last}"}.join(',')
   end
   
   def param_call
-    (1..params.size).collect {|i| "_#{i}"}.join(',')
+    params.collect {|x| x.last}.join(',')
   end
   
 end # Function
 
 class Type < Code
-  
-  def self.def_method(name, params = [], result = nil)
-    define_method name do |*args|
-      f = instance_variable_get(n = "@#{name}".to_sym)
-      instance_variable_set(n, f = Function.new(method_missing(name), params, result)) if f.nil?
-      f.dispatch(*args)
-    end
-  end
   
   # @private
   CommonCode = Class.new(Code) do
@@ -121,7 +122,7 @@ class Type < Code
   
   @@caps = [:ctor, :dtor, :copy, :equal, :less, :identify]
   
-  attr_reader :type, :prefix
+  attr_reader :type, :type_ref
   
   def hash; self.class.hash ^ type.hash end
   
@@ -133,7 +134,7 @@ class Type < Code
 
   def initialize(type, visibility = :public, prefix = nil)
     @type = type.to_s
-    @prefix = prefix.nil? ? @type : prefix.to_s
+    @type_ref = "#{@type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
     @capability = Set.new(@@caps)
   end
@@ -222,6 +223,25 @@ class Type < Code
   def orderable?; comparable? && @capability.include?(:less) end
 
   def hashable?; comparable? && @capability.include?(:identify) end
+
+private
+
+  # @private
+  module Dispatcher
+    def def_dispatcher(*names)
+      names.each do |name|
+        define_method(name) do |*args|
+          instance_variable_get("@#{name}".to_sym).dispatch(*args)
+        end
+      end
+    end
+  end
+  
+  extend Dispatcher
+  
+  def set_method(name, params = [], result = nil)
+    instance_variable_set(iv = "@#{name}".to_sym, Function.new(method_missing(name), params, result))
+  end
   
 end # Type
 
@@ -305,7 +325,7 @@ class Reference < Type
   
   def initialize(target)
     @target = Type.coerce(target)
-    super("#{@target.type}*")
+    super(@target.type_ref)
   end
   
   alias :eql? :==
