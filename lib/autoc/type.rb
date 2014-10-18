@@ -6,45 +6,43 @@ module AutoC
   
 
 # @private
-class Function
-
-  attr_reader :name, :params, :result
+class Signature
   
-  def initialize(name, params = [], result = nil)
-    # TODO test the C type/name conformance
-    @name = name.to_s
-    @result = (result.nil? ? :void : result).to_s
-    i = 0; @params = params.collect do |x|
+  attr_reader :arguments, :result
+  
+  def initialize(arguments = [], result = nil)
+    i = 0
+    @arguments = Arguments.new
+    arguments.each do |t|
       i += 1
-      if x.is_a?(Array)
-        t = x.first
-        n = x.last
-      else
-        t = x
-        n = "_#{i}"
-      end
-      [t, n]
+      @arguments << (t.is_a?(Array) ? t : [t, "_#{i}"])
+    end
+    @result = result.nil? ? :void : result
+  end
+
+  private
+
+  # @private
+  class Arguments < Array
+    def passthrough
+      self.collect {|x| x.last}.join(',')
+    end
+    def declaration
+      self.collect {|x| x.first}.join(',')
+    end
+    def definition
+      self.collect {|x| "#{x.first} #{x.last}"}.join(',')
     end
   end
   
-  def rename(new_name)
-    Function.new(new_name, params, result)
-  end
-  
-  def to_s; @name end
+end # Signature
 
-  def declaration
-    "#{result} #{name}(#{param_dec})"
-  end
-  
-  def definition
-    "#{result} #{name}(#{param_def})"
-  end
-  
-  def call(*args)
-    "#{name}(#{args.join(',')})"
-  end
 
+# @private
+class Dispatcher
+
+  # def call(*args)
+  
   def dispatch(*args)
     if args.empty?
       self
@@ -53,22 +51,36 @@ class Function
       call(*args)
     end
   end
+
+end
+
+
+# @private
+class Function < Dispatcher
   
-  private
+  attr_reader :name, :signature
   
-  def param_dec
-    params.collect {|x| x.first}.join(',')
+  def initialize(name, signature)
+    @name = name.to_s
+    @signature = signature
   end
   
-  def param_def
-    params.collect {|x| "#{x.first} #{x.last}"}.join(',')
+  def to_s; name end
+  
+  def call(*args)
+    "#{name}(#{args.join(',')})"
+  end
+
+  def definition
+    "#{signature.result} #{name}(#{signature.arguments.definition})"
   end
   
-  def param_call
-    params.collect {|x| x.last}.join(',')
+  def declaration
+    "#{signature.result} #{name}(#{signature.arguments.declaration})"
   end
   
 end # Function
+
 
 class Type < Code
   
@@ -122,8 +134,6 @@ class Type < Code
   
   @@caps = [:ctor, :dtor, :copy, :equal, :less, :identify]
   
-  attr_reader :type, :type_ref
-  
   def hash; self.class.hash ^ type.hash end
   
   def ==(other)
@@ -132,20 +142,22 @@ class Type < Code
   
   def entities; super << CommonCode end
 
-  def initialize(type, visibility = :public, prefix = nil)
+  attr_reader :type, :type_ref
+  
+  def initialize(type, visibility = :public)
     @type = type.to_s
-    @type_ref = "#{@type}*"
+    @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
     @capability = Set.new(@@caps)
+    @ctor = method(:ctor, [type_ref^:self])
+    @dtor = method(:dtor, [type_ref^:self])
+    @copy = method(:copy, [type_ref^:dst, type_ref^:src])
+    @equal = method(:equal, [type_ref^:lt, type_ref^:rt], :int)
+    @identify = method(:identify, [type_ref^:self], :size_t)
+    @less = method(:less, [type_ref^:lt, type_ref^:rt], :int)
   end
   
-  def prefix
-    if @prefix.nil?
-      @prefix = type.to_s
-      raise "prefix must be a valid C identifier" unless @prefix =~ /^[a-zA-Z_]\w*$/
-    end
-    @prefix
-  end
+  alias :prefix :type
   
   def method_missing(method, *args)
     str = method.to_s.sub(/[\!\?]$/, "") # Strip trailing ? or !
@@ -224,20 +236,18 @@ class Type < Code
 
   def hashable?; comparable? && @capability.include?(:identify) end
 
-private
-
-  # @private
-  module Dispatcher
-    def def_dispatcher(*names)
-      names.each do |name|
-        define_method(name) do |*args|
-          instance_variable_get("@#{name}".to_sym).dispatch(*args)
-        end
-      end
+  # Create readers which take arbitrary number of arguments
+  [:ctor, :dtor, :copy, :equal, :identify, :less].each do |name|
+    define_method(name) do |*args|
+      instance_variable_get("@#{name}".to_sym).dispatch(*args)
     end
   end
   
-  extend Dispatcher
+  private
+
+  def method(name, params = [], result = nil)
+    Function.new(method_missing(name), Signature.new(params, result))
+  end
   
 end # Type
 
@@ -257,54 +267,41 @@ class UserDefinedType < Type
     end
   end # PublicDeclaration
 
-  def entities; super + @deps end
+  def entities; super.concat(@deps) end
   
   def initialize(opt)
-    @deps = []
-    v = :public
-    p = nil
-    if [Symbol, String].include?(opt.class)
-      t = opt
-    elsif opt.is_a?(Hash)
+    opt = {:type => opt} if opt.is_a?(Symbol) || opt.is_a?(String)
+    if opt.is_a?(Hash)
       t = opt[:type].nil? ? raise("type is not specified") : opt[:type]
-      @@caps.each do |key|
-        instance_variable_set("@#{key}".to_sym, opt[key].to_s) unless opt[key].nil?
-      end
-      @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-      optv = opt[:visibility]
-      v = optv.nil? ? :public : optv
-      p = opt[:prefix] # This handles nil case as well
     else
-      raise "failed to decode the argument"
+      raise "argument must be a Symbol, String or Hash"
     end
-    super(t, v, p.nil? ? t : p)
+    super(t)
+    @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
+    define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    define_callable(:dtor, opt) {def call(obj) end}
+    define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
   end
   
-  def ctor(obj)
-    @ctor.nil? ? "((#{obj}) = 0)" : "#{@ctor}(#{obj})"
+  private
+  
+  # Default methods creator
+  def define_callable(name, opt, &block)
+    iv = "@#{name}".to_s
+    c = if opt[name].nil?
+      Class.new(Dispatcher, &block).new
+    elsif opt[name].is_a?(Function)
+      opt[name]
+    else
+      Function.new(opt[name], instance_variable_get(iv).signature)
+    end
+    instance_variable_set(iv, c)
   end
   
-  def dtor(obj)
-    @dtor.nil? ? nil : "#{@dtor}(#{obj})"
-  end
-  
-  def copy(dst, src)
-    @copy.nil? ? "((#{dst}) = (#{src}))" : "#{@copy}(#{dst}, #{src})"
-  end
-  
-  def equal(lt, rt)
-    @equal.nil? ? "((#{lt}) == (#{rt}))" : "#{@equal}(#{lt}, #{rt})"
-  end
-  
-  def less(lt, rt)
-    @less.nil? ? "((#{lt}) < (#{rt}))" : "#{@less}(#{lt}, #{rt})"
-  end
-  
-  def identify(obj)
-    @identify.nil? ? "((size_t)(#{obj}))" : "#{@identify}(#{obj})"
-  end
-  
-end # UserDefinedType
+  end # UserDefinedType
 
 
 require "forwardable"
@@ -392,6 +389,16 @@ class Reference < Type
     @target.identify("*#{obj}")
   end
   
+end
+
+
+# Class adjustments for the function signature definition DSL
+[Symbol, String, Type].each do |c|
+  c.class_eval do 
+    def ^(name)
+      [self, name]
+    end
+  end
 end
 
 

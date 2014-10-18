@@ -29,4 +29,4 @@ AutoC::Module.generate!(:Test) do |c|
   c << AutoC::Vector.new(:PIntVector, PInt)
   c << AutoC::List.new(:PIntList, PInt)
   c << AutoC::HashSet.new(:PIntSet, PInt)
-  end
+end
