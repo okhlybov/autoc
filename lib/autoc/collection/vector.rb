@@ -129,7 +129,7 @@ class Vector < Collection
       def call(obj, size)
         super("&#{obj}", size)
       end
-    end.new(method_missing(:ctor), [ [type_ref,:self],[:size_t,:element_count] ])
+    end.new(method_missing(:ctor), Signature.new([type_ref^:self, :size_t^:element_count]))
   end
   
   def write_intf_types(stream)
