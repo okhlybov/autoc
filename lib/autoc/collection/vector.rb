@@ -125,11 +125,8 @@ class Vector < Collection
     super
     @capability.subtract [:ctor, :less]
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
-    @ctor = Class.new(Function) do
-      def call(obj, size)
-        super("&#{obj}", size)
-      end
-    end.new(method_missing(:ctor), Signature.new([type_ref^:self, :size_t^:element_count]))
+    # The Vector's constructor requires extra parameter
+    @ctor = external_function(:ctor, [type_ref^:self, :size_t^:element_count])
   end
   
   def write_intf_types(stream)
@@ -154,6 +151,7 @@ class Vector < Collection
   end
   
   def write_intf_decls(stream, declare, define)
+    super
     stream << %$
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};

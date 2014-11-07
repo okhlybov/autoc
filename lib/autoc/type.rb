@@ -1,4 +1,5 @@
 require "set"
+require "forwardable"
 require "autoc/code"
 
 
@@ -6,77 +7,109 @@ module AutoC
   
 
 # @private
-class Signature
-  
-  attr_reader :arguments, :result
-  
-  def initialize(arguments = [], result = nil)
+class ParameterArray < Array
+
+  def self.coerce(*params)
+    out = []
     i = 0
-    @arguments = Arguments.new
-    arguments.each do |t|
+    params.each do |t|
       i += 1
-      @arguments << (t.is_a?(Array) ? t : [t, "_#{i}"])
+      out << (t.is_a?(Array) ? t : [t, "_#{i}"])
     end
-    @result = result.nil? ? :void : result
+    self.new(out)
   end
 
-  private
-
-  # @private
-  class Arguments < Array
-    def passthrough
-      self.collect {|x| x.last}.join(',')
-    end
-    def declaration
-      self.collect {|x| x.first}.join(',')
-    end
-    def definition
-      self.collect {|x| "#{x.first} #{x.last}"}.join(',')
-    end
+  def types
+    collect {|x| x.first}
   end
   
-end # Signature
+  def names
+    collect {|x| x.last}
+  end
+  
+  def pass
+    names.join(',')
+  end
 
+  def declaration
+    types.join(',')
+  end
+
+  def definition
+    collect {|x| "#{x.first} #{x.last}"}.join(',')
+  end
+  
+end # Parameters
+  
 
 # @private
 class Dispatcher
 
-  # def call(*args)
+  # def call(*params)
   
-  def dispatch(*args)
-    if args.empty?
+  def dispatch(*params)
+    if params.empty?
       self
     else
-      args = [] if args.size == 1 && args.first.nil?
-      call(*args)
+      params = [] if params.size == 1 && params.first.nil?
+      call(*params)
     end
   end
+ 
+end # Dispatcher
 
-end
+
+# @private
+class Statement < Dispatcher
+  
+  attr_reader :types
+  
+  def initialize(types)
+    @types = types
+  end
+  
+end # Statement
 
 
 # @private
 class Function < Dispatcher
   
+  # @private
+  class Signature
+
+    attr_reader :parameters, :result
+
+    def initialize(params = [], result = nil)
+      @parameters = ParameterArray.coerce(*params)
+      @result = result.nil? ? :void : result
+    end
+
+  end # Signature
+
+  extend Forwardable
+  
+  def_delegators :@signature,
+    :parameters, :result
+  
   attr_reader :name, :signature
   
   def initialize(name, signature)
-    @name = name.to_s
+    @name = name
     @signature = signature
   end
   
   def to_s; name end
   
-  def call(*args)
-    "#{name}(#{args.join(',')})"
+  def call(*params)
+    "#{name}(#{params.join(',')})"
   end
 
   def definition
-    "#{signature.result} #{name}(#{signature.arguments.definition})"
+    "#{result} #{name}(#{parameters.definition})"
   end
   
   def declaration
-    "#{signature.result} #{name}(#{signature.arguments.declaration})"
+    "#{result} #{name}(#{parameters.declaration})"
   end
   
 end # Function
@@ -149,19 +182,22 @@ class Type < Code
     @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
     @capability = Set.new(@@caps)
-    @ctor = method(:ctor, [type_ref^:self])
-    @dtor = method(:dtor, [type_ref^:self])
-    @copy = method(:copy, [type_ref^:dst, type_ref^:src])
-    @equal = method(:equal, [type_ref^:lt, type_ref^:rt], :int)
-    @identify = method(:identify, [type_ref^:self], :size_t)
-    @less = method(:less, [type_ref^:lt, type_ref^:rt], :int)
+    @ctor = external_function(:ctor, [type_ref^:self])
+    @dtor = external_function(:dtor, [type_ref^:self])
+    @copy = external_function(:copy, [type_ref^:dst, type_ref^:src])
+    @equal = external_function(:equal, [type_ref^:lt, type_ref^:rt], :int)
+    @identify = external_function(:identify, [type_ref^:self], :size_t)
+    @less = external_function(:less, [type_ref^:lt, type_ref^:rt], :int)
   end
   
   alias :prefix :type
   
   def method_missing(method, *args)
-    str = method.to_s.sub(/[\!\?]$/, "") # Strip trailing ? or !
+    str = method.to_s
+    u = !(str =~ /\!$/).nil?
+    str = str.sub(/[\!\?]$/, "") # Strip trailing ? or !
     func = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
+    func = "_#{func}" if u
     if args.empty?
       func # Emit bare function name
     elsif args.size == 1 && args.first == nil
@@ -196,11 +232,11 @@ class Type < Code
     end
   end
   
-  def write_intf_types(stream) end
+  # def write_intf_types(stream) end
   
-  def write_intf_decls(stream, declare, define) end
+  # def write_intf_decls(stream, declare, define) end
   
-  def write_impls(stream, define) end
+  # def write_impls(stream, define) end
   
   def extern; "AUTOC_EXTERN" end
   
@@ -224,7 +260,7 @@ class Type < Code
   
   def static?; @visibility == :static end
 
-  def constructible?; @capability.include?(:ctor) end
+  def constructible?; @capability.include?(:ctor) end # TODO constructible type must have constructor with no extra parameters
   
   def destructible?; @capability.include?(:dtor) end
   
@@ -245,8 +281,16 @@ class Type < Code
   
   private
 
-  def method(name, params = [], result = nil)
-    Function.new(method_missing(name), Signature.new(params, result))
+  # @private
+  class Redirector < Function
+    # Redirect call to the specific macro
+    def call(*params)
+      "_#{name}(" + params.join(',') + ")"
+    end
+  end # Redirector
+  
+  def external_function(name, params = [], result = nil)
+    Redirector.new(method_missing(name), Function::Signature.new(params, result))
   end
   
 end # Type
@@ -269,6 +313,8 @@ class UserDefinedType < Type
 
   def entities; super.concat(@deps) end
   
+  def prefix; @prefix.nil? ? super : @prefix end
+  
   def initialize(opt)
     opt = {:type => opt} if opt.is_a?(Symbol) || opt.is_a?(String)
     if opt.is_a?(Hash)
@@ -277,34 +323,34 @@ class UserDefinedType < Type
       raise "argument must be a Symbol, String or Hash"
     end
     super(t)
+    @prefix = opt[:prefix]
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
-    define_callable(:dtor, opt) {def call(obj) end}
-    define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
-    define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
-    define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
-    define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    callable_statement(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    callable_statement(:dtor, opt) {def call(obj) end}
+    callable_statement(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    callable_statement(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    callable_statement(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    callable_statement(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
   end
   
   private
   
   # Default methods creator
-  def define_callable(name, opt, &block)
-    iv = "@#{name}".to_s
+  def callable_statement(name, opt, &code)
+    iv = "@#{name}".to_sym
     c = if opt[name].nil?
-      Class.new(Dispatcher, &block).new
+      # Synthesize statement block with default parameter list
+      Class.new(Statement, &code).new(instance_variable_get(iv).parameters)
     elsif opt[name].is_a?(Function)
       opt[name]
     else
+      # If only a name is specified, assume it is the function name with default signature
       Function.new(opt[name], instance_variable_get(iv).signature)
     end
     instance_variable_set(iv, c)
   end
   
-  end # UserDefinedType
-
-
-require "forwardable"
+end # UserDefinedType
 
 
 class Reference < Type
@@ -312,19 +358,26 @@ class Reference < Type
   extend Forwardable
   
   def_delegators :@target,
-    :prefix, :hash,
+    :prefix, #:hash,
     :public?, :private?, :static?,
     :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
   
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref)
+    @ctor_params = ParameterArray.new(@target.ctor.is_a?(Function) ? @target.ctor.signature.parameters[1..-1] : [])
+    define_statement(:ctor, @ctor_pass_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    define_statement(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
+    define_statement(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
+    define_statement(:equal, [type, type]) {def call(lt, rt) @target.equal(lt, rt) end}
+    define_statement(:less, [type, type]) {def call(lt, rt) @target.less(lt, rt) end}
+    define_statement(:identify, [type]) {def call(obj) @target.identify(obj) end}
   end
   
   alias :eql? :==
   
   def ==(other)
-    super && @target == other.instance_variable_get(:@target)
+    @target == other.instance_variable_get(:@target)
   end
   
   def entities; super << @target end
@@ -334,7 +387,7 @@ class Reference < Type
       /***
       ****  <#{type}> (#{self.class})
       ***/
-      #{declare} #{type} #{new?}();
+      #{declare} #{type} #{new?}(#{@ctor_params.declaration});
       #{declare} #{type} #{ref?}(#{type});
       #{declare} void #{free?}(#{type});
     $
@@ -343,9 +396,9 @@ class Reference < Type
   def write_impls(stream, define)
     stream << %$
     #define AUTOC_COUNTER(p) (*(size_t*)((char*)(p) + sizeof(#{@target.type})))
-      #{define} #{type} #{new?}() {
+      #{define} #{type} #{new?}(#{@ctor_params.definition}) {
         #{type} self = (#{type})#{malloc}(sizeof(#{@target.type}) + sizeof(size_t)); #{assert}(self);
-        #{@target.ctor("*self")};
+        #{@target.ctor("*self", *@ctor_params.names)};
         AUTOC_COUNTER(self) = 1;
         return self;
       }
@@ -365,31 +418,22 @@ class Reference < Type
     $
   end
   
-  def ctor(obj)
-    "((#{obj}) = #{new?}())";
+  private
+  
+  # @private
+  class BoundStatement < Statement
+    def initialize(ref, target, params)
+      super(params)
+      @ref = ref
+      @target = target
+    end
+  end # BoundStatement
+  
+  def define_statement(name, params, &code)
+    instance_variable_set("@#{name}".to_sym, Class.new(BoundStatement, &code).new(self, @target, params))
   end
   
-  def dtor(obj)
-    "#{free?}(#{obj})"
-  end
-  
-  def copy(dst, src)
-    "((#{dst}) = #{ref?}(#{src}))"
-  end
-  
-  def equal(lt, rt)
-    @target.equal("*#{lt}", "*#{rt}")
-  end
-  
-  def less(lt, rt)
-    @target.less("*#{lt}", "*#{rt}")
-  end
-  
-  def identify(obj)
-    @target.identify("*#{obj}")
-  end
-  
-end
+end # Reference
 
 
 # Class adjustments for the function signature definition DSL

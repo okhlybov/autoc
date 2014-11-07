@@ -939,6 +939,42 @@ static void type(Test)() {
 }
 
 
+#undef Type
+#define Type Int
+#undef type
+#define type(x) Int##x
+
+
+static void PIntTest() {
+    int *c1, *c2;
+    c1 = type(New)(); *c1 = 1;
+    c2 = type(New)(); *c2 = 2;
+    assert(*c1 != *c2);
+    type(Free)(c2);
+    c2 = type(Ref)(c1);
+    assert(*c1 == *c2);
+    type(Free)(c1);
+    type(Free)(c2);
+}
+
+
+#undef Type
+#define Type ValueType
+#undef type
+#define type(x) ValueType##x
+
+
+static void PValueTypeTest() {
+    ValueType *c1, *c2;
+    c1 = type(New)();
+    c2 = type(New)();
+    type(Free)(c2);
+    c2 = type(Ref)(c1);
+    type(Free)(c1);
+    type(Free)(c2);
+}
+
+
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
@@ -952,5 +988,7 @@ int main(int argc, char** argv) {
     IntSetTestNot2();
     IntStrMapTest();
     ListIntSetTest();
+    PIntTest();
+    PValueTypeTest();
     return 0;
 }

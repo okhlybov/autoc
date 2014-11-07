@@ -11,7 +11,11 @@ ValueType = {
   :forward => %$#include "test.h"$,
 }
 
-PInt = AutoC::Reference.new(:type => "int", :prefix => "Integer")
+PInt = AutoC::Reference.new(:type => "int", :prefix => "Int")
+
+PValueType = AutoC::Reference.new(ValueType)
+
+IntVector = AutoC::Vector.new(:IntVector, :int)
 
 IntSet = AutoC::HashSet.new(:IntSet, "int")
 
@@ -27,6 +31,5 @@ AutoC::Module.generate!(:Test) do |c|
   c << ListIntSet
   c << IntSet
   c << AutoC::Vector.new(:PIntVector, PInt)
-  c << AutoC::List.new(:PIntList, PInt)
-  c << AutoC::HashSet.new(:PIntSet, PInt)
+  c << PInt << PValueType
 end
