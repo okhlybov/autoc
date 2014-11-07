@@ -93,9 +93,9 @@ class Function < Dispatcher
   
   attr_reader :name, :signature
   
-  def initialize(name, signature)
+  def initialize(name, a = [], b = nil)
     @name = name
-    @signature = signature
+    @signature = a.is_a?(Signature) ? a : Signature.new(a, b)
   end
   
   def to_s; name end
@@ -290,7 +290,7 @@ class Type < Code
   end # Redirector
   
   def external_function(name, params = [], result = nil)
-    Redirector.new(method_missing(name), Function::Signature.new(params, result))
+    Redirector.new(method_missing(name), params, result)
   end
   
 end # Type
