@@ -84,19 +84,23 @@ class Collection < Type
     @it_ref = "#{it}*"
   end
   
-  private
-  
-  # @private
-  class Dereferer < AutoC::Function
-    def call(*args)
-      super(*args.collect {|x| "&#{x}"})
-    end
+  def write_intf_decls(stream, declare, define)
+    # Emit default redirection macros
+    # Unlike other special methods the constructors may have extra arguments
+    # Assume the constructor's first parameter is always a target
+    ctor_ex = ctor.parameters.names[1..-1]
+    ctor_lt = ["self"].concat(ctor_ex).join(',')
+    ctor_rt = ["&self"].concat(ctor_ex).join(',')
+    stream << %$
+      #define _#{ctor}(#{ctor_lt}) #{ctor}(#{ctor_rt})
+      #define _#{dtor}(self) #{dtor}(&self)
+      #define _#{identify}(self) #{identify}(&self)
+      #define _#{copy}(dst,src) #{copy}(&dst,&src)
+      #define _#{equal}(lt,rt) #{equal}(&lt,&rt)
+      #define _#{less}(lt,rt) #{less}(&lt,&rt)
+    $
   end
-  
-  def method(name, params = [], result = nil)
-    Dereferer.new(method_missing(name), Signature.new(params, result))
-  end
-  
+
 end # Collection
 
 

@@ -186,6 +186,7 @@ class List < Collection
   end
   
   def write_intf_decls(stream, declare, define)
+    super
     stream << %$
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
