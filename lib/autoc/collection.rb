@@ -101,6 +101,20 @@ class Collection < Type
     $
   end
 
+  private
+  
+  # @private
+  class Redirector < Function
+    # Redirect call to the specific macro
+    def call(*params)
+      "_#{name}(" + params.join(',') + ")"
+    end
+  end # Redirector
+  
+  def external_function(name, params = [], result = nil)
+    Redirector.new(method_missing(name), params, result)
+  end
+  
 end # Collection
 
 

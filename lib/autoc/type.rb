@@ -232,11 +232,11 @@ class Type < Code
     end
   end
   
-  # def write_intf_types(stream) end
+  # def write_intf_types(stream)
   
-  # def write_intf_decls(stream, declare, define) end
+  # def write_intf_decls(stream, declare, define)
   
-  # def write_impls(stream, define) end
+  # def write_impls(stream, define)
   
   def extern; "AUTOC_EXTERN" end
   
@@ -281,16 +281,8 @@ class Type < Code
   
   private
 
-  # @private
-  class Redirector < Function
-    # Redirect call to the specific macro
-    def call(*params)
-      "_#{name}(" + params.join(',') + ")"
-    end
-  end # Redirector
-  
   def external_function(name, params = [], result = nil)
-    Redirector.new(method_missing(name), params, result)
+    Function.new(method_missing(name), params, result)
   end
   
 end # Type
