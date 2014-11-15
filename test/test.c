@@ -975,6 +975,52 @@ static void PValueTypeTest() {
 }
 
 
+/* List<Vector<ValueType*>*> */
+#undef Type
+#define Type ListPVectorValue
+#undef TypeIt
+#define TypeIt ListPVectorValueIt
+#undef type
+#define type(x) ListPVectorValue##x
+#undef it
+#define it(x) ListPVectorValueIt##x
+#undef Element
+#define Element PVectorValue
+#undef element
+#define element(x) PVectorValue##x
+
+
+static void type(Test)() {
+    Type c1, c2;
+    Element *e1, *e2;
+    ValueType *v1, *v2;
+    
+    type(Ctor)(&c1);
+    type(Ctor)(&c2);
+    
+    e1 = element(New)(3);
+    
+    element(Set)(e1, 1, v1 = ValueTypeNew());
+    
+    e2 = element(Ref)(e1);
+    
+    assert(element(Equal)(e1, e2));
+    
+    element(Set)(e2, 0, v2 = ValueTypeRef(v1));
+    
+    type(Push)(&c1, e1);
+    
+    element(Free)(e1);
+    element(Free)(e2);
+    
+    type(Dtor)(&c1);
+    type(Dtor)(&c2);
+    
+    ValueTypeFree(v1);
+    ValueTypeFree(v2);
+}
+
+
 int main(int argc, char** argv) {
     ValueTypeVectorTest();
     ValueTypeListTest();
@@ -990,5 +1036,6 @@ int main(int argc, char** argv) {
     ListIntSetTest();
     PIntTest();
     PValueTypeTest();
+    ListPVectorValueTest();
     return 0;
 }
