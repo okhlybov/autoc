@@ -17,7 +17,7 @@ PValueType = AutoC::Reference.new(ValueType)
 
 IntVector = AutoC::Vector.new(:IntVector, :int)
 
-IntSet = AutoC::HashSet.new(:IntSet, "int")
+IntSet = AutoC::HashSet.new(:IntSet, :int)
 
 ListIntSet = AutoC::List.new(:ListIntSet, IntSet)
 
@@ -32,4 +32,5 @@ AutoC::Module.generate!(:Test) do |c|
   c << IntSet
   c << AutoC::Vector.new(:PIntVector, PInt)
   c << PInt << PValueType
+  c << AutoC::List.new(:ListPVectorValue, AutoC::Reference.new(AutoC::Vector.new(:PVectorValue, PValueType)))
 end
