@@ -361,9 +361,9 @@ class Reference < Type
     define_statement(:ctor, @ctor_pass_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_statement(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_statement(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
-    define_statement(:equal, [type, type]) {def call(lt, rt) @target.equal(lt, rt) end}
-    define_statement(:less, [type, type]) {def call(lt, rt) @target.less(lt, rt) end}
-    define_statement(:identify, [type]) {def call(obj) @target.identify(obj) end}
+    define_statement(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
+    define_statement(:less, [type, type]) {def call(lt, rt) @target.less("*#{lt}", "*#{rt}") end}
+    define_statement(:identify, [type]) {def call(obj) @target.identify("*#{obj}") end}
   end
   
   alias :eql? :==
