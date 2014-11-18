@@ -14,11 +14,16 @@ class ParameterArray < Array
     i = 0
     params.each do |t|
       i += 1
-      out << (t.is_a?(Array) ? t : [t, "_#{i}"])
+      out << (t.is_a?(Array) ? t.collect {|x| x.to_s} : [t.to_s, "_#{i}"])
     end
     self.new(out)
   end
 
+  # Test for parameter list compatibility
+  def ===(other)
+    other.is_a?(ParameterArray) && types == other.types
+  end
+  
   def types
     collect {|x| x.first}
   end
@@ -62,10 +67,10 @@ end # Dispatcher
 # @private
 class Statement < Dispatcher
   
-  attr_reader :types
+  attr_reader :parameters
   
-  def initialize(types)
-    @types = types
+  def initialize(params = [])
+    @parameters = ParameterArray.coerce(*params)
   end
   
 end # Statement
@@ -81,7 +86,7 @@ class Function < Dispatcher
 
     def initialize(params = [], result = nil)
       @parameters = ParameterArray.coerce(*params)
-      @result = result.nil? ? :void : result
+      @result = (result.nil? ? :void : result).to_s
     end
 
   end # Signature
@@ -94,7 +99,7 @@ class Function < Dispatcher
   attr_reader :name, :signature
   
   def initialize(name, a = [], b = nil)
-    @name = name
+    @name = name.to_s
     @signature = a.is_a?(Signature) ? a : Signature.new(a, b)
   end
   
@@ -165,13 +170,11 @@ class Type < Code
     type.is_a?(Type) ? type : UserDefinedType.new(type)
   end
   
-  @@caps = [:ctor, :dtor, :copy, :equal, :less, :identify]
-  
   def hash; self.class.hash ^ type.hash end
   
-  def ==(other)
-    self.class == other.class && type == other.type
-  end
+  alias :eql? :==
+  
+  def ==(other) self.class == other.class && type == other.type end
   
   def entities; super << CommonCode end
 
@@ -181,13 +184,13 @@ class Type < Code
     @type = type.to_s
     @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
-    @capability = Set.new(@@caps)
-    @ctor = external_function(:ctor, [type_ref^:self])
-    @dtor = external_function(:dtor, [type_ref^:self])
-    @copy = external_function(:copy, [type_ref^:dst, type_ref^:src])
-    @equal = external_function(:equal, [type_ref^:lt, type_ref^:rt], :int)
-    @identify = external_function(:identify, [type_ref^:self], :size_t)
-    @less = external_function(:less, [type_ref^:lt, type_ref^:rt], :int)
+    @capability = Set[:constructible, :comparable, :hashable, :orderable] # Can be used to disable specific capabilities for a type
+    @ctor = external_function(:ctor, @ctor_signature = Function::Signature.new([type_ref^:self]))
+    @dtor = external_function(:dtor, @dtor_signature = Function::Signature.new([type_ref^:self]))
+    @copy = external_function(:copy, @copy_signature = Function::Signature.new([type_ref^:dst, type_ref^:src]))
+    @equal = external_function(:equal, @equal_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    @identify = external_function(:identify, @identify_signature = Function::Signature.new([type_ref^:self], :size_t))
+    @less = external_function(:less, @less_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
   end
   
   alias :prefix :type
@@ -260,29 +263,35 @@ class Type < Code
   
   def static?; @visibility == :static end
 
-  def constructible?; @capability.include?(:ctor) end # TODO constructible type must have constructor with no extra parameters
-  
-  def destructible?; @capability.include?(:dtor) end
-  
-  def copyable?; @capability.include?(:copy) end
-  
-  def comparable?; @capability.include?(:equal) end
+  def constructible?
+    @capability.include?(:constructible) && ctor.parameters === @ctor_signature.parameters
+  end
 
-  def orderable?; comparable? && @capability.include?(:less) end
+  def comparable?
+    @capability.include?(:comparable) && equal.parameters === @equal_signature.parameters
+  end
+  
+  def orderable?
+    @capability.include?(:orderable) && comparable? && less.parameters === @less_signature.parameters
+  end
 
-  def hashable?; comparable? && @capability.include?(:identify) end
+  def hashable?
+     @capability.include?(:hashable) && comparable? && identify.parameters === @identify_signature.parameters
+  end
 
-  # Create readers which take arbitrary number of arguments
+  # Create forwarding readers which take arbitrary number of arguments
   [:ctor, :dtor, :copy, :equal, :identify, :less].each do |name|
-    define_method(name) do |*args|
-      instance_variable_get("@#{name}".to_sym).dispatch(*args)
-    end
+    class_eval %$
+      def #{name}(*args)
+        @#{name}.dispatch(*args)
+      end
+    $
   end
   
   private
 
-  def external_function(name, params = [], result = nil)
-    Function.new(method_missing(name), params, result)
+  def external_function(name, signature)
+    Function.new(method_missing(name), signature)
   end
   
 end # Type
@@ -295,11 +304,10 @@ class UserDefinedType < Type
     def entities; super << Type::CommonCode end
     def initialize(forward) @forward = forward.to_s end
     def hash; @forward.hash end
-    def eql?(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
+    alias :eql? :==
+    def ==(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
     def write_intf(stream)
-      stream << "\n"
-      stream << @forward
-      stream << "\n"
+      stream << "\n#{@forward}\n"
     end
   end # PublicDeclaration
 
@@ -317,27 +325,27 @@ class UserDefinedType < Type
     super(t)
     @prefix = opt[:prefix]
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    callable_statement(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
-    callable_statement(:dtor, opt) {def call(obj) end}
-    callable_statement(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
-    callable_statement(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
-    callable_statement(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
-    callable_statement(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    callable_expression(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    callable_expression(:dtor, opt) {def call(obj) end}
+    callable_expression(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    callable_expression(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    callable_expression(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    callable_expression(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
   end
   
   private
   
   # Default methods creator
-  def callable_statement(name, opt, &code)
-    iv = "@#{name}".to_sym
+  def callable_expression(name, opt, &code)
+    iv = "@#{name}"
     c = if opt[name].nil?
       # Synthesize statement block with default parameter list
       Class.new(Statement, &code).new(instance_variable_get(iv).parameters)
     elsif opt[name].is_a?(Function)
-      opt[name]
+      opt[name] # If a Function instance is given, pass it through
     else
       # If only a name is specified, assume it is the function name with default signature
-      Function.new(opt[name], instance_variable_get(iv).signature)
+      Function.new(opt[name], instance_variable_get("@#{name}_signature"))
     end
     instance_variable_set(iv, c)
   end
@@ -350,15 +358,15 @@ class Reference < Type
   extend Forwardable
   
   def_delegators :@target,
-    :prefix, #:hash,
+    :prefix,
     :public?, :private?, :static?,
-    :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
+    :constructible?, :comparable?, :orderable?, :hashable?
   
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref)
-    @ctor_params = ParameterArray.new(@target.ctor.is_a?(Function) ? @target.ctor.signature.parameters[1..-1] : [])
-    define_statement(:ctor, @ctor_pass_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    @ctor_params = ParameterArray.new(@target.ctor.parameters[1..-1])
+    define_statement(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_statement(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_statement(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
     define_statement(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
@@ -368,9 +376,7 @@ class Reference < Type
   
   alias :eql? :==
   
-  def ==(other)
-    @target == other.instance_variable_get(:@target)
-  end
+  def ==(other) @target == other.instance_variable_get(:@target) end
   
   def entities; super << @target end
   
@@ -422,15 +428,15 @@ class Reference < Type
   end # BoundStatement
   
   def define_statement(name, params, &code)
-    instance_variable_set("@#{name}".to_sym, Class.new(BoundStatement, &code).new(self, @target, params))
+    instance_variable_set("@#{name}", Class.new(BoundStatement, &code).new(self, @target, params))
   end
   
 end # Reference
 
 
 # Class adjustments for the function signature definition DSL
-[Symbol, String, Type].each do |c|
-  c.class_eval do 
+[Symbol, String, Type].each do |type|
+  type.class_eval do 
     def ^(name)
       [self, name]
     end
