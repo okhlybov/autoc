@@ -111,8 +111,8 @@ class Collection < Type
     end
   end # Redirector
   
-  def external_function(name, params = [], result = nil)
-    Redirector.new(method_missing(name), params, result)
+  def external_function(name, signature)
+    Redirector.new(method_missing(name), signature)
   end
   
 end # Collection

@@ -123,12 +123,13 @@ class Vector < Collection
 
   def initialize(*args)
     super
-    @capability.subtract [:ctor, :less]
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
-    # The Vector's constructor requires extra parameter
-    @ctor = external_function(:ctor, [type_ref^:self, :size_t^:element_count])
+    # Override the default type constructor as the Vector's requires extra parameter
+    # Note that this makes the Vector instance un-constructible
+    @ctor = external_function(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
+    @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
-  
+
   def write_intf_types(stream)
     stream << %$
       /***
@@ -198,15 +199,9 @@ class Vector < Collection
         return #{get}(self->vector, self->index);
       }
     $
-    stream << if element.orderable?
-      %$
-        #{declare} void #{sort}(#{type_ref});
-      $
-    else
-      %$
-        /* No #{sort}() defined since #{element.type} is not orderable */
-      $
-    end
+    stream << %$
+      #{declare} void #{sort}(#{type_ref});
+    $ if element.orderable?
   end
   
   def write_impls(stream, define)
