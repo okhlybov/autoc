@@ -172,9 +172,9 @@ class Type < Code
   
   def hash; self.class.hash ^ type.hash end
   
-  alias :eql? :==
-  
   def ==(other) self.class == other.class && type == other.type end
+  
+  alias :eql? :==
   
   def entities; super << CommonCode end
 
@@ -304,8 +304,8 @@ class UserDefinedType < Type
     def entities; super << Type::CommonCode end
     def initialize(forward) @forward = forward.to_s end
     def hash; @forward.hash end
-    alias :eql? :==
     def ==(other) self.class == other.class && @forward == other.instance_variable_get(:@forward) end
+    alias :eql? :==
     def write_intf(stream)
       stream << "\n#{@forward}\n"
     end
@@ -374,9 +374,9 @@ class Reference < Type
     define_statement(:identify, [type]) {def call(obj) @target.identify("*#{obj}") end}
   end
   
-  alias :eql? :==
-  
   def ==(other) @target == other.instance_variable_get(:@target) end
+  
+  alias :eql? :==
   
   def entities; super << @target end
   

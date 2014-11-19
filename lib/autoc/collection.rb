@@ -70,12 +70,10 @@ class Collection < Type
   
   def hash; super ^ element.hash end
   
+  def ==(other) super && element == other.element end
+  
   alias :eql? :==
 
-  def ==(other)
-    super && element == other.element
-  end
-  
   def entities; super << element end
   
   def initialize(type_name, element_type, visibility = :public)
