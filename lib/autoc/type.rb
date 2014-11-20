@@ -99,7 +99,7 @@ class Function < Dispatcher
   attr_reader :name, :signature
   
   def initialize(name, a = [], b = nil)
-    @name = name.to_s
+    @name = AutoC.c_id(name)
     @signature = a.is_a?(Signature) ? a : Signature.new(a, b)
   end
   
@@ -180,33 +180,35 @@ class Type < Code
 
   attr_reader :type, :type_ref
   
+  def prefix
+    # Lazy evaluator for simple types like char* which do not actually use
+    # this method and hence do not require the prefix to be valid C identifier
+    AutoC.c_id(type)
+  end
+  
   def initialize(type, visibility = :public)
     @type = type.to_s
     @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
     @capability = Set[:constructible, :comparable, :hashable, :orderable] # Can be used to disable specific capabilities for a type
-    @ctor = external_function(:ctor, @ctor_signature = Function::Signature.new([type_ref^:self]))
-    @dtor = external_function(:dtor, @dtor_signature = Function::Signature.new([type_ref^:self]))
-    @copy = external_function(:copy, @copy_signature = Function::Signature.new([type_ref^:dst, type_ref^:src]))
-    @equal = external_function(:equal, @equal_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
-    @identify = external_function(:identify, @identify_signature = Function::Signature.new([type_ref^:self], :size_t))
-    @less = external_function(:less, @less_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    @ctor_signature = Function::Signature.new([type_ref^:self])
+    @dtor_signature = Function::Signature.new([type_ref^:self])
+    @copy_signature = Function::Signature.new([type_ref^:dst, type_ref^:src])
+    @equal_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int)
+    @identify_signature = Function::Signature.new([type_ref^:self], :size_t)
+    @less_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int)
   end
-  
-  alias :prefix :type
   
   def method_missing(method, *args)
     str = method.to_s
-    u = !(str =~ /\!$/).nil?
-    str = str.sub(/[\!\?]$/, "") # Strip trailing ? or !
-    func = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
-    func = "_#{func}" if u
+    str = str.sub(/[\!\?]$/, '') # Strip trailing ? or !
+    fn = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
     if args.empty?
-      func # Emit bare function name
+      fn # Emit bare function name
     elsif args.size == 1 && args.first == nil
-      func + "()" # Use sole nil argument to emit function call with no arguments
+      fn + '()' # Use sole nil argument to emit function call with no arguments
     else
-      func + "(" + args.join(",") + ")" # Emit normal function call with supplied arguments
+      fn + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
     end
   end
   
@@ -290,7 +292,7 @@ class Type < Code
   
   private
 
-  def external_function(name, signature)
+  def define_function(name, signature)
     Function.new(method_missing(name), signature)
   end
   
@@ -323,29 +325,30 @@ class UserDefinedType < Type
       raise "argument must be a Symbol, String or Hash"
     end
     super(t)
-    @prefix = opt[:prefix]
+    @prefix = AutoC.c_id(opt[:prefix]) unless opt[:prefix].nil?
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    callable_expression(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
-    callable_expression(:dtor, opt) {def call(obj) end}
-    callable_expression(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
-    callable_expression(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
-    callable_expression(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
-    callable_expression(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    define_callable(:dtor, opt) {def call(obj) end}
+    define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
   end
   
   private
   
   # Default methods creator
-  def callable_expression(name, opt, &code)
+  def define_callable(name, opt, &code)
     iv = "@#{name}"
+    ivs = "@#{name}_signature"
     c = if opt[name].nil?
       # Synthesize statement block with default parameter list
-      Class.new(Statement, &code).new(instance_variable_get(iv).parameters)
+      Class.new(Statement, &code).new(instance_variable_get(ivs).parameters)
     elsif opt[name].is_a?(Function)
       opt[name] # If a Function instance is given, pass it through
     else
       # If only a name is specified, assume it is the function name with default signature
-      Function.new(opt[name], instance_variable_get("@#{name}_signature"))
+      Function.new(opt[name], instance_variable_get(ivs))
     end
     instance_variable_set(iv, c)
   end
@@ -366,12 +369,12 @@ class Reference < Type
     @target = Type.coerce(target)
     super(@target.type_ref)
     @ctor_params = ParameterArray.new(@target.ctor.parameters[1..-1])
-    define_statement(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
-    define_statement(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
-    define_statement(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
-    define_statement(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
-    define_statement(:less, [type, type]) {def call(lt, rt) @target.less("*#{lt}", "*#{rt}") end}
-    define_statement(:identify, [type]) {def call(obj) @target.identify("*#{obj}") end}
+    define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
+    define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
+    define_callable(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
+    define_callable(:less, [type, type]) {def call(lt, rt) @target.less("*#{lt}", "*#{rt}") end}
+    define_callable(:identify, [type]) {def call(obj) @target.identify("*#{obj}") end}
   end
   
   def ==(other) @target == other.instance_variable_get(:@target) end
@@ -427,7 +430,7 @@ class Reference < Type
     end
   end # BoundStatement
   
-  def define_statement(name, params, &code)
+  def define_callable(name, params, &code)
     instance_variable_set("@#{name}", Class.new(BoundStatement, &code).new(self, @target, params))
   end
   

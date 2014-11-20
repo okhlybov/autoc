@@ -80,6 +80,12 @@ class Collection < Type
     super(type_name, visibility)
     @element = Type.coerce(element_type)
     @it_ref = "#{it}*"
+    @ctor = define_function(:ctor, @ctor_signature)
+    @dtor = define_function(:dtor, @dtor_signature)
+    @copy = define_function(:copy, @copy_signature)
+    @equal = define_function(:equal, @equal_signature)
+    @identify = define_function(:identify, @identify_signature)
+    @less = define_function(:less, @less_signature)
   end
   
   def write_intf_decls(stream, declare, define)
@@ -109,7 +115,7 @@ class Collection < Type
     end
   end # Redirector
   
-  def external_function(name, signature)
+  def define_function(name, signature)
     Redirector.new(method_missing(name), signature)
   end
   
