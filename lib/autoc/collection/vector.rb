@@ -126,7 +126,7 @@ class Vector < Collection
     raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
     # Override the default type constructor as the Vector's requires extra parameter
     # Note that this makes the Vector instance un-constructible
-    @ctor = external_function(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
+    @ctor = define_function(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
     @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
 
