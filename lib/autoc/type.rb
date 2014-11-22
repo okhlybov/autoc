@@ -190,13 +190,14 @@ class Type < Code
     @type = type.to_s
     @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
-    @capability = Set[:constructible, :comparable, :hashable, :orderable] # Can be used to disable specific capabilities for a type
-    @ctor_signature = Function::Signature.new([type_ref^:self])
-    @dtor_signature = Function::Signature.new([type_ref^:self])
-    @copy_signature = Function::Signature.new([type_ref^:dst, type_ref^:src])
-    @equal_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int)
-    @identify_signature = Function::Signature.new([type_ref^:self], :size_t)
-    @less_signature = Function::Signature.new([type_ref^:lt, type_ref^:rt], :int)
+    @capability = Set[:constructible, :destructible, :copyable, :comparable, :hashable, :orderable] # Can be used to disable specific capabilities for a type
+    # Canonic special method signatures
+    @ctor_signature = Function::Signature.new([type^:self])
+    @dtor_signature = Function::Signature.new([type^:self])
+    @copy_signature = Function::Signature.new([type^:dst, type^:src])
+    @equal_signature = Function::Signature.new([type^:lt, type^:rt], :int)
+    @identify_signature = Function::Signature.new([type^:self], :size_t)
+    @less_signature = Function::Signature.new([type^:lt, type^:rt], :int)
   end
   
   def method_missing(method, *args)
@@ -265,21 +266,17 @@ class Type < Code
   
   def static?; @visibility == :static end
 
-  def constructible?
-    @capability.include?(:constructible) && ctor.parameters === @ctor_signature.parameters
-  end
+  def constructible?; @capability.include?(:constructible) end
 
-  def comparable?
-    @capability.include?(:comparable) && equal.parameters === @equal_signature.parameters
-  end
+  def destructible?; @capability.include?(:destructible) end
+
+  def copyable?; @capability.include?(:copyable) end
+
+  def comparable?; @capability.include?(:comparable) end
   
-  def orderable?
-    @capability.include?(:orderable) && comparable? && less.parameters === @less_signature.parameters
-  end
+  def orderable?; @capability.include?(:orderable) && comparable? end
 
-  def hashable?
-     @capability.include?(:hashable) && comparable? && identify.parameters === @identify_signature.parameters
-  end
+  def hashable?; @capability.include?(:hashable) && comparable? end
 
   # Create forwarding readers which take arbitrary number of arguments
   [:ctor, :dtor, :copy, :equal, :identify, :less].each do |name|
@@ -320,19 +317,22 @@ class UserDefinedType < Type
   def initialize(opt)
     opt = {:type => opt} if opt.is_a?(Symbol) || opt.is_a?(String)
     if opt.is_a?(Hash)
-      t = opt[:type].nil? ? raise("type is not specified") : opt[:type]
+      t = opt[:type].nil? ? raise("type is not specified") : opt[:type].to_s
     else
       raise "argument must be a Symbol, String or Hash"
     end
     super(t)
     @prefix = AutoC.c_id(opt[:prefix]) unless opt[:prefix].nil?
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
-    define_callable(:dtor, opt) {def call(obj) end}
-    define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
-    define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
-    define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
-    define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    opt.default = :unset # This allows to use nil as a value to indicate that the specific method is not avaliable
+    opt[:ctor].nil? ? @capability.subtract([:constructible]) : define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    opt[:dtor].nil? ? @capability.subtract([:destructible]) : define_callable(:dtor, opt) {def call(obj) end}
+    opt[:copy].nil? ? @capability.subtract([:copyable]) : define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    opt[:equal].nil? ? @capability.subtract([:comparable]) : define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    opt[:less].nil? ? @capability.subtract([:orderable]) : define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    opt[:identify].nil? ? @capability.subtract([:hashable]) : define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    # Handle specific requirements
+    @capability.subtract([:constructible]) if @ctor.parameters.size > 1 # Constructible type must not have extra parameters besides self
   end
   
   private
@@ -341,8 +341,8 @@ class UserDefinedType < Type
   def define_callable(name, opt, &code)
     iv = "@#{name}"
     ivs = "@#{name}_signature"
-    c = if opt[name].nil?
-      # Synthesize statement block with default parameter list
+    c = if opt[name] == :unset
+      # Synthesize statement block with default (canonic) parameter list
       Class.new(Statement, &code).new(instance_variable_get(ivs).parameters)
     elsif opt[name].is_a?(Function)
       opt[name] # If a Function instance is given, pass it through
@@ -363,12 +363,12 @@ class Reference < Type
   def_delegators :@target,
     :prefix,
     :public?, :private?, :static?,
-    :constructible?, :comparable?, :orderable?, :hashable?
+    :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
   
   def initialize(target)
     @target = Type.coerce(target)
-    super(@target.type_ref)
-    @ctor_params = ParameterArray.new(@target.ctor.parameters[1..-1])
+    super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
+    @ctor_params = ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
     define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}

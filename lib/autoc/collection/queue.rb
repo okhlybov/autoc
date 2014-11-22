@@ -195,7 +195,7 @@ class Queue < Collection
   
   def initialize(*args)
     super
-    @capability.subtract [:less]
+    @capability.subtract [:orderable]
   end
   
   def write_intf_types(stream)
