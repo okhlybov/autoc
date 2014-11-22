@@ -6,49 +6,30 @@ require "autoc/code"
 module AutoC
   
 
-# @private
-class ParameterArray < Array
-
-  def self.coerce(*params)
-    out = []
-    i = 0
-    params.each do |t|
-      i += 1
-      out << (t.is_a?(Array) ? t.collect {|x| x.to_s} : [t.to_s, "_#{i}"])
-    end
-    self.new(out)
-  end
-
-  # Test for parameter list compatibility
-  def ===(other)
-    other.is_a?(ParameterArray) && types == other.types
-  end
-  
-  def types
-    collect {|x| x.first}
-  end
-  
-  def names
-    collect {|x| x.last}
-  end
-  
-  def pass
-    names.join(',')
-  end
-
-  def declaration
-    types.join(',')
-  end
-
-  def definition
-    collect {|x| "#{x.first} #{x.last}"}.join(',')
-  end
-  
-end # Parameters
   
 
 # @private
 class Dispatcher
+
+  # @private
+  class ParameterArray < Array
+    def self.coerce(*params)
+      out = []
+      i = 0
+      params.each do |t|
+        i += 1
+        out << (t.is_a?(Array) ? t.collect {|x| x.to_s} : [t.to_s, "_#{i}"])
+      end
+      self.new(out)
+    end
+    # Test for parameter list compatibility
+    def ===(other) other.is_a?(ParameterArray) && types == other.types end
+    def types; collect {|x| x.first} end
+    def names; collect {|x| x.last} end
+    def pass; names.join(',') end
+    def declaration; types.join(',') end
+    def definition; collect {|x| "#{x.first} #{x.last}"}.join(',') end
+  end # ParameterArray
 
   # def call(*params)
   
@@ -85,7 +66,7 @@ class Function < Dispatcher
     attr_reader :parameters, :result
 
     def initialize(params = [], result = nil)
-      @parameters = ParameterArray.coerce(*params)
+      @parameters = Dispatcher::ParameterArray.coerce(*params)
       @result = (result.nil? ? :void : result).to_s
     end
 
@@ -368,7 +349,7 @@ class Reference < Type
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
-    @ctor_params = ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
+    @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
     define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
