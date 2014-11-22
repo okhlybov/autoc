@@ -78,14 +78,15 @@ class Collection < Type
   
   def initialize(type_name, element_type, visibility = :public)
     super(type_name, visibility)
-    @element = Type.coerce(element_type)
     @it_ref = "#{it}*"
-    @ctor = define_function(:ctor, @ctor_signature)
-    @dtor = define_function(:dtor, @dtor_signature)
-    @copy = define_function(:copy, @copy_signature)
-    @equal = define_function(:equal, @equal_signature)
-    @identify = define_function(:identify, @identify_signature)
-    @less = define_function(:less, @less_signature)
+    @element = Type.coerce(element_type)
+    @ctor = define_function(:ctor, Function::Signature.new([type_ref^:self]))
+    @dtor = define_function(:dtor, Function::Signature.new([type_ref^:self]))
+    @copy = define_function(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
+    @equal = define_function(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    @identify = define_function(:identify, Function::Signature.new([type_ref^:self], :size_t))
+    @less = define_function(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    element_type_check(element)
   end
   
   def write_intf_decls(stream, declare, define)
@@ -105,14 +106,25 @@ class Collection < Type
     $
   end
 
+  def copyable?; super && element.copyable? end
+  
+  def comparable?; super && element.comparable? end
+  
+  def hashable?; super && element.hashable? end
+  
   private
+  
+  def element_type_check(obj)
+    raise "type #{obj.type} (#{obj}) must be destructible" unless obj.destructible?
+    raise "type #{obj.type} (#{obj}) must be copyable" unless obj.copyable?
+    raise "type #{obj.type} (#{obj}) must be comparable" unless obj.comparable?
+    raise "type #{obj.type} (#{obj}) must be hashable" unless obj.hashable?
+  end
   
   # @private
   class Redirector < Function
     # Redirect call to the specific macro
-    def call(*params)
-      "_#{name}(" + params.join(',') + ")"
-    end
+    def call(*params) "_#{name}(" + params.join(',') + ')' end
   end # Redirector
   
   def define_function(name, signature)

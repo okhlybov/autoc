@@ -123,8 +123,7 @@ class Vector < Collection
 
   def initialize(*args)
     super
-    raise "type #{element.type} (#{element}) must be constructible" unless element.constructible?
-    # Override the default type constructor as the Vector's requires extra parameter
+    # Override the default type constructor as the Vector's requires one extra parameter
     # Note that this makes the Vector instance un-constructible
     @ctor = define_function(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
     @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
@@ -302,7 +301,15 @@ class Vector < Collection
       }
     $ if element.orderable?
   end
+ 
+  private
   
+  def element_type_check(obj)
+    # Additional requirement is imposed on the vector's element
+    raise "type #{obj.type} (#{obj}) must be constructible" unless obj.constructible?
+    super
+  end
+
 end # Vector
 
 
