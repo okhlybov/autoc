@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.email = "fougas@mail.ru"
   spec.homepage = "http://autoc.sourceforge.net/"
   spec.summary = "A host of Ruby modules related to automatic C source code generation"
-  spec.files = Dir.glob ["lib/**/*.rb", "doc/**/*", "test/test.{c,h,rb}", "test/*_auto.[ch]", "README", ".yardopts"]
+  spec.files = Dir.glob ["lib/**/*.rb", "doc/**/*", "test/test.{c,h,rb}", "test/*_auto.[ch]", "README", "CHANGES", ".yardopts"]
   spec.required_ruby_version = ">= 1.8"
   spec.licenses = ["BSD"]
   spec.description = <<-EOF
