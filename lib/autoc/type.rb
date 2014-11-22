@@ -6,8 +6,6 @@ require "autoc/code"
 module AutoC
   
 
-  
-
 # @private
 class Dispatcher
 
@@ -277,6 +275,11 @@ class Type < Code
 end # Type
 
 
+=begin
+
+UserDefinedType represents a user-defined custom type.
+
+=end
 class UserDefinedType < Type
   
   # @private  
@@ -337,6 +340,35 @@ class UserDefinedType < Type
 end # UserDefinedType
 
 
+=begin
+
+Reference represents a managed counted reference for any type.
+It can be used with any type, including AutoC collections themselves.
+
+== Generated C interface
+
+=== Type management
+
+[cols="2*"]
+|===
+|*_Type_* * ~type~New(...)
+|
+Create and return a reference to *_Type_* with reference count set to one.
+
+The storage for the returned instance is malloc()'ed. The instance is constructed with the type's constructor ~type~Ctor(...).
+
+NOTE: The generated method borrows the second and subsequent arguments from the respective constructor.
+
+|*_Type_* * ~type~Ref(*_Type_* * self)
+|
+Increment the +self+'s reference count and return +self+.
+
+|*_void_* ~type~Free(*_Type_* * self)
+|
+Decrement the +self+'s reference count.
+If the reference count reaches zero, free the storage and destroy the instance with the type's destructor ~type~Dtor().
+
+=end
 class Reference < Type
   
   extend Forwardable

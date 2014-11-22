@@ -2,8 +2,8 @@
 
 *AutoC* is a host of Ruby modules related to automatic C source code generation.
 
-. {AutoC::Code} - generic C multi-source module generator.
-. {AutoC::Collection} - strongly-typed data structure generators similar
+. {AutoC::Code} generic C multi-source module generator.
+. {AutoC::Collection} strongly-typed data structure generators similar
 to the C++ STL container classes.
 
 == Versioning scheme
