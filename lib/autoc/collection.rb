@@ -7,17 +7,23 @@ module AutoC
 
 =begin
 
+== Implemented types
+
+- {AutoC::UserDefinedType} user-defined custom type
+
+- {AutoC::Reference} counted reference type
+
 == Implemented collections
 
-- {AutoC::Vector} a fixed-sized array
+- {AutoC::Vector} resizable array
 
-- {AutoC::List} a single linked list
+- {AutoC::List} single linked list
 
-- {AutoC::Queue} a double linked list
+- {AutoC::Queue} double linked list
 
-- {AutoC::HashSet} a hash-based set
+- {AutoC::HashSet} hash-based set
 
-- {AutoC::HashMap} a hash-based map
+- {AutoC::HashMap} hash-based map
 
 == Ruby side operation
 
