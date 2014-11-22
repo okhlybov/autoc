@@ -1,5 +1,7 @@
 == 1.2
 
+Introduced counted reference type AutoC::Reference.
+
 Introduced type capabilities/restrictions and optional operations for collections.
 
 AutoC::Vector#sort() is now optional operation.
