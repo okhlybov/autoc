@@ -170,7 +170,7 @@ class HashSet < Collection
       };
       struct #{it} {
         #{type_ref} set;
-        int bucket_index;
+        size_t bucket_index;
         #{@list.it} it;
       };
     $
@@ -407,11 +407,11 @@ class HashSet < Collection
       #{define} void #{itCtor}(#{it_ref} self, #{type_ref} set) {
         #{assert}(self);
         self->set = set;
-        self->bucket_index = -1;
+        self->bucket_index = self->set->bucket_count;
       }
       #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
-        if(self->bucket_index < 0) #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
+        if(self->bucket_index >= self->set->bucket_count) #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index = 0]);
         if(#{@list.itMove}(&self->it)) return 1;
         while(++self->bucket_index < self->set->bucket_count) {
           #{@list.itCtor}(&self->it, &self->set->buckets[self->bucket_index]);
