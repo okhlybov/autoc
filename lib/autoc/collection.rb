@@ -88,32 +88,19 @@ class Collection < Type
     super(type_name, visibility)
     @it_ref = "#{it}*"
     @element = Type.coerce(element_type)
-    setup_specials
+    initialize_redirectors
     element_type_check(element)
   end
   
-  def write_intf_decls(stream, declare, define)
-    # Emit default redirection macros
-    # Unlike other special methods the constructors may have extra arguments
-    # Assume the constructor's first parameter is always a target
-    ctor_ex = ctor.parameters.names[1..-1]
-    ctor_lt = ["self"].concat(ctor_ex).join(',')
-    ctor_rt = ["&self"].concat(ctor_ex).join(',')
-    stream << %$
-      #define _#{ctor}(#{ctor_lt}) #{ctor}(#{ctor_rt})
-      #define _#{dtor}(self) #{dtor}(&self)
-      #define _#{identify}(self) #{identify}(&self)
-      #define _#{copy}(dst,src) #{copy}(&dst,&src)
-      #define _#{equal}(lt,rt) #{equal}(&lt,&rt)
-      #define _#{less}(lt,rt) #{less}(&lt,&rt)
-    $
-  end
-
   def copyable?; super && element.copyable? end
   
   def comparable?; super && element.comparable? end
   
   def hashable?; super && element.hashable? end
+  
+  def write_intf_decls(stream, declare, define)
+    write_redirectors(stream, declare, define)
+  end
   
   private
   

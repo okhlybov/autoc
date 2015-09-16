@@ -15,7 +15,7 @@ class String < Type
     
   def initialize(type_name = :String, visibility = :public)
     super
-    setup_specials
+    initialize_redirectors
   end
   
   def write_intf_types(stream)
@@ -36,6 +36,7 @@ class String < Type
 
   def write_intf_decls(stream, declare, define)
     super
+    write_redirectors(stream, declare, define)
     stream << %$
       #define #{ctor}(self) #{ctorPChar}(self, "")
       #{declare} void #{ctorPChar}(#{type_ref}, const #{char_type_ref});
