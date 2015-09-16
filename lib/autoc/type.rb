@@ -161,7 +161,7 @@ class Type < Code
   
   def prefix
     # Lazy evaluator for simple types like char* which do not actually use
-    # this method and hence do not require the prefix to be valid C identifier
+    # this method and hence do not require the prefix to be a valid C identifier
     AutoC.c_id(type)
   end
   
@@ -223,21 +223,21 @@ class Type < Code
   
   # def write_impls(stream, define)
   
-  def extern; "AUTOC_EXTERN" end
+  def extern; :AUTOC_EXTERN end
   
-  def inline; "AUTOC_INLINE" end
+  def inline; :AUTOC_INLINE end
   
-  def static; "AUTOC_STATIC" end
+  def static; :AUTOC_STATIC end
   
-  def assert; "assert" end
+  def assert; :assert end
   
-  def malloc; "malloc" end
+  def malloc; :malloc end
   
-  def calloc; "calloc" end
+  def calloc; :calloc end
   
-  def free; "free" end
+  def free; :free end
   
-  def abort; "abort" end
+  def abort; :abort end
   
   def public?; @visibility == :public end
     
@@ -264,12 +264,6 @@ class Type < Code
         @#{name}.dispatch(*args)
       end
     $
-  end
-  
-  private
-
-  def define_function(name, signature)
-    Function.new(method_missing(name), signature)
   end
   
 end # Type
@@ -299,7 +293,7 @@ class UserDefinedType < Type
   def prefix; @prefix.nil? ? super : @prefix end
   
   def initialize(opt)
-    opt = {:type => opt} if opt.is_a?(Symbol) || opt.is_a?(String)
+    opt = {:type => opt} if opt.is_a?(::Symbol) || opt.is_a?(::String)
     if opt.is_a?(Hash)
       t = opt[:type].nil? ? raise("type is not specified") : opt[:type].to_s
     else
@@ -308,7 +302,7 @@ class UserDefinedType < Type
     super(t)
     @prefix = AutoC.c_id(opt[:prefix]) unless opt[:prefix].nil?
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    opt.default = :unset # This allows to use nil as a value to indicate that the specific method is not avaliable
+    opt.default = :unset # This allows to use nil as a value to indicate that the specific method is not available
     opt[:ctor].nil? ? @capability.subtract([:constructible]) : define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
     opt[:dtor].nil? ? @capability.subtract([:destructible]) : define_callable(:dtor, opt) {def call(obj) end}
     opt[:copy].nil? ? @capability.subtract([:copyable]) : define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
@@ -450,8 +444,36 @@ class Reference < Type
 end # Reference
 
 
+# @private
+module Type::Redirecting
+
+  # Setup special methods which receive types by reference instead of by value
+  def setup_specials
+    @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self]))
+    @dtor = define_redirector(:dtor, Function::Signature.new([type_ref^:self]))
+    @copy = define_redirector(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
+    @equal = define_redirector(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    @identify = define_redirector(:identify, Function::Signature.new([type_ref^:self], :size_t))
+    @less = define_redirector(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+  end
+  
+private
+      
+  # @private
+  class Redirector < Function
+    # Redirect call to the specific macro
+    def call(*params) "_#{name}(" + params.join(',') + ')' end
+  end # Redirector
+  
+  def define_redirector(name, signature)
+    Redirector.new(method_missing(name), signature)
+  end
+      
+end # Redirecting
+
+
 # Class adjustments for the function signature definition DSL
-[Symbol, String, Type].each do |type|
+[::Symbol, ::String, Type].each do |type|
   type.class_eval do 
     def ^(name)
       [self, name]

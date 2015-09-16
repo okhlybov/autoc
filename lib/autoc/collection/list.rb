@@ -160,6 +160,7 @@ class List < Collection
   end
   
   def write_intf_types(stream)
+    super
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
@@ -214,6 +215,7 @@ class List < Collection
   end
   
   def write_impls(stream, define)
+    super
     stream << %$
       #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
       #{define} #{ctor.definition} {

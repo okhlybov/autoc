@@ -125,11 +125,12 @@ class Vector < Collection
     super
     # Override the default type constructor as the Vector's requires one extra parameter
     # Note that this makes the Vector instance un-constructible
-    @ctor = define_function(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
+    @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
     @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
 
   def write_intf_types(stream)
+    super
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
@@ -204,6 +205,7 @@ class Vector < Collection
   end
   
   def write_impls(stream, define)
+    super
     stream << %$
       static void #{allocate}(#{type_ref} self, size_t element_count) {
         #{assert}(self);

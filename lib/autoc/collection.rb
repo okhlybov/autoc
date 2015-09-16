@@ -72,6 +72,8 @@ WARNING: the collection being iterated *must not* be modified in any way otherwi
 =end
 class Collection < Type
 
+  include Redirecting
+  
   attr_reader :element, :it_ref
   
   def hash; super ^ element.hash end
@@ -86,12 +88,7 @@ class Collection < Type
     super(type_name, visibility)
     @it_ref = "#{it}*"
     @element = Type.coerce(element_type)
-    @ctor = define_function(:ctor, Function::Signature.new([type_ref^:self]))
-    @dtor = define_function(:dtor, Function::Signature.new([type_ref^:self]))
-    @copy = define_function(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
-    @equal = define_function(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
-    @identify = define_function(:identify, Function::Signature.new([type_ref^:self], :size_t))
-    @less = define_function(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    setup_specials
     element_type_check(element)
   end
   
@@ -125,16 +122,6 @@ class Collection < Type
     raise "type #{obj.type} (#{obj}) must be copyable" unless obj.copyable?
     raise "type #{obj.type} (#{obj}) must be comparable" unless obj.comparable?
     raise "type #{obj.type} (#{obj}) must be hashable" unless obj.hashable?
-  end
-  
-  # @private
-  class Redirector < Function
-    # Redirect call to the specific macro
-    def call(*params) "_#{name}(" + params.join(',') + ')' end
-  end # Redirector
-  
-  def define_function(name, signature)
-    Redirector.new(method_missing(name), signature)
   end
   
 end # Collection
