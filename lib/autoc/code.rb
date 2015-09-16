@@ -50,7 +50,7 @@ class Code
     end
   end
   def source_size
-    s = String.new
+    s = ::String.new
     write_decls(s)
     write_defs(s)
     s.size

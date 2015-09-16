@@ -153,6 +153,7 @@ class HashSet < Collection
   end
   
   def write_intf_types(stream)
+    super
     stream << %$
       /***
       **** #{type}<#{element.type}> (#{self.class})
@@ -203,6 +204,7 @@ class HashSet < Collection
   end
 
   def write_impls(stream, define)
+    super
     @list.write_intf_decls(stream, static, inline)
     @list.write_impls(stream, static)
     stream << %$

@@ -162,6 +162,7 @@ class HashMap < Collection
   end
   
   def write_intf_types(stream)
+    super
     stream << %$
       /***
       **** #{type}<#{key.type},#{value.type}> (#{self.class})
@@ -213,6 +214,7 @@ class HashMap < Collection
   end
 
   def write_impls(stream, define)
+    super
     stream << %$
       #define AUTOC_VALID_VALUE 1
       #define AUTOC_VALID_KEY 2
