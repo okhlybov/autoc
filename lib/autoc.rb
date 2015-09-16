@@ -27,6 +27,7 @@ end # AutoC
 
 require "autoc/code"
 require "autoc/type"
+require "autoc/string"
 require "autoc/collection"
 require "autoc/collection/list"
 require "autoc/collection/queue"
