@@ -448,13 +448,30 @@ end # Reference
 module Type::Redirecting
 
   # Setup special methods which receive types by reference instead of by value
-  def setup_specials
+  def initialize_redirectors
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self]))
     @dtor = define_redirector(:dtor, Function::Signature.new([type_ref^:self]))
     @copy = define_redirector(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
     @equal = define_redirector(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
     @identify = define_redirector(:identify, Function::Signature.new([type_ref^:self], :size_t))
     @less = define_redirector(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+  end
+  
+  def write_redirectors(stream, declare, define)
+    # Emit default redirection macros
+    # Unlike other special methods the constructors may have extra arguments
+    # Assume the constructor's first parameter is always a target
+    ctor_ex = ctor.parameters.names[1..-1]
+    ctor_lt = ["self"].concat(ctor_ex).join(',')
+    ctor_rt = ["&self"].concat(ctor_ex).join(',')
+    stream << %$
+      #define _#{ctor}(#{ctor_lt}) #{ctor}(#{ctor_rt})
+      #define _#{dtor}(self) #{dtor}(&self)
+      #define _#{identify}(self) #{identify}(&self)
+      #define _#{copy}(dst,src) #{copy}(&dst,&src)
+      #define _#{equal}(lt,rt) #{equal}(&lt,&rt)
+      #define _#{less}(lt,rt) #{less}(&lt,&rt)
+    $
   end
   
 private
