@@ -372,6 +372,8 @@ class Reference < Type
     :public?, :private?, :static?,
     :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
   
+  attr_reader :target
+    
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
