@@ -17,6 +17,8 @@ class String < Type
     super
     @list = Reference.new(List.new(list, char_type_ref, :public))
     initialize_redirectors
+    @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, "const #{char_type_ref}"^:pchar]))
+    @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
   
   def write_intf_types(stream)
@@ -44,40 +46,45 @@ class String < Type
     super
     write_redirectors(stream, declare, define)
     stream << %$
-      #define #{ctor}(self) #{ctorPChar}(self, "")
-      #{declare} void #{ctorPChar}(#{type_ref}, const #{char_type_ref});
+      #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
       #{declare} #{copy.declaration};
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
-      #{declare} void #{renderEx}(#{type_ref});
-      #{define} void #{render}(#{type_ref} self) {
+      #{declare} void #{render}(#{type_ref});
+      #{define} void #{join}(#{type_ref} self) {
         #{assert}(self);
-        if(self->list) #{renderEx}(self);
+        if(self->list) #{render}(self);
       }
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
-        #{render}(self);
+        #{join}(self);
         return self->size;
       }
       #{define} int #{within}(#{type_ref} self, size_t index) {
         #{assert}(self);
-        /* Excessive call to #{render}(self); */
+        /* Excessive call to #{join}(self); */
         return index < #{size}(self);
       }
       #{define} #{char_type} #{get}(#{type_ref} self, size_t index) {
         #{assert}(self);
         #{assert}(#{within}(self, index));
-        #{render}(self);
+        #{join}(self);
         return self->string[index];
       }
       #{define} void #{set}(#{type_ref} self, size_t index, #{char_type} value) {
         #{assert}(self);
         #{assert}(#{within}(self, index));
-        #{render}(self);
+        #{join}(self);
         self->string[index] = value;
       }
-      #{declare} void #{appendPChar}(#{type_ref}, const #{char_type_ref});
+      #{define} const #{char_type_ref} #{chars}(#{type_ref} self) {
+        #{assert}(self);
+        #{join}(self);
+        return self->string;
+      }
+      #{declare} void #{appendChars}(#{type_ref}, const #{char_type_ref});
+      #{declare} void #{append}(#{type_ref}, #{type_ref});
     $
   end
 
@@ -89,7 +96,7 @@ class String < Type
       }
       stream << %$
         #include <string.h>
-        #{define} void #{renderEx}(#{type_ref} self) {
+        #{define} void #{render}(#{type_ref} self) {
           #{assert}(self);
           #{assert}(self->list);
           #{@list.it} it;
@@ -99,7 +106,7 @@ class String < Type
           while(#{@list.itMove}(&it)) {
             size += strlen(#{@list.itGet}(&it));
           }
-          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type}));
+          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type})); #{assert}(string);
           #{@list.itCtor}(&it, self->strings);
           while(#{@list.itMove}(&it)) {
             #{char_type_ref} s = #{@list.itGet}(&it);
@@ -111,16 +118,10 @@ class String < Type
           self->string = string;
           self->size = size;
         }
-        static const #{char_type_ref} #{pChar}(#{type_ref} self) {
-          #{assert}(self);
-          #{render}(self);
-          return self->string;
-        }
-        #{define} void #{ctorPChar}(#{type_ref} self, const #{char_type_ref} pchar) {
+        #{define} #{ctor.definition} {
           #{assert}(self);
           #{assert}(pchar);
-          self->size = strlen(pchar);
-          self->string = (#{char_type_ref})#{malloc}(self->size + sizeof(#{char_type}));
+          self->string = (#{char_type_ref})#{malloc}((self->size = strlen(pchar) + 1)*sizeof(#{char_type})); #{assert}(self->string);
           strcpy(self->string, pchar);
           self->list = 0;
         }
@@ -140,24 +141,24 @@ class String < Type
         #{define} #{copy.definition} {
           #{assert}(src);
           #{assert}(dst);
-          #{ctorPChar}(dst, #{pChar}(src));
+          #{ctor}(dst, #{chars}(src));
         }
         #{define} #{equal.definition} {
           #{assert}(lt);
           #{assert}(rt);
-          return strcmp(#{pChar}(lt), #{pChar}(rt)) == 0;
+          return strcmp(#{chars}(lt), #{chars}(rt)) == 0;
         }
         #{define} #{identify.definition} {
           size_t index, result = 0;
           #{assert}(self);
-          #{render}(self);
+          #{join}(self);
           for(index = 0; index < self->size; ++index) {
             result ^= self->string[index];
             result = AUTOC_RCYCLE(result);
           }
           return result;
         }
-        static void #{setupList}(#{type_ref} self) {
+        static void #{split}(#{type_ref} self) {
           #{@list.type} strings;
           #{assert}(self);
           if(!self->list) {
@@ -167,12 +168,20 @@ class String < Type
             self->list = 1;
           }
         }
-        #{define} void #{appendPChar}(#{type_ref} self, const #{char_type_ref} pchar) {
+        #{define} void #{appendChars}(#{type_ref} self, const #{char_type_ref} pchar) {
+          #{char_type_ref} string;
           #{assert}(self);
           #{assert}(pchar);
-          #{setupList}(self);
+          #{split}(self);
           #{assert}(self->list);
-          /* TODO */
+          string = (#{char_type_ref})#{malloc}((strlen(pchar) + 1)*sizeof(#{char_type})); #{assert}(string);
+          strcpy(string, pchar);
+          #{@list.push}(self->strings, string);
+        }
+        #{define} void #{append}(#{type_ref} self, #{type_ref} from) {
+          #{assert}(self);
+          #{assert}(from);
+          #{appendChars}(self, #{chars}(from));
         }
       $
     end
