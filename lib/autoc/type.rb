@@ -169,14 +169,16 @@ class Type < Code
     @type = type.to_s
     @type_ref = "#{self.type}*"
     @visibility = [:public, :private, :static].include?(visibility) ? visibility : raise("unsupported visibility")
-    @capability = Set[:constructible, :destructible, :copyable, :comparable, :hashable, :orderable] # Can be used to disable specific capabilities for a type
     # Canonic special method signatures
-    @ctor_signature = Function::Signature.new([type^:self])
-    @dtor_signature = Function::Signature.new([type^:self])
-    @copy_signature = Function::Signature.new([type^:dst, type^:src])
-    @equal_signature = Function::Signature.new([type^:lt, type^:rt], :int)
-    @identify_signature = Function::Signature.new([type^:self], :size_t)
-    @less_signature = Function::Signature.new([type^:lt, type^:rt], :int)
+    @signature = {
+      :ctor => Function::Signature.new([type^:self]),
+      :dtor => Function::Signature.new([type^:self]),
+      :copy => Function::Signature.new([type^:dst, type^:src]),
+      :equal => Function::Signature.new([type^:lt, type^:rt], :int),
+      :identify => Function::Signature.new([type^:self], :size_t),
+      :less => Function::Signature.new([type^:lt, type^:rt], :int),
+    }
+    @capability = Set[*@signature.keys] # Can be used to disable specific capabilities for a type
   end
   
   def method_missing(method, *args)
@@ -245,17 +247,17 @@ class Type < Code
   
   def static?; @visibility == :static end
 
-  def constructible?; @capability.include?(:constructible) end
+  def constructible?; @capability.include?(:ctor) end
 
-  def destructible?; @capability.include?(:destructible) end
+  def destructible?; @capability.include?(:dtor) end
 
-  def copyable?; @capability.include?(:copyable) end
+  def copyable?; @capability.include?(:copy) end
 
-  def comparable?; @capability.include?(:comparable) end
+  def comparable?; @capability.include?(:equal) end
   
-  def orderable?; @capability.include?(:orderable) && comparable? end
+  def orderable?; @capability.include?(:less) && comparable? end
 
-  def hashable?; @capability.include?(:hashable) && comparable? end
+  def hashable?; @capability.include?(:identify) && comparable? end
 
   # Create forwarding readers which take arbitrary number of arguments
   [:ctor, :dtor, :copy, :equal, :identify, :less].each do |name|
@@ -302,33 +304,37 @@ class UserDefinedType < Type
     super(t)
     @prefix = AutoC.c_id(opt[:prefix]) unless opt[:prefix].nil?
     @deps = []; @deps << PublicDeclaration.new(opt[:forward]) unless opt[:forward].nil?
-    opt.default = :unset # This allows to use nil as a value to indicate that the specific method is not available
-    opt[:ctor].nil? ? @capability.subtract([:constructible]) : define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
-    opt[:dtor].nil? ? @capability.subtract([:destructible]) : define_callable(:dtor, opt) {def call(obj) end}
-    opt[:copy].nil? ? @capability.subtract([:copyable]) : define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
-    opt[:equal].nil? ? @capability.subtract([:comparable]) : define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
-    opt[:less].nil? ? @capability.subtract([:orderable]) : define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
-    opt[:identify].nil? ? @capability.subtract([:hashable]) : define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
+    define_callable(:ctor, opt) {def call(obj) "((#{obj}) = 0)" end}
+    define_callable(:dtor, opt) {def call(obj) end}
+    define_callable(:copy, opt) {def call(dst, src) "((#{dst}) = (#{src}))" end}
+    define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
+    define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
+    define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
     # Handle specific requirements
-    @capability.subtract([:constructible]) if @ctor.parameters.size > 1 # Constructible type must not have extra parameters besides self
+    @capability.subtract([:ctor]) if constructible? && @ctor.parameters.size > 1 # Constructible type must not have extra parameters besides self
   end
   
   private
   
   # Default methods creator
   def define_callable(name, opt, &code)
-    iv = "@#{name}"
-    ivs = "@#{name}_signature"
-    c = if opt[name] == :unset
-      # Synthesize statement block with default (canonic) parameter list
-      Class.new(Statement, &code).new(instance_variable_get(ivs).parameters)
-    elsif opt[name].is_a?(Function)
-      opt[name] # If a Function instance is given, pass it through
+    if opt.has_key?(name) && opt[name].nil?
+      # Disable specific capability by explicitly setting the key to nil
+      @capability.subtract([name])
     else
-      # If only a name is specified, assume it is the function name with default signature
-      Function.new(opt[name], instance_variable_get(ivs))
+      iv = "@#{name}"
+      signature = @signature[name.to_sym]
+      c = if opt[name].nil?
+        # Implicit nil as returned by Hash#default method does synthesize statement block with default (canonic) parameter list
+        Class.new(Statement, &code).new(signature.parameters)
+      elsif opt[name].is_a?(Function)
+        opt[name] # If a Function instance is given, pass it through
+      else
+        # If only a name is specified, assume it is the function name with default signature
+        Function.new(opt[name], signature)
+      end
+      instance_variable_set(iv, c)
     end
-    instance_variable_set(iv, c)
   end
   
 end # UserDefinedType
@@ -377,8 +383,10 @@ class Reference < Type
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
-    @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
-    define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    if constructible?
+      @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
+      define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    end
     define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
     define_callable(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
@@ -439,8 +447,8 @@ class Reference < Type
     end
   end # BoundStatement
   
-  def define_callable(name, params, &code)
-    instance_variable_set("@#{name}", Class.new(BoundStatement, &code).new(self, @target, params))
+  def define_callable(name, param_types, &code)
+    instance_variable_set("@#{name}", Class.new(BoundStatement, &code).new(self, @target, param_types))
   end
   
 end # Reference
