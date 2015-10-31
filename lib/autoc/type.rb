@@ -323,7 +323,7 @@ class UserDefinedType < Type
       @capability.subtract([name])
     else
       iv = "@#{name}"
-      signature = @signature[name.to_sym]
+      signature = @signature[name]
       c = if opt[name].nil?
         # Implicit nil as returned by Hash#default method does synthesize statement block with default (canonic) parameter list
         Class.new(Statement, &code).new(signature.parameters)
@@ -383,10 +383,8 @@ class Reference < Type
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
-    if constructible?
-      @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
-      define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
-    end
+    @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
+    define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
     define_callable(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
@@ -459,12 +457,12 @@ module Type::Redirecting
 
   # Setup special methods which receive types by reference instead of by value
   def initialize_redirectors
-    @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self]))
-    @dtor = define_redirector(:dtor, Function::Signature.new([type_ref^:self]))
-    @copy = define_redirector(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
-    @equal = define_redirector(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
-    @identify = define_redirector(:identify, Function::Signature.new([type_ref^:self], :size_t))
-    @less = define_redirector(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    define_redirector(:ctor, Function::Signature.new([type_ref^:self]))
+    define_redirector(:dtor, Function::Signature.new([type_ref^:self]))
+    define_redirector(:copy, Function::Signature.new([type_ref^:dst, type_ref^:src]))
+    define_redirector(:equal, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
+    define_redirector(:identify, Function::Signature.new([type_ref^:self], :size_t))
+    define_redirector(:less, Function::Signature.new([type_ref^:lt, type_ref^:rt], :int))
   end
   
   def write_redirectors(stream, declare, define)
@@ -493,7 +491,7 @@ private
   end # Redirector
   
   def define_redirector(name, signature)
-    Redirector.new(method_missing(name), signature)
+    instance_variable_set("@#{name}", Redirector.new(method_missing(name), signature))
   end
       
 end # Redirecting
