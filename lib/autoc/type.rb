@@ -1,4 +1,3 @@
-require "set"
 require "forwardable"
 require "autoc/code"
 
@@ -178,7 +177,6 @@ class Type < Code
       :identify => Function::Signature.new([type^:self], :size_t),
       :less => Function::Signature.new([type^:lt, type^:rt], :int),
     }
-    @capability = Set[*@signature.keys] # Can be used to disable specific capabilities for a type
   end
   
   def method_missing(method, *args)
@@ -247,17 +245,29 @@ class Type < Code
   
   def static?; @visibility == :static end
 
-  def constructible?; @capability.include?(:ctor) end
+  # A generic type is not required to provide any special functions therefore all the
+  # availability methods below return false
+    
+  # Returns *true* if the type provides a well-defined parameterless default type constructor
+  def constructible?; false end
 
-  def destructible?; @capability.include?(:dtor) end
+  # Returns *true* if the type provides a well-defined type constructor which can have extra arguments
+  def initializable?; false end
 
-  def copyable?; @capability.include?(:copy) end
+  # Returns *true* if the type provides a well-defined type destructor
+  def destructible?; false end
 
-  def comparable?; @capability.include?(:equal) end
+  # Returns *true* if the type provides a well-defined copy constructor to create a clone of an instance
+  def copyable?; false end
+
+  # Returns *true* if the type provides a well-defined equality test function
+  def comparable?; false end
   
-  def orderable?; @capability.include?(:less) && comparable? end
+  # Returns *true* if the type provides a well-defined 'less than' test function
+  def orderable?; false end
 
-  def hashable?; @capability.include?(:identify) && comparable? end
+  # Returns *true* if the type provides a well-defined hash calculation function
+  def hashable?; false end
 
   # Create forwarding readers which take arbitrary number of arguments
   [:ctor, :dtor, :copy, :equal, :identify, :less].each do |name|
@@ -310,19 +320,29 @@ class UserDefinedType < Type
     define_callable(:equal, opt) {def call(lt, rt) "((#{lt}) == (#{rt}))" end}
     define_callable(:less, opt) {def call(lt, rt) "((#{lt}) < (#{rt}))" end}
     define_callable(:identify, opt) {def call(obj) "((size_t)(#{obj}))" end}
-    # Handle specific requirements
-    @capability.subtract([:ctor]) if constructible? && @ctor.parameters.size > 1 # Constructible type must not have extra parameters besides self
   end
   
+  def constructible?; !@ctor.nil? && @ctor.parameters.size == 1 end
+
+  def initializable?; !@ctor.nil? end
+
+  def destructible?; !@dtor.nil? end
+
+  def copyable?; !@copy.nil? end
+
+  def comparable?; !@equal.nil? end
+
+  def orderable?; !@less.nil? end
+
+  def hashable?; !@identify.nil? end
+    
   private
   
   # Default methods creator
   def define_callable(name, opt, &code)
-    if opt.has_key?(name) && opt[name].nil?
-      # Disable specific capability by explicitly setting the key to nil
-      @capability.subtract([name])
+    c = if opt.has_key?(name) && opt[name].nil?
+      nil # Disable specific capability by explicitly setting the key to nil
     else
-      iv = "@#{name}"
       signature = @signature[name]
       c = if opt[name].nil?
         # Implicit nil as returned by Hash#default method does synthesize statement block with default (canonic) parameter list
@@ -333,8 +353,8 @@ class UserDefinedType < Type
         # If only a name is specified, assume it is the function name with default signature
         Function.new(opt[name], signature)
       end
-      instance_variable_set(iv, c)
     end
+    instance_variable_set("@#{name}", c)
   end
   
 end # UserDefinedType
@@ -376,15 +396,18 @@ class Reference < Type
   def_delegators :@target,
     :prefix,
     :public?, :private?, :static?,
-    :constructible?, :destructible?, :copyable?, :comparable?, :orderable?, :hashable?
-  
+    :constructible?, :initializable?, :destructible?, :comparable?, :orderable?, :hashable?
+
+  # Return *true* since reference copying involves no call to the underlying type's copy constructor  
+  def copyable?; true end
+    
   attr_reader :target
     
   def initialize(target)
     @target = Type.coerce(target)
     super(@target.type_ref) # NOTE : the type of the Reference instance itself is actually a pointer type
-    @ctor_params = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
-    define_callable(:ctor, @ctor_params) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
+    @init = Dispatcher::ParameterArray.new(@target.ctor.parameters[1..-1]) # Capture extra parameters from the target type constructor
+    define_callable(:ctor, @init) {def call(obj, *params) "((#{obj}) = #{@ref.new?}(#{params.join(',')}))" end}
     define_callable(:dtor, [type]) {def call(obj) "#{@ref.free?}(#{obj})" end}
     define_callable(:copy, [type, type]) {def call(dst, src) "((#{dst}) = #{@ref.ref?}(#{src}))" end}
     define_callable(:equal, [type, type]) {def call(lt, rt) @target.equal("*#{lt}", "*#{rt}") end}
@@ -403,7 +426,7 @@ class Reference < Type
       /***
       ****  <#{type}> (#{self.class})
       ***/
-      #{declare} #{type} #{new?}(#{@ctor_params.declaration});
+      #{declare} #{type} #{new?}(#{@init.declaration});
       #{declare} #{type} #{ref?}(#{type});
       #{declare} void #{free?}(#{type});
     $
@@ -412,9 +435,9 @@ class Reference < Type
   def write_impls(stream, define)
     stream << %$
     #define AUTOC_COUNTER(p) (*(size_t*)((char*)(p) + sizeof(#{@target.type})))
-      #{define} #{type} #{new?}(#{@ctor_params.definition}) {
+      #{define} #{type} #{new?}(#{@init.definition}) {
         #{type} self = (#{type})#{malloc}(sizeof(#{@target.type}) + sizeof(size_t)); #{assert}(self);
-        #{@target.ctor("*self", *@ctor_params.names)};
+        #{@target.ctor("*self", *@init.names)};
         AUTOC_COUNTER(self) = 1;
         return self;
       }

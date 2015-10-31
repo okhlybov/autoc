@@ -146,20 +146,15 @@ class HashMap < Collection
     @key = Type.coerce(key_type)
     @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
     @set = HashSet.new(set, @entry, :static)
-    @capability.subtract [:orderable]
-    element_type_check(value)
-    key_type_check(key)
+    element_requirement(value)
+    key_requirement(key)
   end
-  
+
   def copyable?; super && key.copyable? end
   
   def comparable?; super && key.comparable? end
   
-  def hashable?
-    # NOTE : must be in sync with Type#hashable?
-    # No super call here because the map's element need not to be hashable,- only the key must be
-    @capability.include?(:hashable) && comparable? && key.hashable?
-  end
+  def hashable?; super && key.hashable? end
   
   def write_intf_types(stream)
     super

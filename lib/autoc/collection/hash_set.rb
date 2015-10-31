@@ -148,8 +148,7 @@ class HashSet < Collection
   def initialize(*args)
     super
     @list = List.new(list, element, :static)
-    @capability.subtract [:orderable]
-    key_type_check(element)
+    key_requirement(element)
   end
   
   def write_intf_types(stream)
@@ -434,9 +433,9 @@ class HashSet < Collection
   
   private
   
-  def key_type_check(obj)
+  def key_requirement(obj)
+    element_requirement(obj)
     raise "type #{obj.type} (#{obj}) must be hashable" unless obj.hashable?
-    element_type_check(obj)
   end
 
 end # HashSet
