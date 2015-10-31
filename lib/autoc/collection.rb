@@ -89,26 +89,48 @@ class Collection < Type
     @it_ref = "#{it}*"
     @element = Type.coerce(element_type)
     initialize_redirectors
-    element_type_check(element)
+    element_requirement(element)
   end
   
-  def copyable?; super && element.copyable? end
+  # Normally all collections are expected to provide all special functions
+  # If a collection does not provide specific function it should override the respective method
   
-  def comparable?; super && element.comparable? end
-  
-  def hashable?; super && element.hashable? end
-  
+  # Collection always has default constructor
+  def constructible?; true end
+
+  # Collection always has constructor
+  def initializable?; true end
+
+  # Collection always has destructor but the element is required to be destructible on its own
+  # because collection destruction incurs destruction of all contained elements
+  def destructible?; true && element.destructible? end
+
+  # Collection always has copy constructor but the element is required to be copyable on its own
+  # because collection copying incurs copying of all contained elements
+  def copyable?; true && element.copyable? end
+
+  # Collection always has equality tester but the element is required to be comparable on its own
+  # because collection comparison incurs comparison of all contained elements
+  def comparable?; true && element.comparable? end
+
+  # So far there are no orderable collections therefore inherit false-returning #orderable? 
+
+  # Collection always has hash calculation function but the element is required to be hashable on its own
+  # because collection comparison incurs hash calculation for all contained elements
+  def hashable?
+    # Since using collection as an element of a hash-based container also requires it to be comparable as well 
+    comparable? && element.hashable?
+  end
+
   def write_intf_decls(stream, declare, define)
     write_redirectors(stream, declare, define)
   end
   
   private
   
-  def element_type_check(obj)
+  def element_requirement(obj)
     raise "type #{obj.type} (#{obj}) must be destructible" unless obj.destructible?
     raise "type #{obj.type} (#{obj}) must be copyable" unless obj.copyable?
-    raise "type #{obj.type} (#{obj}) must be comparable" unless obj.comparable?
-    raise "type #{obj.type} (#{obj}) must be hashable" unless obj.hashable?
   end
   
 end # Collection

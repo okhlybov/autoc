@@ -154,11 +154,6 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class List < Collection
   
-  def initialize(*args)
-    super
-    @capability.subtract [:orderable]
-  end
-  
   def write_intf_types(stream)
     super
     stream << %$

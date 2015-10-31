@@ -124,11 +124,13 @@ class Vector < Collection
   def initialize(*args)
     super
     # Override the default type constructor as the Vector's requires one extra parameter
-    # Note that this makes the Vector instance un-constructible
+    # Note that this makes the Vector instance non-constructible
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, :size_t^:element_count]))
-    @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
 
+  # No default constructor provided
+  def constructible?; false end
+    
   def write_intf_types(stream)
     super
     stream << %$
@@ -306,8 +308,8 @@ class Vector < Collection
  
   private
   
-  def element_type_check(obj)
-    # Additional requirement is imposed on the vector's element
+  def element_requirement(obj)
+    # Vector requires the element to have default parameterless constructor
     raise "type #{obj.type} (#{obj}) must be constructible" unless obj.constructible?
     super
   end
