@@ -217,6 +217,8 @@ class Type < Code
     end
   end
   
+  # Abstract methods which must be defined in descendant classes
+  
   # def write_intf_types(stream)
   
   # def write_intf_decls(stream, declare, define)
@@ -336,6 +338,14 @@ class UserDefinedType < Type
 
   def hashable?; !@identify.nil? end
     
+  # The methods below are left empty as the user-defined types have no implementation on their own
+
+  def write_intf_types(stream) end
+
+  def write_intf_decls(stream, declare, define) end
+
+  def write_impls(stream, define) end
+
   private
   
   # Default methods creator
