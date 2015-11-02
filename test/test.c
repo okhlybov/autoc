@@ -78,7 +78,7 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 #define it(x) ValueTypeVectorIt##x
 
 
-static void type(Test)() {
+static void type(Test1)() {
     ValueType e1, e2;
     Type c1, c2;
     TypeIt it;
@@ -136,7 +136,7 @@ static void type(Test)() {
 #define it(x) ValueTypeListIt##x
 
 
-static void type(Test)() {
+static void type(Test1)() {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -227,7 +227,7 @@ static void type(Test)() {
  * Queue is a non-strict superset of List
  * so the test case for the latter can be reused as-is 
  */
-static void type(Test)() {
+static void type(Test1)() {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -314,7 +314,7 @@ static void type(Test)() {
 #define it(x) ValueTypeSetIt##x
 
 
-static void type(Test)() {
+static void type(Test1)() {
     ValueType e1, e2, e3;
     Type c1, c2, cc1, cc2;
     TypeIt it;
@@ -461,7 +461,7 @@ static void type(Test)() {
 #define it(x) ValueTypeMapIt##x
 
 
-static void type(Test)() {
+static void type(Test1)() {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
