@@ -4,7 +4,82 @@ require "autoc/type"
 
 module AutoC
   
+
+=begin
+
+String is wrapper around standard C string which has the capabilities of a plain string and a string builder optimized for appending.
+
+The String's default character type, *_CharType_*, is *_char_* although this can be changed. 
+
+String generally obeys the Vector interface with respect to working with its contents.
+
+== Generated C interface
+
+=== Collection management
+
+[cols="2*"]
+|===
+|*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+|
+Create a new string +dst+ filled with the contents of +src+.
+
+NOTE: Previous contents of +dst+ is overwritten.
+
+|*_void_* ~type~Ctor(*_Type_* * +self+, *_const CharType *_* +chars+)
+|
+Create a new string +self+ with a _copy_ of null-terminated C string +chars+.
+
+NOTE: Previous contents of +self+ is overwritten.
+
+|*_void_* ~type~Dtor(*_Type_* * +self+)
+|
+Destroy string +self+.
+
+|*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|
+Return non-zero value if strings +lt+ and +rt+ are considered equal by contents and zero value otherwise.
+
+|*_size_t_* ~type~Identify(*_Type_* * +self+)
+|
+Return hash code for string +self+.
+|===
+
+=== Basic operations
+
+[cols=2*]
+|===
+|*_const CharType *_* ~type~Chars(*_Type_* * +self+)
+|
+Return a _view_ of the string in a form of standard C null-terminated array.
   
+WARNING: the returned C array should be considered *volatile* and thus may be invalidated by a subsequent call to any String method!    
+   
+|*_CharType_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
+|
+Return a _copy_ of the character stored in +self+ at position +index+.
+
+WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
+
+|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_CharType_* +what+)
+|
+
+Store a _copy_ of the character +what+ in string +self+ at position +index+.
+
+WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
+
+|*_size_t_* ~type~Size(*_Type_* * +self+)
+|
+Return number of characters stored in string +self+.
+
+Note that this does not include the null terminator.
+
+|*_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
+|
+Return non-zero value if +index+ is a valid character index and zero value otherwise.
+Valid index belongs to the range 0 ... ~type~Size()-1.
+|===
+   
+=end  
 class String < Type
 
   include Redirecting
@@ -18,9 +93,11 @@ class String < Type
     @list = Reference.new(List.new(list, char_type_ref, :public))
     initialize_redirectors
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, "const #{char_type_ref}"^:chars]))
-    @capability.subtract [:constructible, :orderable] # No default constructor and no less operation defined
   end
   
+  # No default constructor provided
+  def constructible?; false end
+
   def write_intf_types(stream)
     stream << %$
       /***
@@ -51,10 +128,10 @@ class String < Type
       #{declare} #{copy.declaration};
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
-      #{declare} void #{join_}(#{type_ref});
+      #{declare} void #{joinEx}(#{type_ref});
       #{define} void #{join}(#{type_ref} self) {
         #{assert}(self);
-        if(self->list) #{join_}(self);
+        if(self->list) #{joinEx}(self);
       }
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
@@ -83,10 +160,10 @@ class String < Type
         #{join}(self);
         return self->data.string;
       }
-      #{declare} void #{split_}(#{type_ref});
+      #{declare} void #{splitEx}(#{type_ref});
       #{define} void #{split}(#{type_ref} self) {
         #{assert}(self);
-        if(!self->list) #{split_}(self);
+        if(!self->list) #{splitEx}(self);
       }
       #{declare} void #{pushChars}(#{type_ref}, const #{char_type_ref});
       #{declare} void #{push}(#{type_ref}, #{type_ref});
@@ -106,7 +183,7 @@ class String < Type
       stream << %$
         #include <stdio.h>
         #include <string.h>
-        #{define} void #{join_}(#{type_ref} self) {
+        #{define} void #{joinEx}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
           size_t* sizes; /* Avoiding excessive call to strlen() */
@@ -130,7 +207,7 @@ class String < Type
           self->list = 0;
           #{free}(sizes);
         }
-        #{define} void #{split_}(#{type_ref} self) {
+        #{define} void #{splitEx}(#{type_ref} self) {
           #{@list.type} strings;
           #{assert}(self);
           #{assert}(!self->list);
