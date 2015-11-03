@@ -475,6 +475,25 @@ ValueTypeMap = Class.new(AutoC::HashMap) do
   end
 end.new(:ValueTypeMap, ValueType, ValueType)
 
+Str = Class.new(AutoC::String) do
+  def write_intf(stream)
+    super
+    stream << %$#{extern} void #{test!}();$
+  end
+  def write_defs(stream)
+    super
+    stream << %$
+      void #{test!}() {
+        #{type} s1, s2, s3;
+        #{ctor}(&s1, "A");
+        #{ctor}(&s2, "B");
+        #{dtor}(&s1);
+        #{dtor}(&s2);
+      }
+    $
+  end
+end.new(:Str)
+
 AutoC::Module.generate!(:Test) do |c|
   c << ValueTypeVector
   c << ValueTypeList
@@ -487,4 +506,5 @@ AutoC::Module.generate!(:Test) do |c|
   c << AutoC::Vector.new(:PIntVector, PInt)
   c << PInt << PValueType
   c << AutoC::List.new(:ListPVectorValue, AutoC::Reference.new(AutoC::Vector.new(:PVectorValue, PValueType)))
+  c << Str
 end
