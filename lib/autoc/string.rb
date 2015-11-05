@@ -123,16 +123,15 @@ class String < Type
     super
     write_redirectors(stream, declare, define)
     stream << %$
+      #define #{join}(self) if(self->list) #{runJoin}(self);
+      #define #{split}(self) if(!self->list) #{runSplit}(self);
+      #{declare} void #{runJoin}(#{type_ref});
+      #{declare} void #{runSplit}(#{type_ref});
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
       #{declare} #{copy.declaration};
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
-      #{declare} void #{joinEx}(#{type_ref});
-      #{define} void #{join}(#{type_ref} self) {
-        #{assert}(self);
-        if(self->list) #{joinEx}(self);
-      }
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         #{join}(self);
@@ -140,8 +139,7 @@ class String < Type
       }
       #{define} int #{within}(#{type_ref} self, size_t index) {
         #{assert}(self);
-        /* Omitting excessive call to #{join}() */
-        return index < #{size}(self);
+        return index < #{size}(self); /* Omitting excessive call to #{join}() */
       }
       #{define} #{char_type} #{get}(#{type_ref} self, size_t index) {
         #{assert}(self);
@@ -159,11 +157,6 @@ class String < Type
         #{assert}(self);
         #{join}(self);
         return self->data.string;
-      }
-      #{declare} void #{splitEx}(#{type_ref});
-      #{define} void #{split}(#{type_ref} self) {
-        #{assert}(self);
-        if(!self->list) #{splitEx}(self);
       }
       #{declare} void #{pushChars}(#{type_ref}, const #{char_type_ref});
       #{declare} void #{push}(#{type_ref}, #{type_ref});
@@ -183,7 +176,7 @@ class String < Type
       stream << %$
         #include <stdio.h>
         #include <string.h>
-        #{define} void #{joinEx}(#{type_ref} self) {
+        #{define} void #{runJoin}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
           size_t* chunk; /* Avoiding excessive call to strlen() */
@@ -210,7 +203,7 @@ class String < Type
           self->size = total;
           self->list = 0;
         }
-        #{define} void #{splitEx}(#{type_ref} self) {
+        #{define} void #{runSplit}(#{type_ref} self) {
           #{@list.type} strings;
           #{assert}(self);
           #{assert}(!self->list);
