@@ -186,26 +186,29 @@ class String < Type
         #{define} void #{joinEx}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
-          size_t* sizes; /* Avoiding excessive call to strlen() */
-          size_t i, index = 0, size = 0;
+          size_t* chunk; /* Avoiding excessive call to strlen() */
+          size_t i, start = 0, total = 0;
           #{assert}(self);
           #{assert}(self->list);
-          sizes = (size_t*)malloc(#{@list.size}(self->data.strings)*sizeof(size_t)); #{assert}(sizes);
+          chunk = (size_t*)malloc(#{@list.size}(self->data.strings)*sizeof(size_t)); #{assert}(chunk);
           #{@list.itCtor}(&it, self->data.strings);
           for(i = 0; #{@list.itMove}(&it); ++i) {
-            size += (sizes[i] = strlen(#{@list.itGet}(&it)));
+            total += (chunk[i] = strlen(#{@list.itGet}(&it)));
           }
-          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type})); #{assert}(string);
+          string = (#{char_type_ref})#{malloc}((total + 1)*sizeof(#{char_type})); #{assert}(string);
           #{@list.itCtor}(&it, self->data.strings);
-          for(i = 0; #{@list.itMove}(&it); ++i) {
-            strcpy(&string[index], #{@list.itGet}(&it));
-            index += sizes[i];
+          /* List is a LIFO structure therefore merging should be performed from right to left */
+          start = total - chunk[i = 0];
+          while(#{@list.itMove}(&it)) {
+            memcpy(&string[start], #{@list.itGet}(&it), chunk[i]*sizeof(#{char_type}));
+            start -= chunk[++i];
           }
+          string[total] = '\\0';
+          #{free}(chunk);
           #{@list.free?}(self->data.strings);
           self->data.string = string;
-          self->size = size;
+          self->size = total;
           self->list = 0;
-          #{free}(sizes);
         }
         #{define} void #{splitEx}(#{type_ref} self) {
           #{@list.type} strings;
