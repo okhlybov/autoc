@@ -485,8 +485,14 @@ Str = Class.new(AutoC::String) do
     stream << %$
       void #{test!}() {
         #{type} s1, s2, s3;
-        #{ctor}(&s1, "A");
-        #{ctor}(&s2, "B");
+        #{ctor}(&s1, "z");
+        #{ctor}(&s2, "x");
+        #{pushInt}(&s1, 0);
+        #{copy}(&s3, &s1);
+        #{push}(&s3, &s2);
+        #{pushPtr}(&s3, -1);
+        printf("%s\\n", #{chars}(&s3));
+        #{dtor}(&s3);
         #{dtor}(&s1);
         #{dtor}(&s2);
       }
