@@ -176,6 +176,21 @@ class String < Type
       stream << %$
         #include <stdio.h>
         #include <string.h>
+      
+        #undef AUTOC_SNPRINTF
+      
+        #if defined(_MSC_VER)
+          #define AUTOC_SNPRINTF sprintf_s
+        #elif defined(__DMC__)
+          #define AUTOC_SNPRINTF _snprintf
+        #elif defined(HAVE_SNPRINTF) || __STDC_VERSION__ >= 199901L /* Be Autotools-friendly, C99 must have snprintf()  */
+          #define AUTOC_SNPRINTF snprintf
+        #endif
+      
+        #ifndef AUTOC_SNPRINTF
+          /* #warning Using unsafe sprintf() function */
+        #endif
+      
         #{define} void #{runJoin}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
@@ -214,10 +229,15 @@ class String < Type
         }
         #{define} #{ctor.definition} {
           #{assert}(self);
-          #{assert}(chars);
-          self->data.string = (#{char_type_ref})#{malloc}((self->size = strlen(chars) + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
-          strcpy(self->data.string, chars);
-          self->list = 0;
+          if(chars) {
+            self->data.string = (#{char_type_ref})#{malloc}((self->size = strlen(chars) + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
+            strcpy(self->data.string, chars);
+            self->list = 0;
+          } else {
+            /* NULL argument is permitted and corresponds to empty string */
+            self->data.strings = #{@list.new?}();
+            self->list = 1;
+          }
         }
         #{define} #{dtor.definition} {
           #{assert}(self);
@@ -266,32 +286,57 @@ class String < Type
           #{assert}(from);
           #{pushChars}(self, #{chars}(from));
         }
-        #define AUTOC_BUF_SIZE 128
+        #define AUTOC_BUFFER_SIZE 64
         #{define} void #{pushChar}(#{type_ref} self, #{char_type} value) {
-          #{char_type} buffer[AUTOC_BUF_SIZE];
+          int i;
+          #{char_type} buffer[AUTOC_BUFFER_SIZE];
           #{assert}(self);
-          sprintf(buffer, "%c", (int)value);
+          #ifdef AUTOC_SNPRINTF
+            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%c", (int)value);
+          #else
+            i = sprintf(buffer, "%c", (int)value);
+          #endif
+          #{assert}(i >= 0 && i < sizeof(buffer));
           #{pushChars}(self, buffer);
         }
         #{define} void #{pushInt}(#{type_ref} self, int value) {
-          #{char_type} buffer[AUTOC_BUF_SIZE];
+          int i;
+          #{char_type} buffer[AUTOC_BUFFER_SIZE];
           #{assert}(self);
-          sprintf(buffer, "%d", value);
+          #ifdef AUTOC_SNPRINTF
+            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%d", value);
+          #else
+            i = sprintf(buffer, "%d", value);
+          #endif
+          #{assert}(i >= 0 && i < sizeof(buffer));
           #{pushChars}(self, buffer);
         }
         #{define} void #{pushFloat}(#{type_ref} self, double value) {
-          #{char_type} buffer[AUTOC_BUF_SIZE];
+          int i;
+          #{char_type} buffer[AUTOC_BUFFER_SIZE];
           #{assert}(self);
-          sprintf(buffer, "%e", value);
+          #ifdef AUTOC_SNPRINTF
+            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%e", value);
+          #else
+            i = sprintf(buffer, "%e", value);
+          #endif
+          #{assert}(i >= 0 && i < sizeof(buffer));
           #{pushChars}(self, buffer);
         }
         #{define} void #{pushPtr}(#{type_ref} self, void* ptr) {
-          #{char_type} buffer[AUTOC_BUF_SIZE];
+          int i;
+          #{char_type} buffer[AUTOC_BUFFER_SIZE];
           #{assert}(self);
-          sprintf(buffer, "%p", ptr);
+          #ifdef AUTOC_SNPRINTF
+            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%p", ptr);
+          #else
+            i = sprintf(buffer, "%p", ptr);
+          #endif
+          #{assert}(i >= 0 && i < sizeof(buffer));
           #{pushChars}(self, buffer);
         }
-        #undef AUTOC_BUF_SIZE
+        #undef AUTOC_BUFFER_SIZE
+        #undef AUTOC_SNPRINTF
       $
     end
     
