@@ -182,7 +182,13 @@ class Type < Code
   def method_missing(method, *args)
     str = method.to_s
     str = str.sub(/[\!\?]$/, '') # Strip trailing ? or !
+    x = false # Have leading underscore
+    if /_(.*)/ =~ str
+      str = $1
+      x = true
+    end
     fn = prefix + str[0,1].capitalize + str[1..-1] # Ruby 1.8 compatible
+    fn = "_" << fn if x # Carry over the leading underscore
     if args.empty?
       fn # Emit bare function name
     elsif args.size == 1 && args.first == nil

@@ -123,10 +123,10 @@ class String < Type
     super
     write_redirectors(stream, declare, define)
     stream << %$
-      #define #{join}(self) if(self->list) #{runJoin}(self);
-      #define #{split}(self) if(!self->list) #{runSplit}(self);
-      #{declare} void #{runJoin}(#{type_ref});
-      #{declare} void #{runSplit}(#{type_ref});
+      #define #{join}(self) if(self->list) #{_join}(self);
+      #define #{split}(self) if(!self->list) #{_split}(self);
+      #{declare} void #{_join}(#{type_ref});
+      #{declare} void #{_split}(#{type_ref});
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
       #{declare} #{copy.declaration};
@@ -191,7 +191,7 @@ class String < Type
           /* #warning Using unsafe sprintf() function */
         #endif
       
-        #{define} void #{runJoin}(#{type_ref} self) {
+        #{define} void #{_join}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
           size_t* chunk; /* Avoiding excessive call to strlen() */
@@ -212,13 +212,14 @@ class String < Type
             start -= chunk[++i];
           }
           string[total] = '\\0';
+          
           #{free}(chunk);
           #{@list.free?}(self->data.strings);
           self->data.string = string;
           self->size = total;
           self->list = 0;
         }
-        #{define} void #{runSplit}(#{type_ref} self) {
+        #{define} void #{_split}(#{type_ref} self) {
           #{@list.type} strings;
           #{assert}(self);
           #{assert}(!self->list);
