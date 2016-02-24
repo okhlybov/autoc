@@ -475,7 +475,7 @@ ValueTypeMap = Class.new(AutoC::HashMap) do
   end
 end.new(:ValueTypeMap, ValueType, ValueType)
 
-Str = Class.new(AutoC::String) do
+CharString = Class.new(AutoC::String) do
   def write_intf(stream)
     super
     stream << %$#{extern} void #{test!}();$
@@ -489,7 +489,7 @@ Str = Class.new(AutoC::String) do
         #{ctor}(&s2, "x");
         #{pushInt}(&s1, 0);
         #{copy}(&s3, &s1);
-        #{push}(&s3, &s2);
+        #{pushString}(&s3, &s2);
         #{pushPtr}(&s3, -1);
         printf("%s\\n", #{chars}(&s3));
         #{dtor}(&s3);
@@ -498,7 +498,7 @@ Str = Class.new(AutoC::String) do
       }
     $
   end
-end.new(:Str)
+end.new(:String)
 
 AutoC::Module.generate!(:Test) do |c|
   c << ValueTypeVector
@@ -512,5 +512,5 @@ AutoC::Module.generate!(:Test) do |c|
   c << AutoC::Vector.new(:PIntVector, PInt)
   c << PInt << PValueType
   c << AutoC::List.new(:ListPVectorValue, AutoC::Reference.new(AutoC::Vector.new(:PVectorValue, PValueType)))
-  c << Str
+  c << CharString
 end

@@ -7,7 +7,9 @@ module AutoC
 
 =begin
 
-String is wrapper around standard C string which has the capabilities of a plain string and a string builder optimized for appending.
+String is wrapper around the standard null-terminated C string which has the capabilities of both a plain string and a string builder optimized for appending and piecewise building.
+
+Unlike the plain C string, this String type has value type semantics but it can be turned into the reference type with {AutoC::Reference}.
 
 The String's default character type, *_CharType_*, is *_char_* although this can be changed. 
 
@@ -27,8 +29,10 @@ NOTE: Previous contents of +dst+ is overwritten.
 
 |*_void_* ~type~Ctor(*_Type_* * +self+, *_const CharType *_* +chars+)
 |
-Create a new string +self+ with a _copy_ of null-terminated C string +chars+.
+Create a new string +self+ with a _copy_ of the null-terminated C string +chars+.
 
+NULL value of +chars+ is premitted; this case corresponds to an empty string "".
+ 
 NOTE: Previous contents of +self+ is overwritten.
 
 |*_void_* ~type~Dtor(*_Type_* * +self+)
@@ -50,9 +54,11 @@ Return hash code for string +self+.
 |===
 |*_const CharType *_* ~type~Chars(*_Type_* * +self+)
 |
-Return a _view_ of the string in a form of standard C null-terminated array.
+Return a _read-only view_ of the string in a form of the standard C null-terminated string.
+
+The returned value need not to be freed.
   
-WARNING: the returned C array should be considered *volatile* and thus may be invalidated by a subsequent call to any String method!    
+WARNING: the returned value should be considered *volatile* and thus may be invalidated by a subsequent call to any String method!    
    
 |*_CharType_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 |
@@ -77,6 +83,32 @@ Note that this does not include the null terminator.
 |
 Return non-zero value if +index+ is a valid character index and zero value otherwise.
 Valid index belongs to the range 0 ... ~type~Size()-1.
+|===
+
+=== String buffer operations
+
+Functions which provide the string buffer functionality.
+This allows the incremental building of strings without excessive storage copying/reallocation.
+  
+[cols=2*]
+|===
+|*_int_* ~type~PushFormat(*_Type_* * +self+, *_const char*_* format, ...);
+|
+Append the _?sprintf()_- formatted string to +self+.
+
+Return non-zero value of successful formatting and zero value if the call to _?sprintf()_ failed.
+This usually happens due to the encoding error.
+
+This function tries to use the _vsnprintf()_ standard C function if possible and falls back to *unsafe* _vsprintf()_ function which is ought to be present in every ANSI-compliant standard C library.
+The former function is used on the platforms which are known to have it; the Autotools-compliant _HAVE_VSNPRINTF_ macro is also taken into consideration.
+ _Note that the choice is obviously made at compile-time._
+
+If using the _vsnprintf()_ and the allocated buffer is not large enough this function continuously expands the buffer to eventually accommodate the resulting string.
+On the contrary, when the *unsafe* _vsprintf()_ is used, the buffer overrun causes this function to *abort()* in order to prevent possible data corruption.   
+
+Current implementation operates on the heap-allocated buffer whose initial size is determined by the _AUTOC_BUFFER_SIZE_ macro.
+If not explicitly set it defaults to 1024 bytes.
+       
 |===
    
 =end  
@@ -161,7 +193,7 @@ class String < Type
       }
       #{declare} int #{pushFormat}(#{type_ref}, const char*, ...);
       #{declare} void #{pushChars}(#{type_ref}, const #{char_type_ref});
-      #{declare} void #{push}(#{type_ref}, #{type_ref});
+      #{declare} void #{pushString}(#{type_ref}, #{type_ref});
       #define #{pushChar}(self, c) #{pushFormat}(self, "%c", (#{char_type})(c))
       #define #{pushInt}(self, i) #{pushFormat}(self, "%d", (int)(i))
       #define #{pushFloat}(self, f) #{pushFormat}(self, "%e", (double)(f))
@@ -179,9 +211,6 @@ class String < Type
         #include <stdio.h>
         #include <string.h>
         #include <stdarg.h>
-        #ifndef AUTOC_BUFFER_SIZE
-          #define AUTOC_BUFFER_SIZE 1024
-        #endif
         #undef AUTOC_VSNPRINTF
         #if defined(_MSC_VER)
           #define AUTOC_VSNPRINTF _vsnprintf
@@ -191,7 +220,7 @@ class String < Type
           #define AUTOC_VSNPRINTF vsnprintf
         #endif
         #ifndef AUTOC_VSNPRINTF
-          /* #warning Using unsafe vsprintf() function */
+          #warning Using unsafe vsprintf() function
         #endif
         #{define} void #{_join}(#{type_ref} self) {
           #{@list.it} it;
@@ -234,7 +263,7 @@ class String < Type
           #{assert}(self);
           if(chars) {
             self->data.string = (#{char_type_ref})#{malloc}((self->size = strlen(chars) + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
-            strcpy(self->data.string, chars);
+            strcpy(self->data.string, chars); /* Using strcpy() here is considered to be safe because of the preceding call to strlen() */
             self->list = 0;
           } else {
             /* NULL argument is permitted and corresponds to empty string */
@@ -279,7 +308,14 @@ class String < Type
           va_list args;
           char* buffer;
           int i, c;
-          int buffer_size = AUTOC_BUFFER_SIZE;
+          int buffer_size =
+            /* Avoid redefining the macro since this might affect the code appended after this one */
+            #ifdef AUTOC_BUFFER_SIZE
+              AUTOC_BUFFER_SIZE
+            #else
+              1024 /* Stay in sync with the documentation above! */
+            #endif
+          ;
           #{assert}(self);
           #{assert}(format);
           do {
@@ -289,6 +325,10 @@ class String < Type
               i = AUTOC_VSNPRINTF(buffer, buffer_size, format, args);
             #else
               i = vsprintf(buffer, format, args);
+              if(i >= buffer_size) #{abort}();
+              /* Since vsprintf() can not truncate its output this means the buffer overflow and
+                 there is no guarantee that some useful data is not corrupted so its better
+                 to crash right here than to let the corruption slip away uncaught */
             #endif
             c = (i > 0 && !(i < buffer_size));
             if(i > 0 && !c) #{pushChars}(self, buffer);
@@ -307,7 +347,7 @@ class String < Type
           strcpy(string, chars);
           #{@list.push}(self->data.strings, string);
         }
-        #{define} void #{push}(#{type_ref} self, #{type_ref} from) {
+        #{define} void #{pushString}(#{type_ref} self, #{type_ref} from) {
           #{assert}(self);
           #{assert}(from);
           #{pushChars}(self, #{chars}(from));

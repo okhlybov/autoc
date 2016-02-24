@@ -1037,6 +1037,6 @@ int main(int argc, char** argv) {
     PIntTest();
     PValueTypeTest();
     ListPVectorValueTest();
-    StrTest();
+    StringTest();
     return 0;
 }
