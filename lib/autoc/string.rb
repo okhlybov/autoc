@@ -139,7 +139,8 @@ class String < Type
       }
       #{define} int #{within}(#{type_ref} self, size_t index) {
         #{assert}(self);
-        return index < #{size}(self); /* Omitting excessive call to #{join}() */
+        /* Omitting excessive call to #{join}() */
+        return index < #{size}(self);
       }
       #{define} #{char_type} #{get}(#{type_ref} self, size_t index) {
         #{assert}(self);
@@ -158,12 +159,13 @@ class String < Type
         #{join}(self);
         return self->data.string;
       }
+      #{declare} int #{pushFormat}(#{type_ref}, const char*, ...);
       #{declare} void #{pushChars}(#{type_ref}, const #{char_type_ref});
       #{declare} void #{push}(#{type_ref}, #{type_ref});
-      #{declare} void #{pushChar}(#{type_ref}, #{char_type});
-      #{declare} void #{pushInt}(#{type_ref}, int);
-      #{declare} void #{pushFloat}(#{type_ref}, double);
-      #{declare} void #{pushPtr}(#{type_ref}, void*);
+      #define #{pushChar}(self, c) #{pushFormat}(self, "%c", (#{char_type})(c))
+      #define #{pushInt}(self, i) #{pushFormat}(self, "%d", (int)(i))
+      #define #{pushFloat}(self, f) #{pushFormat}(self, "%e", (double)(f))
+      #define #{pushPtr}(self, p) #{pushFormat}(self, "%p", (void*)(p))
     $
   end
 
@@ -176,21 +178,21 @@ class String < Type
       stream << %$
         #include <stdio.h>
         #include <string.h>
-      
-        #undef AUTOC_SNPRINTF
-      
+        #include <stdarg.h>
+        #ifndef AUTOC_BUFFER_SIZE
+          #define AUTOC_BUFFER_SIZE 1024
+        #endif
+        #undef AUTOC_VSNPRINTF
         #if defined(_MSC_VER)
-          #define AUTOC_SNPRINTF sprintf_s
+          #define AUTOC_VSNPRINTF _vsnprintf
         #elif defined(__DMC__)
-          #define AUTOC_SNPRINTF _snprintf
-        #elif defined(HAVE_SNPRINTF) || __STDC_VERSION__ >= 199901L /* Be Autotools-friendly, C99 must have snprintf()  */
-          #define AUTOC_SNPRINTF snprintf
+          #define AUTOC_VSNPRINTF _vsnprintf
+        #elif defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L /* Be Autotools-friendly, C99 must have snprintf()  */
+          #define AUTOC_VSNPRINTF vsnprintf
         #endif
-      
-        #ifndef AUTOC_SNPRINTF
-          /* #warning Using unsafe sprintf() function */
+        #ifndef AUTOC_VSNPRINTF
+          /* #warning Using unsafe vsprintf() function */
         #endif
-      
         #{define} void #{_join}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
@@ -273,6 +275,29 @@ class String < Type
           }
           return result;
         }
+        #{define} int #{pushFormat}(#{type_ref} self, const char* format, ...) {
+          va_list args;
+          char* buffer;
+          int i, c;
+          int buffer_size = AUTOC_BUFFER_SIZE;
+          #{assert}(self);
+          #{assert}(format);
+          do {
+            buffer = (char*)#{malloc}(buffer_size*sizeof(char)); #{assert}(buffer);
+            va_start(args, format);
+            #ifdef AUTOC_VSNPRINTF
+              i = AUTOC_VSNPRINTF(buffer, buffer_size, format, args);
+            #else
+              i = vsprintf(buffer, format, args);
+            #endif
+            c = (i > 0 && !(i < buffer_size));
+            if(i > 0 && !c) #{pushChars}(self, buffer);
+            va_end(args);
+            #{free}(buffer);
+            buffer_size *= 2;
+          } while(c);
+          return i >= 0;
+        }
         #{define} void #{pushChars}(#{type_ref} self, const #{char_type_ref} chars) {
           #{char_type_ref} string;
           #{assert}(self);
@@ -287,56 +312,6 @@ class String < Type
           #{assert}(from);
           #{pushChars}(self, #{chars}(from));
         }
-        #define AUTOC_BUFFER_SIZE 64
-        #{define} void #{pushChar}(#{type_ref} self, #{char_type} value) {
-          int i;
-          #{char_type} buffer[AUTOC_BUFFER_SIZE];
-          #{assert}(self);
-          #ifdef AUTOC_SNPRINTF
-            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%c", (int)value);
-          #else
-            i = sprintf(buffer, "%c", (int)value);
-          #endif
-          #{assert}(i >= 0 && i < sizeof(buffer));
-          #{pushChars}(self, buffer);
-        }
-        #{define} void #{pushInt}(#{type_ref} self, int value) {
-          int i;
-          #{char_type} buffer[AUTOC_BUFFER_SIZE];
-          #{assert}(self);
-          #ifdef AUTOC_SNPRINTF
-            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%d", value);
-          #else
-            i = sprintf(buffer, "%d", value);
-          #endif
-          #{assert}(i >= 0 && i < sizeof(buffer));
-          #{pushChars}(self, buffer);
-        }
-        #{define} void #{pushFloat}(#{type_ref} self, double value) {
-          int i;
-          #{char_type} buffer[AUTOC_BUFFER_SIZE];
-          #{assert}(self);
-          #ifdef AUTOC_SNPRINTF
-            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%e", value);
-          #else
-            i = sprintf(buffer, "%e", value);
-          #endif
-          #{assert}(i >= 0 && i < sizeof(buffer));
-          #{pushChars}(self, buffer);
-        }
-        #{define} void #{pushPtr}(#{type_ref} self, void* ptr) {
-          int i;
-          #{char_type} buffer[AUTOC_BUFFER_SIZE];
-          #{assert}(self);
-          #ifdef AUTOC_SNPRINTF
-            i = AUTOC_SNPRINTF(buffer, sizeof(buffer), "%p", ptr);
-          #else
-            i = sprintf(buffer, "%p", ptr);
-          #endif
-          #{assert}(i >= 0 && i < sizeof(buffer));
-          #{pushChars}(self, buffer);
-        }
-        #undef AUTOC_BUFFER_SIZE
         #undef AUTOC_SNPRINTF
       $
     end
