@@ -187,6 +187,7 @@ class Module::Header < Module::File
     stream << %$
       #endif
     $
+    stream << "\n" # DigitalMars C in strict ANSI (-A) mode complains about absent empty line at the very end so let's make it happy
   end
   
 end # Header
