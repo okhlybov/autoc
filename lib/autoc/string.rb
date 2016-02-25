@@ -189,7 +189,7 @@ class String < Type
     super
     write_redirectors(stream, declare, define)
     stream << %$
-    #include <string.h>
+      #include <string.h>
       #define #{join}(self) if(self->list) #{_join}(self);
       #define #{split}(self) if(!self->list) #{_split}(self);
       #{declare} void #{_join}(#{type_ref});
@@ -274,7 +274,6 @@ class String < Type
       }
       stream << %$
         #include <stdio.h>
-        #include <string.h>
         #include <stdarg.h>
         #undef AUTOC_VSNPRINTF
         #if defined(_MSC_VER)
@@ -285,7 +284,7 @@ class String < Type
           #define AUTOC_VSNPRINTF vsnprintf
         #endif
         #ifndef AUTOC_VSNPRINTF
-          #warning Using unsafe vsprintf() function
+          /* #warning Using unsafe vsprintf() function */
         #endif
         #{define} void #{_join}(#{type_ref} self) {
           #{@list.it} it;
@@ -328,10 +327,12 @@ class String < Type
         #{define} #{ctor.definition} {
           #{assert}(self);
           if(chars) {
+            size_t nbytes;
             self->list = 0;
             self->size = strlen(chars);
-            self->data.string = (#{char_type_ref})#{malloc}((self->size + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
-            strcpy(self->data.string, chars); /* Using strcpy() here is considered to be safe because of the preceding call to strlen() */
+            nbytes = (self->size + 1)*sizeof(#{char_type});
+            self->data.string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(self->data.string);
+            memcpy(self->data.string, chars, nbytes);
           } else {
             /* NULL argument is permitted and corresponds to empty string */
             self->list = 1;
@@ -408,13 +409,14 @@ class String < Type
         }
         #{define} void #{pushChars}(#{type_ref} self, const #{char_type_ref} chars) {
           #{char_type_ref} string;
-          size_t size;
+          size_t size, nbytes;
           #{assert}(self);
           #{assert}(chars);
           #{split}(self);
           size = strlen(chars);
-          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type})); #{assert}(string);
-          strcpy(string, chars);
+          nbytes = (size + 1)*sizeof(#{char_type});
+          string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(string);
+          memcpy(string, chars, nbytes);
           #{@list.push}(self->data.strings, string);
           self->size += size;
         }
