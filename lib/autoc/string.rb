@@ -96,15 +96,15 @@ This allows the incremental building of strings without excessive storage copyin
 |
 Append the _?sprintf()_- formatted string to +self+.
 
-Return non-zero value of successful formatting and zero value if the call to _?sprintf()_ failed.
-This usually happens due to the encoding error.
+Return non-zero value on successful formatting and zero value if the call to _?sprintf()_ failed.
+The latter usually happens due to the encoding error.
 
 This function tries to use the _vsnprintf()_ standard C function if possible and falls back to *unsafe* _vsprintf()_ function which is ought to be present in every ANSI-compliant standard C library.
 The former function is used on the platforms which are known to have it; the Autotools-compliant _HAVE_VSNPRINTF_ macro is also taken into consideration.
  _Note that the choice is obviously made at compile-time._
 
 If using the _vsnprintf()_ and the allocated buffer is not large enough this function continuously expands the buffer to eventually accommodate the resulting string.
-On the contrary, when the *unsafe* _vsprintf()_ is used, the buffer overrun causes this function to *abort()* in order to prevent possible data corruption.   
+On the contrary, when the *unsafe* _vsprintf()_ is used, the buffer overrun causes this function to *abort()* in order to possible data corruption not to slip away uncaught.   
 
 Current implementation operates on the heap-allocated buffer whose initial size is determined by the _AUTOC_BUFFER_SIZE_ macro.
 If not explicitly set it defaults to 1024 bytes.
@@ -166,7 +166,12 @@ class String < Type
       #{declare} #{identify.declaration};
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
-        #{join}(self);
+        /* #{join}(self); assuming the changes to the contents are reflected in the size */
+        #ifndef NDEBUG
+          /* Type invariants which must hold true */
+          if(!self->list) #{assert}(self->size == strlen(self->data.string));
+          /* TODO self->list case */
+        #endif
         return self->size;
       }
       #{define} int #{within}(#{type_ref} self, size_t index) {
@@ -243,12 +248,11 @@ class String < Type
             start -= chunk[++i];
           }
           string[total] = '\\0';
-          
           #{free}(chunk);
           #{@list.free?}(self->data.strings);
-          self->data.string = string;
-          self->size = total;
           self->list = 0;
+          self->size = total;
+          self->data.string = string;
         }
         #{define} void #{_split}(#{type_ref} self) {
           #{@list.type} strings;
@@ -256,19 +260,23 @@ class String < Type
           #{assert}(!self->list);
           strings = #{@list.new?}();
           #{@list.push}(strings, self->data.string);
-          self->data.strings = strings;
           self->list = 1;
+          /* self->size = strlen(self->data.string); not needed since the size shouldn't have changed */
+          #{assert}(self->size == strlen(self->data.string));
+          self->data.strings = strings;
         }
         #{define} #{ctor.definition} {
           #{assert}(self);
           if(chars) {
-            self->data.string = (#{char_type_ref})#{malloc}((self->size = strlen(chars) + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
-            strcpy(self->data.string, chars); /* Using strcpy() here is considered to be safe because of the preceding call to strlen() */
             self->list = 0;
+            self->size = strlen(chars);
+            self->data.string = (#{char_type_ref})#{malloc}((self->size + 1)*sizeof(#{char_type})); #{assert}(self->data.string);
+            strcpy(self->data.string, chars); /* Using strcpy() here is considered to be safe because of the preceding call to strlen() */
           } else {
             /* NULL argument is permitted and corresponds to empty string */
-            self->data.strings = #{@list.new?}();
             self->list = 1;
+            self->size = 0;
+            self->data.strings = #{@list.new?}();
           }
         }
         #{define} #{dtor.definition} {
@@ -298,7 +306,7 @@ class String < Type
           size_t index, result = 0;
           #{assert}(self);
           #{join}(self);
-          for(index = 0; index < self->size; ++index) {
+          for(index = 0; index < #{size}(self); ++index) {
             result ^= self->data.string[index];
             result = AUTOC_RCYCLE(result);
           }
@@ -340,12 +348,15 @@ class String < Type
         }
         #{define} void #{pushChars}(#{type_ref} self, const #{char_type_ref} chars) {
           #{char_type_ref} string;
+          size_t size;
           #{assert}(self);
           #{assert}(chars);
           #{split}(self);
-          string = (#{char_type_ref})#{malloc}((strlen(chars) + 1)*sizeof(#{char_type})); #{assert}(string);
+          size = strlen(chars);
+          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type})); #{assert}(string);
           strcpy(string, chars);
           #{@list.push}(self->data.strings, string);
+          self->size += size;
         }
         #{define} void #{pushString}(#{type_ref} self, #{type_ref} from) {
           #{assert}(self);
