@@ -7,26 +7,36 @@ module AutoC
 
 =begin
 
-String is wrapper around the standard null-terminated C string which has the capabilities of both a plain string and a string builder optimized for appending and piecewise building.
+String is wrapper around the standard null-terminated C string which has the capabilities of both a plain string and a string builder optimized for appending and incremental building.
+
+It is ought to be on par with the raw C strings performance-wise (or even exceed it since the string size is tracked).
 
 Unlike the plain C string, this String type has value type semantics but it can be turned into the reference type with {AutoC::Reference}.
 
 The String's default character type, *_CharType_*, is *_char_* although this can be changed. 
 
-String generally obeys the Vector interface with respect to working with its contents.
+String generally obeys the Vector interface with respect to working with its characters and resembles the List interface when using its building capabilities.
 
 == Generated C interface
 
-=== Collection management
+=== String management
 
 [cols="2*"]
 |===
 |*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
 |
-Create a new string +dst+ filled with the contents of +src+.
+Create a new string +dst+ filled with a _copy_ the contents of +src+.
 
 NOTE: Previous contents of +dst+ is overwritten.
 
+|*_void_* ~type~CopyRange(*_Type_* * +dst+, *_Type_* * +src+, *_size_t_* first, *_size_t_* last)
+|
+Create a new string +dst+ filled with a part the contents of +src+ lying in the range +[first, last)+, that is including the character at position +first+ and *not* including the character at position +last+.
+
+NOTE: Previous contents of +dst+ is overwritten.
+
+WARNING: +first+ *must not* exceed +last+ (that is, +first+ <= +last+) and both indices *must* be valid otherwise behavoir is undefined. See ~type~Within().
+ 
 |*_void_* ~type~Ctor(*_Type_* * +self+, *_const CharType *_* +chars+)
 |
 Create a new string +self+ with a _copy_ of the null-terminated C string +chars+.
@@ -56,9 +66,9 @@ Return hash code for string +self+.
 |
 Return a _read-only view_ of the string in a form of the standard C null-terminated string.
 
-The returned value need not to be freed.
+NOTE: the returned value need not to be freed.
   
-WARNING: the returned value should be considered *volatile* and thus may be invalidated by a subsequent call to any String method!    
+WARNING: the returned value should be considered *volatile* and thus may be altered or invalidated by a subsequent call to any String method!    
    
 |*_CharType_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 |
@@ -66,10 +76,10 @@ Return a _copy_ of the character stored in +self+ at position +index+.
 
 WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
-|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_CharType_* +what+)
+|*_void_* ~type~Set(*_Type_* * +self+, *_size_t_* +index+, *_CharType_* +value+)
 |
 
-Store a _copy_ of the character +what+ in string +self+ at position +index+.
+Store a _copy_ of the character +value+ in string +self+ at position +index+.
 
 WARNING: +index+ *must* be a valid index otherwise the behavior is undefined. See ~type~Within().
 
@@ -82,7 +92,7 @@ Note that this does not include the null terminator.
 |*_int_* ~type~Within(*_Type_* * +self+, *_size_t_* +index+)
 |
 Return non-zero value if +index+ is a valid character index and zero value otherwise.
-Valid index belongs to the range 0 ... ~type~Size()-1.
+A valid index lies between 0 and ~type~Size()-1 inclusively.
 |===
 
 === String buffer operations
@@ -92,9 +102,49 @@ This allows the incremental building of strings without excessive storage copyin
   
 [cols=2*]
 |===
+|*_void_* ~type~PushChars(*_Type_* * +self+, *_const CharType*_* +chars+)
+|
+Append a _copy_ of the null-terminated C string +chars+ to string +self+.
+  
+|*_int_* ~type~PushChar(*_Type_* * +self+, *_CharType_* +value+)
+|
+Append a _copy_ of the character +value+ to string +self+.
+
+Return non-zero value on success and zero value on conversion error.
+
+NOTE: this convenience function applies generic formatting rules and is currently implemented as a macro; for more precise control over the formatting process use the ~type~PushFormat() function.
+
+|*_int_* ~type~PushInt(*_Type_* * +self+, *_int_* +value+)
+|
+Append string representation of the integer +value+ to string +self+.
+
+Return non-zero value on success and zero value on conversion error.
+
+NOTE: this convenience function applies generic formatting rules and is currently implemented as a macro; for more precise control over the formatting process use the ~type~PushFormat() function.
+
+|*_int_* ~type~PushFloat(*_Type_* * +self+, *_double_* +value+)
+|
+Append string representation of the floating-point +value+ to string +self+.
+
+Return non-zero value on success and zero value on conversion error.
+
+NOTE: this convenience function applies generic formatting rules and is currently implemented as a macro; for more precise control over the formatting process use the ~type~PushFormat() function.
+
+|*_int_* ~type~PushPtr(*_Type_* * +self+, *_void*_* +value+)
+|
+Append string representation of the pointer +value+ to string +self+.
+
+Return non-zero value on success and zero value on conversion error.
+
+NOTE: this convenience function applies generic formatting rules and is currently implemented as a macro; for more precise control over the formatting process use the ~type~PushFormat() function.
+
+|*_void_* ~type~PushString(*_Type_* * +self+, *_Type_* * +from+)
+|
+Append a _copy_ of the contents of string +from+ to string +self+.
+  
 |*_int_* ~type~PushFormat(*_Type_* * +self+, *_const char*_* format, ...);
 |
-Append the _?sprintf()_- formatted string to +self+.
+Append the _?sprintf()_- formatted string to string +self+.
 
 Return non-zero value on successful formatting and zero value if the call to _?sprintf()_ failed.
 The latter usually happens due to the encoding error.
@@ -133,7 +183,7 @@ Advance iterator position of +it+ *and* return non-zero value if new position is
 
 |*_CharType_* ~it~Get(*_IteratorType_* * +it+)
 |
-Return character pointed to by the iterator +it+.
+Return a _copy_ of the character pointed to by the iterator +it+.
 
 WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 |===
@@ -197,6 +247,7 @@ class String < Type
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
       #{declare} #{copy.declaration};
+      #{declare} void #{copyRange}(#{type_ref}, #{type_ref}, size_t, size_t);
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
       #{define} size_t #{size}(#{type_ref} self) {
@@ -234,7 +285,7 @@ class String < Type
       #{declare} int #{pushFormat}(#{type_ref}, const char*, ...);
       #{declare} void #{pushChars}(#{type_ref}, const #{char_type_ref});
       #{declare} void #{pushString}(#{type_ref}, #{type_ref});
-      #define #{pushChar}(self, c) #{pushFormat}(self, "%c", (#{char_type})(c))
+      #define #{pushChar}(self, c) #{pushFormat}(self, "%c", (char)(c))
       #define #{pushInt}(self, i) #{pushFormat}(self, "%d", (int)(i))
       #define #{pushFloat}(self, f) #{pushFormat}(self, "%e", (double)(f))
       #define #{pushPtr}(self, p) #{pushFormat}(self, "%p", (void*)(p))
@@ -357,6 +408,12 @@ class String < Type
           #{assert}(src);
           #{assert}(dst);
           #{ctor}(dst, #{chars}(src));
+        }
+        #{define} void #{copyRange}(#{type_ref} dst, #{type_ref} src, size_t first, size_t last) {
+          #{assert}(src);
+          #{assert}(first <= last);
+          #{assert}(#{within}(src, first));
+          #{assert}(#{within}(src, last));
         }
         #{define} #{equal.definition} {
           #{assert}(lt);
