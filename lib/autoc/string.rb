@@ -157,7 +157,7 @@ If using the _vsnprintf()_ and the allocated buffer is not large enough this fun
 On the contrary, when the *unsafe* _vsprintf()_ is used, the buffer overrun causes this function to *abort()* in order to possible data corruption not to slip away uncaught.   
 
 Current implementation operates on the heap-allocated buffer whose initial size is determined by the _AUTOC_BUFFER_SIZE_ macro.
-If not explicitly set it defaults to 1024 bytes.
+If not explicitly set it defaults to 4096 bytes.
 |===
 
 === Iteration over string's characters
@@ -329,8 +329,8 @@ class String < Type
         #undef AUTOC_VSNPRINTF
         #if defined(_MSC_VER)
           #define AUTOC_VSNPRINTF _vsnprintf
-        #elif defined(__DMC__)
-          #define AUTOC_VSNPRINTF _vsnprintf
+        #elif defined(__DMC__) || defined (__LCC__)
+          #define AUTOC_VSNPRINTF vsnprintf
         #elif defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L /* Be Autotools-friendly, C99 must have snprintf()  */
           #define AUTOC_VSNPRINTF vsnprintf
         #endif
@@ -439,7 +439,7 @@ class String < Type
             #ifdef AUTOC_BUFFER_SIZE
               AUTOC_BUFFER_SIZE
             #else
-              1024 /* Stay in sync with the documentation above! */
+              4096 /* Stay in sync with the documentation! */
             #endif
           ;
           #{assert}(self);

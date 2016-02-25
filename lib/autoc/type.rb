@@ -105,10 +105,12 @@ class Type < Code
     def write_intf(stream)
       stream << %$
         #ifndef AUTOC_INLINE
-          #ifdef _MSC_VER
-            #define AUTOC_INLINE __inline
+          #if defined(_MSC_VER) || defined(__DMC__)
+            #define AUTOC_INLINE AUTOC_STATIC __inline
+          #elif defined(__LCC__)
+            #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
           #elif __STDC_VERSION__ >= 199901L
-            #define AUTOC_INLINE inline AUTOC_STATIC
+            #define AUTOC_INLINE  AUTOC_STATIC inline
           #else
             #define AUTOC_INLINE AUTOC_STATIC
           #endif
@@ -121,7 +123,7 @@ class Type < Code
           #endif
         #endif
         #ifndef AUTOC_STATIC
-          #ifdef _MSC_VER
+          #if defined(_MSC_VER)
             #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
           #elif defined(__GNUC__)
             #define AUTOC_STATIC __attribute__((__used__)) static
