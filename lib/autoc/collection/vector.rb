@@ -159,6 +159,7 @@ class Vector < Collection
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
       #{declare} #{copy.declaration};
+      /* TODO #{copyRange}() */
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
       #{declare} void #{resize}(#{type_ref}, size_t);
