@@ -108,7 +108,34 @@ On the contrary, when the *unsafe* _vsprintf()_ is used, the buffer overrun caus
 
 Current implementation operates on the heap-allocated buffer whose initial size is determined by the _AUTOC_BUFFER_SIZE_ macro.
 If not explicitly set it defaults to 1024 bytes.
-       
+|===
+
+=== Iteration over string's characters
+
+[cols=2*]
+|===
+|*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+|
+Create a new forward iterator +it+ on string +self+.
+
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +forward+)
+|
+Create a new iterator +it+ on string +self+.
+Non-zero value of +forward+ specifies a forward iterator, zero value specifies a backward iterator.
+
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_int_* ~it~Move(*_IteratorType_* * +it+)
+|
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
+
+|*_CharType_* ~it~Get(*_IteratorType_* * +it+)
+|
+Return character pointed to by the iterator +it+.
+
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
 |===
    
 =end  
@@ -119,9 +146,12 @@ class String < Type
   def char_type; :char end
   
   def char_type_ref; "#{char_type}*" end
-
+  
+  attr_reader :it_ref
+    
   def initialize(type_name = :String, visibility = :public)
     super
+    @it_ref = "#{it}*"
     @list = Reference.new(List.new(list, char_type_ref, :public))
     initialize_redirectors
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, "const #{char_type_ref}"^:chars]))
@@ -148,6 +178,10 @@ class String < Type
         } data;
         int list;
       };
+      struct #{it} {
+        const #{char_type_ref} string;
+        int index, last, forward;
+      };
     $
   end
 
@@ -155,6 +189,7 @@ class String < Type
     super
     write_redirectors(stream, declare, define)
     stream << %$
+    #include <string.h>
       #define #{join}(self) if(self->list) #{_join}(self);
       #define #{split}(self) if(!self->list) #{_split}(self);
       #{declare} void #{_join}(#{type_ref});
@@ -203,6 +238,31 @@ class String < Type
       #define #{pushInt}(self, i) #{pushFormat}(self, "%d", (int)(i))
       #define #{pushFloat}(self, f) #{pushFormat}(self, "%e", (double)(f))
       #define #{pushPtr}(self, p) #{pushFormat}(self, "%p", (void*)(p))
+      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
+      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} string, int forward) {
+        #{assert}(self);
+        #{assert}(string);
+        self->string = #{chars}(string); #{assert}(self->string);
+        if((self->forward = forward)) {
+          self->index = 0;
+          self->last = #{size}(string);
+        } else {
+          self->index = #{size}(string)-1;
+          self->last = -1;
+        }
+        self->forward = forward;
+      }
+      #{define} int #{itMove}(#{it_ref} self) {
+        int result;
+        #{assert}(self);
+        result = self->index != self->last;
+        if(self->forward) ++self->index; else --self->index;
+        return result;
+      }
+      #{define} #{char_type} #{itGet}(#{it_ref} self) {
+        #{assert}(self);
+        return self->string[self->index]; /* TODO range checking assert */
+      }
     $
   end
 
