@@ -294,14 +294,14 @@ class String < Type
         #{assert}(self);
         #{assert}(string);
         self->string = #{chars}(string); #{assert}(self->string);
-        if((self->forward = forward)) {
+        self->forward = forward;
+        if(forward) {
           self->index = 0;
           self->last = #{size}(string);
         } else {
           self->index = #{size}(string)-1;
           self->last = -1;
         }
-        self->forward = forward;
       }
       #{define} int #{itMove}(#{it_ref} self) {
         int result;

@@ -284,9 +284,8 @@ class HashMap < Collection
         int absent;
         #{assert}(self);
         #{assert}(entry);
-        if((absent = !#{containsKey}(self, entry->key))) {
-          #{@set.put}(&self->entries, *entry);
-        }
+        absent = !#{containsKey}(self, entry->key);
+        if(absent) #{@set.put}(&self->entries, *entry);
         return absent;
       }
       #{define} #{copy.definition} {
