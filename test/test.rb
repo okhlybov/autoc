@@ -24,12 +24,12 @@ ListIntSet = AutoC::List.new(:ListIntSet, IntSet)
 ValueTypeVector = Class.new(AutoC::Vector) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{element.type} e1, e2;
         #{type} c1, c2;
         #{it} it;
@@ -82,12 +82,12 @@ end.new(:ValueTypeVector, ValueType)
 ValueTypeList = Class.new(AutoC::List) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{element.type} e1, e2, e3;
         #{type} c1, c2;
         #{it} it;
@@ -170,12 +170,12 @@ end.new(:ValueTypeList, ValueType)
 ValueTypeQueue = Class.new(AutoC::Queue) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{element.type} e1, e2, e3;
         #{type} c1, c2;
         #{it} it;
@@ -257,12 +257,12 @@ end.new(:ValueTypeQueue, ValueType)
 ValueTypeSet = Class.new(AutoC::HashSet) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{element.type} e1, e2, e3;
         #{type} c1, c2, cc1, cc2;
         #{it} it;
@@ -404,12 +404,12 @@ end.new(:ValueTypeSet, ValueType)
 ValueTypeMap = Class.new(AutoC::HashMap) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{element.type} e1, e2, e3;
         #{type} c1, c2;
         #{it} it;
@@ -478,12 +478,12 @@ end.new(:ValueTypeMap, ValueType, ValueType)
 CharString = Class.new(AutoC::String) do
   def write_intf(stream)
     super
-    stream << %$#{extern} void #{test!}();$
+    stream << %$#{extern} void #{test!}(void);$
   end
   def write_defs(stream)
     super
     stream << %$
-      void #{test!}() {
+      void #{test!}(void) {
         #{type} s1, s2, s3;
         #{ctor}(&s1, "z");
         #{ctor}(&s2, "x");

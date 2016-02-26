@@ -8,7 +8,7 @@
 
 
 #include <assert.h>
-#include <memory.h>
+#include <string.h>
 #include <stdio.h>
 
 
@@ -78,7 +78,7 @@ size_t ValueTypeIdentifyRef(ValueType* self) {
 #define it(x) ValueTypeVectorIt##x
 
 
-static void type(Test1)() {
+static void type(Test1)(void) {
     ValueType e1, e2;
     Type c1, c2;
     TypeIt it;
@@ -136,7 +136,7 @@ static void type(Test1)() {
 #define it(x) ValueTypeListIt##x
 
 
-static void type(Test1)() {
+static void type(Test1)(void) {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -227,7 +227,7 @@ static void type(Test1)() {
  * Queue is a non-strict superset of List
  * so the test case for the latter can be reused as-is 
  */
-static void type(Test1)() {
+static void type(Test1)(void) {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -314,7 +314,7 @@ static void type(Test1)() {
 #define it(x) ValueTypeSetIt##x
 
 
-static void type(Test1)() {
+static void type(Test1)(void) {
     ValueType e1, e2, e3;
     Type c1, c2, cc1, cc2;
     TypeIt it;
@@ -461,7 +461,7 @@ static void type(Test1)() {
 #define it(x) ValueTypeMapIt##x
 
 
-static void type(Test1)() {
+static void type(Test1)(void) {
     ValueType e1, e2, e3;
     Type c1, c2;
     TypeIt it;
@@ -536,7 +536,7 @@ static void type(Test1)() {
 
 
 /* {1,2,3} & {2,3,4} == {2,3} */
-static void type(TestAnd)() {
+static void type(TestAnd)(void) {
     Type r, c1, c2, cc1, cc2;
     
     type(Ctor)(&r);
@@ -596,7 +596,7 @@ static void type(TestAnd)() {
 
 
 /* {1,2,3} | {2,3,4} == {1,2,3,4} */
-static void type(TestOr)() {
+static void type(TestOr)(void) {
     Type r, c1, c2, cc1, cc2;
     
     type(Ctor)(&r);
@@ -658,7 +658,7 @@ static void type(TestOr)() {
 
 
 /* {1,2,3} ^ {2,3,4} == {1,4} */
-static void type(TestXor)() {
+static void type(TestXor)(void) {
     Type r, c1, c2, cc1, cc2;
     
     type(Ctor)(&r);
@@ -718,7 +718,7 @@ static void type(TestXor)() {
 
 
 /* {1,2,3} - {2,3,4} == {1} */
-static void type(TestNot1)() {
+static void type(TestNot1)(void) {
     Type r, c1, c2, cc1, cc2;
     
     type(Ctor)(&r);
@@ -777,7 +777,7 @@ static void type(TestNot1)() {
 
 
 /* {1,2,3} - {1,2,3,4} == {} */
-static void type(TestNot2)() {
+static void type(TestNot2)(void) {
     Type r, c1, c2;
     
     type(Ctor)(&r);
@@ -838,7 +838,7 @@ static const char* one = "one";
 static const char* two = "two";
 
 
-static void type(Test)() {
+static void type(Test)(void) {
     Type c1, c2;
     TypeIt it;
     int i;
@@ -919,7 +919,7 @@ static void type(Test)() {
 #define element(x) IntSet##x
 
 
-static void type(Test)() {
+static void type(Test)(void) {
     Type c1, c2;
     Element e;
     
@@ -945,7 +945,7 @@ static void type(Test)() {
 #define type(x) Int##x
 
 
-static void PIntTest() {
+static void PIntTest(void) {
     int *c1, *c2;
     c1 = type(New)(); *c1 = 1;
     c2 = type(New)(); *c2 = 2;
@@ -964,7 +964,7 @@ static void PIntTest() {
 #define type(x) ValueType##x
 
 
-static void PValueTypeTest() {
+static void PValueTypeTest(void) {
     ValueType *c1, *c2;
     c1 = type(New)();
     c2 = type(New)();
@@ -990,7 +990,7 @@ static void PValueTypeTest() {
 #define element(x) PVectorValue##x
 
 
-static void type(Test)() {
+static void type(Test)(void) {
     Type c1, c2;
     Element *e1, *e2;
     ValueType *v1, *v2;
