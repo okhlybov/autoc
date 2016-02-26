@@ -23,9 +23,10 @@ class Dispatcher
     def ===(other) other.is_a?(ParameterArray) && types == other.types end
     def types; collect {|x| x.first} end
     def names; collect {|x| x.last} end
-    def pass; names.join(',') end
-    def declaration; types.join(',') end
-    def definition; collect {|x| "#{x.first} #{x.last}"}.join(',') end
+    def pass; names.join(",") end
+    # ANSI C instructs the empty parameter list to be marked as `void`
+    def declaration; empty? ? :void : types.join(",") end
+    def definition; empty? ? :void : collect {|x| "#{x.first} #{x.last}"}.join(",") end
   end # ParameterArray
 
   # def call(*params)
