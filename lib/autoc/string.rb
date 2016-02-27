@@ -69,6 +69,10 @@ Return a _read-only view_ of the string in a form of the standard C null-termina
 NOTE: the returned value need not to be freed.
   
 WARNING: the returned value should be considered *volatile* and thus may be altered or invalidated by a subsequent call to any String method!    
+
+|*_int_* ~type~Empty(*_Type_* * +self+)
+|
+Return non-zero value if string +self+ has zero length and zero value otherwise.
    
 |*_CharType_* ~type~Get(*_Type_* * +self+, *_size_t_* +index+)
 |
@@ -250,6 +254,7 @@ class String < Type
       #{declare} void #{copyRange}(#{type_ref}, #{type_ref}, size_t, size_t);
       #{declare} #{equal.declaration};
       #{declare} #{identify.declaration};
+      #define #{empty}(self) (#{size}(self) == 0)
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         /* #{join}(self); assuming the changes to the contents are reflected in the size */

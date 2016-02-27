@@ -5,14 +5,42 @@ Prologue = Class.new(AutoC::Code) do
   def write_defs(stream)
     stream << %~
       #include <stdio.h>
-      #define TEST_TRUE(x) 
-      char* current_test_name;
       struct {
         int total, processed, failed;
       } tests;
-      void print_summary(FILE* file) {
-        fprintf(file, "*** Processed %d of %d tests\\n", tests.processed, tests.total);
+      typedef void (*test_func)(void);
+      void run_test(const char* name, test_func func) {
+        fprintf(stdout, "+   %s\\n", name);
+        fflush(stdout);
+        func();
+        tests.processed++;
       }
+      void print_condition_failure(const char* message, const char* condition, const char* file, int line) {
+        fprintf(stderr, "*** %s : %s (%s:%d)\\n", condition, message, file, line);
+        fflush(stderr);
+        tests.failed++;
+      }
+      void print_equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
+        fprintf(stderr, "*** %s == %s : %s (%s:%d)\\n", x, y, message, file, line);
+        fflush(stderr);
+        tests.failed++;
+      }
+      void print_summary(void) {
+        if(tests.failed)
+          fprintf(stdout, "*** Failed %d of %d tests\\n", tests.failed, tests.processed);
+        else
+          fprintf(stdout, "+++ All %d tests passed successfully\\n", tests.processed);
+        fflush(stdout);
+      }
+      #define TEST_ASSERT(x) if(x) {} else print_condition_failure("evaluated to FALSE", #x, __FILE__, __LINE__) 
+      #define TEST_TRUE(x) if(x) {} else print_condition_failure("expected TRUE but got FALSE", #x, __FILE__, __LINE__) 
+      #define TEST_FALSE(x) if(x) print_condition_failure("expected FALSE but got TRUE", #x, __FILE__, __LINE__)
+      #define TEST_NULL(x) if((x) == NULL) {} else print_condition_failure("expected NULL", #x, __FILE__, __LINE__) 
+      #define TEST_NOT_NULL(x) if((x) == NULL) print_condition_failure("expected not NULL", #x, __FILE__, __LINE__)
+      #define TEST_EQUAL(x, y) if((x) == (y)) {} else print_equality_failure("expected equality", #x, #y, __FILE__, __LINE__)
+      #define TEST_NOT_EQUAL(x, y) if((x) == (y)) print_equality_failure("expected non-equality", #x, #y, __FILE__, __LINE__)
+      #define TEST_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) {} else print_equality_failure("expected strings equality", #x, #y, __FILE__, __LINE__)
+      #define TEST_NOT_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) print_equality_failure("expected strings non-equality", #x, #y, __FILE__, __LINE__)
     ~
   end
 end.new
@@ -29,7 +57,7 @@ Epilogue = Class.new(AutoC::Code) do
       tests.processed = tests.failed = 0;
     ~
     $tests.each {|t| t.write_test_calls(stream)}
-    stream << %~print_summary(stdout);~
+    stream << %~print_summary();~
     stream << %~return tests.failed > 0;}~
   end
 end.new
@@ -54,7 +82,7 @@ def type_test(cls, *opts, &code)
       @cleanup_code = code
     end
     def test(name, code)
-      @test_names << [name, func_name = eval("#{name}Test")]
+      @test_names << [name, func_name = eval("test#{name[0].upcase}#{name[1..-1]}")]
       @tests << %~
         void #{func_name}(void) {
           #{@setup_code}
@@ -67,14 +95,18 @@ def type_test(cls, *opts, &code)
       super
       @tests.each {|f| stream << f}
       stream << %~void #{runTests}(void) {~
+        stream << %~
+          fprintf(stdout, "+ %s\\n", "#{type}");
+          fflush(stdout);
+        ~
         @test_names.each do |name, func_name|
-          stream << %$
-            current_test_name = "#{type}\##{name}";
-            #{func_name}();
-            tests.processed++;
-          $
+          stream << %~
+            run_test("#{name}", #{func_name});
+          ~
         end
-      stream << %~}~
+      stream << %~
+        fputs("\\n", stdout); fflush(stdout);}
+      ~
     end
     def write_test_calls(stream)
       stream << %$
