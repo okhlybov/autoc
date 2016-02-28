@@ -147,8 +147,7 @@ class Vector < Collection
       };
       struct #{it} {
         #{type_ref} vector;
-        int index;
-        int forward;
+        int index, forward;
       };
     $
   end
