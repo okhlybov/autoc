@@ -31,17 +31,17 @@ NOTE: Previous contents of +dst+ is overwritten.
 
 |*_void_* ~type~CopyRange(*_Type_* * +dst+, *_Type_* * +src+, *_size_t_* first, *_size_t_* last)
 |
-Create a new string +dst+ filled with a part the contents of +src+ lying in the range +[first, last)+, that is including the character at position +first+ and *not* including the character at position +last+.
+Create a new string +dst+ filled with a part the contents of +src+ lying in the range +[first, last]+, that is including the character at position +first+ and including the character at position +last+.
 
 NOTE: Previous contents of +dst+ is overwritten.
 
-WARNING: +first+ *must not* exceed +last+ (that is, +first+ <= +last+) and both indices *must* be valid otherwise behavoir is undefined. See ~type~Within().
+WARNING: +first+ *must not* exceed +last+ (that is, +first+ <= +last+) and both indices *must* be valid otherwise behavior is undefined. See ~type~Within().
  
 |*_void_* ~type~Ctor(*_Type_* * +self+, *_const CharType *_* +chars+)
 |
 Create a new string +self+ with a _copy_ of the null-terminated C string +chars+.
 
-NULL value of +chars+ is premitted; this case corresponds to an empty string "".
+NULL value of +chars+ is permitted; this case corresponds to an empty string "".
  
 NOTE: Previous contents of +self+ is overwritten.
 
@@ -233,8 +233,8 @@ class String < Type
         int list;
       };
       struct #{it} {
-        const #{char_type_ref} string;
-        int index, last, forward;
+        #{type_ref} string;
+        int index, forward;
       };
     $
   end
@@ -244,6 +244,11 @@ class String < Type
     write_redirectors(stream, declare, define)
     stream << %$
       #include <string.h>
+      #ifdef AUTOC_BUFFER_SIZE
+        #define #{_bufferSize} AUTOC_BUFFER_SIZE
+      #else
+        #define #{_bufferSize} 4096 /* Stay in sync with the documentation! */
+      #endif
       #define #{join}(self) if(self->list) #{_join}(self);
       #define #{split}(self) if(!self->list) #{_split}(self);
       #{declare} void #{_join}(#{type_ref});
@@ -298,26 +303,18 @@ class String < Type
       #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} string, int forward) {
         #{assert}(self);
         #{assert}(string);
-        self->string = #{chars}(string); #{assert}(self->string);
+        self->string = string;
         self->forward = forward;
-        if(forward) {
-          self->index = 0;
-          self->last = #{size}(string);
-        } else {
-          self->index = #{size}(string)-1;
-          self->last = -1;
-        }
+        self->index = forward ? -1 : #{size}(string);
       }
       #{define} int #{itMove}(#{it_ref} self) {
-        int result;
         #{assert}(self);
-        result = self->index != self->last;
         if(self->forward) ++self->index; else --self->index;
-        return result;
+        return #{within}(self->string, self->index);
       }
       #{define} #{char_type} #{itGet}(#{it_ref} self) {
         #{assert}(self);
-        return self->string[self->index]; /* TODO range checking assert */
+        return #{get}(self->string, self->index);
       }
     $
   end
@@ -412,13 +409,23 @@ class String < Type
         #{define} #{copy.definition} {
           #{assert}(src);
           #{assert}(dst);
+          #{assert}(src != dst);
           #{ctor}(dst, #{chars}(src));
         }
         #{define} void #{copyRange}(#{type_ref} dst, #{type_ref} src, size_t first, size_t last) {
+          size_t size;
+          #{char_type_ref} string;
           #{assert}(src);
+          #{assert}(src != dst);
           #{assert}(first <= last);
           #{assert}(#{within}(src, first));
           #{assert}(#{within}(src, last));
+          size = last - first + 1;
+          string = (#{char_type_ref})#{malloc}((size + 1)*sizeof(#{char_type})); #{assert}(string);
+          memcpy(string, &#{chars}(src)[first], size*sizeof(#{char_type}));
+          string[size] = '\\0';
+          #{ctor}(dst, string);
+          #{free}(string);
         }
         #{define} #{equal.definition} {
           #{assert}(lt);
@@ -438,15 +445,7 @@ class String < Type
         #{define} int #{pushFormat}(#{type_ref} self, const char* format, ...) {
           va_list args;
           char* buffer;
-          int i, c;
-          int buffer_size =
-            /* Avoid redefining the macro since this might affect the code appended after this one */
-            #ifdef AUTOC_BUFFER_SIZE
-              AUTOC_BUFFER_SIZE
-            #else
-              4096 /* Stay in sync with the documentation! */
-            #endif
-          ;
+          int i, c, buffer_size = #{_bufferSize};
           #{assert}(self);
           #{assert}(format);
           do {
