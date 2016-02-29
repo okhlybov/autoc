@@ -32,8 +32,8 @@ cleanup %~#{dtor}(&t1); #{dtor}(&t2);~
     }
     TEST_TRUE( #{equal}(&t1, &t2) );
     #{element.ctorEx}(e, -1);
-    #{element.dtor}(e);
     #{set}(&t1, 0, e);
+    #{element.dtor}(e);
     TEST_FALSE( #{equal}(&t1, &t2) );
   ~
   
