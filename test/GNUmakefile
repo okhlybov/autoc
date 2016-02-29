@@ -32,7 +32,7 @@ PKG ?=
 # Options passed to the C preprocessor, ex. <-DNDEBUG>.
 # The same options will used to preprocess all kinds of sources
 # (FORTRAN included).
-CPPFLAGS ?=
+CPPFLAGS ?= #-DHAVE_VSNPRINTF
 
 # Language-neutral options passed to all compilers, ex. <-O3>.
 # This variable is mainly intended to control the compilers optimizations.
@@ -144,7 +144,7 @@ clean :
 -include $(DEP)
 
 test_auto.c test_auto.h : autotest.rb $(wildcard test_*.rb)
-	ruby -I../lib $<
+	ruby -I. -I../lib $<
 	
 run : $(EXE)
 	./$<
