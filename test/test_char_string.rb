@@ -17,6 +17,11 @@ cleanup %~#{dtor}(&t);~
     TEST_TRUE( #{empty}(&t) );
   ~
 
+  test :hash, %~
+    #{ctor}(&t, "XYZ");
+    #{identify}(&t);
+  ~
+  
   test :within, %~
     #{ctor}(&t, "XYZ");
     TEST_FALSE( #{empty}(&t) );
@@ -100,6 +105,75 @@ cleanup %~#{dtor}(&t);~
     TEST_EQUAL_CHARS( #{chars}(&t), "XYZ" );
   ~
   
+  test :pushString, %~
+    #{type} s;
+    #{ctor}(&s, "YZ");
+    #{ctor}(&t, "X");
+    #{pushString}(&t, &s);
+    TEST_EQUAL_CHARS( #{chars}(&t), "XYZ" );
+    #{dtor}(&s);
+  ~
+  
+  test :pushChar, %~
+    #{ctor}(&t, "XY");
+    #{pushChar}(&t, 'Z');
+    TEST_EQUAL_CHARS( #{chars}(&t), "XYZ" );
+  ~
+  
+  test :pushInt, %~
+    #{ctor}(&t, "XYZ");
+    #{pushInt}(&t, -123);
+    TEST_EQUAL_CHARS( #{chars}(&t), "XYZ-123" );
+  ~
+  
+  test :pushFloat, %~
+    #{ctor}(&t, "XYZ");
+    #{pushFloat}(&t, -1.23);
+  ~
+
+  test :pushPtr, %~
+    #{ctor}(&t, "XYZ");
+    #{pushPtr}(&t, &t);
+  ~
+  
+  test :pushNULLPtr, %~
+    #{ctor}(&t, "XYZ");
+    #{pushPtr}(&t, NULL);
+  ~
+  
+  test :pushFormat, %~
+    #{ctor}(&t, NULL);
+    #{pushFormat}(&t, "%s%c%d", "XY", 'Z', -123);
+    TEST_EQUAL_CHARS( #{chars}(&t), "XYZ-123" );
+  ~
+  
+  setup %~
+    #{type} t;
+    #{char_type}* b = #{malloc}(#{_bufferSize}*sizeof(#{char_type})); #{assert}(b);
+    memset(b, '*', _#{bufferSize});
+    b[#{_bufferSize}-1] = '\\0';
+  ~
+  cleanup %~
+    #{free}(b);
+    #{dtor}(&t);
+  ~
+  
+  test :pushFormatExactBuffer, %~
+    #{ctor}(&t, NULL);
+    #{pushFormat}(&t, "%s", b);
+    TEST_EQUAL_CHARS( #{chars}(&t), b );
+  ~
+
+  test :pushFormatOverBuffer, %~
+    #{ctor}(&t, "-");
+    #ifdef AUTOC_VSNPRINTF
+      #{pushFormat}(&t, "%s-", b);
+      TEST_EQUAL(#{size}(&t), #{_bufferSize}+1);
+    #else
+      TEST_MESSAGE("vsnprintf() is not used, skipping")
+    #endif
+  ~
+    
 setup %~
   #{type} t;
   #{it} it;
@@ -179,6 +253,18 @@ cleanup %~#{dtor}(&t1); #{dtor}(&t2);~
     #{ctor}(&t1, "XYZ");
     #{copyRange}(&t2, &t1, 1, 1);
     TEST_EQUAL_CHARS( #{chars}(&t2), "Y" );
+  ~
+  
+  test :equal, %~
+    #{ctor}(&t1, "XYZ");
+    #{ctor}(&t2, "XYZ");
+    TEST_TRUE( #{equal}(&t1, &t2) );
+  ~
+  
+  test :notEqual, %~
+    #{ctor}(&t1, "-XYZ");
+    #{ctor}(&t2, "XYZ-");
+    TEST_FALSE( #{equal}(&t1, &t2) );
   ~
   
 end
