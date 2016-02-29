@@ -1,6 +1,5 @@
 require "autoc"
 
-
 Prologue = Class.new(AutoC::Code) do
   def write_defs(stream)
     stream << %~
@@ -32,6 +31,7 @@ Prologue = Class.new(AutoC::Code) do
           fprintf(stdout, "+++ All %d tests passed successfully\\n", tests.processed);
         fflush(stdout);
       }
+      #define TEST_MESSAGE(s) fprintf(stderr, "*** %s\\n", s); fflush(stderr);
       #define TEST_ASSERT(x) if(x) {} else print_condition_failure("evaluated to FALSE", #x, __FILE__, __LINE__) 
       #define TEST_TRUE(x) if(x) {} else print_condition_failure("expected TRUE but got FALSE", #x, __FILE__, __LINE__) 
       #define TEST_FALSE(x) if(x) print_condition_failure("expected FALSE but got TRUE", #x, __FILE__, __LINE__)
