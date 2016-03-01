@@ -1,3 +1,4 @@
+CC = gcc
 # This is a template of the WHPC-friendly (http://whpc.sf.net) makefile for building
 # single executable from multiple source files written in C, C++ and/or FORTRAN languages.
 # The makefile requires GCC compilers and GNU Make.
@@ -22,6 +23,9 @@ PROG ?= test
 SRC ?= test_auto.c
 
 
+AUTO = $(SRC) test_auto.h
+
+
 ### [optional] user-definable variables which are normally set.
 
 # Space-separated list of WHPC packages to be used, ex. <mpi blas lapack>.
@@ -32,7 +36,7 @@ PKG ?=
 # Options passed to the C preprocessor, ex. <-DNDEBUG>.
 # The same options will used to preprocess all kinds of sources
 # (FORTRAN included).
-CPPFLAGS ?= #-DHAVE_VSNPRINTF
+CPPFLAGS ?= -DHAVE_VSNPRINTF
 
 # Language-neutral options passed to all compilers, ex. <-O3>.
 # This variable is mainly intended to control the compilers optimizations.
@@ -139,11 +143,11 @@ $(OBJPAT) : %.f90
 	$(COMPILE.f) -o $@ $<
 
 clean :
-	$(RM) $(EXE) $(OBJ) $(MOD) $(DEP)
+	$(RM) $(EXE) $(OBJ) $(MOD) $(DEP) $(AUTO)
 
 -include $(DEP)
 
-test_auto.c test_auto.h : autotest.rb $(wildcard test_*.rb)
+$(AUTO) : autotest.rb $(wildcard *.rb)
 	ruby -I. -I../lib $<
 	
 run : $(EXE)
