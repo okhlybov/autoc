@@ -346,21 +346,25 @@ class String < Type
           size_t i, start = 0, total = 0;
           #{assert}(self);
           #{assert}(self->list);
-          chunk = (size_t*)malloc(#{@list.size}(self->data.strings)*sizeof(size_t)); #{assert}(chunk);
-          #{@list.itCtor}(&it, self->data.strings);
-          for(i = 0; #{@list.itMove}(&it); ++i) {
-            total += (chunk[i] = strlen(#{@list.itGet}(&it)));
+          if(!#{@list.empty}(self->data.strings)) {
+            chunk = (size_t*)malloc(#{@list.size}(self->data.strings)*sizeof(size_t)); #{assert}(chunk);
+            #{@list.itCtor}(&it, self->data.strings);
+            for(i = 0; #{@list.itMove}(&it); ++i) {
+              total += (chunk[i] = strlen(#{@list.itGet}(&it)));
+            }
+            string = (#{char_type_ref})#{malloc}((total + 1)*sizeof(#{char_type})); #{assert}(string);
+            #{@list.itCtor}(&it, self->data.strings);
+            /* List is a LIFO structure therefore merging should be performed from right to left */
+            start = total - chunk[i = 0];
+            while(#{@list.itMove}(&it)) {
+              memcpy(&string[start], #{@list.itGet}(&it), chunk[i]*sizeof(#{char_type}));
+              start -= chunk[++i];
+            }
+            string[total] = '\\0';
+            #{free}(chunk);
+          } else {
+            string = (#{char_type_ref})#{calloc}(1, sizeof(#{char_type})); #{assert}(string);
           }
-          string = (#{char_type_ref})#{malloc}((total + 1)*sizeof(#{char_type})); #{assert}(string);
-          #{@list.itCtor}(&it, self->data.strings);
-          /* List is a LIFO structure therefore merging should be performed from right to left */
-          start = total - chunk[i = 0];
-          while(#{@list.itMove}(&it)) {
-            memcpy(&string[start], #{@list.itGet}(&it), chunk[i]*sizeof(#{char_type}));
-            start -= chunk[++i];
-          }
-          string[total] = '\\0';
-          #{free}(chunk);
           #{@list.free?}(self->data.strings);
           self->list = 0;
           self->size = total;
