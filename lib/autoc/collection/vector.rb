@@ -78,9 +78,17 @@ Return number of elements stored in vector +self+.
 
 |*_void_* ~type~Sort(*_Type_* * +self+)
 |
+Perform an ascending sort.
+See ~type~SortEx().
+
 NOTE : optional operation.
 
-Perform a sorting operation on the contents of vector +self+ utilizing either generated of user supplied ordering functions.
+|*_void_* ~type~SortEx(*_Type_* * +self+, *_int_* ascending)
+|
+NOTE : optional operation.
+
+Perform a sort operation on the contents of vector +self+ utilizing either generated of user supplied ordering functions.
+If the +ascending+ is non-zero, perform the sorting in ascending order otherwise perform the soring in descending order.
 
 Note that this operation is defined only if element type is orderable, e.g. has equality testing and comparison operations defined.
 
@@ -202,7 +210,8 @@ class Vector < Collection
       }
     $
     stream << %$
-      #{declare} void #{sort}(#{type_ref});
+      #define #{sort}(self) #{sortEx}(self, 1)
+      #{declare} void #{sortEx}(#{type_ref}, int);
     $ if element.orderable?
   end
   
@@ -287,7 +296,7 @@ class Vector < Collection
       }
     $
     stream << %$
-      static int #{comparator}(void* lp_, void* rp_) {
+      static int #{ascend}(void* lp_, void* rp_) {
         #{element.type_ref} lp = (#{element.type_ref})lp_;
         #{element.type_ref} rp = (#{element.type_ref})rp_;
         if(#{element.equal("*lp", "*rp")}) {
@@ -298,10 +307,13 @@ class Vector < Collection
           return +1;
         }
       }
-      #{define} void #{sort}(#{type_ref} self) {
+      static int #{descend}(void* lp_, void* rp_) {
+        return -#{ascend}(lp_, rp_);
+      }
+      #{define} void #{sortEx}(#{type_ref} self, int ascending) {
         typedef int (*F)(const void*, const void*);
         #{assert}(self);
-        qsort(self->values, #{size}(self), sizeof(#{element.type}), (F)#{comparator});
+        qsort(self->values, #{size}(self), sizeof(#{element.type}), ascending ? (F)#{ascend} : (F)#{descend});
       }
     $ if element.orderable?
   end
