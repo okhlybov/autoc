@@ -206,7 +206,7 @@ class String < Type
   def initialize(type_name = :String, visibility = :public)
     super
     @it_ref = "#{it}*"
-    @list = Reference.new(List.new(list, {:type => char_type_ref, :dtor => free}, :private)) # List takes ownership over the strings put into it hence the custom element destructor
+    @list = List.new(list, {:type => char_type_ref, :dtor => free}, :private) # List takes ownership over the strings put into it hence the custom element destructor
     initialize_redirectors
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, "const #{char_type_ref}"^:chars]))
   end
@@ -220,7 +220,7 @@ class String < Type
       **** #{type}<#{char_type}> (#{self.class})
       ***/
     $ if public?
-    [@list.target, @list].each {|obj| obj.write_intf_types(stream)} # TODO : this should be handled by the entity dependencies system 
+    [@list].each {|obj| obj.write_intf_types(stream)} # TODO : this should be handled by the entity dependencies system 
     stream << %$
       typedef struct #{type} #{type};
       typedef struct #{it} #{it};
@@ -230,7 +230,7 @@ class String < Type
           #{char_type_ref} string;
           #{@list.type} list;
         } data;
-        int list;
+        int is_list;
       };
       struct #{it} {
         #{type_ref} string;
@@ -249,8 +249,8 @@ class String < Type
       #else
         #define #{_bufferSize} 4096 /* Stay in sync with the documentation! */
       #endif
-      #define #{join}(self) if(self->list) #{_join}(self);
-      #define #{split}(self) if(!self->list) #{_split}(self);
+      #define #{join}(self) if(self->is_list) #{_join}(self);
+      #define #{split}(self) if(!self->is_list) #{_split}(self);
       #{declare} void #{_join}(#{type_ref});
       #{declare} void #{_split}(#{type_ref});
       #{declare} #{ctor.declaration};
@@ -265,8 +265,8 @@ class String < Type
         /* #{join}(self); assuming the changes to the contents are reflected in the size */
         #ifndef NDEBUG
           /* Type invariants which must hold true */
-          if(!self->list) #{assert}(self->size == strlen(self->data.string));
-          /* TODO self->list case */
+          if(!self->is_list) #{assert}(self->size == strlen(self->data.string));
+          /* TODO self->is_list case */
         #endif
         return self->size;
       }
@@ -321,7 +321,7 @@ class String < Type
 
     def write_impls(stream, define)
       super
-      [@list.target, @list].each {|obj|
+      [@list].each {|obj|
         obj.write_intf_decls(stream, static, inline)
         obj.write_impls(stream, static)
       }
@@ -345,15 +345,15 @@ class String < Type
           size_t* size; /* size sizes cache to avoid excessive calls to strlen() */
           size_t i, start = 0, total = 0;
           #{assert}(self);
-          #{assert}(self->list);
-          if(!#{@list.empty}(self->data.list)) {
-            size = (size_t*)malloc(#{@list.size}(self->data.list)*sizeof(size_t)); #{assert}(size);
-            #{@list.itCtor}(&it, self->data.list);
+          #{assert}(self->is_list);
+          if(!#{@list.empty}(&self->data.list)) {
+            size = (size_t*)malloc(#{@list.size}(&self->data.list)*sizeof(size_t)); #{assert}(size);
+            #{@list.itCtor}(&it, &self->data.list);
             for(i = 0; #{@list.itMove}(&it); ++i) {
               total += (size[i] = strlen(#{@list.itGet}(&it)));
             }
             string = (#{char_type_ref})#{malloc}((total + 1)*sizeof(#{char_type})); #{assert}(string);
-            #{@list.itCtor}(&it, self->data.list);
+            #{@list.itCtor}(&it, &self->data.list);
             /* List is a LIFO structure therefore merging should be performed from right to left */
             i = 0; start = total;
             while(#{@list.itMove}(&it)) {
@@ -366,21 +366,21 @@ class String < Type
           } else {
             string = (#{char_type_ref})#{calloc}(1, sizeof(#{char_type})); #{assert}(string);
           }
-          #{@list.free?}(self->data.list);
+          #{@list.dtor}(&self->data.list);
           self->size = total;
           self->data.string = string;
-          self->list = 0;
+          self->is_list = 0;
         }
         #{define} void #{_split}(#{type_ref} self) {
           #{@list.type} list;
           #{assert}(self);
-          #{assert}(!self->list);
-          list = #{@list.new?}();
-          #{@list.push}(list, self->data.string);
+          #{assert}(!self->is_list);
+          #{@list.ctor}(&list);
+          #{@list.push}(&list, self->data.string);
           /* self->size = strlen(self->data.string); not needed since the size shouldn't have changed */
           #{assert}(self->size == strlen(self->data.string));
           self->data.list = list;
-          self->list = 1;
+          self->is_list = 1;
         }
         #{define} #{ctor.definition} {
           #{assert}(self);
@@ -390,17 +390,17 @@ class String < Type
             nbytes = (self->size + 1)*sizeof(#{char_type});
             self->data.string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(self->data.string);
             memcpy(self->data.string, chars, nbytes);
-            self->list = 0;
+            self->is_list = 0;
           } else {
             /* NULL argument is permitted and corresponds to empty string */
             self->size = 0;
-            self->data.list = #{@list.new?}();
-            self->list = 1;
+            #{@list.ctor}(&self->data.list);
+            self->is_list = 1;
           }
         }
         #{define} #{dtor.definition} {
           #{assert}(self);
-          if(self->list) #{@list.free?}(self->data.list); else #{free}(self->data.string);
+          if(self->is_list) #{@list.dtor}(&self->data.list); else #{free}(self->data.string);
         }
         #{define} #{copy.definition} {
           #{assert}(src);
@@ -474,7 +474,7 @@ class String < Type
           nbytes = (size + 1)*sizeof(#{char_type});
           string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(string);
           memcpy(string, chars, nbytes);
-          #{@list.push}(self->data.list, string);
+          #{@list.push}(&self->data.list, string);
           self->size += size;
         }
         #{define} void #{pushString}(#{type_ref} self, #{type_ref} from) {
