@@ -228,7 +228,7 @@ class String < Type
         size_t size;
         union data {
           #{char_type_ref} string;
-          #{@list.type} strings;
+          #{@list.type} list;
         } data;
         int list;
       };
@@ -342,70 +342,71 @@ class String < Type
         #{define} void #{_join}(#{type_ref} self) {
           #{@list.it} it;
           #{char_type_ref} string;
-          size_t* chunk; /* Avoiding excessive call to strlen() */
+          size_t* size; /* size sizes cache to avoid excessive calls to strlen() */
           size_t i, start = 0, total = 0;
           #{assert}(self);
           #{assert}(self->list);
-          if(!#{@list.empty}(self->data.strings)) {
-            chunk = (size_t*)malloc(#{@list.size}(self->data.strings)*sizeof(size_t)); #{assert}(chunk);
-            #{@list.itCtor}(&it, self->data.strings);
+          if(!#{@list.empty}(self->data.list)) {
+            size = (size_t*)malloc(#{@list.size}(self->data.list)*sizeof(size_t)); #{assert}(size);
+            #{@list.itCtor}(&it, self->data.list);
             for(i = 0; #{@list.itMove}(&it); ++i) {
-              total += (chunk[i] = strlen(#{@list.itGet}(&it)));
+              total += (size[i] = strlen(#{@list.itGet}(&it)));
             }
             string = (#{char_type_ref})#{malloc}((total + 1)*sizeof(#{char_type})); #{assert}(string);
-            #{@list.itCtor}(&it, self->data.strings);
+            #{@list.itCtor}(&it, self->data.list);
             /* List is a LIFO structure therefore merging should be performed from right to left */
-            start = total - chunk[i = 0];
+            i = 0; start = total;
             while(#{@list.itMove}(&it)) {
-              memcpy(&string[start], #{@list.itGet}(&it), chunk[i]*sizeof(#{char_type}));
-              start -= chunk[++i];
+              start -= size[i];
+              memcpy(&string[start], #{@list.itGet}(&it), size[i]*sizeof(#{char_type}));
+              ++i;
             }
             string[total] = '\\0';
-            #{free}(chunk);
+            #{free}(size);
           } else {
             string = (#{char_type_ref})#{calloc}(1, sizeof(#{char_type})); #{assert}(string);
           }
-          #{@list.free?}(self->data.strings);
-          self->list = 0;
+          #{@list.free?}(self->data.list);
           self->size = total;
           self->data.string = string;
+          self->list = 0;
         }
         #{define} void #{_split}(#{type_ref} self) {
-          #{@list.type} strings;
+          #{@list.type} list;
           #{assert}(self);
           #{assert}(!self->list);
-          strings = #{@list.new?}();
-          #{@list.push}(strings, self->data.string);
-          self->list = 1;
+          list = #{@list.new?}();
+          #{@list.push}(list, self->data.string);
           /* self->size = strlen(self->data.string); not needed since the size shouldn't have changed */
           #{assert}(self->size == strlen(self->data.string));
-          self->data.strings = strings;
+          self->data.list = list;
+          self->list = 1;
         }
         #{define} #{ctor.definition} {
           #{assert}(self);
           if(chars) {
             size_t nbytes;
-            self->list = 0;
             self->size = strlen(chars);
             nbytes = (self->size + 1)*sizeof(#{char_type});
             self->data.string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(self->data.string);
             memcpy(self->data.string, chars, nbytes);
+            self->list = 0;
           } else {
             /* NULL argument is permitted and corresponds to empty string */
-            self->list = 1;
             self->size = 0;
-            self->data.strings = #{@list.new?}();
+            self->data.list = #{@list.new?}();
+            self->list = 1;
           }
         }
         #{define} #{dtor.definition} {
           #{assert}(self);
           if(self->list) {
             #{@list.it} it;
-            #{@list.itCtor}(&it, self->data.strings);
+            #{@list.itCtor}(&it, self->data.list);
             while(#{@list.itMove}(&it)) {
               #{free}(#{@list.itGet}(&it));
             }
-            #{@list.free?}(self->data.strings);
+            #{@list.free?}(self->data.list);
           } else {
             #{free}(self->data.string);
           }
@@ -482,7 +483,7 @@ class String < Type
           nbytes = (size + 1)*sizeof(#{char_type});
           string = (#{char_type_ref})#{malloc}(nbytes); #{assert}(string);
           memcpy(string, chars, nbytes);
-          #{@list.push}(self->data.strings, string);
+          #{@list.push}(self->data.list, string);
           self->size += size;
         }
         #{define} void #{pushString}(#{type_ref} self, #{type_ref} from) {
