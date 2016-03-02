@@ -206,7 +206,7 @@ class String < Type
   def initialize(type_name = :String, visibility = :public)
     super
     @it_ref = "#{it}*"
-    @list = Reference.new(List.new(list, char_type_ref, :public))
+    @list = Reference.new(List.new(list, {:type => char_type_ref, :dtor => free}, :private)) # List takes ownership over the strings put into it hence the custom element destructor
     initialize_redirectors
     @ctor = define_redirector(:ctor, Function::Signature.new([type_ref^:self, "const #{char_type_ref}"^:chars]))
   end
@@ -400,16 +400,7 @@ class String < Type
         }
         #{define} #{dtor.definition} {
           #{assert}(self);
-          if(self->list) {
-            #{@list.it} it;
-            #{@list.itCtor}(&it, self->data.list);
-            while(#{@list.itMove}(&it)) {
-              #{free}(#{@list.itGet}(&it));
-            }
-            #{@list.free?}(self->data.list);
-          } else {
-            #{free}(self->data.string);
-          }
+          if(self->list) #{@list.free?}(self->data.list); else #{free}(self->data.string);
         }
         #{define} #{copy.definition} {
           #{assert}(src);
