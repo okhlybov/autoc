@@ -207,7 +207,7 @@ class HashSet < Collection
     @list.write_intf_decls(stream, static, inline)
     @list.write_impls(stream, static)
     stream << %$
-      #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
+      static #{element.type_ref} #{itGetRef}(#{it_ref});
       static void #{rehash}(#{type_ref} self) {
         #{@list.type_ref} buckets;
         size_t index, bucket_count, size, fill;
@@ -424,7 +424,7 @@ class HashSet < Collection
         #{assert}(self);
         return #{@list.itGet}(&self->it);
       }
-      #{define} #{element.type_ref} #{itGetRef}(#{it_ref} self) {
+      static #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         return #{@list.itGetRef}(&self->it);
       }
