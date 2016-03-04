@@ -231,12 +231,23 @@ class List < Collection
       }
       #{define} #{copy.definition} {
         #{it} it;
+        int index;
+        size_t size;
+        #{element.type}** elements;
         #{assert}(src);
         #{assert}(dst);
         #{ctor}(dst);
-        #{itCtor}(&it, src);
-        while(#{itMove}(&it)) {
-          #{push}(dst, *#{itGetRef}(&it));
+        if(!#{empty}(src)) {
+          /* List is a LIFO type container therefore the insertion order into the destination container should be reversed */
+          elements = (#{element.type}**)#{malloc}((size = #{size}(src))*sizeof(#{element.type}*)); #{assert}(elements);
+          index = 0;
+          #{itCtor}(&it, src);
+          while(#{itMove}(&it)) {
+            #{assert}(index < size);
+            elements[index++] = #{itGetRef}(&it);
+          }
+          for(index = size-1; index >= 0; --index) #{push}(dst, *elements[index]);
+          #{free}(elements);
         }
       }
       #{define} #{equal.definition} {
