@@ -261,7 +261,7 @@ class Queue < Collection
   def write_impls(stream, define)
     super
     stream << %$
-      #{define} #{element.type_ref} #{itGetRef}(#{it_ref});
+      static #{element.type_ref} #{itGetRef}(#{it_ref});
       #{define} #{ctor.definition} {
         #{assert}(self);
         self->head_node = self->tail_node = NULL;
@@ -503,7 +503,7 @@ class Queue < Collection
         #{element.copy("result", "self->this_node->element")};
         return result;
       }
-      #{define} #{element.type_ref} #{itGetRef}(#{it_ref} self) {
+      static #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         #{assert}(self->this_node);
         return &self->this_node->element;
