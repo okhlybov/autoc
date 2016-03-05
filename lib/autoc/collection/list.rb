@@ -231,8 +231,7 @@ class List < Collection
       }
       #{define} #{copy.definition} {
         #{it} it;
-        int index;
-        size_t size;
+        size_t index, size;
         #{element.type}** elements;
         #{assert}(src);
         #{assert}(dst);
@@ -246,7 +245,7 @@ class List < Collection
             #{assert}(index < size);
             elements[index++] = #{itGetRef}(&it);
           }
-          for(index = size-1; index >= 0; --index) #{push}(dst, *elements[index]);
+          for(index = size; index > 0; --index) #{push}(dst, *elements[index-1]); /* Be careful not to run into the underflow of unsigned integer type */
           #{free}(elements);
         }
       }
