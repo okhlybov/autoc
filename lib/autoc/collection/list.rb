@@ -7,7 +7,7 @@ module AutoC
 =begin
 
 List is an ordered unidirectional sequence container.
-List supports submission/polling operations at one end hence it can be used as a LIFO container.
+List supports submission/polling operations on one end hence it can be used as a LIFO container (a stack).
 
 The collection's C++ counterpart is +std::forward_list<>+ template class.
 
@@ -245,7 +245,7 @@ class List < Collection
             #{assert}(index < size);
             elements[index++] = #{itGetRef}(&it);
           }
-          for(index = size; index > 0; --index) #{push}(dst, *elements[index-1]); /* Be careful not to run into the underflow of unsigned integer type */
+          for(index = size; index > 0; --index) #{push}(dst, *elements[index-1]); /* Be careful not to run into the underflow of the unsigned integer type */
           #{free}(elements);
         }
       }
@@ -338,6 +338,9 @@ class List < Collection
         }
         #{abort}();
       }
+      /* FIXME: for the generality's sake there should be both `what` and `with` values
+        This is not achievable without breaking the interface, however,
+        therefore defer this change to the major version bump */
       #{define} int #{replaceEx}(#{type_ref} self, #{element.type} with, int count) {
         #{node}* node;
         int replaced = 0;
