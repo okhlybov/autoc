@@ -66,6 +66,17 @@ cleanup %~#{dtor}(&t);~
     }
   ~
 
+  test :iterateExactForward, %~
+    #{it} it;
+    #{itCtorEx}(&it, &t, 1);
+    i = 0;
+    while(#{itMove}(&it)) {
+      e = #{itGet}(&it);
+      TEST_EQUAL( #{element.get}(e), i++ );
+      #{element.dtor}(e);
+    }
+  ~
+
   test :iterateBackward, %~
     #{it} it;
     #{itCtorEx}(&it, &t, 0);

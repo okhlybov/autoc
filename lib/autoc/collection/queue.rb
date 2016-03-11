@@ -9,7 +9,7 @@ module AutoC
 Queue is an ordered bidirectional sequence container.
 Queue supports addition/removal operations at both ends.
 However, it is intended to be used as a FIFO container as opposed to {AutoC::List}
-since submission and polling operations are performed on the opposite ends.
+therefore the default submission, polling and retrieval operations are performed on the opposite ends.
 
 This collection is a synergy of C++ +std::list<>+ and +std::queue<>+ template classes.
 

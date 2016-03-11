@@ -15,7 +15,8 @@ Value = Class.new(AutoC::UserDefinedType) do
       #define ValueEqual(lt, rt) _ValueEqual(&lt, &rt)
       #define ValueLess(lt, rt) _ValueLess(&lt, &rt)
       #define ValueIdentify(self) _ValueIdentify(&self)
-      #define ValueGet(self) (*(self).value)
+      #define ValueGet(self) *(self).value
+      #define ValueSet(self, x) *(self).value = (x)
       void _ValueCtor(Value*);
       void _ValueCtorEx(Value*, int);
       void _ValueDtor(Value*);

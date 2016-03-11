@@ -1,3 +1,28 @@
+=begin
+
+This is the AutoC automatic unit test generator.
+Usage instruction:
+
+1. Generate get test's source code (test_auto.c and test_auto.h):
+> ruby -I . -I ../lib autoctest.rb
+
+2. Compile the generated code:
+> cc test_auto.c
+  
+3. Run the tests:
+> ./a.out
+
+The code is intended to finish succesfully,
+the process' exit code is zero when all tests are passed
+ano non-zero if there were failed tests.
+
+The compile-time warnings are possible and may be ignored.
+
+The compiled code should also pass the memory leakage tests
+(with Valgrind, Dr.Memory etc.)
+
+=end
+
 require "autoc"
 
 Prologue = Class.new(AutoC::Code) do
