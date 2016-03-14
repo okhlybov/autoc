@@ -70,7 +70,7 @@ Remove and destroy all elements stored in +self+.
 |
 Put a _copy_ of the element +what+ into +self+ *only if* there is no such element in +self+ which is considered equal to +what+.
 
-Return non-zero value on successful element put and zero value otherwise.
+Return non-zero value on successful element put (that is there was not such element in +self+) and zero value otherwise.
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +with+)
 |
