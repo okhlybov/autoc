@@ -32,22 +32,25 @@ Prologue = Class.new(AutoC::Code) do
       struct {
         int total, processed, failed;
       } tests;
+      int failure;
       typedef void (*test_func)(void);
       void run_test(const char* name, test_func func) {
         fprintf(stdout, "+   %s\\n", name);
         fflush(stdout);
+        failure = 0;
         func();
+        if(failure) tests.failed++;
         tests.processed++;
       }
       void print_condition_failure(const char* message, const char* condition, const char* file, int line) {
         fprintf(stderr, "*** %s : %s (%s:%d)\\n", condition, message, file, line);
         fflush(stderr);
-        tests.failed++;
+        failure = 1;
       }
       void print_equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
         fprintf(stderr, "*** %s == %s : %s (%s:%d)\\n", x, y, message, file, line);
         fflush(stderr);
-        tests.failed++;
+        failure = 1;
       }
       void print_summary(void) {
         if(tests.failed)

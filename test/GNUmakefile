@@ -40,7 +40,7 @@ CPPFLAGS ?= -DHAVE_VSNPRINTF
 
 # Language-neutral options passed to all compilers, ex. <-O3>.
 # This variable is mainly intended to control the compilers optimizations.
-OPTFLAGS ?= -g -ansi -pedantic -Wall -Wno-unused-value -Wno-unused-function
+OPTFLAGS ?= -g -ansi -pedantic -Wall -Wno-unused-value -Wno-unused-function -Wno-declaration-after-statement
 
 
 ### [extra] user-definable variables that might be of use.
