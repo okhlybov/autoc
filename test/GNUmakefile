@@ -147,7 +147,7 @@ clean :
 
 -include $(DEP)
 
-$(AUTO) : autotest.rb $(wildcard *.rb)
+$(AUTO) : test.rb $(wildcard *.rb)
 	ruby -I. -I../lib $<
 	
 run : $(EXE)
