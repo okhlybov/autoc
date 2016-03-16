@@ -60,7 +60,7 @@ Return non-zero value if map +self+ contains no entries and zero value otherwise
 |
 Return a _copy_ of the element in +self+ bound to a key which is considered equal to the key +key+.
 
-WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See ~type~Contains().
+WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See ~type~ContainsKey().
 
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
@@ -77,7 +77,7 @@ Return non-zero value on successful put and zero value otherwise.
 If +self+ contains a key which is considered equal to the key +key+,
 remove and destroy that key along with an element bound to it
 and put a new pair built of the _copies_ of +key+ and +value+,
-otherwise simply put a new key/element pair into +self+ in the way of ~type~Put().
+otherwise no nothing.
 
 Return non-zero value if the replacement was actually performed and zero value otherwise.
 

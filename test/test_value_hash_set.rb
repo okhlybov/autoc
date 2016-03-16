@@ -74,12 +74,14 @@ cleanup %~
 		#{element.set}(e, 1);
 		TEST_TRUE( #{contains}(&a, e) );
 		TEST_TRUE( #{replace}(&a, e) );
+		TEST_TRUE( #{contains}(&a, e) );
 	~
 
 	test :replaceNone, %~
 		#{element.set}(e, -1);
 		TEST_FALSE( #{contains}(&a, e) );
 		TEST_FALSE( #{replace}(&a, e) );
+		TEST_FALSE( #{contains}(&a, e) );
 	~
 
 	test :remove, %~
@@ -97,7 +99,7 @@ cleanup %~
 
 	test :iterate, %~
 		#{it} it;
-		int i = 0;
+		size_t i = 0;
 		#{itCtor}(&it, &a);
 		while(#{itMove}(&it)) {
 			#{element.type} e2 = #{itGet}(&it);
