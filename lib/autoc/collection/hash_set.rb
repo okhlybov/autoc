@@ -74,7 +74,7 @@ Return non-zero value on successful element put (that is there was not such elem
 
 |*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +with+)
 |
-*If* +self+ contains an element which is considered equal to the element +with+,
+If +self+ contains an element which is considered equal to the element +with+,
 replace that element with a _copy_ of +with+, otherwise do nothing.
 Replaced element is destroyed.
 

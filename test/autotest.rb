@@ -110,7 +110,8 @@ def type_test(cls, *opts, &code)
       @cleanup_code = code
     end
     def test(name, code)
-      @test_names << [name, func_name = eval("test#{name[0].upcase}#{name[1..-1]}")]
+      s = name.to_s
+      @test_names << [name, func_name = eval("test#{s[0,1].upcase}#{s[1..-1]}")]
       @tests << %~
         void #{func_name}(void) {
           #{@setup_code}
