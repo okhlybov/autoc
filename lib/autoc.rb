@@ -5,6 +5,7 @@
 . {AutoC::Code} generic C multi-source module generator.
 . {AutoC::Collection} strongly-typed data structure generators similar
 to the C++ STL container classes.
+. {AutoC::String} wrapper around the standard C string with string building capability.
 
 == Versioning scheme
 

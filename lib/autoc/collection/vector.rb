@@ -205,10 +205,8 @@ class Vector < Collection
         return #{within}(self->vector, self->index);
       }
       #{define} #{element.type} #{itGet}(#{it_ref} self) {
-        #{element.type} e;
         #{assert}(self);
-        e = #{get}(self->vector, self->index); return e;
-        /* OrangeC 5.60.??? compiler strangely fails to compile the direct return statement without using the intermediate variable */
+        return #{get}(self->vector, self->index);
       }
     $
     stream << %$
