@@ -16,7 +16,9 @@ For more information refer to {::AutoC}.
 Ad-hoc test build instructions:
 ----
 > cd test
-> cc -o test test.c test_auto.c
+> ruby -I. -I../lib test.rb
+> cc test_auto.c
+> ./a.out
 ----
 
 For (in)complete list of changes refer to {file:CHANGES}.
