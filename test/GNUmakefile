@@ -59,7 +59,7 @@ CXXFLAGS ?=
 FFLAGS ?=
 
 # Options passed to the linker, ex. <-s>.
-LDFLAGS ?=
+LDFLAGS ?= -g
 
 # Extra library options, ex. <-lm>.
 LDLIBS ?=

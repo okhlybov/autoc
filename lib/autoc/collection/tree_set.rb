@@ -99,13 +99,11 @@ class TreeSet < Collection
       }
       static void #{leftRotate}(#{type_ref} self, #{node}* x) {
         #{node}* y;
-        #{node}* nil;
         #{assert}(self);
         #{assert}(x);
-        nil = self->nil;
         y = x->right;
         x->right = y->left;
-        if(y->left != nil) y->left->parent = x;
+        if(y->left != self->nil) y->left->parent = x;
         y->parent = x->parent;   
         if(x == x->parent->left) {
           x->parent->left = y;
@@ -118,13 +116,11 @@ class TreeSet < Collection
       }
       static void #{rightRotate}(#{type_ref} self, #{node}* y) {
         #{node}* x;
-        #{node}* nil;
         #{assert}(self);
         #{assert}(y);
-        nil = self->nil;
         x = y->left;
         y->left = x->right;
-        if(nil != x->right)  x->right->parent = y;
+        if(self->nil != x->right)  x->right->parent = y;
         x->parent = y->parent;
         if(y == y->parent->left) {
           y->parent->left = x;
@@ -150,11 +146,9 @@ class TreeSet < Collection
         temp->is_set = 0;
       }
       static void #{nodeDtor}(#{type_ref} self, #{node}* x) {
-        #{node}* nil;
         #{assert}(self);
         #{assert}(x);
-        nil = self->nil;
-        if(x != nil) {
+        if(x != self->nil) {
           #{nodeDtor}(self, x->left);
           #{nodeDtor}(self, x->right);
           if(x->is_set) #{element.dtor("x->element")};
@@ -200,12 +194,10 @@ class TreeSet < Collection
       static #{node}* #{findNode}(#{type_ref} self, #{element.type} element) {
         /* Returns nil and not NULL when no element is found */
         #{node}* x;
-        #{node}* nil;
         int cmp;
         #{assert}(self);
         x = self->root->left;
-        nil = self->nil;
-        if(x == nil) return x;
+        if(x == self->nil) return x;
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
           if(1 == cmp) {
@@ -213,27 +205,23 @@ class TreeSet < Collection
           } else {
             x = x->right;
           }
-          if (x == nil) return x;
+          if (x == self->nil) return x;
           cmp = #{compare}(x->element, element);
         }
         return x;
       }
       #{define} int #{contains}(#{type_ref} self, #{element.type} element) {
-        #{node}* nil;
         #{assert}(self);
-        nil = self->nil;
-        return #{findNode}(self, element) == nil ? 0 : 1;
+        return #{findNode}(self, element) == self->nil ? 0 : 1;
       }
       #{define} #{element.type} #{get}(#{type_ref} self, #{element.type} element) {
         #{node}* x;
-        #{node}* nil;
         #{element.type} result;
         int cmp;
         #{assert}(self);
         #{assert}(#{contains}(self, element));
         x = self->root->left;
-        nil = self->nil;
-        if(x == nil) #{abort}();
+        if(x == self->nil) #{abort}();
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
           if(1 == cmp) {
@@ -241,7 +229,7 @@ class TreeSet < Collection
           } else {
             x = x->right;
           }
-          if(x == nil) #{abort}();
+          if(x == self->nil) #{abort}();
           cmp = #{compare}(x->element, element);
         }
         #{element.copy("result", "x->element")};
@@ -254,14 +242,12 @@ class TreeSet < Collection
       static void #{insertNode}(#{type_ref} self, #{node}* z) {
         #{node}* x;
         #{node}* y;
-        #{node}* nil;
         #{assert}(self);
         #{assert}(z);
-        nil = self->nil;
-        z->left = z->right = nil;
+        z->left = z->right = self->nil;
         y = self->root;
         x = self->root->left;
-        while(x != nil) {
+        while(x != self->nil) {
           y = x;
           if(1 == #{compare}(x->element, z->element)) {
             x = x->left;
@@ -401,21 +387,17 @@ class TreeSet < Collection
       }
       static #{node}* #{prevNode}(#{type_ref} self, #{node}* x) { 
         #{node}* y;
-        #{node}* nil;
-        #{node}* root;
         #{assert}(self);
         #{assert}(x);
-        nil = self->nil;
-        root = self->root;
-        if(nil != (y = x->left)) {
-          while(y->right != nil) {
+        if(self->nil != (y = x->left)) {
+          while(y->right != self->nil) {
             y = y->right;
           }
           return y;
         } else {
           y = x->parent;
           while(x == y->left) { 
-            if(y == root) return nil; 
+            if(y == self->root) return self->nil; 
             x = y;
             y = y->parent;
           }
@@ -424,14 +406,10 @@ class TreeSet < Collection
       }
       static #{node}* #{nextNode}(#{type_ref} self, #{node}* x) { 
         #{node}* y;
-        #{node}* nil;
-        #{node}* root;
         #{assert}(self);
         #{assert}(x);
-        nil = self->nil;
-        root = self->root;
-        if(nil != (y = x->right)) {
-          while(y->left != nil) {
+        if(self->nil != (y = x->right)) {
+          while(y->left != self->nil) {
             y = y->left;
           }
           return y;
@@ -441,23 +419,19 @@ class TreeSet < Collection
             x = y;
             y = y->parent;
           }
-          if(y == root) return nil;
+          if(y == self->root) return self->nil;
           return y;
         }
       }
       static void #{deleteNode}(#{type_ref} self, #{node}* z) {
         #{node}* x;
         #{node}* y;
-        #{node}* nil;
-        #{node}* root;
         #{assert}(self);
         #{assert}(z);
-        nil = self->nil;
-        root = self->root;
-        y = ((z->left == nil) || (z->right == nil)) ? z : #{nextNode}(self, z);
-        x = (y->left == nil) ? y->right : y->left;
-        if(root == (x->parent = y->parent)) {
-          root->left = x;
+        y = ((z->left == self->nil) || (z->right == self->nil)) ? z : #{nextNode}(self, z);
+        x = (y->left == self->nil) ? y->right : y->left;
+        if(self->root == (x->parent = y->parent)) {
+          self->root->left = x;
         } else {
           if(y == y->parent->left) {
             y->parent->left = x;
@@ -495,11 +469,9 @@ class TreeSet < Collection
       }
       #{define} int #{remove}(#{type_ref} self, #{element.type} element) {
         #{node}* x;
-        #{node}* nil;
         #{assert}(self);
-        nil = self->nil;
         x = #{findNode}(self, element);
-        if(x == nil) {
+        if(x == self->nil) {
           return 0;
         } else {
           #{deleteNode}(self, x);
@@ -556,19 +528,17 @@ class TreeSet < Collection
       #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} tree, int ascending) {
         #{node}* x;
         #{node}* y;
-        #{node}* nil;
         #{assert}(self);
         #{assert}(tree);
-        nil = tree->nil;
         self->tree = tree;
         self->start = 1;
         x = tree->root;
         if(self->ascending = ascending) {
-          while((y = #{prevNode}(tree, x)) != nil) x = y;
+          while((y = #{prevNode}(tree, x)) != self->tree->nil) x = y;
         } else {
-          while((y = #{nextNode}(tree, x)) != nil) x = y;
+          while((y = #{nextNode}(tree, x)) != self->tree->nil) x = y;
         }
-        self->node = (x == tree->root ? nil : x);
+        self->node = (x == self->tree->root ? self->tree->nil : x);
       }
       #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
