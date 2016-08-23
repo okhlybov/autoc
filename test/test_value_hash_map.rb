@@ -1,6 +1,6 @@
 require "value"
 
-type_test(AutoC::HashMap, :ValueMap, Value, Value) do
+type_test(AutoC::HashMap, :ValueHashMap, Value, Value) do
   
 	def write_defs(stream)
 		stream << %~

@@ -1,6 +1,6 @@
 require "value"
 
-type_test(AutoC::HashSet, :ValueSet, Value) do
+type_test(AutoC::HashSet, :ValueHashSet, Value) do
   
 	def write_defs(stream)
 		stream << %~

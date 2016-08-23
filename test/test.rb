@@ -35,7 +35,7 @@ Prologue = Class.new(AutoC::Code) do
       int failure;
       typedef void (*test_func)(void);
       void run_test(const char* name, test_func func) {
-        fprintf(stdout, "+   %s\\n", name);
+        fprintf(stdout, "|   %s\\n", name);
         fflush(stdout);
         failure = 0;
         func();
@@ -125,7 +125,7 @@ def type_test(cls, *opts, &code)
       @tests.each {|f| stream << f}
       stream << %~void #{runTests}(void) {~
         stream << %~
-          fprintf(stdout, "+ %s\\n", "#{type}");
+          fprintf(stdout, "* %s\\n", "#{type}");
           fflush(stdout);
         ~
         @test_names.each do |name, func_name|
