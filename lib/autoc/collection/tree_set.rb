@@ -16,7 +16,7 @@ http://web.mit.edu/~emin/Desktop/ref_to_emin/www.old/source_code/red_black_tree/
 The collection's C++ counterpart is +std::set<>+ template class.
 
 =end
-class HashSet < Collection
+class TreeSet < Collection
 
   def initialize(*args)
     super
@@ -86,6 +86,17 @@ class HashSet < Collection
   def write_impls(stream, define)
     super
     stream << %$
+      static #{element.type_ref} #{itGetRef}(#{it_ref});
+      static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
+        #{it} it;
+        #{itCtor}(&it, self);
+        while(#{itMove}(&it)) {
+          int found = 0;
+          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
+          if(!found) return 0;
+        }
+        return 1;
+      }
       static void #{leftRotate}(#{type_ref} self, #{node}* x) {
         #{node}* y;
         #{node}* nil;
@@ -124,16 +135,16 @@ class HashSet < Collection
         y->parent = x;
         #{assert}(!self->nil->red);
       }
-      #define #{compare}(lt, rt) (#{element.equal(:lt, :rt)} ? 0 : (#{element.less(:lt, :rt)} : -1 : +1))
+      #define #{compare}(lt, rt) (#{element.equal(:lt, :rt)} ? 0 : (#{element.less(:lt, :rt)} ? -1 : +1))
       #{define} #{ctor.definition} {
         #{node}* temp;
         #{assert}(self);
         self->size = 0;
-        temp = self->nil = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(node);
+        temp = self->nil = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
         temp->parent = temp->left = temp->right = temp;
         temp->red = 0;
         temp->is_set = 0;
-        temp = self->root = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(node);
+        temp = self->root = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
         temp->parent = temp->left = temp->right = self->nil;
         temp->red = 0;
         temp->is_set = 0;
@@ -146,7 +157,7 @@ class HashSet < Collection
         if(x != nil) {
           #{nodeDtor}(self, x->left);
           #{nodeDtor}(self, x->right);
-          if(x->is_set) #{element.dtor}(x->element);
+          if(x->is_set) #{element.dtor("x->element")};
           #{free}(x);
         }
       }
@@ -157,6 +168,7 @@ class HashSet < Collection
         #{free}(self->nil);
       }
       #{define} #{copy.definition} {
+        #{it} it;
         #{assert}(src);
         #{assert}(dst);
         #{ctor}(dst);
@@ -192,11 +204,11 @@ class HashSet < Collection
         int cmp;
         #{assert}(self);
         x = self->root->left;
-        nil = tree->nil;
+        nil = self->nil;
         if(x == nil) return x;
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
-          if(1 == compVal) {
+          if(1 == cmp) {
             x = x->left;
           } else {
             x = x->right;
@@ -209,7 +221,7 @@ class HashSet < Collection
       #{define} int #{contains}(#{type_ref} self, #{element.type} element) {
         #{node}* nil;
         #{assert}(self);
-        nil = tree->nil;
+        nil = self->nil;
         return #{findNode}(self, element) == nil ? 0 : 1;
       }
       #{define} #{element.type} #{get}(#{type_ref} self, #{element.type} element) {
@@ -220,7 +232,7 @@ class HashSet < Collection
         #{assert}(self);
         #{assert}(#{contains}(self, element));
         x = self->root->left;
-        nil = tree->nil;
+        nil = self->nil;
         if(x == nil) #{abort}();
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
@@ -237,18 +249,7 @@ class HashSet < Collection
       }
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
-        return size;
-      }
-      static #{element.type_ref} #{itGetRef}(#{it_ref});
-      static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          int found = 0;
-          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
-          if(!found) return 0;
-        }
-        return 1;
+        return self->size;
       }
       static void #{insertNode}(#{type_ref} self, #{node}* z) {
         #{node}* x;
@@ -317,7 +318,7 @@ class HashSet < Collection
             } else {
               if(x == x->parent->left) {
                 x = x->parent;
-                #{rightRotate(self, x);
+                #{rightRotate}(self, x);
               }
               x->parent->red = 0;
               x->parent->parent->red = 1;
@@ -588,7 +589,8 @@ class HashSet < Collection
       }
       static #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
-        #{assert}(self->this_node);
+        #{assert}(self->node);
+        #{assert}(self->node != self->tree->nil);
         return &self->node->element;
       }
     $
