@@ -277,6 +277,9 @@ class Type < Code
   # Returns *true* if the type provides a well-defined 'less than' test function
   def orderable?; false end
 
+  # Returns *true* if the type provides corrset soritng routines
+  def sortable?; comparable? && orderable? end
+  
   # Returns *true* if the type provides a well-defined hash calculation function
   def hashable?; false end
 

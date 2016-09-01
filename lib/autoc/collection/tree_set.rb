@@ -208,6 +208,7 @@ class TreeSet < Collection
           if(1 == cmp) {
             x = x->left;
           } else {
+            #{assert}(-1 == cmp);
             x = x->right;
           }
           if (x == self->nil) return x;
@@ -232,6 +233,7 @@ class TreeSet < Collection
           if(1 == cmp) {
             x = x->left;
           } else {
+            #{assert}(-1 == cmp);
             x = x->right;
           }
           if(x == self->nil) #{abort}();
@@ -325,9 +327,8 @@ class TreeSet < Collection
       #{define} int #{replace}(#{type_ref} self, #{element.type} element) {
         int removed;
         #{assert}(self);
-        /* FIXME might be inefficient */
-        removed = #{remove}(self, element);
-        #{put}(self, element);
+        /* FIXME removing followed by putting might be inefficient */
+        if(removed = #{remove}(self, element)) #{put}(self, element);
         return removed;
       }
       static void #{fixupNode}(#{type_ref} self, #{node}* x) {
@@ -575,7 +576,7 @@ class TreeSet < Collection
   
   def key_requirement(obj)
     element_requirement(obj)
-    raise "type #{obj.type} (#{obj}) must be sortable" unless obj.comparable?
+    raise "type #{obj.type} (#{obj}) must be sortable" unless obj.sortable?
   end
 
 end # TreeSet
