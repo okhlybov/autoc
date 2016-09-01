@@ -258,9 +258,7 @@ class HashSet < Collection
         #{it} it;
         #{itCtor}(&it, self);
         while(#{itMove}(&it)) {
-          int found = 0;
-          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
-          if(!found) return 0;
+          if(!#{contains}(other, *#{itGetRef}(&it))) return 0;
         }
         return 1;
       }
