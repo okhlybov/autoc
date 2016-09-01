@@ -45,7 +45,7 @@ class TreeSet < Collection
         #{node}* node;
       };
       struct #{node} {
-        int red, is_set; /* FIXME use lower bit pointer hack instead */
+        int flags;
         #{node}* left;
         #{node}* right;
         #{node}* parent;
@@ -86,14 +86,19 @@ class TreeSet < Collection
   def write_impls(stream, define)
     super
     stream << %$
+      #define #{isRed}(x) (x->flags & 1)
+      #define #{setRed}(x) (x->flags |= 1)
+      #define #{dropRed}(x) (x->flags &= ~1)
+      #define #{copyRed}(x, y) if(#{isRed}(y)) #{setRed}(x); else #{dropRed}(x);
+      #define #{isSet}(x) (x->flags & 2)
+      #define #{setSet}(x) (x->flags |= 2)
+      #define #{dropSet}(x) (x->flags &= ~2)
       static #{element.type_ref} #{itGetRef}(#{it_ref});
       static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
         #{itCtor}(&it, self);
         while(#{itMove}(&it)) {
-          int found = 0;
-          if(#{contains}(other, *#{itGetRef}(&it))) found = 1;
-          if(!found) return 0;
+          if(!#{contains}(other, *#{itGetRef}(&it))) return 0;
         }
         return 1;
       }
@@ -112,7 +117,7 @@ class TreeSet < Collection
         }
         y->left = x;
         x->parent = y;
-        #{assert}(!self->nil->red);
+        #{assert}(!#{isRed}(self->nil));
       }
       static void #{rightRotate}(#{type_ref} self, #{node}* y) {
         #{node}* x;
@@ -129,7 +134,7 @@ class TreeSet < Collection
         }
         x->right = y;
         y->parent = x;
-        #{assert}(!self->nil->red);
+        #{assert}(!#{isRed}(self->nil));
       }
       #define #{compare}(lt, rt) (#{element.equal(:lt, :rt)} ? 0 : (#{element.less(:lt, :rt)} ? -1 : +1))
       #{define} #{ctor.definition} {
@@ -138,12 +143,12 @@ class TreeSet < Collection
         self->size = 0;
         temp = self->nil = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
         temp->parent = temp->left = temp->right = temp;
-        temp->red = 0;
-        temp->is_set = 0;
+        #{dropRed}(temp);
+        #{dropSet}(temp);
         temp = self->root = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
         temp->parent = temp->left = temp->right = self->nil;
-        temp->red = 0;
-        temp->is_set = 0;
+        #{dropRed}(temp);
+        #{dropSet}(temp);
       }
       static void #{nodeDtor}(#{type_ref} self, #{node}* x) {
         #{assert}(self);
@@ -151,7 +156,7 @@ class TreeSet < Collection
         if(x != self->nil) {
           #{nodeDtor}(self, x->left);
           #{nodeDtor}(self, x->right);
-          if(x->is_set) #{element.dtor("x->element")};
+          if(#{isSet}(x)) #{element.dtor("x->element")};
           #{free}(x);
         }
       }
@@ -261,7 +266,7 @@ class TreeSet < Collection
         } else {
           y->right = z;
         }
-        #{assert}(!self->nil->red);
+        #{assert}(!#{isRed}(self->nil));
       }
       #{define} int #{put}(#{type_ref} self, #{element.type} element) {
         #{node}* x;
@@ -272,49 +277,49 @@ class TreeSet < Collection
         if(#{contains}(self, element)) return 0;
         x = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(x);
         #{element.copy("x->element", "element")};
-        x->is_set = 1;
+        #{setSet}(x);
         ++self->size;
         #{insertNode}(self, x);
         node = x;
-        x->red = 1;
-        while(x->parent->red) {
+        #{setRed}(x);
+        while(#{isRed}(x->parent)) {
           if(x->parent == x->parent->parent->left) {
             y = x->parent->parent->right;
-            if(y->red) {
-              x->parent->red = 0;
-              y->red = 0;
-              x->parent->parent->red = 1;
+            if(#{isRed}(y)) {
+              #{dropRed}(x->parent);
+              #{dropRed}(y);
+              #{setRed}(x->parent->parent);
               x = x->parent->parent;
             } else {
               if(x == x->parent->right) {
                 x = x->parent;
                 #{leftRotate}(self, x);
               }
-              x->parent->red = 0;
-              x->parent->parent->red = 1;
+              #{dropRed}(x->parent);
+              #{setRed}(x->parent->parent);
               #{rightRotate}(self, x->parent->parent);
             } 
           } else {
             y = x->parent->parent->left;
-            if(y->red) {
-              x->parent->red = 0;
-              y->red = 0;
-              x->parent->parent->red = 1;
+            if(#{isRed}(y)) {
+              #{dropRed}(x->parent);
+              #{dropRed}(y);
+              #{setRed}(x->parent->parent);
               x = x->parent->parent;
             } else {
               if(x == x->parent->left) {
                 x = x->parent;
                 #{rightRotate}(self, x);
               }
-              x->parent->red = 0;
-              x->parent->parent->red = 1;
+              #{dropRed}(x->parent);
+              #{setRed}(x->parent->parent);
               #{leftRotate}(self, x->parent->parent);
             } 
           }
         }
-        self->root->left->red = 0;
-        #{assert}(!self->nil->red);
-        #{assert}(!self->root->red);
+        #{dropRed}(self->root->left);
+        #{assert}(!#{isRed}(self->nil));
+        #{assert}(!#{isRed}(self->root));
         return 1;
       }
       #{define} int #{replace}(#{type_ref} self, #{element.type} element) {
@@ -331,59 +336,59 @@ class TreeSet < Collection
         #{assert}(self);
         #{assert}(x);
         root = self->root->left;
-        while((!x->red) && (root != x)) {
+        while(!#{isRed}(x) && (root != x)) {
           if(x == x->parent->left) {
             w = x->parent->right;
-            if(w->red) {
-              w->red = 0;
-              x->parent->red = 1;
+            if(#{isRed}(w)) {
+              #{dropRed}(w);
+              #{setRed}(x->parent);
               #{leftRotate}(self, x->parent);
               w = x->parent->right;
             }
-            if((!w->right->red) && (!w->left->red)) { 
-              w->red = 1;
+            if((!#{isRed}(w->right)) && (!#{isRed}(w->left))) { 
+              #{setRed}(w);
               x = x->parent;
             } else {
-              if(!w->right->red) {
-                w->left->red = 0;
-                w->red = 1;
+              if(!#{isRed}(w->right)) {
+                #{dropRed}(w->left);
+                #{setRed}(w);
                 #{rightRotate}(self, w);
                 w = x->parent->right;
               }
-              w->red = x->parent->red;
-              x->parent->red = 0;
-              w->right->red = 0;
+              #{copyRed}(w, x->parent);
+              #{dropRed}(x->parent);
+              #{dropRed}(w->right);
               #{leftRotate}(self, x->parent);
               x = root;
             }
           } else {
             w = x->parent->left;
-            if(w->red) {
-              w->red = 0;
-              x->parent->red = 1;
+            if(#{isRed}(w)) {
+              #{dropRed}(w);
+              #{setRed}(x->parent);
               #{rightRotate}(self, x->parent);
               w = x->parent->left;
             }
-            if((!w->right->red) && (!w->left->red)) { 
-              w->red = 1;
+            if((!#{isRed}(w->right)) && (!#{isRed}(w->left))) { 
+              #{setRed}(w);
               x = x->parent;
             } else {
-              if(!w->left->red) {
-                w->right->red = 0;
-                w->red = 1;
+              if(!#{isRed}(w->left)) {
+                #{dropRed}(w->right);
+                #{setRed}(w);
                 #{leftRotate}(self, w);
                 w = x->parent->left;
               }
-              w->red = x->parent->red;
-              x->parent->red = 0;
-              w->left->red = 0;
+              #{copyRed}(w, x->parent);
+              #{dropRed}(x->parent);
+              #{dropRed}(w->left);
               #{rightRotate}(self, x->parent);
               x = root;
             }
           }
         }
-        x->red = 0;
-        #{assert}(!self->nil->red);
+        #{dropRed}(x);
+        #{assert}(!#{isRed}(self->nil));
       }
       static #{node}* #{prevNode}(#{type_ref} self, #{node}* x) { 
         #{node}* y;
@@ -441,31 +446,31 @@ class TreeSet < Collection
         }
         if(y != z) {
           #{assert}(y != self->nil);
-          if(!(y->red)) #{fixupNode}(self, x);
-          if(z->is_set) {
+          if(!#{isRed}(y)) #{fixupNode}(self, x);
+          if(#{isSet}(z)) {
             #{element.dtor("z->element")};
             --self->size;
           }
           y->left = z->left;
           y->right = z->right;
           y->parent = z->parent;
-          y->red = z->red;
+          #{copyRed}(y, z);
           z->left->parent = z->right->parent = y;
           if(z == z->parent->left) {
             z->parent->left = y; 
           } else {
             z->parent->right = y;
           }
-          #{free}(z); 
+          #{free}(z);
         } else {
-          if(y->is_set) {
+          if(#{isSet}(y)) {
             #{element.dtor("y->element")};
             --self->size;
           }
-          if(!(y->red)) #{fixupNode}(self, x);
+          if(!#{isRed}(y)) #{fixupNode}(self, x);
           #{free}(y);
         }
-        #{assert}(!self->nil->red);
+        #{assert}(!#{isRed}(self->nil));
       }
       #{define} int #{remove}(#{type_ref} self, #{element.type} element) {
         #{node}* x;
