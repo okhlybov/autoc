@@ -45,7 +45,7 @@ cleanup %~
 	~
 
 setup %~
-	int values[] = {-6,7,1,2,5,7,4,3,1,-6,0};
+	int values[] = {2,-6,7,-6,1,2,5,7,4,3,1,-6,0};
 	int* p = values;
 	#{type} t;
 	#{ctor}(&t);
@@ -97,4 +97,13 @@ cleanup %~
 			}
 		}
 	~
+
+	test :peekHighest, %~
+		TEST_EQUAL( #{peekHighest}(&t), 7 );
+	~
+
+	test :peekLowest, %~
+		TEST_EQUAL( #{peekLowest}(&t), -6 );
+	~
+
 end

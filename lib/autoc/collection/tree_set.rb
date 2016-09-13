@@ -65,6 +65,8 @@ class TreeSet < Collection
       #{declare} void #{purge}(#{type_ref});
       #{declare} int #{contains}(#{type_ref}, #{element.type});
       #{declare} #{element.type} #{get}(#{type_ref}, #{element.type});
+      #{declare} #{element.type} #{peekLowest}(#{type_ref});
+      #{declare} #{element.type} #{peekHighest}(#{type_ref});
       #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
       #{declare} int #{put}(#{type_ref}, #{element.type});
@@ -203,6 +205,7 @@ class TreeSet < Collection
         #{assert}(self);
         x = self->root->left;
         if(x == self->nil) return x;
+        #{assert}(#{isSet}(x));
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
           if(1 == cmp) {
@@ -212,6 +215,7 @@ class TreeSet < Collection
             x = x->right;
           }
           if (x == self->nil) return x;
+          #{assert}(#{isSet}(x));
           cmp = #{compare}(x->element, element);
         }
         return x;
@@ -228,6 +232,7 @@ class TreeSet < Collection
         #{assert}(#{contains}(self, element));
         x = self->root->left;
         if(x == self->nil) #{abort}();
+        #{assert}(#{isSet}(x));
         cmp = #{compare}(x->element, element);
         while(0 != cmp) {
           if(1 == cmp) {
@@ -237,8 +242,10 @@ class TreeSet < Collection
             x = x->right;
           }
           if(x == self->nil) #{abort}();
+          #{assert}(#{isSet}(x));
           cmp = #{compare}(x->element, element);
         }
+        #{assert}(#{isSet}(x));
         #{element.copy("result", "x->element")};
         return result;
       }
@@ -256,6 +263,8 @@ class TreeSet < Collection
         x = self->root->left;
         while(x != self->nil) {
           y = x;
+          #{assert}(#{isSet}(x));
+          #{assert}(#{isSet}(z));
           if(1 == #{compare}(x->element, z->element)) {
             x = x->left;
           } else {
@@ -263,7 +272,7 @@ class TreeSet < Collection
           }
         }
         z->parent = y;
-        if ((y == self->root) || (1 == #{compare}(y->element, z->element))) {
+        if ((y == self->root) || (1 == #{compare}(y->element, z->element) /* TODO isSet() on y&z */ )) {
           y->left = z;
         } else {
           y->right = z;
@@ -531,20 +540,48 @@ class TreeSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} tree, int ascending) {
+      static #{node}* #{lowestNode}(#{type_ref} self) {
         #{node}* x;
         #{node}* y;
+        #{assert}(self);
+        x = self->root;
+        while((y = x->left) != self->nil) x = y;
+        return x == self->root ? self->nil : x;
+      }
+      static #{node}* #{highestNode}(#{type_ref} self) {
+        #{node}* x;
+        #{node}* y;
+        #{assert}(self);
+        x = self->root;
+        while((y = x->right) != self->nil) x = y;
+        return x == self->root ? self->nil : x;
+      }
+      #{define} #{element.type} #{peekLowest}(#{type_ref} self) {
+        #{element.type} result;
+        #{node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{lowestNode}(self);
+        #{assert}(#{isSet}(node));
+        #{element.copy(:result, "node->element")};
+        return result;
+      }
+      #{define} #{element.type} #{peekHighest}(#{type_ref} self) {
+        #{element.type} result;
+        #{node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{highestNode}(self);
+        #{assert}(#{isSet}(node));
+        #{element.copy(:result, "node->element")};
+        return result;
+      }
+      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} tree, int ascending) {
         #{assert}(self);
         #{assert}(tree);
         self->tree = tree;
         self->start = 1;
-        x = tree->root;
-        if(self->ascending = ascending) {
-          while((y = #{prevNode}(tree, x)) != self->tree->nil) x = y;
-        } else {
-          while((y = #{nextNode}(tree, x)) != self->tree->nil) x = y;
-        }
-        self->node = (x == self->tree->root ? self->tree->nil : x);
+        self->node = (self->ascending = ascending) ? #{lowestNode}(tree) : #{highestNode}(tree);
       }
       #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
@@ -555,19 +592,18 @@ class TreeSet < Collection
         }
         return self->node != self->tree->nil;
       }
-      #{define} #{element.type} #{itGet}(#{it_ref} self) {
-        #{element.type} result;
-        #{assert}(self);
-        #{assert}(self->node);
-        #{assert}(self->node != self->tree->nil);
-        #{element.copy("result", "self->node->element")};
-        return result;
-      }
       static #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         #{assert}(self->node);
         #{assert}(self->node != self->tree->nil);
+        #{assert}(#{isSet}(self->node));
         return &self->node->element;
+      }
+      #{define} #{element.type} #{itGet}(#{it_ref} self) {
+        #{element.type} result;
+        #{assert}(self);
+        #{element.copy("result", "*#{itGetRef}(self)")};
+        return result;
       }
     $
   end
