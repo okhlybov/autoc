@@ -11,9 +11,157 @@ TreeSet is a sorted container holding unique elements.
 
 The TreeSet implements the Red-Black Tree algorithm.
 
-This code is an adaptation of the rbtree code from the NLNetLabs LDNS project (www.nlnetlabs.nl/projects/ldns).
+This code is an adaptation of the rbtree code from the http://www.nlnetlabs.nl/projects/ldns[NLNetLabs LDNS] project.
 
 The collection's C++ counterpart is +std::set<>+ template class.
+
+== Generated C interface
+
+=== Collection management
+
+[cols=2*]
+|===
+|*_void_* ~type~Copy(*_Type_* * +dst+, *_Type_* * +src+)
+|
+Create a new set +dst+ filled with the contents of +src+.
+A copy operation is performed on every element in +src+.
+
+NOTE: Previous contents of +dst+ is overwritten.
+
+|*_void_* ~type~Ctor(*_Type_* * +self+)
+|
+Create a new empty set +self+.
+
+NOTE: Previous contents of +self+ is overwritten.
+
+|*_void_* ~type~Dtor(*_Type_* * +self+)
+|
+Destroy set +self+.
+Stored elements are destroyed as well by calling the respective destructors.
+
+|*_int_* ~type~Equal(*_Type_* * +lt+, *_Type_* * +rt+)
+|
+Return non-zero value if sets +lt+ and +rt+ are considered equal by contents and zero value otherwise.
+
+|*_size_t_* ~type~Identify(*_Type_* * +self+)
+|
+Return hash code for set +self+.
+|===
+
+=== Basic operations
+
+[cols=2*]
+|===
+|*_int_* ~type~Contains(*_Type_* * +self+, *_E_* +what+)
+|
+Return non-zero value if set +self+ contains an element considered equal to the element +what+ and zero value otherwise.
+
+|*_int_* ~type~Empty(*_Type_* * +self+)
+|
+Return non-zero value if set +self+ contains no elements and zero value otherwise.
+
+|*_E_* ~type~Get(*_Type_* * +self+, *_E_* +what+)
+|
+Return a _copy_ of the element in +self+ considered equal to the element +what+.
+
+WARNING: +self+ *must* contain such element otherwise the behavior is undefined. See ~type~Contains().
+
+|*_E_* ~type~PeekLowest(*_Type_* * +self+)
+|
+Return a _copy_ of the lowest element in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_E_* ~type~PeekHighest(*_Type_* * +self+)
+|
+Return a _copy_ of the highest element in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_void_* ~type~Purge(*_Type_* * +self+)
+|
+Remove and destroy all elements stored in +self+.
+
+|*_int_* ~type~Put(*_Type_* * +self+, *_E_* +what+)
+|
+Put a _copy_ of the element +what+ into +self+ *only if* there is no such element in +self+ which is considered equal to +what+.
+
+Return non-zero value on successful element put (that is there was not such element in +self+) and zero value otherwise.
+
+|*_int_* ~type~Replace(*_Type_* * +self+, *_E_* +with+)
+|
+If +self+ contains an element which is considered equal to the element +with+,
+replace that element with a _copy_ of +with+, otherwise do nothing.
+Replaced element is destroyed.
+
+Return non-zero value if the replacement was actually performed and zero value otherwise.
+
+|*_int_* ~type~Remove(*_Type_* * +self+, *_E_* +what+)
+|
+Remove and destroy an element in +self+ which is considered equal to the element +what+.
+
+Return non-zero value on successful element removal and zero value otherwise.
+
+|*_size_t_* ~type~Size(*_Type_* * +self+)
+|
+Return number of elements stored in +self+.
+|===
+
+=== Logical operations
+
+[cols=2*]
+|===
+|*_void_* ~type~Exclude(*_Type_* * +self+, *_Type_* * +other+)
+|
+Perform the difference operation that is +self+ will retain only the elements not contained in +other+.
+
+Removed elements are destroyed.
+|*_void_* ~type~Include(*_Type_* * +self+, *_Type_* * +other+)
+|
+Perform the union operation that is +self+ will contain the elements from both +self+ and +other+.
+
++self+ receives the _copies_ of extra elements in +other+.
+
+|*_void_* ~type~Invert(*_Type_* * +self+, *_Type_* * +other+)
+|
+Perform the symmetric difference operation that is +self+ will retain the elements contained in either +self+ or +other+, but not in both.
+
+Removed elements are destroyed, extra elements are _copied_.
+
+|*_void_* ~type~Retain(*_Type_* * +self+, *_Type_* * +other+)
+|
+Perform the intersection operation that is +self+ will retain only the elements contained in both +self+ and +other+.
+
+Removed elements are destroyed.
+|===
+
+=== Iteration
+
+[cols=2*]
+|===
+|*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
+|
+Create a new ascending iterator +it+ on tree +self+. See ~it~CtorEx().
+
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +ascending+)
+|
+Create a new iterator +it+ on tree +self+.
+Non-zero value of +ascending+ specifies an ascending (+lowest to highest element traversal+) iterator, zero value specifies a descending (+highest to lowest element traversal+) iterator.
+
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_int_* ~it~Move(*_IteratorType_* * +it+)
+|
+Advance iterator position of +it+ *and* return non-zero value if new position is valid and zero value otherwise.
+
+|*_E_* ~it~Get(*_IteratorType_* * +it+)
+|
+Return a _copy_ of current element pointed to by the iterator +it+.
+
+WARNING: current position *must* be valid otherwise the behavior is undefined. See ~it~Move().
+|===
 
 =end
 class TreeSet < Collection

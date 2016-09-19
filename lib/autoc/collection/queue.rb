@@ -168,7 +168,7 @@ Return number of elements stored in +self+.
 |===
 |*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 |
-Create a new forward iterator +it+ on queue +self+.
+Create a new forward (see ~it~CtorEx()) iterator +it+ on queue +self+.
 
 NOTE: Previous contents of +it+ is overwritten.
 
