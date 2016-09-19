@@ -13,17 +13,23 @@ module AutoC
 
 - {AutoC::Reference} counted reference type
 
+- {AutoC::String} string builder type with value semantics
+
 == Implemented collections
 
 - {AutoC::Vector} resizable array
 
-- {AutoC::List} single linked list
+- {AutoC::List} singly linked list
 
-- {AutoC::Queue} double linked list
+- {AutoC::Queue} doubly linked list
 
-- {AutoC::HashSet} hash-based set
+- {AutoC::HashSet} hash-based unordered set
 
-- {AutoC::HashMap} hash-based map
+- {AutoC::HashMap} hash-based unordered map
+
+- {AutoC::TreeSet} tree-based sorted set
+
+- {AutoC::TreeMap} tree-based sorted map
 
 == Ruby side operation
 

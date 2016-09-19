@@ -1,4 +1,4 @@
-Introduced the AutoC::TreeSet binary tree based set.
+Introduced AutoC::TreeSet and AutoC::TreeMap binary tree based containers.
 
 == 1.3
 

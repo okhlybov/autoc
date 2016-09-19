@@ -1,5 +1,5 @@
 require "autoc/collection"
-require "autoc/collection/hash_set"
+require "autoc/collection/tree_set"
 
 
 module AutoC
@@ -7,11 +7,11 @@ module AutoC
   
 =begin
 
-HashMap is a hash-based unordered random access container holding unique keys with each key having an element bound to it.
+TreeMap is a tree-based ordered random access container holding unique keys with each key having an element bound to it.
 
-HashMap is backed by {AutoC::HashSet} container.
+TreeMap is backed by {AutoC::TreeSet} container.
 
-The collection's C++ counterpart is +std::unordered_map<>+ template class.
+The collection's C++ counterpart is +std::map<>+ template class.
 
 == Generated C interface
 
@@ -129,7 +129,7 @@ Alias for ~it~GetElement().
 |===
 
 =end
-class HashMap < Collection
+class TreeMap < Collection
   
   attr_reader :key
 
@@ -146,8 +146,8 @@ class HashMap < Collection
   def initialize(type, key_type, value_type, visibility = :public)
     super(type, value_type, visibility)
     @key = Type.coerce(key_type)
-    @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :copy => entryCopy, :dtor => entryDtor)
-    @set = HashSet.new(set, @entry, :static)
+    @entry = UserDefinedType.new(:type => entry, :identify => entryIdentify, :equal => entryEqual, :less => entryLess, :copy => entryCopy, :dtor => entryDtor)
+    @set = TreeSet.new(set, @entry, :static)
     element_requirement(value)
     key_requirement(key)
   end
@@ -230,13 +230,17 @@ class HashMap < Collection
         entry.flags = (AUTOC_VALID_KEY | AUTOC_VALID_VALUE);
         return entry;
       }
-      #define #{entryIdentify}(obj) #{entryIdentifyRef}(&obj)
-      static size_t #{entryIdentifyRef}(#{@entry.type}* entry) {
-        return #{key.identify("entry->key")};
-      }
       #define #{entryEqual}(lt, rt) #{entryEqualRef}(&lt, &rt)
       static int #{entryEqualRef}(#{@entry.type}* lt, #{@entry.type}* rt) {
         return #{key.equal("lt->key", "rt->key")};
+      }
+      #define #{entryLess}(lt, rt) #{entryLessRef}(&lt, &rt)
+      static int #{entryLessRef}(#{@entry.type}* lt, #{@entry.type}* rt) {
+        return #{key.less("lt->key", "rt->key")};
+      }
+      #define #{entryIdentify}(obj) #{entryIdentifyRef}(&obj)
+      static size_t #{entryIdentifyRef}(#{@entry.type}* entry) {
+        return #{key.identify("entry->key")};
       }
       #define #{entryCopy}(dst, src) #{entryCopyRef}(&dst, &src)
       static void #{entryCopyRef}(#{@entry.type_ref} dst, #{@entry.type_ref} src) {
@@ -400,7 +404,7 @@ class HashMap < Collection
     $
   end
   
-end # HashMap
+end # TreeMap
 
 
 end # AutoC
