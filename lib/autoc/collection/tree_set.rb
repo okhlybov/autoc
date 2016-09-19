@@ -548,7 +548,7 @@ class TreeSet < Collection
         if(to_delete->left != #{null}) child = to_delete->left; else child = to_delete->right;
         #{changeParent}(self, to_delete->parent, to_delete, child);
         #{changeChild}(child, to_delete, to_delete->parent);
-        if(#{isRed}(to_delete)); else if(#{isRed}(child)) {
+        if(#{isRed}(to_delete)) {} else if(#{isRed}(child)) {
           if(child != #{null}) #{setBlack}(child);
         } else #{deleteFixup}(self, child, to_delete->parent);
         #{destroyNode}(to_delete);
