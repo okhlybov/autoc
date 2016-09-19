@@ -10,8 +10,8 @@ module AutoC
 TreeSet is a sorted container holding unique elements.
 
 The TreeSet implements the Red-Black Tree algorithm.
-The implementation is based on the code by Emin Martinian <emin@alum.mit.edu>.
-http://web.mit.edu/~emin/Desktop/ref_to_emin/www.old/source_code/red_black_tree/index.html
+
+This code is an adaptation of the rbtree code from the NLNetLabs LDNS project (www.nlnetlabs.nl/projects/ldns).
 
 The collection's C++ counterpart is +std::set<>+ template class.
 
@@ -22,7 +22,7 @@ class TreeSet < Collection
     super
     key_requirement(element)
   end
-  
+
   def write_intf_types(stream)
     super
     stream << %$
@@ -36,16 +36,14 @@ class TreeSet < Collection
       typedef struct #{it} #{it};
       struct #{type} {
         #{node}* root;
-        #{node}* nil;
         size_t size;
       };
       struct #{it} {
         int start, ascending;
-        #{type_ref} tree;
         #{node}* node;
       };
       struct #{node} {
-        int flags;
+        int color;
         #{node}* left;
         #{node}* right;
         #{node}* parent;
@@ -88,13 +86,13 @@ class TreeSet < Collection
   def write_impls(stream, define)
     super
     stream << %$
-      #define #{isRed}(x) (x->flags & 1)
-      #define #{setRed}(x) (x->flags |= 1)
-      #define #{dropRed}(x) (x->flags &= ~1)
-      #define #{copyRed}(x, y) if(#{isRed}(y)) #{setRed}(x); else #{dropRed}(x);
-      #define #{isSet}(x) (x->flags & 2)
-      #define #{setSet}(x) (x->flags |= 2)
-      #define #{dropSet}(x) (x->flags &= ~2)
+      #define #{isRed}(x) (x->color)
+      #define #{isBlack}(x) !#{isRed}(x)
+      #define #{setRed}(x) (x->color = 1)
+      #define #{setBlack}(x) (x->color = 0)
+      #define #{compare}(lt, rt) (#{element.equal(:lt, :rt)} ? 0 : (#{element.less(:lt, :rt)} ? -1 : +1))
+      static #{node} #{nullNode} = {0, NULL, NULL, NULL};
+      static #{node}* #{null} = &#{nullNode};
       static #{element.type_ref} #{itGetRef}(#{it_ref});
       static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
@@ -104,69 +102,27 @@ class TreeSet < Collection
         }
         return 1;
       }
-      static void #{leftRotate}(#{type_ref} self, #{node}* x) {
-        #{node}* y;
-        #{assert}(self);
-        #{assert}(x);
-        y = x->right;
-        x->right = y->left;
-        if(y->left != self->nil) y->left->parent = x;
-        y->parent = x->parent;   
-        if(x == x->parent->left) {
-          x->parent->left = y;
-        } else {
-          x->parent->right = y;
-        }
-        y->left = x;
-        x->parent = y;
-        #{assert}(!#{isRed}(self->nil));
+      static void #{destroyNode}(#{node}* node) {
+        #{assert}(node);
+        #{assert}(node != #{null});
+        #{element.dtor("node->element")};
+        #{free}(node);
       }
-      static void #{rightRotate}(#{type_ref} self, #{node}* y) {
-        #{node}* x;
-        #{assert}(self);
-        #{assert}(y);
-        x = y->left;
-        y->left = x->right;
-        if(self->nil != x->right)  x->right->parent = y;
-        x->parent = y->parent;
-        if(y == y->parent->left) {
-          y->parent->left = x;
-        } else {
-          y->parent->right = x;
-        }
-        x->right = y;
-        y->parent = x;
-        #{assert}(!#{isRed}(self->nil));
-      }
-      #define #{compare}(lt, rt) (#{element.equal(:lt, :rt)} ? 0 : (#{element.less(:lt, :rt)} ? -1 : +1))
       #{define} #{ctor.definition} {
-        #{node}* temp;
         #{assert}(self);
         self->size = 0;
-        temp = self->nil = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
-        temp->parent = temp->left = temp->right = temp;
-        #{dropRed}(temp);
-        #{dropSet}(temp);
-        temp = self->root = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(temp);
-        temp->parent = temp->left = temp->right = self->nil;
-        #{dropRed}(temp);
-        #{dropSet}(temp);
+        self->root = #{null};
       }
-      static void #{nodeDtor}(#{type_ref} self, #{node}* x) {
-        #{assert}(self);
-        #{assert}(x);
-        if(x != self->nil) {
-          #{nodeDtor}(self, x->left);
-          #{nodeDtor}(self, x->right);
-          if(#{isSet}(x)) #{element.dtor("x->element")};
-          #{free}(x);
+      static void #{destroy}(#{node}* node) {
+        if(node != #{null}) {
+          #{destroy}(node->left);
+          #{destroy}(node->right);
+          #{destroyNode}(node);
         }
       }
       #{define} #{dtor.definition} {
         #{assert}(self);
-        #{nodeDtor}(self, self->root->left);
-        #{free}(self->root);
-        #{free}(self->nil);
+        #{destroy}(self->root); /* FIXME recursive algorithm might be inefficient */
       }
       #{define} #{copy.definition} {
         #{it} it;
@@ -198,300 +154,258 @@ class TreeSet < Collection
         #{dtor}(self);
         #{ctor}(self);
       }
-      static #{node}* #{findNode}(#{type_ref} self, #{element.type} element) {
-        /* Returns nil and not NULL when no element is found */
-        #{node}* x;
-        int cmp;
-        #{assert}(self);
-        x = self->root->left;
-        if(x == self->nil) return x;
-        #{assert}(#{isSet}(x));
-        cmp = #{compare}(x->element, element);
-        while(0 != cmp) {
-          if(1 == cmp) {
-            x = x->left;
+      static void #{rotateLeft}(#{type}* self, #{node}* node) {
+        #{node}* right = node->right;
+        node->right = right->left;
+        if(right->left != #{null}) right->left->parent = node;
+        right->parent = node->parent;
+        if(node->parent != #{null}) {
+          if(node == node->parent->left) {
+            node->parent->left = right;
           } else {
-            #{assert}(-1 == cmp);
-            x = x->right;
+            node->parent->right = right;
           }
-          if (x == self->nil) return x;
-          #{assert}(#{isSet}(x));
-          cmp = #{compare}(x->element, element);
+        } else {
+          self->root = right;
         }
-        return x;
+        right->left = node;
+        node->parent = right;
+      }
+      static void #{rotateRight}(#{type}* self, #{node}* node) {
+        #{node}* left = node->left;
+        node->left = left->right;
+        if(left->right != #{null}) left->right->parent = node;
+        left->parent = node->parent;
+        if(node->parent != #{null}) {
+          if(node == node->parent->right) {
+            node->parent->right = left;
+          } else {
+            node->parent->left = left;
+          }
+        } else {
+          self->root = left;
+        }
+        left->right = node;
+        node->parent = left;
+      }
+      static void #{insertFixup}(#{type}* self, #{node}* node) {
+        #{node}* uncle;
+        while(node != self->root && #{isRed}(node->parent)) {
+          if(node->parent == node->parent->parent->left) {
+            uncle = node->parent->parent->right;
+            if(#{isRed}(uncle)) {
+              #{setBlack}(node->parent);
+              #{setBlack}(uncle);
+              #{setRed}(node->parent->parent);
+              node = node->parent->parent;
+            } else {
+              if(node == node->parent->right) {
+                node = node->parent;
+                #{rotateLeft}(self, node);
+              }
+              #{setBlack}(node->parent);
+              #{setRed}(node->parent->parent);
+              #{rotateRight}(self, node->parent->parent);
+            }
+          } else {
+            uncle = node->parent->parent->left;
+            if(#{isRed}(uncle)) {
+              #{setBlack}(node->parent);
+              #{setBlack}(uncle);
+              #{setRed}(node->parent->parent);
+              node = node->parent->parent;
+            } else {
+              if(node == node->parent->left) {
+                node = node->parent;
+                #{rotateRight}(self, node);
+              }
+              #{setBlack}(node->parent);
+              #{setRed}(node->parent->parent);
+              #{rotateLeft}(self, node->parent->parent);
+            }
+          }
+        }
+        #{setBlack}(self->root);
+      }
+      static void #{deleteFixup}(#{type}* self, #{node}* child, #{node}* child_parent) {
+        #{node}* sibling;
+        int go_up = 1;
+        if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
+        while(go_up) {
+          if(child_parent == #{null}) return;
+          if(#{isRed}(sibling)) {
+            #{setRed}(child_parent);
+            #{setBlack}(sibling);
+            if(child_parent->right == child) #{rotateRight}(self, child_parent); else #{rotateLeft}(self, child_parent);
+            if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
+          }
+          if(#{isBlack}(child_parent) && #{isBlack}(sibling) && #{isBlack}(sibling->left) && #{isBlack}(sibling->right)) {
+            if(sibling != #{null}) #{setRed}(sibling);
+            child = child_parent;
+            child_parent = child_parent->parent;
+            if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
+          } else go_up = 0;
+        }
+        if(#{isRed}(child_parent) && #{isBlack}(sibling) && #{isBlack}(sibling->left) && #{isBlack}(sibling->right)) {
+          if(sibling != #{null}) #{setRed}(sibling);
+          #{setBlack}(child_parent);
+          return;
+        }
+        if(child_parent->right == child && #{isBlack}(sibling) && #{isRed}(sibling->right) && #{isBlack}(sibling->left)) {
+          #{setRed}(sibling);
+          #{setBlack}(sibling->right);
+          #{rotateLeft}(self, sibling);
+          if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
+        } else if(child_parent->left == child && #{isBlack}(sibling) && #{isRed}(sibling->left) && #{isBlack}(sibling->right)) {
+          #{setRed}(sibling);
+          #{setBlack}(sibling->left);
+          #{rotateRight}(self, sibling);
+          if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
+        }
+        sibling->color = child_parent->color;
+        #{setBlack}(child_parent);
+        if(child_parent->right == child) {
+          #{setBlack}(sibling->left);
+          #{rotateRight}(self, child_parent);
+        } else {
+          #{setBlack}(sibling->right);
+          #{rotateLeft}(self, child_parent);
+        }
+      }
+      static #{node}* #{findNode}(#{type_ref} self, #{element.type} element) {
+        int r;
+        #{node}* node;
+        #{assert}(self);
+        node = self->root;
+        while(node != #{null}) {
+          if((r = #{compare}(element, node->element)) == 0) {
+            return node;
+          }
+          if(r < 0) {
+            node = node->left;
+          } else {
+            node = node->right;
+          }
+        }
+        return NULL;
       }
       #{define} int #{contains}(#{type_ref} self, #{element.type} element) {
         #{assert}(self);
-        return #{findNode}(self, element) == self->nil ? 0 : 1;
+        return #{findNode}(self, element) != NULL;
       }
       #{define} #{element.type} #{get}(#{type_ref} self, #{element.type} element) {
-        #{node}* x;
+        #{node} *node;
         #{element.type} result;
-        int cmp;
         #{assert}(self);
         #{assert}(#{contains}(self, element));
-        x = self->root->left;
-        if(x == self->nil) #{abort}();
-        #{assert}(#{isSet}(x));
-        cmp = #{compare}(x->element, element);
-        while(0 != cmp) {
-          if(1 == cmp) {
-            x = x->left;
-          } else {
-            #{assert}(-1 == cmp);
-            x = x->right;
-          }
-          if(x == self->nil) #{abort}();
-          #{assert}(#{isSet}(x));
-          cmp = #{compare}(x->element, element);
-        }
-        #{assert}(#{isSet}(x));
-        #{element.copy("result", "x->element")};
+        node = #{findNode}(self, element);
+        #{element.copy("result", "node->element")}; /* Here we rely on NULL pointer dereference to manifest the failure! */
         return result;
       }
       #{define} size_t #{size}(#{type_ref} self) {
         #{assert}(self);
         return self->size;
       }
-      static void #{insertNode}(#{type_ref} self, #{node}* z) {
-        #{node}* x;
-        #{node}* y;
-        #{assert}(self);
-        #{assert}(z);
-        z->left = z->right = self->nil;
-        y = self->root;
-        x = self->root->left;
-        while(x != self->nil) {
-          y = x;
-          #{assert}(#{isSet}(x));
-          #{assert}(#{isSet}(z));
-          if(1 == #{compare}(x->element, z->element)) {
-            x = x->left;
-          } else {
-            x = x->right;
-          }
-        }
-        z->parent = y;
-        if ((y == self->root) || (1 == #{compare}(y->element, z->element) /* TODO isSet() on y&z */ )) {
-          y->left = z;
-        } else {
-          y->right = z;
-        }
-        #{assert}(!#{isRed}(self->nil));
-      }
       #{define} int #{put}(#{type_ref} self, #{element.type} element) {
-        #{node}* x;
-        #{node}* y;
+        int r;
+        #{node}* data;
         #{node}* node;
+        #{node}* parent;
         #{assert}(self);
-        /* FIXME searching for duplicate followed by insertion might be inefficient */
-        if(#{contains}(self, element)) return 0;
-        x = (#{node}*) #{malloc}(sizeof(#{node})); #{assert}(x);
-        #{element.copy("x->element", "element")};
-        #{setSet}(x);
-        ++self->size;
-        #{insertNode}(self, x);
-        node = x;
-        #{setRed}(x);
-        while(#{isRed}(x->parent)) {
-          if(x->parent == x->parent->parent->left) {
-            y = x->parent->parent->right;
-            if(#{isRed}(y)) {
-              #{dropRed}(x->parent);
-              #{dropRed}(y);
-              #{setRed}(x->parent->parent);
-              x = x->parent->parent;
-            } else {
-              if(x == x->parent->right) {
-                x = x->parent;
-                #{leftRotate}(self, x);
-              }
-              #{dropRed}(x->parent);
-              #{setRed}(x->parent->parent);
-              #{rightRotate}(self, x->parent->parent);
-            } 
+        node = self->root;
+        parent = #{null};
+        while(node != #{null}) {
+          if((r = #{compare}(element, node->element)) == 0) {
+            return 0;
+          }
+          parent = node;
+          if (r < 0) {
+            node = node->left;
           } else {
-            y = x->parent->parent->left;
-            if(#{isRed}(y)) {
-              #{dropRed}(x->parent);
-              #{dropRed}(y);
-              #{setRed}(x->parent->parent);
-              x = x->parent->parent;
-            } else {
-              if(x == x->parent->left) {
-                x = x->parent;
-                #{rightRotate}(self, x);
-              }
-              #{dropRed}(x->parent);
-              #{setRed}(x->parent->parent);
-              #{leftRotate}(self, x->parent->parent);
-            } 
+            node = node->right;
           }
         }
-        #{dropRed}(self->root->left);
-        #{assert}(!#{isRed}(self->nil));
-        #{assert}(!#{isRed}(self->root));
+        data = #{malloc}(sizeof(#{node})); #{assert}(data);
+        #{element.copy("data->element", "element")};
+        data->parent = parent;
+        data->left = data->right = #{null};
+        #{setRed}(data);
+        ++self->size;
+        if(parent != #{null}) {
+          if(r < 0) {
+            parent->left = data;
+          } else {
+            parent->right = data;
+          }
+        } else {
+          self->root = data;
+        }
+        #{insertFixup}(self, data);
         return 1;
       }
       #{define} int #{replace}(#{type_ref} self, #{element.type} element) {
         int removed;
         #{assert}(self);
         /* FIXME removing followed by putting might be inefficient */
-        if(removed = #{remove}(self, element)) #{put}(self, element);
+        if((removed = #{remove}(self, element))) #{put}(self, element);
         return removed;
       }
-      static void #{fixupNode}(#{type_ref} self, #{node}* x) {
-        #{node}* root;
-        #{node}* w;
-        #{assert}(self);
+      static void #{swapColors}(#{node}* x, #{node}* y) {
+        int t = x->color;
         #{assert}(x);
-        root = self->root->left;
-        while(!#{isRed}(x) && (root != x)) {
-          if(x == x->parent->left) {
-            w = x->parent->right;
-            if(#{isRed}(w)) {
-              #{dropRed}(w);
-              #{setRed}(x->parent);
-              #{leftRotate}(self, x->parent);
-              w = x->parent->right;
-            }
-            if((!#{isRed}(w->right)) && (!#{isRed}(w->left))) { 
-              #{setRed}(w);
-              x = x->parent;
-            } else {
-              if(!#{isRed}(w->right)) {
-                #{dropRed}(w->left);
-                #{setRed}(w);
-                #{rightRotate}(self, w);
-                w = x->parent->right;
-              }
-              #{copyRed}(w, x->parent);
-              #{dropRed}(x->parent);
-              #{dropRed}(w->right);
-              #{leftRotate}(self, x->parent);
-              x = root;
-            }
-          } else {
-            w = x->parent->left;
-            if(#{isRed}(w)) {
-              #{dropRed}(w);
-              #{setRed}(x->parent);
-              #{rightRotate}(self, x->parent);
-              w = x->parent->left;
-            }
-            if((!#{isRed}(w->right)) && (!#{isRed}(w->left))) { 
-              #{setRed}(w);
-              x = x->parent;
-            } else {
-              if(!#{isRed}(w->left)) {
-                #{dropRed}(w->right);
-                #{setRed}(w);
-                #{leftRotate}(self, w);
-                w = x->parent->left;
-              }
-              #{copyRed}(w, x->parent);
-              #{dropRed}(x->parent);
-              #{dropRed}(w->left);
-              #{rightRotate}(self, x->parent);
-              x = root;
-            }
-          }
-        }
-        #{dropRed}(x);
-        #{assert}(!#{isRed}(self->nil));
+        #{assert}(y);
+        x->color = y->color;
+        y->color = t;
       }
-      static #{node}* #{prevNode}(#{type_ref} self, #{node}* x) { 
-        #{node}* y;
-        #{assert}(self);
-        #{assert}(x);
-        if(self->nil != (y = x->left)) {
-          while(y->right != self->nil) {
-            y = y->right;
-          }
-          return y;
-        } else {
-          y = x->parent;
-          while(x == y->left) { 
-            if(y == self->root) return self->nil; 
-            x = y;
-            y = y->parent;
-          }
-          return y;
-        }
+      static void #{swapNodes}(#{node}** x, #{node}** y) {
+        #{node}* t = *x; *x = *y; *y = t; 
       }
-      static #{node}* #{nextNode}(#{type_ref} self, #{node}* x) { 
-        #{node}* y;
-        #{assert}(self);
-        #{assert}(x);
-        if(self->nil != (y = x->right)) {
-          while(y->left != self->nil) {
-            y = y->left;
-          }
-          return y;
-        } else {
-          y = x->parent;
-          while(x == y->right) {
-            x = y;
-            y = y->parent;
-          }
-          if(y == self->root) return self->nil;
-          return y;
+      static void #{changeParent}(#{type}* self, #{node}* parent, #{node}* old_node, #{node}* new_node) {
+        if(parent == #{null}) {
+          if(self->root == old_node) self->root = new_node;
+          return;
         }
+        if(parent->left == old_node) parent->left = new_node;
+        if(parent->right == old_node) parent->right = new_node;
       }
-      static void #{deleteNode}(#{type_ref} self, #{node}* z) {
-        #{node}* x;
-        #{node}* y;
-        #{assert}(self);
-        #{assert}(z);
-        y = ((z->left == self->nil) || (z->right == self->nil)) ? z : #{nextNode}(self, z);
-        x = (y->left == self->nil) ? y->right : y->left;
-        if(self->root == (x->parent = y->parent)) {
-          self->root->left = x;
-        } else {
-          if(y == y->parent->left) {
-            y->parent->left = x;
-          } else {
-            y->parent->right = x;
-          }
-        }
-        if(y != z) {
-          #{assert}(y != self->nil);
-          if(!#{isRed}(y)) #{fixupNode}(self, x);
-          if(#{isSet}(z)) {
-            #{element.dtor("z->element")};
-            --self->size;
-          }
-          y->left = z->left;
-          y->right = z->right;
-          y->parent = z->parent;
-          #{copyRed}(y, z);
-          z->left->parent = z->right->parent = y;
-          if(z == z->parent->left) {
-            z->parent->left = y; 
-          } else {
-            z->parent->right = y;
-          }
-          #{free}(z);
-        } else {
-          if(#{isSet}(y)) {
-            #{element.dtor("y->element")};
-            --self->size;
-          }
-          if(!#{isRed}(y)) #{fixupNode}(self, x);
-          #{free}(y);
-        }
-        #{assert}(!#{isRed}(self->nil));
+      static void #{changeChild}(#{node}* child, #{node}* old_node, #{node}* new_node) {
+        if(child == #{null}) return;
+        if(child->parent == old_node) child->parent = new_node;
       }
-      #{define} int #{remove}(#{type_ref} self, #{element.type} element) {
-        #{node}* x;
+      int #{remove}(#{type}* self, #{element.type} element) {
+        #{node}* to_delete;
+        #{node}* child;
         #{assert}(self);
-        x = #{findNode}(self, element);
-        if(x == self->nil) {
-          return 0;
-        } else {
-          #{deleteNode}(self, x);
-          return 1;
+        if((to_delete = #{findNode}(self, element)) == NULL) return 0;
+        if(to_delete->left != #{null} && to_delete->right != #{null}) {
+          #{node} *smright = to_delete->right;
+          while(smright->left != #{null}) smright = smright->left;
+          #{swapColors}(to_delete, smright);
+          #{changeParent}(self, to_delete->parent, to_delete, smright);
+          if(to_delete->right != smright) #{changeParent}(self, smright->parent, smright, to_delete);
+          #{changeChild}(smright->left, smright, to_delete);
+          #{changeChild}(smright->left, smright, to_delete);
+          #{changeChild}(smright->right, smright, to_delete);
+          #{changeChild}(smright->right, smright, to_delete);
+          #{changeChild}(to_delete->left, to_delete, smright);
+          if(to_delete->right != smright) #{changeChild}(to_delete->right, to_delete, smright);
+          if(to_delete->right == smright) {
+            to_delete->right = to_delete;
+            smright->parent = smright;
+          }
+          #{swapNodes}(&to_delete->parent, &smright->parent);
+          #{swapNodes}(&to_delete->left, &smright->left);
+          #{swapNodes}(&to_delete->right, &smright->right);
         }
+        if(to_delete->left != #{null}) child = to_delete->left; else child = to_delete->right;
+        #{changeParent}(self, to_delete->parent, to_delete, child);
+        #{changeChild}(child, to_delete, to_delete->parent);
+        if(#{isRed}(to_delete)); else if(#{isRed}(child)) {
+          if(child != #{null}) #{setBlack}(child);
+        } else #{deleteFixup}(self, child, to_delete->parent);
+        #{destroyNode}(to_delete);
+        --self->size;
+        return 1;
       }
       #{define} void #{exclude}(#{type_ref} self, #{type_ref} other) {
         #{it} it;
@@ -540,63 +454,99 @@ class TreeSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      static #{node}* #{lowestNode}(#{type_ref} self) {
-        #{node}* x;
-        #{node}* y;
+      static #{node}* #{lowestNode}(#{type}* self) {
+        #{node} *node;
         #{assert}(self);
-        x = self->root;
-        while((y = x->left) != self->nil) x = y;
-        return x == self->root ? self->nil : x;
+        node = self->root;
+        if(self->root != #{null}) {
+          for(node = self->root; node->left != #{null}; node = node->left);
+        }
+        return node;
       }
-      static #{node}* #{highestNode}(#{type_ref} self) {
-        #{node}* x;
-        #{node}* y;
+      static #{node}* #{highestNode}(#{type}* self) {
+        #{node} *node;
         #{assert}(self);
-        x = self->root;
-        while((y = x->right) != self->nil) x = y;
-        return x == self->root ? self->nil : x;
+        node = self->root;
+        if(self->root != #{null}) {
+          for(node = self->root; node->right != #{null}; node = node->right);
+        }
+        return node;
+      }
+      static #{node}* #{nextNode}(#{node}* node) {
+        #{node} *parent;
+        #{assert}(node);
+        if(node->right != #{null}) {
+          for(node = node->right;
+            node->left != #{null};
+            node = node->left);
+        } else {
+          parent = node->parent;
+          while(parent != #{null} && node == parent->right) {
+            node = parent;
+            parent = parent->parent;
+          }
+          node = parent;
+        }
+        return node;
+      }
+      static #{node}* #{prevNode}(#{node}* node) {
+        #{node} *parent;
+        #{assert}(node);
+        if(node->left != #{null}) {
+          for(node = node->left;
+            node->right != #{null};
+            node = node->right);
+        } else {
+          parent = node->parent;
+          while(parent != #{null} && node == parent->left) {
+            node = parent;
+            parent = parent->parent;
+          }
+          node = parent;
+        }
+        return node;
       }
       #{define} #{element.type} #{peekLowest}(#{type_ref} self) {
-        #{element.type} result;
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         node = #{lowestNode}(self);
-        #{assert}(#{isSet}(node));
-        #{element.copy(:result, "node->element")};
+        #{assert}(node);
+        #{assert}(node != #{null});
+        #{element.copy("result", "node->element")};
         return result;
       }
       #{define} #{element.type} #{peekHighest}(#{type_ref} self) {
-        #{element.type} result;
         #{node}* node;
+        #{element.type} result;
         #{assert}(self);
         #{assert}(!#{empty}(self));
         node = #{highestNode}(self);
-        #{assert}(#{isSet}(node));
-        #{element.copy(:result, "node->element")};
+        #{assert}(node);
+        #{assert}(node != #{null});
+        #{element.copy("result", "node->element")};
         return result;
       }
       #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} tree, int ascending) {
         #{assert}(self);
         #{assert}(tree);
-        self->tree = tree;
-        self->start = 1;
         self->node = (self->ascending = ascending) ? #{lowestNode}(tree) : #{highestNode}(tree);
+        self->start = 1;
       }
       #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
         if(self->start) {
           self->start = 0;
         } else {
-          self->node = self->ascending ? #{nextNode}(self->tree, self->node) : #{prevNode}(self->tree, self->node);
+          self->node = self->ascending ? #{nextNode}(self->node) : #{prevNode}(self->node);
         }
-        return self->node != self->tree->nil;
+        return self->node != #{null};
       }
       static #{element.type_ref} #{itGetRef}(#{it_ref} self) {
         #{assert}(self);
         #{assert}(self->node);
-        #{assert}(self->node != self->tree->nil);
-        #{assert}(#{isSet}(self->node));
+        #{assert}(self->node != #{null});
         return &self->node->element;
       }
       #{define} #{element.type} #{itGet}(#{it_ref} self) {
@@ -616,6 +566,5 @@ class TreeSet < Collection
   end
 
 end # TreeSet
-
 
 end # AutoC

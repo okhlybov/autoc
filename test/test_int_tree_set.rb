@@ -69,9 +69,10 @@ cleanup %~
 	~
 
 	test :iterateAscending, %~
-		int cur = 0, pre = 0, start = 1;
+		int cur, pre, start = 1;
 		#{it} it;
 		#{itCtorEx}(&it, &t, 1);
+		cur = pre = #{peekLowest}(&t);
 		while(#{itMove}(&it)) {
 			cur = #{itGet}(&it);
 			if(start) {
@@ -84,9 +85,10 @@ cleanup %~
 	~
 
 	test :iterateDescending, %~
-		int cur = 0, pre = 0, start = 1;
+		int cur, pre, start = 1;
 		#{it} it;
 		#{itCtorEx}(&it, &t, 0);
+		cur = pre = #{peekHighest}(&t);
 		while(#{itMove}(&it)) {
 			cur = #{itGet}(&it);
 			if(start) {
