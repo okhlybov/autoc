@@ -6,7 +6,7 @@ module AutoC
   
 =begin
 
-Queue is an ordered bidirectional sequence container.
+Queue< *_E_* > is an ordered bidirectional sequence container.
 Queue supports addition/removal operations at both ends.
 However, it is intended to be used as a FIFO container as opposed to {AutoC::List}
 therefore the default submission, polling and retrieval operations are performed on the opposite ends.

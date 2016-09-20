@@ -145,9 +145,23 @@ cleanup %~
 		#{element.dtor(:k)};
 	~
 
-	test :iterate, %~
+	test :iterateAscending, %~
 		#{it} it;
 		#{itCtor}(&it, &t);
+		while(#{itMove}(&it)) {
+			#{key.type} k;
+			#{element.type} v;
+			k = #{itGetKey}(&it);
+			v = #{itGetElement}(&it);
+			TEST_EQUAL( #{key.get}(k), -#{value.get}(v) );
+			#{key.dtor}(k);
+			#{value.dtor}(v);
+		}
+	~
+
+	test :iterateDescending, %~
+		#{it} it;
+		#{itCtorEx}(&it, &t, 0);
 		while(#{itMove}(&it)) {
 			#{key.type} k;
 			#{element.type} v;

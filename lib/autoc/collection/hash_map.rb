@@ -7,7 +7,7 @@ module AutoC
   
 =begin
 
-HashMap is a hash-based unordered random access container holding unique keys with each key having an element bound to it.
+HashMap< *_K_* => *_E_* > is a hash-based unordered random access container holding unique keys with each key having an element bound to it.
 
 HashMap is backed by {AutoC::HashSet} container.
 
@@ -213,21 +213,21 @@ class HashMap < Collection
   def write_impls(stream, define)
     super
     stream << %$
-      #define AUTOC_VALID_VALUE 1
-      #define AUTOC_VALID_KEY 2
-      #define AUTOC_OWNED_VALUE 4
-      #define AUTOC_OWNED_KEY 8
+      #define #{validValue} 1
+      #define #{validKey} 2
+      #define #{ownedValue} 4
+      #define #{ownedKey} 8
       static #{@entry.type} #{entryKeyOnlyRef}(#{key.type_ref} key) {
         #{@entry.type} entry;
         entry.key = *key;
-        entry.flags = AUTOC_VALID_KEY;
+        entry.flags = #{validKey};
         return entry;
       }
       static #{@entry.type} #{entryKeyValueRef}(#{key.type_ref} key, #{value.type_ref} value) {
         #{@entry.type} entry;
         entry.key = *key;
         entry.value = *value;
-        entry.flags = (AUTOC_VALID_KEY | AUTOC_VALID_VALUE);
+        entry.flags = (#{validKey} | #{validValue});
         return entry;
       }
       #define #{entryIdentify}(obj) #{entryIdentifyRef}(&obj)
@@ -240,19 +240,19 @@ class HashMap < Collection
       }
       #define #{entryCopy}(dst, src) #{entryCopyRef}(&dst, &src)
       static void #{entryCopyRef}(#{@entry.type_ref} dst, #{@entry.type_ref} src) {
-        #{assert}(src->flags & AUTOC_VALID_KEY);
-        dst->flags = (AUTOC_VALID_KEY | AUTOC_OWNED_KEY);
+        #{assert}(src->flags & #{validKey});
+        dst->flags = (#{validKey} | #{ownedKey});
         #{key.copy("dst->key", "src->key")};
-        if(src->flags & AUTOC_VALID_VALUE) {
-          dst->flags |= (AUTOC_VALID_VALUE | AUTOC_OWNED_VALUE);
+        if(src->flags & #{validValue}) {
+          dst->flags |= (#{validValue} | #{ownedValue});
           #{value.copy("dst->value", "src->value")};
         }
       }
       #define #{entryDtor}(obj) #{entryDtorRef}(&obj)
       static void #{entryDtorRef}(#{@entry.type}* entry) {
-        #{assert}(entry->flags & AUTOC_VALID_KEY);
-        if(entry->flags & AUTOC_OWNED_KEY) #{key.dtor("entry->key")};
-        if(entry->flags & AUTOC_VALID_VALUE && entry->flags & AUTOC_OWNED_VALUE) #{value.dtor("entry->value")};
+        #{assert}(entry->flags & #{validKey});
+        if(entry->flags & #{ownedKey}) #{key.dtor("entry->key")};
+        if(entry->flags & #{validValue} && entry->flags & #{ownedValue}) #{value.dtor("entry->value")};
       }
       static #{@entry.type_ref} #{itGetEntryRef}(#{it_ref});
       static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
@@ -385,7 +385,7 @@ class HashMap < Collection
         #{value.type} value;
         #{assert}(self);
         e = #{itGetEntryRef}(self);
-        #{assert}(e->flags & AUTOC_VALID_VALUE);
+        #{assert}(e->flags & #{validValue});
         #{value.copy("value", "e->value")};
         return value;
       }
@@ -393,10 +393,6 @@ class HashMap < Collection
         #{assert}(self);
         return #{@set.itGetRef}(&self->it);
       }
-      #undef AUTOC_VALID_VALUE
-      #undef AUTOC_VALID_KEY
-      #undef AUTOC_OWNED_VALUE
-      #undef AUTOC_OWNED_KEY
     $
   end
   

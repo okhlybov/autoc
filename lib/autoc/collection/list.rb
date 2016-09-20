@@ -6,7 +6,7 @@ module AutoC
 
 =begin
 
-List is an ordered unidirectional sequence container.
+List< *_E_* > is an ordered unidirectional sequence container.
 List supports submission/polling operations on one end hence it can be used as a LIFO container (a stack).
 
 The collection's C++ counterpart is +std::forward_list<>+ template class.
