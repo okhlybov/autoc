@@ -7,7 +7,7 @@ module AutoC
   
 =begin
 
-HashSet is a hash-based unordered container holding unique elements.
+HashSet< *_E_* > is a hash-based unordered container holding unique elements.
 
 The collection's C++ counterpart is +std::unordered_set<>+ template class.
 

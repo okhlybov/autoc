@@ -7,7 +7,7 @@ module AutoC
   
 =begin
 
-TreeMap is a tree-based ordered random access container holding unique keys with each key having an element bound to it.
+TreeMap< *_K_* => *_E_* > is a tree-based ordered random access container holding unique keys with each key having an element bound to it.
 
 TreeMap is backed by {AutoC::TreeSet} container.
 
@@ -64,13 +64,38 @@ Return a _copy_ of the element in +self+ bound to a key which is considered equa
 
 WARNING: +self+ *must* contain such key otherwise the behavior is undefined. See ~type~ContainsKey().
 
+|*_E_* ~type~PeekLowestElement(*_Type_* * +self+)
+|
+Return a _copy_ of an element bound to the lowest key in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_K_* ~type~PeekLowestKey(*_Type_* * +self+)
+|
+Return a _copy_ of the lowest key in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_E_* ~type~PeekHighestElement(*_Type_* * +self+)
+|
+Return a _copy_ of an element bound to the highest key in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
+|*_K_* ~type~PeekHighestKey(*_Type_* * +self+)
+|
+Return a _copy_ of the highest key in +self+.
+
+WARNING: +self+ *must not* be empty otherwise the behavior is undefined. See ~type~Empty().
+
 |*_void_* ~type~Purge(*_Type_* * +self+)
 |
 Remove and destroy all keys and elements stored in +self+.
 
 |*_int_* ~type~Put(*_Type_* * +self+, *_K_* +key+, *_E_* +value+)
 |
-Put a _copy_ of the element +value+ bound to a _copy_ of the key +key+ into +self+ *only if* there is no such key in +self+ which is considered equal to +key+.
+Put a _copy_ of the element +value+ bound to a _copy_ of the key +key+ into +self+
+*only if* there is no such key in +self+ which is considered equal to +key+.
 
 Return non-zero value on successful put and zero value otherwise.
 
@@ -101,9 +126,14 @@ Return number of key/element pairs stored in +self+.
 |===
 |*_void_* ~it~Ctor(*_IteratorType_* * +it+, *_Type_* * +self+)
 |
-Create a new iterator +it+ on map +self+.
+Create a new ascending iterator +it+ on map +self+. See ~it~CtorEx().
 
-NOTE: As the map is an unordered sequence, the traversal order is unspecified.
+NOTE: Previous contents of +it+ is overwritten.
+
+|*_void_* ~it~CtorEx(*_IteratorType_* * +it+, *_Type_* * +self+, *_int_* +ascending+)
+|
+Create a new iterator +it+ on map +self+.
+Non-zero value of +ascending+ specifies an ascending (+lowest to highest key traversal+) iterator, zero value specifies a descending (+highest to lowest key traversal+) iterator.
 
 NOTE: Previous contents of +it+ is overwritten.
 
@@ -199,10 +229,15 @@ class TreeMap < Collection
       #define #{empty}(self) (#{size}(self) == 0)
       #{declare} int #{containsKey}(#{type_ref}, #{key.type});
       #{declare} #{value.type} #{get}(#{type_ref}, #{key.type});
+      #{declare} #{key.type} #{peekLowestKey}(#{type_ref});
+      #{declare} #{value.type} #{peekLowestElement}(#{type_ref});
+      #{declare} #{key.type} #{peekHighestKey}(#{type_ref});
+      #{declare} #{value.type} #{peekHighestElement}(#{type_ref});
       #{declare} int #{put}(#{type_ref}, #{key.type}, #{value.type});
       #{declare} int #{replace}(#{type_ref}, #{key.type}, #{value.type});
       #{declare} int #{remove}(#{type_ref}, #{key.type});
-      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
+      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
+      #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
       #{declare} int #{itMove}(#{it_ref});
       #{declare} #{key.type} #{itGetKey}(#{it_ref});
       #{declare} #{value.type} #{itGetElement}(#{it_ref});
@@ -213,21 +248,21 @@ class TreeMap < Collection
   def write_impls(stream, define)
     super
     stream << %$
-      #define AUTOC_VALID_VALUE 1
-      #define AUTOC_VALID_KEY 2
-      #define AUTOC_OWNED_VALUE 4
-      #define AUTOC_OWNED_KEY 8
+      #define #{validValue} 1
+      #define #{validKey} 2
+      #define #{ownedValue} 4
+      #define #{ownedKey} 8
       static #{@entry.type} #{entryKeyOnlyRef}(#{key.type_ref} key) {
         #{@entry.type} entry;
         entry.key = *key;
-        entry.flags = AUTOC_VALID_KEY;
+        entry.flags = #{validKey};
         return entry;
       }
       static #{@entry.type} #{entryKeyValueRef}(#{key.type_ref} key, #{value.type_ref} value) {
         #{@entry.type} entry;
         entry.key = *key;
         entry.value = *value;
-        entry.flags = (AUTOC_VALID_KEY | AUTOC_VALID_VALUE);
+        entry.flags = (#{validKey} | #{validValue});
         return entry;
       }
       #define #{entryEqual}(lt, rt) #{entryEqualRef}(&lt, &rt)
@@ -244,19 +279,19 @@ class TreeMap < Collection
       }
       #define #{entryCopy}(dst, src) #{entryCopyRef}(&dst, &src)
       static void #{entryCopyRef}(#{@entry.type_ref} dst, #{@entry.type_ref} src) {
-        #{assert}(src->flags & AUTOC_VALID_KEY);
-        dst->flags = (AUTOC_VALID_KEY | AUTOC_OWNED_KEY);
+        #{assert}(src->flags & #{validKey});
+        dst->flags = (#{validKey} | #{ownedKey});
         #{key.copy("dst->key", "src->key")};
-        if(src->flags & AUTOC_VALID_VALUE) {
-          dst->flags |= (AUTOC_VALID_VALUE | AUTOC_OWNED_VALUE);
+        if(src->flags & #{validValue}) {
+          dst->flags |= (#{validValue} | #{ownedValue});
           #{value.copy("dst->value", "src->value")};
         }
       }
       #define #{entryDtor}(obj) #{entryDtorRef}(&obj)
       static void #{entryDtorRef}(#{@entry.type}* entry) {
-        #{assert}(entry->flags & AUTOC_VALID_KEY);
-        if(entry->flags & AUTOC_OWNED_KEY) #{key.dtor("entry->key")};
-        if(entry->flags & AUTOC_VALID_VALUE && entry->flags & AUTOC_OWNED_VALUE) #{value.dtor("entry->value")};
+        #{assert}(entry->flags & #{validKey});
+        if(entry->flags & #{ownedKey}) #{key.dtor("entry->key")};
+        if(entry->flags & #{validValue} && entry->flags & #{ownedValue}) #{value.dtor("entry->value")};
       }
       static #{@entry.type_ref} #{itGetEntryRef}(#{it_ref});
       static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
@@ -341,6 +376,46 @@ class TreeMap < Collection
         #{@entry.dtor("entry")};
         return result;
       }
+      #{define} #{key.type} #{peekLowestKey}(#{type_ref} self) {
+        #{key.type} result;
+        #{@set.node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{@set.lowestNode}(&self->entries);
+        #{assert}(node);
+        #{key.copy("result", "node->element.key")};
+        return result;
+      }
+      #{define} #{value.type} #{peekLowestElement}(#{type_ref} self) {
+        #{value.type} result;
+        #{@set.node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{@set.lowestNode}(&self->entries);
+        #{assert}(node);
+        #{element.copy("result", "node->element.value")};
+        return result;
+      }
+      #{define} #{key.type} #{peekHighestKey}(#{type_ref} self) {
+        #{key.type} result;
+        #{@set.node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{@set.highestNode}(&self->entries);
+        #{assert}(node);
+        #{key.copy("result", "node->element.key")};
+        return result;
+      }
+      #{define} #{value.type} #{peekHighestElement}(#{type_ref} self) {
+        #{value.type} result;
+        #{@set.node}* node;
+        #{assert}(self);
+        #{assert}(!#{empty}(self));
+        node = #{@set.highestNode}(&self->entries);
+        #{assert}(node);
+        #{element.copy("result", "node->element.value")};
+        return result;
+      }
       #{define} int #{put}(#{type_ref} self, #{key.type} key, #{value.type} value) {
         int result;
         #{@entry.type} entry;
@@ -367,10 +442,10 @@ class TreeMap < Collection
         #{@entry.dtor("entry")};
         return result;
       }
-      #{define} void #{itCtor}(#{it_ref} self, #{type_ref} map) {
+      #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} map, int ascending) {
         #{assert}(self);
         #{assert}(map);
-        #{@set.itCtor}(&self->it, &map->entries);
+        #{@set.itCtorEx}(&self->it, &map->entries, ascending);
       }
       #{define} int #{itMove}(#{it_ref} self) {
         #{assert}(self);
@@ -389,7 +464,7 @@ class TreeMap < Collection
         #{value.type} value;
         #{assert}(self);
         e = #{itGetEntryRef}(self);
-        #{assert}(e->flags & AUTOC_VALID_VALUE);
+        #{assert}(e->flags & #{validValue});
         #{value.copy("value", "e->value")};
         return value;
       }
@@ -397,10 +472,6 @@ class TreeMap < Collection
         #{assert}(self);
         return #{@set.itGetRef}(&self->it);
       }
-      #undef AUTOC_VALID_VALUE
-      #undef AUTOC_VALID_KEY
-      #undef AUTOC_OWNED_VALUE
-      #undef AUTOC_OWNED_KEY
     $
   end
   

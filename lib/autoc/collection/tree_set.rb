@@ -1,5 +1,4 @@
 require "autoc/collection"
-require "autoc/collection/list"
 
 
 module AutoC
@@ -7,7 +6,7 @@ module AutoC
   
 =begin
 
-TreeSet is a sorted container holding unique elements.
+TreeSet< *_E_* > is a sorted container holding unique elements.
 
 The TreeSet implements the Red-Black Tree algorithm.
 
@@ -227,7 +226,6 @@ class TreeSet < Collection
       #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
       #{declare} int #{itMove}(#{it_ref});
       #{declare} #{element.type} #{itGet}(#{it_ref});
-
     $
   end
 
@@ -302,7 +300,7 @@ class TreeSet < Collection
         #{dtor}(self);
         #{ctor}(self);
       }
-      static void #{rotateLeft}(#{type}* self, #{node}* node) {
+      static void #{rotateLeft}(#{type_ref} self, #{node}* node) {
         #{node}* right = node->right;
         node->right = right->left;
         if(right->left != #{null}) right->left->parent = node;
@@ -319,7 +317,7 @@ class TreeSet < Collection
         right->left = node;
         node->parent = right;
       }
-      static void #{rotateRight}(#{type}* self, #{node}* node) {
+      static void #{rotateRight}(#{type_ref} self, #{node}* node) {
         #{node}* left = node->left;
         node->left = left->right;
         if(left->right != #{null}) left->right->parent = node;
@@ -336,7 +334,7 @@ class TreeSet < Collection
         left->right = node;
         node->parent = left;
       }
-      static void #{insertFixup}(#{type}* self, #{node}* node) {
+      static void #{insertFixup}(#{type_ref} self, #{node}* node) {
         #{node}* uncle;
         while(node != self->root && #{isRed}(node->parent)) {
           if(node->parent == node->parent->parent->left) {
@@ -375,7 +373,7 @@ class TreeSet < Collection
         }
         #{setBlack}(self->root);
       }
-      static void #{deleteFixup}(#{type}* self, #{node}* child, #{node}* child_parent) {
+      static void #{deleteFixup}(#{type_ref} self, #{node}* child, #{node}* child_parent) {
         #{node}* sibling;
         int go_up = 1;
         if(child_parent->right == child) sibling = child_parent->left; else sibling = child_parent->right;
@@ -508,7 +506,7 @@ class TreeSet < Collection
       static void #{swapNodes}(#{node}** x, #{node}** y) {
         #{node}* t = *x; *x = *y; *y = t; 
       }
-      static void #{changeParent}(#{type}* self, #{node}* parent, #{node}* old_node, #{node}* new_node) {
+      static void #{changeParent}(#{type_ref} self, #{node}* parent, #{node}* old_node, #{node}* new_node) {
         if(parent == #{null}) {
           if(self->root == old_node) self->root = new_node;
           return;
@@ -520,7 +518,7 @@ class TreeSet < Collection
         if(child == #{null}) return;
         if(child->parent == old_node) child->parent = new_node;
       }
-      int #{remove}(#{type}* self, #{element.type} element) {
+      int #{remove}(#{type_ref} self, #{element.type} element) {
         #{node}* to_delete;
         #{node}* child;
         #{assert}(self);
@@ -602,8 +600,8 @@ class TreeSet < Collection
         #{dtor}(self);
         *self = set;
       }
-      static #{node}* #{lowestNode}(#{type}* self) {
-        #{node} *node;
+      static #{node}* #{lowestNode}(#{type_ref} self) {
+        #{node}* node;
         #{assert}(self);
         node = self->root;
         if(self->root != #{null}) {
@@ -611,8 +609,8 @@ class TreeSet < Collection
         }
         return node;
       }
-      static #{node}* #{highestNode}(#{type}* self) {
-        #{node} *node;
+      static #{node}* #{highestNode}(#{type_ref} self) {
+        #{node}* node;
         #{assert}(self);
         node = self->root;
         if(self->root != #{null}) {
@@ -621,7 +619,7 @@ class TreeSet < Collection
         return node;
       }
       static #{node}* #{nextNode}(#{node}* node) {
-        #{node} *parent;
+        #{node}* parent;
         #{assert}(node);
         if(node->right != #{null}) {
           for(node = node->right;
@@ -638,7 +636,7 @@ class TreeSet < Collection
         return node;
       }
       static #{node}* #{prevNode}(#{node}* node) {
-        #{node} *parent;
+        #{node}* parent;
         #{assert}(node);
         if(node->left != #{null}) {
           for(node = node->left;
