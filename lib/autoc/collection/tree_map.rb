@@ -2,6 +2,9 @@ require "autoc/collection"
 require "autoc/collection/tree_set"
 
 
+require "autoc/collection/map"
+
+
 module AutoC
 
   
@@ -161,6 +164,8 @@ Alias for ~it~GetElement().
 =end
 class TreeMap < Collection
   
+  include Maps
+
   attr_reader :key
 
   alias :value :element
@@ -191,11 +196,6 @@ class TreeMap < Collection
   def write_intf_types(stream)
     super
     stream << %$
-      /***
-      **** #{type}<#{key.type},#{value.type}> (#{self.class})
-      ***/
-    $ if public?
-    stream << %$
       typedef struct #{@entry.type} #{@entry.type};
       struct #{@entry.type} {
         #{key.type} key;
@@ -219,29 +219,12 @@ class TreeMap < Collection
   def write_intf_decls(stream, declare, define)
     super
     stream << %$
-      #{declare} #{ctor.declaration};
-      #{declare} #{dtor.declaration};
-      #{declare} #{copy.declaration};
-      #{declare} #{equal.declaration};
-      #{declare} #{identify.declaration};
-      #{declare} void #{purge}(#{type_ref});
-      #{declare} size_t #{size}(#{type_ref});
-      #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} int #{containsKey}(#{type_ref}, #{key.type});
-      #{declare} #{value.type} #{get}(#{type_ref}, #{key.type});
       #{declare} #{key.type} #{peekLowestKey}(#{type_ref});
       #{declare} #{value.type} #{peekLowestElement}(#{type_ref});
       #{declare} #{key.type} #{peekHighestKey}(#{type_ref});
       #{declare} #{value.type} #{peekHighestElement}(#{type_ref});
-      #{declare} int #{put}(#{type_ref}, #{key.type}, #{value.type});
-      #{declare} int #{replace}(#{type_ref}, #{key.type}, #{value.type});
-      #{declare} int #{remove}(#{type_ref}, #{key.type});
       #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
       #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
-      #{declare} int #{itMove}(#{it_ref});
-      #{declare} #{key.type} #{itGetKey}(#{it_ref});
-      #{declare} #{value.type} #{itGetElement}(#{it_ref});
-      #define #{itGet}(it) #{itGetElement}(it)
     $
   end
 

@@ -217,7 +217,7 @@ class String < Type
   def write_intf_types(stream)
     stream << %$
       /***
-      **** #{type}<#{char_type}> (#{self.class})
+      **** #{type}<#{char_type}>
       ***/
     $ if public?
     [@list].each {|obj| obj.write_intf_types(stream)} # TODO : this should be handled by the entity dependencies system 

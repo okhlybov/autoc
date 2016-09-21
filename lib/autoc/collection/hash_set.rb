@@ -2,6 +2,10 @@ require "autoc/collection"
 require "autoc/collection/list"
 
 
+require "autoc/collection/set"
+require "autoc/collection/iterator"
+
+
 module AutoC
 
   
@@ -145,19 +149,21 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class HashSet < Collection
 
+  include Sets
+  include Iterators::Unidirectional
+
   def initialize(*args)
     super
     @list = List.new(list, element, :static)
     key_requirement(element)
   end
   
+  def write_intf_decls(stream, declare, define)
+    super
+  end
+
   def write_intf_types(stream)
     super
-    stream << %$
-      /***
-      **** #{type}<#{element.type}> (#{self.class})
-      ***/
-    $ if public?
     @list.write_intf_types(stream)
     stream << %$
       typedef struct #{type} #{type};
@@ -176,38 +182,11 @@ class HashSet < Collection
     $
   end
   
-  def write_intf_decls(stream, declare, define)
-    super
-    stream << %$
-      #{declare} #{ctor.declaration};
-      #{declare} #{dtor.declaration};
-      #{declare} #{copy.declaration};
-      #{declare} #{equal.declaration};
-      #{declare} #{identify.declaration};
-      #{declare} void #{purge}(#{type_ref});
-      #{declare} int #{contains}(#{type_ref}, #{element.type});
-      #{declare} #{element.type} #{get}(#{type_ref}, #{element.type});
-      #{declare} size_t #{size}(#{type_ref});
-      #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} int #{put}(#{type_ref}, #{element.type});
-      #{declare} int #{replace}(#{type_ref}, #{element.type});
-      #{declare} int #{remove}(#{type_ref}, #{element.type});
-      #{declare} void #{exclude}(#{type_ref}, #{type_ref});
-      #{declare} void #{retain}(#{type_ref}, #{type_ref});
-      #{declare} void #{include}(#{type_ref}, #{type_ref});
-      #{declare} void #{invert}(#{type_ref}, #{type_ref});
-      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
-      #{declare} int #{itMove}(#{it_ref});
-      #{declare} #{element.type} #{itGet}(#{it_ref});
-    $
-  end
-
   def write_impls(stream, define)
-    super
     @list.write_intf_decls(stream, static, inline)
     @list.write_impls(stream, static)
+    super
     stream << %$
-      static #{element.type_ref} #{itGetRef}(#{it_ref});
       static void #{rehash}(#{type_ref} self) {
         #{@list.type_ref} buckets;
         size_t index, bucket_count, size, fill;
@@ -254,14 +233,6 @@ class HashSet < Collection
         self->bucket_count = bucket_count;
         self->size = size;
       }
-      static int #{containsAllOf}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          if(!#{contains}(other, *#{itGetRef}(&it))) return 0;
-        }
-        return 1;
-      }
       #{define} #{ctor.definition} {
         #{assert}(self);
         self->min_bucket_count = 16;
@@ -281,31 +252,6 @@ class HashSet < Collection
         }
         #{free}(self->buckets);
       }
-      #{define} #{copy.definition} {
-        #{it} it;
-        #{assert}(src);
-        #{assert}(dst);
-        #{ctor}(dst);
-        #{itCtor}(&it, src);
-        while(#{itMove}(&it)) #{put}(dst, *#{itGetRef}(&it));
-      }
-      #{define} #{equal.definition} {
-        #{assert}(lt);
-        #{assert}(rt);
-        return #{size}(lt) == #{size}(rt) && #{containsAllOf}(lt, rt) && #{containsAllOf}(rt, lt);
-      }
-      #{define} #{identify.definition} {
-        #{it} it;
-        size_t result = 0;
-        #{assert}(self);
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          #{element.type}* e = #{itGetRef}(&it);
-          result ^= #{element.identify("*e")};
-          result = AUTOC_RCYCLE(result);
-        }
-        return result;
-      }
       #{define} void #{purge}(#{type_ref} self) {
         #{assert}(self);
         #{dtor}(self);
@@ -322,10 +268,6 @@ class HashSet < Collection
         #{assert}(#{contains}(self, element));
         result = #{@list.find}(&self->buckets[#{element.identify("element")} % self->bucket_count], element);
         return result;
-      }
-      #{define} size_t #{size}(#{type_ref} self) {
-        #{assert}(self);
-        return self->size;
       }
       #{define} int #{put}(#{type_ref} self, #{element.type} element) {
         #{@list.type_ref} bucket;
@@ -355,53 +297,6 @@ class HashSet < Collection
           return 1;
         }
         return 0;
-      }
-      #{define} void #{exclude}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{assert}(self);
-        #{assert}(other);
-        #{itCtor}(&it, other);
-        while(#{itMove}(&it)) #{remove}(self, *#{itGetRef}(&it));
-      }
-      #{define} void #{include}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{assert}(self);
-        #{assert}(other);
-        #{itCtor}(&it, other);
-        while(#{itMove}(&it)) #{put}(self, *#{itGetRef}(&it));
-      }
-      #{define} void #{retain}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{type} set;
-        #{assert}(self);
-        #{assert}(other);
-        #{ctor}(&set);
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          #{element.type}* e = #{itGetRef}(&it);
-          if(#{contains}(other, *e)) #{put}(&set, *e);
-        }
-        #{dtor}(self);
-        *self = set;
-      }
-      #{define} void #{invert}(#{type_ref} self, #{type_ref} other) {
-        #{it} it;
-        #{type} set;
-        #{assert}(self);
-        #{assert}(other);
-        #{ctor}(&set);
-        #{itCtor}(&it, self);
-        while(#{itMove}(&it)) {
-          #{element.type}* e = #{itGetRef}(&it);
-          if(!#{contains}(other, *e)) #{put}(&set, *e);
-        }
-        #{itCtor}(&it, other);
-        while(#{itMove}(&it)) {
-          #{element.type}* e = #{itGetRef}(&it);
-          if(!#{contains}(self, *e)) #{put}(&set, *e);
-        }
-        #{dtor}(self);
-        *self = set;
       }
       #{define} void #{itCtor}(#{it_ref} self, #{type_ref} set) {
         #{assert}(self);
