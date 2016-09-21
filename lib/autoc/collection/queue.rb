@@ -1,6 +1,9 @@
 require "autoc/collection"
 
 
+require "autoc/collection/iterator"
+
+
 module AutoC
 
   
@@ -193,11 +196,13 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class Queue < Collection
   
+  include Iterators::Bidirectional
+
   def write_intf_types(stream)
     super
     stream << %$
       /***
-      **** #{type}<#{element.type}> (#{self.class})
+      **** #{type}<#{element.type}>
       ***/
     $ if public?
     stream << %$
@@ -250,11 +255,6 @@ class Queue < Collection
       #{declare} int #{removeEx}(#{type_ref}, #{element.type}, int);
       #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
-      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
-      #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
-      #{declare} int #{itMove}(#{it_ref});
-      #{declare} #{element.type} #{itGet}(#{it_ref});
     $
   end
   

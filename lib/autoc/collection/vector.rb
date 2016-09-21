@@ -1,6 +1,9 @@
 require "autoc/collection"
 
 
+require "autoc/collection/iterator"
+
+
 module AutoC
   
   
@@ -129,6 +132,8 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class Vector < Collection
 
+  include Iterators::Bidirectional
+
   def initialize(*args)
     super
     # Override the default type constructor as the Vector's requires one extra parameter
@@ -143,7 +148,7 @@ class Vector < Collection
     super
     stream << %$
       /***
-      **** #{type}<#{element.type}> (#{self.class})
+      **** #{type}<#{element.type}>
       ***/
     $ if public?
     stream << %$
@@ -161,7 +166,7 @@ class Vector < Collection
   end
   
   def write_intf_decls(stream, declare, define)
-    super
+    super(stream, define, define) # Need to make prototypes static inline
     stream << %$
       #{declare} #{ctor.declaration};
       #{declare} #{dtor.declaration};
@@ -191,7 +196,6 @@ class Vector < Collection
         #{element.dtor("self->values[index]")};
         #{element.copy("self->values[index]", "value")};
       }
-      #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
       #{define} void #{itCtorEx}(#{it_ref} self, #{type_ref} vector, int forward) {
         #{assert}(self);
         #{assert}(vector);

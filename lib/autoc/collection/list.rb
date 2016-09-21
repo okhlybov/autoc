@@ -1,6 +1,9 @@
 require "autoc/collection"
 
 
+require "autoc/collection/iterator"
+
+
 module AutoC
   
 
@@ -154,11 +157,13 @@ WARNING: current position *must* be valid otherwise the behavior is undefined. S
 =end
 class List < Collection
   
+  include Iterators::Unidirectional
+
   def write_intf_types(stream)
     super
     stream << %$
       /***
-      **** #{type}<#{element.type}> (#{self.class})
+      **** #{type}<#{element.type}>
       ***/
     $ if public?
     stream << %$
@@ -203,9 +208,6 @@ class List < Collection
       #{declare} int #{removeEx}(#{type_ref}, #{element.type}, int);
       #{declare} size_t #{size}(#{type_ref});
       #define #{empty}(self) (#{size}(self) == 0)
-      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
-      #{declare} int #{itMove}(#{it_ref});
-      #{declare} #{element.type} #{itGet}(#{it_ref});
     $
   end
   
