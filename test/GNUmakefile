@@ -1,5 +1,4 @@
-CC = gcc
-# This is a template of the WHPC-friendly (http://whpc.sf.net) makefile for building
+# This is a template of the WHPC-friendly (http://whpc.sourceforge.net) makefile for building
 # single executable from multiple source files written in C, C++ and/or FORTRAN languages.
 # The makefile requires GCC compilers and GNU Make.
 # It should be usable on UNIX systems with little or no modifications.
@@ -20,10 +19,9 @@ PROG ?= test
 # <.c> for C language,
 # <.cpp .cxx .cc> for C++ language,
 # <.f .F .for .f90> for FORTRAN language.
-SRC ?= test_auto.c
-
-
-AUTO = $(SRC) test_auto.h
+AUTO_C = test_auto.c
+AUTO_H = test_auto.h
+SRC ?= $(AUTO_C)
 
 
 ### [optional] user-definable variables which are normally set.
@@ -147,7 +145,9 @@ clean :
 
 -include $(DEP)
 
-$(AUTO) : test.rb $(wildcard *.rb)
+$(AUTO_C) : $(AUTO_H)
+
+$(AUTO_H) : test.rb $(wildcard *.rb)
 	ruby -I. -I../lib $<
 	
 run : $(EXE)
