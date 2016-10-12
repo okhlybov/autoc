@@ -1,1 +1,0 @@
-yard server --reload
