@@ -23,7 +23,6 @@ module Bidirectional
   def write_intf_decls(stream, declare, define)
     super
     stream << %$
-      #{declare} void #{itCtor}(#{it_ref}, #{type_ref});
       #define #{itCtor}(self, type) #{itCtorEx}(self, type, 1)
       #{declare} void #{itCtorEx}(#{it_ref}, #{type_ref}, int);
       #{declare} int #{itMove}(#{it_ref});
