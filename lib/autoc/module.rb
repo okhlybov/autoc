@@ -15,45 +15,74 @@ module AutoC
       obj
     end
 
-    attr_reader :name
+    attr_reader :name, :entities, :total_entities
 
     attr_reader :interface, :declaration, :definition
 
     def initialize(name, sources: 0, size_threshold: 100*1024)
       @name = c_id(name)
-      @entities = SortedSet.new
+      @entities = Set.new
+      @total_entities = Set.new
       @interface = Render.new(:interface)
       @declaration = Render.new(:declaration)
       @definition = Render.new(:definition)
       @sources = sources
       @threshold = size_threshold
+      raise ArgumentError, 'sources must be a non-negative number' if @sources.negative?
     end
 
     def <<(entity)
-      @entities.merge(entity.dependencies)
-      @entities << entity
+      @total_entities << @entities << entity
+      @total_entities.merge(entity.dependencies)
       self
+    end
+
+    attr_reader :header, :sources
+
+    def render!
+      setup_header!
+      setup_sources!
+      header.render!
+    end
+
+    def source_size(entities)
+      size = 0
+      total_entities = entities.dup
+      entities.each do |e|
+        definition[e].each {|x| size += x.length}
+        total_entities.merge(e.dependencies)
+      end
+      total_entities.each do |e|
+        declaration[e].each {|x| size += x.length}
+      end
+      size
     end
 
     private
 
-    def compute_sources!
-      if @sources.zero?
-        size = 0
-        @entities.each do |e|
-          declaration[e].each {|x| size += x.length}
-          definition[e].each {|x| size += x.length}
-        end
-        @sources = (size / @threshold + 1).truncate
+    def required_sources
+      (source_size(@entities) / @threshold + 1).truncate if @sources.zero?
+    end
+
+    def new_header(tag)
+      Header.new(self, tag)
+    end
+
+    def new_source(tag)
+      Source.new(self, tag)
+    end
+
+    def setup_header!
+      @header = new_header(name)
+    end
+
+    def setup_sources!
+      @sources = Set.new
+      if (n = required_sources) == 1
+        @sources << new_source(name)
+      else
+        (1..n).each {|i| @sources << new_source("#{name}#{i}")}
       end
-    end
-
-    def new_header
-      Header.new(self)
-    end
-
-    def new_source
-      Source.new(self)
     end
 
   end # Module
@@ -82,16 +111,40 @@ module AutoC
   #
   class Module::Header
 
-    attr_reader :module
+    attr_reader :module, :tag
 
-    def initialize(m)
+    def initialize(m, tag)
       @module = m
+      @tag = tag
+    end
+
+    def file_name
+      @file_name ||= "#{tag}_auto.h"
+    end
+
+    def render!
+      stream = new_stream
+      begin
+        prologue(stream)
+        SortedSet.new(self.module.total_entities).each do |e|
+          self.module.interface[e].each {|x| stream << x}
+        end
+        epilogue(stream)
+      ensure
+        stream.close
+      end
+    end
+
+    private
+
+    def new_stream
+      File.new(file_name, 'w')
     end
 
     def prologue(stream)
       stream << %~
-        #ifndef #{self.module.name}_autoc_h
-        #define #{self.module.name}_autoc_h
+        #ifndef #{tag}_auto_h
+        #define #{tag}_auto_h
       ~
     end
 
@@ -109,34 +162,66 @@ module AutoC
 
     include Comparable
 
-    attr_reader :module
+    attr_reader :module, :tag
 
-    def initialize(m)
+    def initialize(m, tag)
       @module = m
-      @entities = SortedSet.new
+      @tag = tag
+      @entities = Set.new
+    end
+
+    def file_name
+      @file_name ||= "#{tag}_auto.c"
     end
 
     def <<(entity)
-      @entities.merge(entity.dependencies)
-      @entities << entity
-      @size = nil
+      unless @entities.include?(entity)
+        @entities << entity
+        @size = nil
+      end
       self
     end
 
     def size
-      @size ||= begin
-                  size = 0
-                  @entities.each do |e|
-                    self.module.declaration[e].each {|x| size += x.length}
-                    self.module.definition[e].each {|x| size += x.length}
-                  end
-                  size
-                end
+      @size ||= self.module.source_size(@entities)
     end
 
     def <=>(other)
       size <=> other.size
     end
+
+    def render!
+      stream = new_stream
+      begin
+        prologue(stream)
+        entities = SortedSet.new(@entities)
+        total_entities = entities.dup
+        entities.each {|e| total_entities.merge(e.dependencies)}
+        total_entities.each do |e|
+          self.module.declaration[e].each {|x| stream << x}
+        end
+        entities.each do |e|
+          self.module.definition[e].each {|x| stream << x}
+        end
+        epilogue(stream)
+      ensure
+        stream.close
+      end
+    end
+
+    private
+
+    def new_stream
+      File.new(file_name, 'w')
+    end
+
+    def prologue(stream)
+      stream << %~
+        #include "#{self.module.header.file_name}"
+      ~
+    end
+
+    def epilogue(stream) end
 
   end # Source
 
@@ -157,7 +242,7 @@ module AutoC
         if self == other
           0
         else
-          dependencies.include?(other) ? -1 : +1
+          -(dependencies.include?(other) ? -1 : +1) # Negate the value as we need to yield sequence in descending order
         end
       else
         nil
