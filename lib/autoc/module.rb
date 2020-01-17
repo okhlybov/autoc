@@ -19,20 +19,21 @@ module AutoC
 
     attr_reader :interface, :declaration, :definition
 
-    def initialize(name, sources: 0, size_threshold: 100*1024)
-      @name = c_id(name)
+    def initialize(name, source_count: 0, size_threshold: 100*1024)
+      @name = Module.c_id(name)
       @entities = Set.new
       @total_entities = Set.new
       @interface = Render.new(:interface)
       @declaration = Render.new(:declaration)
       @definition = Render.new(:definition)
-      @sources = sources
+      @source_count = source_count
       @threshold = size_threshold
-      raise ArgumentError, 'sources must be a non-negative number' if @sources.negative?
+      raise ArgumentError, 'source count must be a non-negative number' if @source_count.negative?
     end
 
     def <<(entity)
-      @total_entities << @entities << entity
+      @entities << entity
+      @total_entities << entity
       @total_entities.merge(entity.dependencies)
       self
     end
@@ -42,7 +43,9 @@ module AutoC
     def render!
       setup_header!
       setup_sources!
+      distribute_entities!
       header.render!
+      sources.each {|s| s.render!}
     end
 
     def source_size(entities)
@@ -61,7 +64,7 @@ module AutoC
     private
 
     def required_sources
-      (source_size(@entities) / @threshold + 1).truncate if @sources.zero?
+      @source_count.zero? ? (source_size(@entities) / @threshold + 1).truncate : @source_count
     end
 
     def new_header(tag)
@@ -79,12 +82,19 @@ module AutoC
     def setup_sources!
       @sources = Set.new
       if (n = required_sources) == 1
-        @sources << new_source(name)
+        sources << new_source(name)
       else
-        (1..n).each {|i| @sources << new_source("#{name}#{i}")}
+        (1..n).each {|i| sources << new_source("#{name}#{i}")}
       end
     end
 
+    def distribute_entities!
+      srcs = sources.to_a
+      total_entities.each do |e|
+        srcs.sort!
+        srcs.first << e # Put into the least populated source
+      end
+    end
   end # Module
 
 
@@ -238,7 +248,7 @@ module AutoC
     end
 
     def <=>(other)
-      if other.is_a?(Entity)
+      if other.is_a?(Module::Entity)
         if self == other
           0
         else
