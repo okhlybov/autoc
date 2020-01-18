@@ -114,6 +114,73 @@ module AutoC
       "((size_t)#{value})"
     end
 
-  end # Type
+  end # PrimitiveType
+
+
+  #
+  class ValueType
+
+    include Type
+
+    include Module::Entity
+
+    attr_reader :dependencies
+
+    def initialize(type, deps)
+      super(type)
+      @dependencies = Set.new(deps).freeze
+    end
+
+    #
+    def self.def_redirector(meth)
+      class_eval %~
+        def #{meth}(*args)
+          method_missing(:#{meth}, *args.collect {|arg| %"&(\#{arg})"})
+        end
+      ~
+    end
+
+    def method_missing(symbol, *args)
+      function = decorate_method(symbol) # Construct C function name for the method
+      if args.empty?
+        function # Emit bare function name
+      elsif args.size == 1 && args.first == nil
+        function + '()' # Use sole nil argument to emit function call with no arguments
+      else
+        function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
+      end
+    end
+
+    private
+
+    #
+    def decorate_method(symbol)
+      method = symbol.to_s
+      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
+      # Check for leading underscore
+      underscored = if /_(.*)/ =~ method
+                     method = $1
+                     true
+                    else
+                     false
+                    end
+      function = type + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
+      underscored ? "_#{function}" : function # Preserve the leading underscore
+    end
+
+  end # CustomValueType
+
+
+  #
+  class Collection < ValueType
+
+    attr_reader :element_type
+
+    def initialize(type, element_type, deps)
+      super(type, deps)
+      @element_type = Type.coerce(element_type)
+    end
+
+  end # Collection
 
 end # AutoC
