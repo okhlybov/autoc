@@ -1,3 +1,4 @@
+require 'singleton'
 require 'autoc/module'
 
 
@@ -17,6 +18,10 @@ module AutoC
 
     def initialize(type)
       @type = type.to_s.freeze
+    end
+
+    def to_s
+      type.to_s
     end
 
     def ==(other)
@@ -132,10 +137,13 @@ module AutoC
     end
 
     #
-    def self.def_redirector(meth)
+    def self.def_redirector(meth, redirect_args = 0)
       class_eval %~
         def #{meth}(*args)
-          method_missing(:#{meth}, *args.collect {|arg| %"&(\#{arg})"})
+          n = #{redirect_args}
+          ls = (n.zero? ? args : args[0..n-1]).collect {|arg| %"&(\#{arg})"}
+          rs = n.zero? ? [] : args[n..-1]
+          method_missing(:#{meth}, *(ls + rs))
         end
       ~
     end
@@ -144,7 +152,7 @@ module AutoC
       function = decorate_method(symbol) # Construct C function name for the method
       if args.empty?
         function # Emit bare function name
-      elsif args.size == 1 && args.first == nil
+      elsif args.size == 1 && args.first.nil?
         function + '()' # Use sole nil argument to emit function call with no arguments
       else
         function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
@@ -174,12 +182,24 @@ module AutoC
   #
   class Collection < ValueType
 
-    attr_reader :element_type
+    attr_reader :element
 
-    def initialize(type, element_type, deps)
-      super(type, deps)
-      @element_type = Type.coerce(element_type)
+    def initialize(type, element, deps)
+      super(type, deps << CommonCode.instance)
+      @element = Type.coerce(element)
     end
+
+    class CommonCode
+
+      include Singleton
+      include Module::Entity
+
+      def interface(stream)
+        stream << %~
+          #include <assert.h>
+        ~
+      end
+    end # CommonCode
 
   end # Collection
 
