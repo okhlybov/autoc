@@ -1,4 +1,6 @@
 require 'singleton'
+
+
 require 'autoc/module'
 
 
@@ -17,12 +19,10 @@ module AutoC
     attr_reader :type
 
     def initialize(type)
-      @type = type.to_s.freeze
+      @type = type.to_s
     end
 
-    def to_s
-      type.to_s
-    end
+    alias to_s type
 
     def ==(other)
       type == other.type
@@ -38,6 +38,9 @@ module AutoC
 
     #
     def create(value, *args) end; remove_method :create
+
+    #
+    attr_reader :create_params; remove_method :create_params
 
     #
     def destroy(value) end; remove_method :destroy
@@ -58,12 +61,6 @@ module AutoC
 
     def constructible?
       respond_to?(:create)
-    end
-
-    def default_constructible?
-      !create(:value).nil?
-    rescue
-      false
     end
 
     def destructible?
@@ -103,16 +100,18 @@ module AutoC
       "(#{value}) = (#{init})"
     end
 
+    def create_params; [] end
+
     def copy(value, origin)
       "(#{value}) = (#{origin})"
     end
 
     def equal(value, other)
-      "(#{value}) == (#{origin})"
+      "(#{value}) == (#{other})"
     end
 
     def less(value, other)
-      "(#{value}) < (#{origin})"
+      "(#{value}) < (#{other})"
     end
 
     def identify(value)
@@ -123,18 +122,23 @@ module AutoC
 
 
   #
-  class ValueType
+  class CompositeType
 
     include Type
 
     include Module::Entity
 
-    attr_reader :dependencies
+    attr_reader :prefix, :dependencies
 
-    def initialize(type, deps)
+    def initialize(type, prefix: nil, deps: [])
       super(type)
-      @dependencies = Set.new(deps).freeze
+      @prefix = (prefix.nil? ? self.type : prefix).to_s
+      @dependencies = Set[*(deps << Code.instance)].freeze
     end
+
+    alias to_s prefix
+
+    def inline; :AUTOC_INLINE end
 
     #
     def self.def_redirector(meth, redirect_args = 0)
@@ -148,6 +152,7 @@ module AutoC
       ~
     end
 
+    #
     def method_missing(symbol, *args)
       function = decorate_method(symbol) # Construct C function name for the method
       if args.empty?
@@ -159,48 +164,38 @@ module AutoC
       end
     end
 
-    private
-
     #
     def decorate_method(symbol)
       method = symbol.to_s
       method = method.sub(/[!?]$/, '') # Strip trailing ? or !
       # Check for leading underscore
       underscored = if /_(.*)/ =~ method
-                     method = $1
-                     true
+                      method = $1
+                      true
                     else
-                     false
+                      false
                     end
-      function = type + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
+      function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
       underscored ? "_#{function}" : function # Preserve the leading underscore
     end
 
-  end # CustomValueType
-
-
-  #
-  class Collection < ValueType
-
-    attr_reader :element
-
-    def initialize(type, element, deps)
-      super(type, deps << CommonCode.instance)
-      @element = Type.coerce(element)
-    end
-
-    class CommonCode
-
+    class Code
       include Singleton
       include Module::Entity
-
       def interface(stream)
-        stream << %~
-          #include <assert.h>
-        ~
+        stream << %$
+          #ifndef AUTOC_INLINE
+            #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
+              #define AUTOC_INLINE inline
+            #else
+              #define AUTOC_INLINE static
+            #endif
+          #endif
+        $
       end
-    end # CommonCode
+    end # Code
 
-  end # Collection
+  end # CompositeType
+
 
 end # AutoC
