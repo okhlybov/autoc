@@ -4,11 +4,11 @@ require 'autoc/type'
 module AutoC
 
   #
-  class RC < CompositeType
+  class CR < CompositeType
 
     def initialize(value, prefix: nil)
       @value = Type.coerce(value)
-      super("#{@value.type}*", prefix: (prefix.nil? ? @value.prefix : prefix), deps: [@value])
+      super("#{@value.type}*", prefix: (prefix.nil? ? @value.prefix : prefix), deps: [@value, Code.instance])
     end
 
     def create(value, *args)
@@ -60,26 +60,38 @@ module AutoC
           #{s}* ps = (#{s}*)malloc(sizeof(#{s})); assert(ps);
           #{@value.create(*args)};
           ps->count = 1;
-          return (#{cR}*)ps;
+          return (#{cR})ps;
         }
-        #{inline} #{cR} #{ref}(#{cR} r) {
-          assert(r);
-          ++(#{s}*)r->count;
-          return r;
+        #{inline} #{cR} #{ref}(#{cR} cr) {
+          assert(cr);
+          ++((#{s}*)cr)->count;
+          return cr;
         }
-        #{inline} #{cR} #{unref}(#{cR} r) {
-          assert(r);
-          if(--(#{s}*)r->count == 0) {
-            #{@value.destroy("*r") if @value.destructible?};
-            free(r);
+        #{inline} #{cR} #{unref}(#{cR} cr) {
+          assert(cr);
+          if(--((#{s}*)cr)->count == 0) {
+            #{@value.destroy("*cr") if @value.destructible?};
+            free(cr);
             return NULL;
           } else
-            return r;
+            return cr;
         }
       $
     end
 
-  end # RC
+    class Code
+      include Singleton
+      include Module::Entity
+      def interface(stream)
+        stream << %$
+          #include <stddef.h>
+          #include <assert.h>
+          #include <malloc.h>
+        $
+      end
+    end # Code
+
+  end # CR
 
 
 end # AutoC
