@@ -239,12 +239,12 @@ module AutoC
   #
   module Module::Entity
 
-    EmptySet = Set.new.freeze
+    EMPTY_SET = Set.new.freeze
 
     include Comparable
 
     def dependencies
-      EmptySet
+      EMPTY_SET
     end
 
     def <=>(other)

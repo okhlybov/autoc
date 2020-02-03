@@ -4,11 +4,11 @@ require 'autoc/type'
 module AutoC
 
   #
-  class CR < CompositeType
+  class CR < Composite
 
     def initialize(value, prefix: nil)
       @value = Type.coerce(value)
-      super("#{@value.type}*", prefix: (prefix.nil? ? @value.prefix : prefix), deps: [@value, Code.instance])
+      super(cR, prefix: (prefix.nil? ? @value.prefix : prefix), deps: [@value, @@code])
     end
 
     def create(value, *args)
@@ -39,8 +39,8 @@ module AutoC
       @value.identify("*#{value}")
     end
 
-    def comparable?
-      @value.comparable?
+    def orderable?
+      @value.orderable?
     end
 
     def hashable?
@@ -51,7 +51,7 @@ module AutoC
       i = 0; params = @value.create_params.collect {|p| "#{p.type} arg#{i+=1}"}.join(',')
       args = ['ps->value'] + (1..@value.create_params.size).collect {|i| "arg#{i}"}
       stream << %$
-        typedef #{type} #{cR};
+        typedef #{@value.type}* #{cR};
         typedef struct {
           #{@value.type} value;
           unsigned count;
@@ -79,17 +79,10 @@ module AutoC
       $
     end
 
-    class Code
-      include Singleton
-      include Module::Entity
-      def interface(stream)
-        stream << %$
-          #include <stddef.h>
-          #include <assert.h>
-          #include <malloc.h>
-        $
-      end
-    end # Code
+    @@code = Code.interface %$
+      #include <assert.h>
+      #include <malloc.h>
+    $
 
   end # CR
 

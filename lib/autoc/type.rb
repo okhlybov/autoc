@@ -12,7 +12,7 @@ module AutoC
 
     #
     def self.coerce(obj)
-      obj.is_a?(Type) ? obj : PrimitiveType.new(obj)
+      obj.is_a?(Type) ? obj : Primitive.new(obj)
     end
 
     #
@@ -71,7 +71,7 @@ module AutoC
       respond_to?(:copy)
     end
 
-    def comparable?
+    def orderable?
       respond_to?(:equal) && respond_to?(:less)
     end
 
@@ -82,7 +82,7 @@ module AutoC
 
 
   #
-  class PrimitiveType
+  class Primitive
 
     include Type
 
@@ -122,7 +122,7 @@ module AutoC
 
 
   #
-  class CompositeType
+  class Composite
 
     include Type
 
@@ -179,7 +179,7 @@ module AutoC
       underscored ? "_#{function}" : function # Preserve the leading underscore
     end
 
-    @@code = Code.new interface: %$
+    @@code = Code.interface %$
       #ifndef AUTOC_INLINE
         #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
           #define AUTOC_INLINE inline
@@ -189,7 +189,7 @@ module AutoC
       #endif
     $
 
-  end # CompositeType
+  end # Composite
 
 
 end # AutoC
