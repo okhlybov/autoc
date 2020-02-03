@@ -133,7 +133,7 @@ module AutoC
     def initialize(type, prefix: nil, deps: [])
       super(type)
       @prefix = (prefix.nil? ? self.type : prefix).to_s
-      @dependencies = Set[*(deps << Code.instance)].freeze
+      @dependencies = Set[*(deps << @@code)].freeze
     end
 
     alias to_s prefix
@@ -179,21 +179,15 @@ module AutoC
       underscored ? "_#{function}" : function # Preserve the leading underscore
     end
 
-    class Code
-      include Singleton
-      include Module::Entity
-      def interface(stream)
-        stream << %$
-          #ifndef AUTOC_INLINE
-            #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
-              #define AUTOC_INLINE inline
-            #else
-              #define AUTOC_INLINE static
-            #endif
-          #endif
-        $
-      end
-    end # Code
+    @@code = Code.new interface: %$
+      #ifndef AUTOC_INLINE
+        #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
+          #define AUTOC_INLINE inline
+        #else
+          #define AUTOC_INLINE static
+        #endif
+      #endif
+    $
 
   end # CompositeType
 

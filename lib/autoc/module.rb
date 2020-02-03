@@ -271,4 +271,34 @@ module AutoC
   end # Entity
 
 
+  #
+  class Code
+
+    include Module::Entity
+
+    def self.interface(s)
+      Code.new(interface: s)
+    end
+
+    def initialize(interface: nil, declaration: nil, definition: nil)
+      @interface = interface
+      @declaration = declaration
+      @definition = definition
+    end
+
+    def interface(stream)
+      stream << @interface unless @interface.nil?
+    end
+
+    def definition(stream)
+      stream << @definition unless @definition.nil?
+    end
+
+    def declaration(stream)
+      stream << @declaration unless @declaration.nil?
+    end
+
+  end # Code
+
+
 end # AutoC
