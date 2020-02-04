@@ -9,7 +9,7 @@ module AutoC
     def initialize(value, prefix: nil)
       @value = Type.coerce(value)
       pfx = prefix.nil? ? @value.prefix : prefix
-      super("#{pfx}CR", prefix: pfx, deps: [@value, @@code])
+      super("#{pfx}CR", prefix: pfx, deps: [@value, CODE])
     end
 
     def create(value, *args)
@@ -80,7 +80,7 @@ module AutoC
       $
     end
 
-    @@code = Code.interface %$
+    CODE = Code.interface %$
       #include <assert.h>
       #include <malloc.h>
     $

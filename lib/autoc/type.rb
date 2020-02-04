@@ -131,7 +131,7 @@ module AutoC
     def initialize(type, prefix: nil, deps: [])
       super(type)
       @prefix = (prefix.nil? ? self.type : prefix).to_s
-      @dependencies = Set[*(deps << @@code)].freeze
+      @dependencies = Set[CODE, *deps].freeze
     end
 
     alias to_s prefix
@@ -177,7 +177,7 @@ module AutoC
       underscored ? "_#{function}" : function # Preserve the leading underscore
     end
 
-    @@code = Code.interface %$
+    CODE = Code.interface %$
       #ifndef AUTOC_INLINE
         #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
           #define AUTOC_INLINE inline

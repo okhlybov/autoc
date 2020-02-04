@@ -252,7 +252,7 @@ module AutoC
       @total_entities ||= begin
         set = Set[self]
         dependencies.each {|d| set.merge(d.total_entities)} unless dependencies.empty?
-        set
+        set.freeze
       end
     end
 
