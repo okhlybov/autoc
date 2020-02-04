@@ -10,16 +10,16 @@ module AutoC
   module STDC
 
     class STDDEF_H < Primitive
-      def dependencies; @@deps end
-      @@deps = Set[Code.interface %$
+      def dependencies; @@set end
+      @@set = Set[Code.interface %$
         #include <stddef.h>
       $]
     end
 
     class COMPLEX_H < Primitive
       def orderable?; false end
-      def dependencies; @@deps end
-      @@deps = Set[Code.interface %$
+      def dependencies; @@set end
+      @@set = Set[Code.interface %$
         #include <complex.h>
       $]
     end

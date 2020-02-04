@@ -33,8 +33,7 @@ module AutoC
 
     def <<(entity)
       @entities << entity
-      @total_entities << entity
-      @total_entities.merge(entity.dependencies)
+      @total_entities.merge(entity.total_entities)
       self
     end
 
@@ -243,16 +242,27 @@ module AutoC
 
     include Comparable
 
+    #
     def dependencies
       EMPTY_SET
     end
 
+    #
+    def total_entities
+      @total_entities ||= begin
+        set = Set[self]
+        dependencies.each {|d| set.merge(d.total_entities)} unless dependencies.empty?
+        set
+      end
+    end
+
+    #
     def <=>(other)
       if other.is_a?(Module::Entity)
         if self == other
           0
         else
-          -(dependencies.include?(other) ? -1 : +1) # Negate the value as we need to yield sequence in descending order
+          total_entities.include?(other) ? +1 : -1
         end
       else
         nil

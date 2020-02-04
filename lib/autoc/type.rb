@@ -1,13 +1,10 @@
-require 'singleton'
-
-
 require 'autoc/module'
 
 
 module AutoC
 
 
-  # @abstract
+  #
   module Type
 
     #
@@ -57,7 +54,7 @@ module AutoC
     #
     def identify(value) end; remove_method :identify
 
-    # Type traits
+    # Type trait tests
 
     def constructible?
       respond_to?(:create)
@@ -78,6 +75,7 @@ module AutoC
     def hashable?
       respond_to?(:equal) && respond_to?(:identify)
     end
+
   end
 
 
@@ -118,7 +116,7 @@ module AutoC
       "((size_t)#{value})"
     end
 
-  end # PrimitiveType
+  end # Primitive
 
 
   #

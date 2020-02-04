@@ -8,7 +8,8 @@ module AutoC
 
     def initialize(value, prefix: nil)
       @value = Type.coerce(value)
-      super(cR, prefix: (prefix.nil? ? @value.prefix : prefix), deps: [@value, @@code])
+      pfx = prefix.nil? ? @value.prefix : prefix
+      super("#{pfx}CR", prefix: pfx, deps: [@value, @@code])
     end
 
     def create(value, *args)
