@@ -117,7 +117,7 @@ class Collection < Type
 
   # Collection always has equality tester but the element is required to be comparable on its own
   # because collection comparison incurs comparison of all contained elements
-  def comparable?; true && element.comparable? end
+  def comparable?; true && element.orderable? end
 
   # So far there are no orderable collections therefore inherit false-returning #orderable? 
 

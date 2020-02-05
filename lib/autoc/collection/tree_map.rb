@@ -189,7 +189,7 @@ class TreeMap < Collection
 
   def copyable?; super && key.copyable? end
   
-  def comparable?; super && key.comparable? end
+  def comparable?; super && key.orderable? end
   
   def hashable?; super && key.hashable? end
   

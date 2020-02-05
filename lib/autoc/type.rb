@@ -40,6 +40,26 @@ module AutoC
     attr_reader :create_params; remove_method :create_params
 
     #
+    def create_params_declare_list
+      i = 0; create_params.collect{|p| "#{p} _#{i+=1}"}
+    end
+
+    #
+    def create_params_declare
+      create_params_declare_list.join(',')
+    end
+
+    #
+    def create_params_pass_list
+      (1..create_params.size).collect {|i| "_#{i}"}
+    end
+
+    #
+    def create_params_pass
+      create_params_pass_list.join(',')
+    end
+
+    #
     def destroy(value) end; remove_method :destroy
 
     #
@@ -68,8 +88,12 @@ module AutoC
       respond_to?(:copy)
     end
 
+    def equality_testable?
+      respond_to?(:equal)
+    end
+
     def orderable?
-      respond_to?(:equal) && respond_to?(:less)
+      equality_testable? && respond_to?(:less)
     end
 
     def hashable?
@@ -98,7 +122,9 @@ module AutoC
       "(#{value}) = (#{init})"
     end
 
-    def create_params; [] end
+    EMPTY_ARRAY = [].freeze
+
+    def create_params; EMPTY_ARRAY end
 
     def copy(value, origin)
       "(#{value}) = (#{origin})"
@@ -137,6 +163,10 @@ module AutoC
     alias to_s prefix
 
     def inline; :AUTOC_INLINE end
+
+    def declare; :AUTOC_EXTERN end
+
+    def define; end
 
     #
     def self.def_redirector(meth, redirect_args = 0)
@@ -185,9 +215,116 @@ module AutoC
           #define AUTOC_INLINE static
         #endif
       #endif
+      #ifndef AUTOC_EXTERN
+        #if defined(__cplusplus)
+          #define AUTOC_EXTERN extern "C"
+        #else
+          #define AUTOC_EXTERN extern
+        #endif
+      #endif
     $
 
   end # Composite
+
+
+  class Structure < Composite
+
+    def initialize(type, **fields)
+      @fields = fields.transform_values {|e| Type.coerce(e)}
+      super(type, deps: @fields.values)
+      # TODO type traits conformance tests
+    end
+
+    def default_create!
+      raise 'Type has no default constructor' unless default_constructible?
+      @default_create = true
+      self
+    end
+
+    # TODO
+    #def_redirector(:create, 1)
+
+    def create_params
+      @fields.values
+    end
+
+    def constructible?
+      @fields.each_value {|type| return false unless type.constructible?}
+      true
+    end
+
+    def default_constructible?
+      @fields.each_value {|type| return false unless type.create_params.size.zero?}
+      true
+    end
+
+    def copyable?
+      @fields.each_value {|type| return false unless type.copyable?}
+      true
+    end
+
+    def equality_testable?
+      @fields.each_value {|type| return false unless type.equality_testable?}
+      true
+    end
+
+    def destructible?
+      @fields.each_value {|type| return true if type.destructible?}
+      false
+    end
+
+    def create_params_declare_list
+      xs = []
+      @fields.each {|field, type| xs << "#{type} #{field}"}
+      xs
+    end
+
+    def create_params_pass_list
+      @fields.keys
+    end
+
+    def interface(stream)
+      stream << "typedef struct {"
+        @fields.each {|field, type| stream << "#{type} #{field};"}
+      stream << "} #{self};"
+      #
+      stream << "void #{create}(#{self}* self);" if default_constructible?
+      stream << %$
+        #{declare} void #{createEx}(#{self}* self, #{create_params_declare});
+        #{declare} void #{copy}(#{self}* self, #{self}* origin);
+      $ if copyable?
+      stream << "#{declare} void #{destroy}(#{self}* self);" if destructible?
+      stream << "#{declare} int #{equal}(#{self}* self, #{self}* other);" if equality_testable?
+    end
+
+    def definition(stream)
+      if default_constructible?
+        stream << "#{define} void #{create}(#{self}* self) { assert(self);"
+          @fields.each {|field, type| stream << type.create("self->#{field}") << ';'}
+        stream << '}'
+      end
+      if copyable?
+        stream << "#{define} void #{createEx}(#{self}* self, #{create_params_declare}) { assert(self);"
+          @fields.each {|field, type| stream << type.copy("self->#{field}", field) << ';'}
+        stream << '}'
+        stream << "#{define} void #{copy}(#{self}* self, #{self}* origin) { assert(self); assert(origin);"
+          @fields.each {|field, type| stream << type.copy("self->#{field}", "origin->#{field}") << ';'}
+        stream << '}'
+      end
+      if destructible?
+        stream << "#{define} void #{destroy}(#{self}* self) { assert(self);"
+          @fields.each {|field, type| stream << type.destroy("self->#{field}") << ';' if type.destructible?}
+        stream << '}'
+      end
+      if equality_testable?
+        stream << "#{define} int #{equal}(#{self}* self, #{self}* other) { assert(self); assert(other);"
+        xs = []; @fields.each {|field, type| xs << type.equal("self->#{field}", "other->#{field}")}
+        s = ['self == other', xs.join(' && ')].join(' || ')
+        stream << "return #{s};}"
+      end
+    end
+
+  end # Structure
 
 
 end # AutoC

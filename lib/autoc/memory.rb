@@ -10,6 +10,7 @@ module AutoC
       @value = Type.coerce(value)
       pfx = prefix.nil? ? @value.prefix : prefix
       super("#{pfx}CR", prefix: pfx, deps: [@value, CODE])
+      # TODO type traits conformance tests
     end
 
     def create(value, *args)
@@ -49,17 +50,15 @@ module AutoC
     end
 
     def interface(stream)
-      i = 0; params = @value.create_params.collect {|p| "#{p.type} arg#{i+=1}"}.join(',')
-      args = ['ps->value'] + (1..@value.create_params.size).collect {|i| "arg#{i}"}
       stream << %$
         typedef #{@value.type}* #{cR};
         typedef struct {
           #{@value.type} value;
           unsigned count;
         } #{s};
-        #{inline} #{cR} #{new}(#{params}) {
+        #{inline} #{cR} #{new}(#{@value.create_params_declare}) {
           #{s}* ps = (#{s}*)malloc(sizeof(#{s})); assert(ps);
-          #{@value.create(*args)};
+          #{@value.create(*(['ps->value'] + @value.create_params_pass_list))};
           ps->count = 1;
           return (#{cR})ps;
         }
