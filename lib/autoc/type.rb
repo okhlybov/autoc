@@ -76,26 +76,37 @@ module AutoC
 
     # Type trait tests
 
+    #
     def constructible?
       respond_to?(:create)
     end
 
+    #
+    def auto_constructible?
+      constructible? && create_params.size.zero?
+    end
+
+    #
     def destructible?
       respond_to?(:destroy)
     end
 
+    #
     def copyable?
       respond_to?(:copy)
     end
 
+    #
     def equality_testable?
       respond_to?(:equal)
     end
 
+    #
     def orderable?
       equality_testable? && respond_to?(:less)
     end
 
+    #
     def hashable?
       respond_to?(:equal) && respond_to?(:identify)
     end
@@ -146,6 +157,10 @@ module AutoC
 
 
   #
+  class TraitError < TypeError; end # TraitError
+
+
+  #
   class Composite
 
     include Type
@@ -172,10 +187,14 @@ module AutoC
     def self.def_redirector(meth, redirect_args = 0)
       class_eval %~
         def #{meth}(*args)
-          n = #{redirect_args}
-          ls = (n.zero? ? args : args[0..n-1]).collect {|arg| %"&(\#{arg})"}
-          rs = n.zero? ? [] : args[n..-1]
-          method_missing(:#{meth}, *(ls + rs))
+          if args.size == 1 && args.first.nil?
+            method_missing(:#{meth}, nil)
+          else
+            n = [#{redirect_args}, args.size].min
+            ls = (n.zero? ? args : args[0..n-1]).collect {|arg| %"&\#{arg}"}
+            rs = n.zero? ? [] : args[n..-1]
+            method_missing(:#{meth}, *(ls + rs))
+          end
         end
       ~
     end
@@ -227,25 +246,30 @@ module AutoC
   end # Composite
 
 
+  #
   class Structure < Composite
 
-    def initialize(type, **fields)
+    def initialize(type, auto_create = false, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
       super(type, deps: @fields.values)
-      # TODO type traits conformance tests
+      if (@auto_create = auto_create)
+        raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless auto_constructible?
+      else
+        raise TraitError, 'can not create initializing constructor due to present non-copyable field(s)' unless copyable?
+      end
     end
 
-    def default_create!
-      raise 'Type has no default constructor' unless default_constructible?
-      @default_create = true
-      self
-    end
+    %i(create createEx destroy).each {|s| def_redirector(s, 1)}
+    %i(copy equal).each {|s| def_redirector(s, 2)}
 
-    # TODO
-    #def_redirector(:create, 1)
+    alias createAuto create
+
+    def create(*args)
+      @auto_create ? createAuto(*args) : createEx(*args)
+    end
 
     def create_params
-      @fields.values
+      @auto_create ? [] : @fields.values
     end
 
     def constructible?
@@ -253,8 +277,8 @@ module AutoC
       true
     end
 
-    def default_constructible?
-      @fields.each_value {|type| return false unless type.create_params.size.zero?}
+    def auto_constructible?
+      @fields.each_value {|type| return false unless type.auto_constructible?}
       true
     end
 
@@ -288,28 +312,28 @@ module AutoC
         @fields.each {|field, type| stream << "#{type} #{field};"}
       stream << "} #{self};"
       #
-      stream << "void #{create}(#{self}* self);" if default_constructible?
+      stream << "#{declare} #{self}* #{create}(#{self}* self);" if auto_constructible?
       stream << %$
-        #{declare} void #{createEx}(#{self}* self, #{create_params_declare});
-        #{declare} void #{copy}(#{self}* self, #{self}* origin);
+        #{declare} #{self}* #{createEx}(#{self}* self, #{create_params_declare});
+        #{declare} #{self}* #{copy}(#{self}* self, #{self}* origin);
       $ if copyable?
       stream << "#{declare} void #{destroy}(#{self}* self);" if destructible?
       stream << "#{declare} int #{equal}(#{self}* self, #{self}* other);" if equality_testable?
     end
 
     def definition(stream)
-      if default_constructible?
-        stream << "#{define} void #{create}(#{self}* self) { assert(self);"
+      if auto_constructible?
+        stream << "#{define} #{self}* #{create}(#{self}* self) { assert(self);"
           @fields.each {|field, type| stream << type.create("self->#{field}") << ';'}
-        stream << '}'
+        stream << 'return self;}'
       end
       if copyable?
-        stream << "#{define} void #{createEx}(#{self}* self, #{create_params_declare}) { assert(self);"
+        stream << "#{define} #{self}* #{createEx}(#{self}* self, #{create_params_declare}) { assert(self);"
           @fields.each {|field, type| stream << type.copy("self->#{field}", field) << ';'}
-        stream << '}'
-        stream << "#{define} void #{copy}(#{self}* self, #{self}* origin) { assert(self); assert(origin);"
+        stream << 'return self;}'
+        stream << "#{define} #{self}* #{copy}(#{self}* self, #{self}* origin) { assert(self); assert(origin);"
           @fields.each {|field, type| stream << type.copy("self->#{field}", "origin->#{field}") << ';'}
-        stream << '}'
+        stream << 'return self;}'
       end
       if destructible?
         stream << "#{define} void #{destroy}(#{self}* self) { assert(self);"
@@ -319,7 +343,7 @@ module AutoC
       if equality_testable?
         stream << "#{define} int #{equal}(#{self}* self, #{self}* other) { assert(self); assert(other);"
         xs = []; @fields.each {|field, type| xs << type.equal("self->#{field}", "other->#{field}")}
-        s = ['self == other', xs.join(' && ')].join(' || ')
+        s = ['self == other', "(#{xs.join(' && ')})"].join(' || ')
         stream << "return #{s};}"
       end
     end
