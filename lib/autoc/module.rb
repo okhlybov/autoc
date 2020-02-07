@@ -11,7 +11,7 @@ module AutoC
     # Throw NameError if resulting string is not a valid C identifier.
     def self.c_id(obj)
       obj = obj.to_s
-      raise NameError.new("'#{obj}' is not a valid C identifier", obj) if (/^[_a-zA-Z]\w*$/ =~ obj).nil?
+      raise NameError, "`#{obj}` is not a valid C identifier" if (/^[_a-zA-Z]\w*$/ =~ obj).nil?
       obj
     end
 

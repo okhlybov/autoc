@@ -6,11 +6,10 @@ module AutoC
   #
   class CR < Composite
 
-    def initialize(value, prefix: nil)
+    def initialize(type, value)
       @value = Type.coerce(value)
-      pfx = prefix.nil? ? @value.prefix : prefix
-      super("#{pfx}CR", prefix: pfx, deps: [@value, CODE])
-      # TODO type traits conformance tests
+      super(type, deps: [@value, CODE])
+      raise TraitError, 'value must be constructible' unless @value.constructible?
     end
 
     def create(value, *args)
@@ -51,25 +50,25 @@ module AutoC
 
     def interface(stream)
       stream << %$
-        typedef #{@value.type}* #{cR};
+        typedef #{@value.type}* #{type};
         typedef struct {
           #{@value.type} value;
           unsigned count;
-        } #{s};
-        #{inline} #{cR} #{new}(#{@value.create_params_declare}) {
-          #{s}* ps = (#{s}*)malloc(sizeof(#{s})); assert(ps);
+        } #{_s};
+        #{inline} #{type} #{new}(#{@value.create_params_declare}) {
+          #{_s}* ps = (#{_s}*)malloc(sizeof(#{_s})); assert(ps);
           #{@value.create(*(['ps->value'] + @value.create_params_pass_list))};
           ps->count = 1;
-          return (#{cR})ps;
+          return (#{type})ps;
         }
-        #{inline} #{cR} #{ref}(#{cR} cr) {
+        #{inline} #{type} #{ref}(#{type} cr) {
           assert(cr);
-          ++((#{s}*)cr)->count;
+          ++((#{_s}*)cr)->count;
           return cr;
         }
-        #{inline} #{cR} #{unref}(#{cR} cr) {
+        #{inline} #{type} #{unref}(#{type} cr) {
           assert(cr);
-          if(--((#{s}*)cr)->count == 0) {
+          if(--((#{_s}*)cr)->count == 0) {
             #{@value.destroy("*cr") if @value.destructible?};
             free(cr);
             return NULL;

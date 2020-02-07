@@ -5,6 +5,10 @@ module AutoC
 
 
   #
+  class TraitError < TypeError; end # TraitError
+
+
+  #
   module Type
 
     #
@@ -118,7 +122,6 @@ module AutoC
   class Primitive
 
     include Type
-
     include Module::Entity
 
     def create(value, *args)
@@ -157,11 +160,18 @@ module AutoC
 
 
   #
-  class TraitError < TypeError; end # TraitError
+  class Derived
 
+    include Type
+    include Module::Entity
 
-  #
-  module MethodSynthesizer
+    attr_reader :prefix, :dependencies
+
+    def initialize(type, prefix: nil, deps: [])
+      super(Module.c_id(type))
+      @prefix = (prefix.nil? ? type : prefix).to_s
+      @dependencies = Set[*deps].freeze
+    end
 
     #
     def method_missing(symbol, *args)
@@ -190,25 +200,15 @@ module AutoC
       underscored ? "_#{function}" : function # Preserve the leading underscore
     end
 
-  end
+  end # Derived
 
 
   #
-  class Composite
-
-    include Type
-    include Module::Entity
-    include MethodSynthesizer
-
-    attr_reader :prefix, :dependencies
+  class Composite < Derived
 
     def initialize(type, prefix: nil, deps: [])
-      super(type)
-      @prefix = (prefix.nil? ? self.type : prefix).to_s
-      @dependencies = Set[CODE, *deps].freeze
+      super(type, prefix: prefix, deps: deps << CODE)
     end
-
-    alias to_s prefix
 
     def inline; :AUTOC_INLINE end
 
@@ -253,29 +253,17 @@ module AutoC
 
 
   #
-  class Synthetic
+  class Synthetic < Derived
 
-    include Type
-    include Module::Entity
-    include MethodSynthesizer
+    attr_reader :create_params
 
-    def decorate_method(symbol)
-      raise ArgumentError, "unrecognized call `#{symbol}`" unless @calls.include?(symbol)
-      @calls[symbol].to_s
-    end
-
-    attr_reader :dependencies, :create_params
-
-    alias prefix type
-
-    def initialize(type, deps: [], interface: nil, declaration: nil, definition: nil, create_params: [], **calls)
-      super(type)
+    def initialize(type, deps: [], prefix: nil, interface: nil, declaration: nil, definition: nil, create_params: [], **calls)
       @calls = calls
       @interface = interface
       @declaration = declaration
       @definition = definition
       @create_params = create_params.collect {|e| Type.coerce(e)}
-      @dependencies = Set[*deps.collect {|e| Type.coerce(e)}, *@create_params].freeze
+      super(type, prefix: prefix, deps: deps.collect {|e| Type.coerce(e)} + @create_params)
     end
 
     def constructible?
@@ -316,15 +304,20 @@ module AutoC
       stream << NEW_LINE << @definition << NEW_LINE unless @definition.nil?
     end
 
+    def decorate_method(symbol)
+      raise ArgumentError, "unrecognized call `#{symbol}`" unless @calls.include?(symbol)
+      @calls[symbol].to_s
+    end
+
   end # Synthetic
 
 
   #
   class Structure < Composite
 
-    def initialize(type, auto_create = false, **fields)
+    def initialize(type, auto_create = false, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
-      super(type, deps: @fields.values)
+      super(type, prefix: prefix, deps: @fields.values)
       if (@auto_create = auto_create)
         raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless auto_constructible?
       else
@@ -383,38 +376,38 @@ module AutoC
     def interface(stream)
       stream << "typedef struct {"
         @fields.each {|field, type| stream << "#{type} #{field};"}
-      stream << "} #{self};"
+      stream << "} #{type};"
       #
-      stream << "#{declare} #{self}* #{create}(#{self}* self);" if auto_constructible?
+      stream << "#{declare} #{type}* #{create}(#{type}* self);" if auto_constructible?
       stream << %$
-        #{declare} #{self}* #{createEx}(#{self}* self, #{create_params_declare});
-        #{declare} #{self}* #{copy}(#{self}* self, #{self}* origin);
+        #{declare} #{type}* #{createEx}(#{type}* self, #{create_params_declare});
+        #{declare} #{type}* #{copy}(#{type}* self, #{type}* origin);
       $ if copyable?
-      stream << "#{declare} void #{destroy}(#{self}* self);" if destructible?
-      stream << "#{declare} int #{equal}(#{self}* self, #{self}* other);" if equality_testable?
+      stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
+      stream << "#{declare} int #{equal}(#{type}* self, #{type}* other);" if equality_testable?
     end
 
     def definition(stream)
       if auto_constructible?
-        stream << "#{define} #{self}* #{create}(#{self}* self) { assert(self);"
+        stream << "#{define} #{type}* #{create}(#{type}* self) { assert(self);"
           @fields.each {|field, type| stream << type.create("self->#{field}") << ';'}
         stream << 'return self;}'
       end
       if copyable?
-        stream << "#{define} #{self}* #{createEx}(#{self}* self, #{create_params_declare}) { assert(self);"
+        stream << "#{define} #{type}* #{createEx}(#{type}* self, #{create_params_declare}) { assert(self);"
           @fields.each {|field, type| stream << type.copy("self->#{field}", field) << ';'}
         stream << 'return self;}'
-        stream << "#{define} #{self}* #{copy}(#{self}* self, #{self}* origin) { assert(self); assert(origin);"
+        stream << "#{define} #{type}* #{copy}(#{type}* self, #{type}* origin) { assert(self); assert(origin);"
           @fields.each {|field, type| stream << type.copy("self->#{field}", "origin->#{field}") << ';'}
         stream << 'return self;}'
       end
       if destructible?
-        stream << "#{define} void #{destroy}(#{self}* self) { assert(self);"
+        stream << "#{define} void #{destroy}(#{type}* self) { assert(self);"
           @fields.each {|field, type| stream << type.destroy("self->#{field}") << ';' if type.destructible?}
         stream << '}'
       end
       if equality_testable?
-        stream << "#{define} int #{equal}(#{self}* self, #{self}* other) { assert(self); assert(other);"
+        stream << "#{define} int #{equal}(#{type}* self, #{type}* other) { assert(self); assert(other);"
         xs = []; @fields.each {|field, type| xs << type.equal("self->#{field}", "other->#{field}")}
         s = ['self == other', "(#{xs.join(' && ')})"].join(' || ')
         stream << "return #{s};}"
