@@ -167,7 +167,7 @@ module AutoC
 
     attr_reader :prefix, :dependencies
 
-    def initialize(type, prefix: nil, deps: [])
+    def initialize(type, prefix, deps)
       super(Module.c_id(type))
       @prefix = (prefix.nil? ? type : prefix).to_s
       @dependencies = Set[*deps].freeze
@@ -206,8 +206,8 @@ module AutoC
   #
   class Composite < Derived
 
-    def initialize(type, prefix: nil, deps: [])
-      super(type, prefix: prefix, deps: deps << CODE)
+    def initialize(type, prefix, deps)
+      super(type, prefix, deps << CODE)
     end
 
     def inline; :AUTOC_INLINE end
@@ -263,7 +263,7 @@ module AutoC
       @declaration = declaration
       @definition = definition
       @create_params = create_params.collect {|e| Type.coerce(e)}
-      super(type, prefix: prefix, deps: deps.collect {|e| Type.coerce(e)} + @create_params)
+      super(type, prefix, deps.collect {|e| Type.coerce(e)} + @create_params)
     end
 
     def constructible?
@@ -317,7 +317,7 @@ module AutoC
 
     def initialize(type, auto_create = false, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
-      super(type, prefix: prefix, deps: @fields.values)
+      super(type, prefix, @fields.values)
       if (@auto_create = auto_create)
         raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless auto_constructible?
       else
@@ -415,6 +415,56 @@ module AutoC
     end
 
   end # Structure
+
+
+  #
+  class Container < Composite
+
+    attr_reader :element
+
+    def initialize(type, element, prefix, deps)
+      @element = Type.coerce(element)
+      super(type, prefix, deps << element)
+    end
+
+    def constructible?
+      true
+    end
+
+    def destructible?
+      true
+    end
+
+    def copyable?
+      element.copyable?
+    end
+
+    def equality_testable?
+      element.equality_testable?
+    end
+
+  end # Container
+
+
+  #
+  class AssociativeContainer < Container
+
+    attr_reader :key
+
+    def initialize(type, key, element, prefix, deps)
+      @key = Type.coerce(key)
+      super(type, element, prefix, deps << key)
+    end
+
+    def copyable?
+      super && key.copyable?
+    end
+
+    def equality_testable?
+      super && key.equality_testable?
+    end
+
+  end # AssociativeContainer
 
 
 end # AutoC

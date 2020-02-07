@@ -8,7 +8,7 @@ module AutoC
 
     def initialize(type, value)
       @value = Type.coerce(value)
-      super(type, deps: [@value, CODE])
+      super(type, nil, [@value, CODE])
       raise TraitError, 'value must be constructible' unless @value.constructible?
     end
 
