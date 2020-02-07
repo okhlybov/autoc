@@ -161,11 +161,44 @@ module AutoC
 
 
   #
+  module MethodSynthesizer
+
+    #
+    def method_missing(symbol, *args)
+      function = decorate_method(symbol) # Construct C function name for the method
+      if args.empty?
+        function # Emit bare function name
+      elsif args.size == 1 && args.first.nil?
+        function + '()' # Use sole nil argument to emit function call with no arguments
+      else
+        function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
+      end
+    end
+
+    #
+    def decorate_method(symbol)
+      method = symbol.to_s
+      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
+      # Check for leading underscore
+      underscored = if /_(.*)/ =~ method
+                      method = $1
+                      true
+                    else
+                      false
+                    end
+      function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
+      underscored ? "_#{function}" : function # Preserve the leading underscore
+    end
+
+  end
+
+
+  #
   class Composite
 
     include Type
-
     include Module::Entity
+    include MethodSynthesizer
 
     attr_reader :prefix, :dependencies
 
@@ -199,33 +232,6 @@ module AutoC
       ~
     end
 
-    #
-    def method_missing(symbol, *args)
-      function = decorate_method(symbol) # Construct C function name for the method
-      if args.empty?
-        function # Emit bare function name
-      elsif args.size == 1 && args.first.nil?
-        function + '()' # Use sole nil argument to emit function call with no arguments
-      else
-        function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
-      end
-    end
-
-    #
-    def decorate_method(symbol)
-      method = symbol.to_s
-      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
-      # Check for leading underscore
-      underscored = if /_(.*)/ =~ method
-                      method = $1
-                      true
-                    else
-                      false
-                    end
-      function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
-      underscored ? "_#{function}" : function # Preserve the leading underscore
-    end
-
     CODE = Code.interface %$
       #ifndef AUTOC_INLINE
         #if __STDC_VERSION__ >= 199901L || defined(__cplusplus)
@@ -244,6 +250,73 @@ module AutoC
     $
 
   end # Composite
+
+
+  #
+  class Synthetic
+
+    include Type
+    include Module::Entity
+    include MethodSynthesizer
+
+    def decorate_method(symbol)
+      raise ArgumentError, "unrecognized call `#{symbol}`" unless @calls.include?(symbol)
+      @calls[symbol].to_s
+    end
+
+    attr_reader :dependencies, :create_params
+
+    alias prefix type
+
+    def initialize(type, deps: [], interface: nil, declaration: nil, definition: nil, create_params: [], **calls)
+      super(type)
+      @calls = calls
+      @interface = interface
+      @declaration = declaration
+      @definition = definition
+      @create_params = create_params.collect {|e| Type.coerce(e)}
+      @dependencies = Set[*deps.collect {|e| Type.coerce(e)}, *@create_params].freeze
+    end
+
+    def constructible?
+      !@calls[:create].nil?
+    end
+
+    def destructible?
+      !@calls[:destroy].nil?
+    end
+
+    def copyable?
+      !@calls[:copy].nil?
+    end
+
+    def equality_testable?
+      !@calls[:equal].nil?
+    end
+
+    def orderable?
+      equality_testable? && !@calls[:less].nil?
+    end
+
+    def hashable?
+      equality_testable? && !@calls[:identify].nil?
+    end
+
+    NEW_LINE = "\n"
+
+    def interface(stream)
+      stream << NEW_LINE << @interface << NEW_LINE unless @interface.nil?
+    end
+
+    def declaration(stream)
+      stream << NEW_LINE << @declaration << NEW_LINE unless @declaration.nil?
+    end
+
+    def definition(stream)
+      stream << NEW_LINE << @definition << NEW_LINE unless @definition.nil?
+    end
+
+  end # Synthetic
 
 
   #
