@@ -45,11 +45,11 @@ module AutoC
           return index < #{size}(self);
         }
         #{inline} #{element.type} #{get}(#{type}* self, size_t index) {
-          #{element.type} result;
+          #{element.type} value;
           assert(self);
           assert(#{within}(self, index));
-          #{element.copy(:result, 'self->elements[index]')};
-          return result;
+          #{element.copy(:value, 'self->elements[index]')};
+          return value;
         }
         #{inline} void #{set}(#{type}* self, size_t index, #{element.type} value) {
           assert(self);
@@ -72,7 +72,7 @@ module AutoC
 
     def definition(stream)
       stream << %$
-        static void #{allocate}(#{type}* self, size_t element_count) {
+        #{static} void #{allocate}(#{type}* self, size_t element_count) {
           assert(self);
           assert(element_count > 0);
           self->element_count = element_count;
@@ -144,6 +144,19 @@ module AutoC
           return self;
         }
       $ if copyable?
+      stream << %$
+        #{define} int #{equal}(#{type}* self, #{type}* other) {
+          size_t index, size;
+          assert(self);
+          assert(other);
+          if(#{size}(self) == (size = #{size}(other))) {
+            for(index = 0; index < size; ++index) {
+              if(!(#{element.equal('self->elements[index]', 'other->elements[index]')})) return 0;
+            }
+            return 1;
+          } else return 0;
+        }
+      $ if equality_testable?
     end
 
     def range
