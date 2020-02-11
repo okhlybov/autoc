@@ -31,7 +31,7 @@ module AutoC
     end
 
     class COMPLEX_H < Primitive
-      def orderable?; false end
+      def comparable?; false end
       def dependencies; SET end
       SET = Set[Code.interface %$
         #include <complex.h>

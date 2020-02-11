@@ -40,8 +40,8 @@ module AutoC
       @value.identify("*#{value}")
     end
 
-    def orderable?
-      @value.orderable?
+    def comparable?
+      @value.comparable?
     end
 
     def hashable?
@@ -69,7 +69,7 @@ module AutoC
         #{inline} #{type} #{unref}(#{type} cr) {
           assert(cr);
           if(--((#{_s}*)cr)->count == 0) {
-            #{@value.destroy("*cr") if @value.destructible?};
+            #{@value.destroy('*cr') if @value.destructible?};
             free(cr);
             return NULL;
           } else

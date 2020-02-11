@@ -216,7 +216,7 @@ class Vector < Collection
     stream << %$
       #define #{sort}(self) #{sortEx}(self, 1)
       #{declare} void #{sortEx}(#{type_ref}, int);
-    $ if element.orderable?
+    $ if element.comparable?
   end
   
   def write_impls(stream, define)
@@ -319,7 +319,7 @@ class Vector < Collection
         #{assert}(self);
         qsort(self->values, #{size}(self), sizeof(#{element.type}), ascending ? (F)#{ascend} : (F)#{descend});
       }
-    $ if element.orderable?
+    $ if element.comparable?
   end
  
   private

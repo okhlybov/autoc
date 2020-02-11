@@ -159,7 +159,7 @@ class HashMap < Collection
 
   def copyable?; super && key.copyable? end
   
-  def comparable?; super && key.orderable? end
+  def comparable?; super && key.comparable? end
   
   def hashable?; super && key.hashable? end
   

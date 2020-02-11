@@ -106,7 +106,7 @@ module AutoC
     end
 
     #
-    def orderable?
+    def comparable?
       equality_testable? && respond_to?(:less)
     end
 
@@ -247,6 +247,8 @@ module AutoC
           #define AUTOC_EXTERN extern
         #endif
       #endif
+      #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
+      #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
     $
 
   end # Composite
@@ -282,7 +284,7 @@ module AutoC
       !@calls[:equal].nil?
     end
 
-    def orderable?
+    def comparable?
       equality_testable? && !@calls[:less].nil?
     end
 
@@ -424,7 +426,7 @@ module AutoC
 
     def initialize(type, element, prefix, deps)
       @element = Type.coerce(element)
-      super(type, prefix, deps << element)
+      super(type, prefix, deps << self.element << CODE)
     end
 
     def constructible?
@@ -442,6 +444,12 @@ module AutoC
     def equality_testable?
       element.equality_testable?
     end
+
+    CODE = Code.interface %$
+      #include <assert.h>
+      #include <stddef.h>
+      #include <malloc.h>
+    $
 
   end # Container
 
