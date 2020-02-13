@@ -41,6 +41,7 @@ module AutoC
     BOOL = STDBOOL_H.new '_Bool'
     SIZE_T = STDDEF_H.new :size_t
     PTRDIFF_T = STDDEF_H.new :ptrdiff_t
+    UINTPTR_T = STDDEF_H.new :uintptr_t
     INT = Primitive.new :int
     UNSIGNED = UNSIGNED_INT = Primitive.new :unsigned
     FLOAT = Primitive.new :float
