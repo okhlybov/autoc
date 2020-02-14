@@ -240,7 +240,7 @@ module AutoC
           #define AUTOC_INLINE AUTOC_STATIC __inline
         #elif defined(__LCC__)
           #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
-        #elif __STDC_VERSION__ >= 199901L
+        #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
           #define AUTOC_INLINE  AUTOC_STATIC inline
         #else
           #define AUTOC_INLINE AUTOC_STATIC

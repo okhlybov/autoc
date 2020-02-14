@@ -53,7 +53,9 @@ module AutoC
           #include <time.h>
           #include <stdlib.h>
           size_t __autoc_hasher_seed;
-          #if defined(__GNUC__) || defined(__clang__)
+          #ifdef __cplusplus
+            static
+          #elif defined(__GNUC__) || defined(__clang__)
             __attribute__((constructor))
           #else
             #warning __autoc_hasher_initialize() wont be called automatically; ensure it is called manually in order to initialize the hasher seed
@@ -61,11 +63,29 @@ module AutoC
           void __autoc_hasher_initialize() {
             time_t t;
             srand((unsigned)time(&t));
-            __autoc_hasher_seed = rand();
+            __autoc_hasher_seed = rand(); /* TODO use rand_s() if available */
           }
+          #ifdef __cplusplus
+            struct __autoc_hasher {
+              __autoc_hasher() {
+                __autoc_hasher_initialize();
+              }
+            };
+            static __autoc_hasher __autoc_hasher_instance;
+          #endif
         #endif
       $
     end
+
+    def self.default
+      @@default
+    end
+
+    def self.default=(hasher)
+      @@default = hasher
+    end
+
+    @@default = Hasher.instance
 
   end # Hasher
 
