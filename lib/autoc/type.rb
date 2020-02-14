@@ -440,8 +440,13 @@ module AutoC
     attr_reader :element
 
     def initialize(type, element, prefix, deps)
+      @weak = [] # Dependencies with back references to self which create dependency cycles and thus must be excluded from comparison
       @element = Type.coerce(element)
       super(type, prefix, deps << self.element << CODE)
+    end
+
+    def <=>(other)
+      @weak.include?(other) ? -1 : super
     end
 
     def constructible?
