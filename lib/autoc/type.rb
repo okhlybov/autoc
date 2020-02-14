@@ -20,10 +20,8 @@ module AutoC
     attr_reader :type
 
     def initialize(type)
-      @type = type.to_s
+      @type = type
     end
-
-    alias to_s type
 
     def ==(other)
       type == other.type
@@ -165,12 +163,16 @@ module AutoC
     include Type
     include Module::Entity
 
-    attr_reader :prefix, :dependencies
+    attr_reader :dependencies
 
     def initialize(type, prefix, deps)
-      super(Module.c_id(type))
-      @prefix = (prefix.nil? ? type : prefix).to_s
+      super(type)
+      @prefix = prefix.to_s unless prefix.nil?
       @dependencies = Set[*deps].freeze
+    end
+
+    def prefix
+      @prefix ||= type.to_s
     end
 
     #
@@ -204,22 +206,8 @@ module AutoC
 
 
   #
-  class Composite < Derived
-
-    def initialize(type, prefix, deps)
-      super(type, prefix, deps << CODE)
-    end
-
-    def inline; :AUTOC_INLINE end
-
-    def static; :AUTOC_STATIC end
-
-    def declare; :AUTOC_EXTERN end
-
-    def define; end
-
-    #
-    def self.def_redirector(meth, redirect_args = 0)
+  module Redirecting
+    def def_redirector(meth, redirect_args = 0)
       class_eval %~
         def #{meth}(*args)
           if args.size == 1 && args.first.nil?
@@ -233,6 +221,25 @@ module AutoC
         end
       ~
     end
+  end
+
+
+  #
+  class Composite < Derived
+
+    extend Redirecting
+
+    def initialize(type, prefix, deps)
+      super(type, prefix, deps << CODE)
+    end
+
+    def inline; :AUTOC_INLINE end
+
+    def static; :AUTOC_STATIC end
+
+    def declare; :AUTOC_EXTERN end
+
+    def define; end
 
     CODE = Code.interface %$
       #ifndef AUTOC_INLINE
@@ -472,6 +479,62 @@ module AutoC
     $
 
   end # Container
+
+
+  #
+  module Container::Hashable
+
+    extend Redirecting
+    def_redirector :identify, 1
+
+    def hasher
+      AutoC::Hasher.default
+    end
+
+    def initialize(*args, **kws)
+      kws[:deps] = (deps = kws[:deps]).nil? ? [hasher, range] : deps << hasher << range
+      super(*args, **kws)
+      @weak << range
+      raise TraitError, 'enclosing class must be a Container descendant' unless is_a?(Container)
+      raise TraitError, 'container element must be hashable' unless element.hashable?
+    end
+
+    def interface(stream)
+      super
+      stream << %$
+        #{declare} size_t #{identify}(#{type}* self);
+      $
+    end
+
+    def definition(stream)
+      super
+      define_identify(stream)
+    end
+
+    private
+
+    def define_identify(stream)
+      stream << %$
+      #{define} size_t #{identify}(#{type}* self) {
+          #{hasher.type} hasher;
+          #{range.type} range;
+          size_t hash;
+          assert(self);
+          #{hasher.create(:hasher)};
+          #{range.create(:range, :self)};
+          for(; !#{range.empty(:range)}; #{range.popFront(:range)}) {
+            #{element.type} e = #{range.front(:range)};
+            #{hasher.update(:hasher, :e)};
+            #{element.destroy(:e) if element.destructible?};
+          }
+          hash = #{hasher.result(:hasher)};
+          #{hasher.destroy(:hasher)};
+          return hash;
+        }
+      $
+    end
+
+  end # Hashable
 
 
   #

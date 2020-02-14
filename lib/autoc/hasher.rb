@@ -41,6 +41,7 @@ module AutoC
         #ifdef AUTOC_HASHER_TRIVIAL_SEED
           #define AUTOC_HASHER_SEED 0
         #else
+          #include <stddef.h>
           #define AUTOC_HASHER_SEED __autoc_hasher_seed
           extern size_t __autoc_hasher_seed;
         #endif

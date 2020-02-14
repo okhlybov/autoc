@@ -1,6 +1,7 @@
 require 'autoc/type'
 require 'autoc/stdc'
 require 'autoc/range'
+require 'autoc/hasher'
 
 
 module AutoC
@@ -163,24 +164,27 @@ module AutoC
       @range ||= Range.new(self)
     end
 
-    class Range < AutoC::Range::RandomAccess
+  end # Vector
 
-      def initialize(vector)
-        super(vector, nil, [])
-      end
 
-      alias declare inline
+  class Vector::Range < Range::RandomAccess
 
-      def interface(stream)
-        stream << %$
+    def initialize(vector)
+      super(vector, nil, [])
+    end
+
+    alias declare inline
+
+    def interface(stream)
+      stream << %$
           typedef struct {
             #{@container.type}* iterable;
             size_t position;
           } #{type};
         $
-        super
-        stream << %$
-          #{inline} #{type}* #{create}(#{type}* self, #{@container.type}* iterable) {
+      super
+      stream << %$
+      #{inline} #{type}* #{create}(#{type}* self, #{@container.type}* iterable) {
             assert(self);
             assert(iterable);
             self->iterable = iterable;
@@ -222,11 +226,9 @@ module AutoC
             return #{get}(self, self->position);
           }
         $
-      end
+    end
 
-    end # Range
-
-  end # Vector
+  end # Range
 
 
 end # AutoC

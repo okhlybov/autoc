@@ -8,10 +8,14 @@ module AutoC
 
     def initialize(container, prefix, deps)
       @container = Type.coerce(container)
-      super("#{@container.type}Range", prefix, deps << @container)
+      super(nil, prefix, deps << @container)
     end
 
-    def_redirector :create, 2
+    def type
+      @type ||= "#{@container.type}Range"
+    end
+
+    def_redirector :create, 1
 
     def interface(stream)
       stream << %$
@@ -25,11 +29,6 @@ module AutoC
   class Range::Input < Range
 
     %i(empty popFront front).each {|s| def_redirector s, 1}
-
-    def initialize(*args)
-      super
-      raise TraitError, 'container element must be copyable' unless @container.element.copyable?
-    end
 
     def interface(stream)
       super
