@@ -23,6 +23,22 @@ module AutoC
       $
     end
 
+    def input?
+      is_a?(Input)
+    end
+
+    def forward?
+      is_a?(Forward)
+    end
+
+    def bidirectional?
+      is_a?(Bidirectional)
+    end
+
+    def random_access?
+      is_a?(RandomAccess)
+    end
+
   end # Range
 
 
@@ -35,9 +51,9 @@ module AutoC
       stream << %$
         #{declare} int #{empty}(const #{type}* self);
         #{declare} void #{popFront}(#{type}* self);
-        #{declare} #{@container.element.type} #{front}(const #{type}* self);
         #{declare} const #{@container.element.type}* #{frontView}(const #{type}* self);
       $
+      stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.copyable?
     end
 
   end # Input
@@ -64,9 +80,9 @@ module AutoC
       super
       stream << %$
         #{declare} void #{popBack}(#{type}* self);
-        #{declare} #{@container.element.type} #{back}(const #{type}* self);
         #{declare} const #{@container.element.type}* #{backView}(const #{type}* self);
       $
+      stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.copyable?
     end
 
   end # Bidirectional
@@ -80,9 +96,9 @@ module AutoC
       super
       stream << %$
         #{declare} size_t #{size}(const #{type}* self);
-        #{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);
         #{declare} const #{@container.element.type}* #{view}(const #{type}* self, size_t index);
       $
+      stream << "#{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);" if @container.element.copyable?
     end
 
   end # RandomAccess

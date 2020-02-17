@@ -17,7 +17,7 @@ module AutoC
       if (@auto_create = auto_create)
         raise TraitError, 'can not create auto constructor due non-auto constructible element type' unless self.element.auto_constructible?
       else
-        raise TraitError, 'can not create initializing constructor due to non-copyable element type' unless copyable?
+        raise TraitError, 'can not create initializing constructor due to non-copyable element type' unless element.copyable?
       end
     end
 
@@ -50,18 +50,6 @@ module AutoC
           assert(#{within}(self, index));
           return &self->elements[index];
         }
-        #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
-          #{element.type} value;
-          const #{element.type}* p = #{view(:self, :index)};;
-          #{element.copy(:value, '*p')};
-          return value;
-        }
-        #{inline} void #{set}(#{type}* self, size_t index, #{element.type} value) {
-          assert(self);
-          assert(#{within}(self, index));
-          #{element.destroy('self->elements[index]') if element.destructible?};
-          #{element.copy('self->elements[index]', :value)};
-        }
         #{declare} #{type}* #{destroy}(#{type}* self);
       $
       stream << %$
@@ -71,7 +59,19 @@ module AutoC
       stream << %$
         #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
         #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
-      $ if copyable?
+        #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
+          #{element.type} value;
+          const #{element.type}* p = #{view(:self, :index)};
+          #{element.copy(:value, '*p')};
+          return value;
+        }
+        #{inline} void #{set}(#{type}* self, size_t index, #{element.type} value) {
+          assert(self);
+          assert(#{within}(self, index));
+          #{element.destroy('self->elements[index]') if element.destructible?};
+          #{element.copy('self->elements[index]', :value)};
+        }
+      $ if element.copyable?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
@@ -148,7 +148,7 @@ module AutoC
           }
           return self;
         }
-      $ if copyable?
+      $ if element.copyable?
       stream << %$
         #{define} int #{equal}(const #{type}* self, const #{type}* other) {
           size_t index, size;
@@ -181,67 +181,69 @@ module AutoC
 
     def interface(stream)
       stream << %$
-          typedef struct {
-            const #{@container.type}* iterable;
-            size_t position;
-          } #{type};
-        $
+        typedef struct {
+          const #{@container.type}* container;
+          size_t position;
+        } #{type};
+      $
       super
       stream << %$
-      #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* iterable) {
+        #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
             assert(self);
-            assert(iterable);
-            self->iterable = iterable;
+            assert(container);
+            self->container = container;
             self->position = 0;
             return self;
-          }
-          #{inline} #{type}* #{save}(#{type}* self, const #{type}* origin) {
+        }
+        #{inline} #{type}* #{save}(#{type}* self, const #{type}* origin) {
+          assert(self);
+          assert(origin);
+          *self = *origin;
+          return self;
+        }
+        #{inline} size_t #{size}(const #{type}* self) {
+          assert(self);
+          return #{@container.size('self->container')};
+        }
+        #{inline} const #{@container.element.type}* #{view}(const #{type}* self, size_t index) {
+          assert(self);
+          return #{@container.view('self->container', :index)};
+        }
+        #{inline} int #{empty}(const #{type}* self) {
+          assert(self);
+          return !#{@container.within('self->container', 'self->position')};
+        }
+        #{inline} void #{popFront}(#{type}* self) {
+          assert(self);
+          ++self->position;
+        }
+        #{inline} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+          assert(self);
+          return #{view}(self, self->position);
+        }
+        #{inline} void #{popBack}(#{type}* self) {
+          assert(self);
+          --self->position;
+        }
+        #{inline} const #{@container.element.type}* #{backView}(const #{type}* self) {
+          assert(self);
+          return #{view}(self, self->position);
+        }
+      $
+      stream << %$
+        #{inline} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
             assert(self);
-            assert(origin);
-            *self = *origin;
-            return self;
-          }
-          #{inline} size_t #{size}(const #{type}* self) {
-            assert(self);
-            return #{@container.size('self->iterable')};
-          }
-          #{inline} const #{@container.element.type}* #{view}(const #{type}* self, size_t index) {
-            assert(self);
-            return #{@container.view('self->iterable', :index)};
-          }
-          #{inline} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
-            assert(self);
-            return #{@container.get('self->iterable', :index)};
-          }
-          #{inline} int #{empty}(const #{type}* self) {
-            assert(self);
-            return !#{@container.within('self->iterable', 'self->position')};
-          }
-          #{inline} void #{popFront}(#{type}* self) {
-            assert(self);
-            ++self->position;
-          }
-          #{inline} #{@container.element.type} #{front}(const #{type}* self) {
-            assert(self);
-            return #{get}(self, self->position);
-          }
-          #{inline} const #{@container.element.type}* #{frontView}(const #{type}* self) {
-            assert(self);
-            return #{view}(self, self->position);
-          }
-          #{inline} void #{popBack}(#{type}* self) {
-            assert(self);
-            --self->position;
-          }
-          #{inline} #{@container.element.type} #{back}(const #{type}* self) {
-            assert(self);
-            return #{get}(self, self->position);
-          }
-          #{inline} const #{@container.element.type}* #{backView}(const #{type}* self) {
-            assert(self);
-            return #{view}(self, self->position);
-          }
-        $
+            return #{@container.get('self->container', :index)};
+        }
+        #{inline} #{@container.element.type} #{front}(const #{type}* self) {
+          assert(self);
+          return #{get}(self, self->position);
+        }
+        #{inline} #{@container.element.type} #{back}(const #{type}* self) {
+          assert(self);
+          return #{get}(self, self->position);
+        }
+      $ if @container.element.copyable?
     end
 
   end # Range
