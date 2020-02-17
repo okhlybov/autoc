@@ -19,7 +19,7 @@ module AutoC
 
     def interface(stream)
       stream << %$
-        #{declare} #{type}* #{create}(#{type}* self, #{@container.type}* iterable);
+        #{declare} #{type}* #{create}(#{type}* self, const #{@container.type}* iterable);
       $
     end
 
@@ -28,14 +28,15 @@ module AutoC
 
   class Range::Input < Range
 
-    %i(empty popFront front).each {|s| def_redirector s, 1}
+    %i(empty popFront front frontView).each {|s| def_redirector s, 1}
 
     def interface(stream)
       super
       stream << %$
-        #{declare} int #{empty}(#{type}* self);
+        #{declare} int #{empty}(const #{type}* self);
         #{declare} void #{popFront}(#{type}* self);
-        #{declare} #{@container.element.type} #{front}(#{type}* self);
+        #{declare} #{@container.element.type} #{front}(const #{type}* self);
+        #{declare} const #{@container.element.type}* #{frontView}(const #{type}* self);
       $
     end
 
@@ -49,7 +50,7 @@ module AutoC
     def interface(stream)
       super
       stream << %$
-        #{declare} #{type}* #{save}(#{type}* self, #{type}* origin);
+        #{declare} #{type}* #{save}(#{type}* self, const #{type}* origin);
       $
     end
   end # Forward
@@ -57,13 +58,14 @@ module AutoC
 
   class Range::Bidirectional < Range::Forward
 
-    %i(popBack back).each {|s| def_redirector s, 1}
+    %i(popBack back backView).each {|s| def_redirector s, 1}
 
     def interface(stream)
       super
       stream << %$
         #{declare} void #{popBack}(#{type}* self);
-        #{declare} #{@container.element.type} #{back}(#{type}* self);
+        #{declare} #{@container.element.type} #{back}(const #{type}* self);
+        #{declare} const #{@container.element.type}* #{backView}(const #{type}* self);
       $
     end
 
@@ -72,13 +74,14 @@ module AutoC
 
   class Range::RandomAccess < Range::Bidirectional
 
-    %i(size get).each {|s| def_redirector s, 1}
+    %i(size get view).each {|s| def_redirector s, 1}
 
     def interface(stream)
       super
       stream << %$
-        #{declare} size_t #{size}(#{type}* self);
-        #{declare} #{@container.element.type} #{get}(#{type}* self, size_t index);
+        #{declare} size_t #{size}(const #{type}* self);
+        #{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);
+        #{declare} const #{@container.element.type}* #{view}(const #{type}* self, size_t index);
       $
     end
 

@@ -502,7 +502,7 @@ module AutoC
     def interface(stream)
       super
       stream << %$
-        #{declare} size_t #{identify}(#{type}* self);
+        #{declare} size_t #{identify}(const #{type}* self);
       $
     end
 
@@ -515,7 +515,7 @@ module AutoC
 
     def define_identify(stream)
       stream << %$
-      #{define} size_t #{identify}(#{type}* self) {
+      #{define} size_t #{identify}(const #{type}* self) {
           #{hasher.type} hasher;
           #{range.type} range;
           size_t hash;
@@ -523,9 +523,8 @@ module AutoC
           #{hasher.create(:hasher)};
           #{range.create(:range, :self)};
           for(; !#{range.empty(:range)}; #{range.popFront(:range)}) {
-            #{element.type} e = #{range.front(:range)};
-            #{hasher.update(:hasher, :e)};
-            #{element.destroy(:e) if element.destructible?};
+            const #{element.type}* e = #{range.frontView(:range)};
+            #{hasher.update(:hasher, element.identify('*e'))};
           }
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};
