@@ -398,9 +398,9 @@ module AutoC
     end
 
     def interface(stream)
-      stream << "typedef struct {"
+      stream << "typedef struct #{type} #{type}; struct #{type} {"
         @fields.each {|field, type| stream << "#{type} #{field};"}
-      stream << "} #{type};"
+      stream << '};'
       #
       stream << "#{declare} #{type}* #{create}(#{type}* self);" if auto_constructible?
       stream << %$
