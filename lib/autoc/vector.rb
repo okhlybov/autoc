@@ -17,7 +17,7 @@ module AutoC
       if (@auto_create = auto_create)
         raise TraitError, 'can not create auto constructor due non-auto constructible element type' unless self.element.auto_constructible?
       else
-        raise TraitError, 'can not create initializing constructor due to non-copyable element type' unless element.copyable?
+        raise TraitError, 'can not create initializing constructor due to non-copyable element type' unless self.element.copyable?
       end
     end
 
