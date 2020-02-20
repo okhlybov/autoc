@@ -341,11 +341,11 @@ module AutoC
 
     def initialize(type, auto_create = false, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
-      super(type, prefix, @fields.values)
+      super(type, prefix, @fields.values + [CODE])
       if (@auto_create = auto_create)
-        raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless auto_constructible?
+        raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless fields_auto_constructible?
       else
-        raise TraitError, 'can not create initializing constructor due to present non-copyable field(s)' unless copyable?
+        raise TraitError, 'can not create initializing constructor due to present non-copyable field(s)' unless fields_copyable?
       end
     end
 
@@ -363,33 +363,28 @@ module AutoC
     end
 
     def constructible?
-      @fields.each_value {|type| return false unless type.constructible?}
-      true
+      fields_constructible?
     end
 
     def auto_constructible?
-      @fields.each_value {|type| return false unless type.auto_constructible?}
-      true
+      fields_auto_constructible?
     end
 
     def copyable?
-      @fields.each_value {|type| return false unless type.copyable?}
-      true
+      fields_copyable?
     end
 
     def equality_testable?
-      @fields.each_value {|type| return false unless type.equality_testable?}
-      true
+      fields_equality_testable?
     end
 
     def destructible?
-      @fields.each_value {|type| return true if type.destructible?}
-      false
+      fields_destructible?
     end
 
     def create_params_declare_list
       xs = []
-      @fields.each {|field, type| xs << "#{type} #{field}"}
+      @fields.each {|field, element| xs << "#{element.type} #{field}"}
       xs
     end
 
@@ -399,43 +394,74 @@ module AutoC
 
     def interface(stream)
       stream << "typedef struct #{type} #{type}; struct #{type} {"
-        @fields.each {|field, type| stream << "#{type} #{field};"}
+        @fields.each {|field, element| stream << "#{element.type} #{field};"}
       stream << '};'
       #
-      stream << "#{declare} #{type}* #{create}(#{type}* self);" if auto_constructible?
+      stream << "#{declare} #{type}* #{createAuto}(#{type}* self);" if auto_constructible?
       stream << %$
         #{declare} #{type}* #{createEx}(#{type}* self, #{create_params_declare});
-        #{declare} #{type}* #{copy}(#{type}* self, #{type}* origin);
+        #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
       $ if copyable?
       stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
-      stream << "#{declare} int #{equal}(#{type}* self, #{type}* other);" if equality_testable?
+      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
     def definition(stream)
       if auto_constructible?
-        stream << "#{define} #{type}* #{create}(#{type}* self) { assert(self);"
-          @fields.each {|field, type| stream << type.create("self->#{field}") << ';'}
+        stream << "#{define} #{type}* #{createAuto}(#{type}* self) { assert(self);"
+          @fields.each {|field, element| stream << element.create("self->#{field}") << ';'}
         stream << 'return self;}'
       end
       if copyable?
         stream << "#{define} #{type}* #{createEx}(#{type}* self, #{create_params_declare}) { assert(self);"
-          @fields.each {|field, type| stream << type.copy("self->#{field}", field) << ';'}
+          @fields.each {|field, element| stream << element.copy("self->#{field}", field) << ';'}
         stream << 'return self;}'
-        stream << "#{define} #{type}* #{copy}(#{type}* self, #{type}* origin) { assert(self); assert(origin);"
-          @fields.each {|field, type| stream << type.copy("self->#{field}", "origin->#{field}") << ';'}
+        stream << "#{define} #{type}* #{copy}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
+          @fields.each {|field, element| stream << element.copy("self->#{field}", "origin->#{field}") << ';'}
         stream << 'return self;}'
       end
       if destructible?
         stream << "#{define} void #{destroy}(#{type}* self) { assert(self);"
-          @fields.each {|field, type| stream << type.destroy("self->#{field}") << ';' if type.destructible?}
+          @fields.each {|field, element| stream << element.destroy("self->#{field}") << ';' if element.destructible?}
         stream << '}'
       end
       if equality_testable?
-        stream << "#{define} int #{equal}(#{type}* self, #{type}* other) { assert(self); assert(other);"
-        xs = []; @fields.each {|field, type| xs << type.equal("self->#{field}", "other->#{field}")}
+        stream << "#{define} int #{equal}(const #{type}* self, const #{type}* other) { assert(self); assert(other);"
+        xs = []; @fields.each {|field, element| xs << element.equal("self->#{field}", "other->#{field}")}
         s = ['self == other', "(#{xs.join(' && ')})"].join(' || ')
         stream << "return #{s};}"
       end
+    end
+
+    CODE = Code.interface %$
+      #include <assert.h>
+    $
+
+    private
+
+    def fields_constructible?
+      @fields.each_value {|type| return false unless type.constructible?}
+      true
+    end
+
+    def fields_auto_constructible?
+      @fields.each_value {|type| return false unless type.auto_constructible?}
+      true
+    end
+
+    def fields_copyable?
+      @fields.each_value {|type| return false unless type.copyable?}
+      true
+    end
+
+    def fields_equality_testable?
+      @fields.each_value {|type| return false unless type.equality_testable?}
+      true
+    end
+
+    def fields_destructible?
+      @fields.each_value {|type| return true if type.destructible?}
+      false
     end
 
   end # Structure
