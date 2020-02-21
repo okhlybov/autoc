@@ -3,12 +3,11 @@ require 'autoc/type'
 
 module AutoC
 
-  #
-  class CR < Composite
+  module Reference
 
-    def initialize(type, value)
+    def initialize(value, prefix: nil)
       @value = Type.coerce(value)
-      super(type, nil, [@value, CODE])
+      super(prefix.nil? ? @value.type : prefix, prefix, [@value, CODE])
       raise TraitError, 'value must be constructible' unless @value.constructible?
     end
 
@@ -19,6 +18,47 @@ module AutoC
     def create_params
       @value.create_params
     end
+
+    CODE = Code.interface %$
+      #include <assert.h>
+      #include <malloc.h>
+    $
+
+  end # Reference
+
+  #
+  class Reference::Unique < Composite
+
+    include Reference
+
+    def destroy(value)
+      "(#{value}) = #{free(value)}"
+    end
+
+    def interface(stream)
+      stream << %$
+        typedef #{@value.type}* #{_p};
+        #{inline} #{_p} #{new}(#{@value.create_params_declare}) {
+          #{_p} p = (#{_p})malloc(sizeof(#{@value.type})); assert(p);
+          #{@value.create(*(['*p'] + @value.create_params_pass_list))};
+          return p;
+        }
+        #{inline} #{_p} #{free}(#{_p} p) {
+          assert(p);
+          #{@value.destroy('*p') if @value.destructible?};
+          free(p);
+          return NULL;
+        }
+      $
+    end
+
+  end # Unique
+
+
+  #
+  class Reference::Counted < Composite
+
+    include Reference
 
     def copy(value, origin)
       "(#{value}) = #{ref(origin)}"
@@ -50,40 +90,35 @@ module AutoC
 
     def interface(stream)
       stream << %$
-        typedef #{@value.type}* #{type};
+        typedef #{@value.type}* #{_p};
         typedef struct {
           #{@value.type} value;
           unsigned count;
         } #{_s};
-        #{inline} #{type} #{new}(#{@value.create_params_declare}) {
-          #{_s}* ps = (#{_s}*)malloc(sizeof(#{_s})); assert(ps);
-          #{@value.create(*(['ps->value'] + @value.create_params_pass_list))};
-          ps->count = 1;
-          return (#{type})ps;
+        #{inline} #{_p} #{new}(#{@value.create_params_declare}) {
+          #{_s}* p = (#{_s}*)malloc(sizeof(#{_s})); assert(p);
+          #{@value.create(*(['p->value'] + @value.create_params_pass_list))};
+          p->count = 1;
+          return (#{_p})p;
         }
-        #{inline} #{type} #{ref}(#{type} cr) {
-          assert(cr);
-          ++((#{_s}*)cr)->count;
-          return cr;
+        #{inline} #{_p} #{ref}(#{_p} p) {
+          assert(p);
+          ++((#{_s}*)p)->count;
+          return p;
         }
-        #{inline} #{type} #{unref}(#{type} cr) {
-          assert(cr);
-          if(--((#{_s}*)cr)->count == 0) {
-            #{@value.destroy('*cr') if @value.destructible?};
-            free(cr);
+        #{inline} #{_p} #{unref}(#{_p} p) {
+          assert(p);
+          if(--((#{_s}*)p)->count == 0) {
+            #{@value.destroy('*p') if @value.destructible?};
+            free(p);
             return NULL;
           } else
-            return cr;
+            return p;
         }
       $
     end
 
-    CODE = Code.interface %$
-      #include <assert.h>
-      #include <malloc.h>
-    $
-
-  end # CR
+  end # Counted
 
 
 end # AutoC
