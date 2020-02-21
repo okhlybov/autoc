@@ -86,10 +86,13 @@ module AutoC
       $
       stream << %$
         #{define} #{type}* #{destroy}(#{type}* self) {
-          size_t index, size;
           assert(self);
-          size = #{size}(self);
-          #{'for(index = 0; index < size; ++index)' + element.destroy("self->elements[index]") if element.destructible?};
+      $
+      stream << %${
+          size_t index, size = #{size}(self);
+          for(index = 0; index < size; ++index) #{element.destroy("self->elements[index]")};
+      }$ if element.destructible?
+      stream << %$
           free(self->elements);
           return NULL;
         }
