@@ -192,14 +192,14 @@ module AutoC
       method = symbol.to_s
       method = method.sub(/[!?]$/, '') # Strip trailing ? or !
       # Check for leading underscore
-      underscored = if /_(.*)/ =~ method
-                      method = $1
+      underscored = if /(_+)(.*)/ =~ method
+                      method = $2
                       true
                     else
                       false
                     end
       function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
-      underscored ? "_#{function}" : function # Preserve the leading underscore
+      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore
     end
 
   end # Derived
