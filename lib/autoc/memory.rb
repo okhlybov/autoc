@@ -115,6 +115,7 @@ module AutoC
           } else
             return p;
         }
+        #define #{free}(p) #{unref}(p)
       $
     end
 
