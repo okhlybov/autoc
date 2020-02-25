@@ -12,8 +12,12 @@ module AutoC
     %i(create createEx destroy).each {|s| def_redirector(s, 1)}
     %i(copy equal).each {|s| def_redirector(s, 2)}
 
+    def memory
+      AutoC::Allocator.default
+    end
+
     def initialize(type, element, auto_create = false, prefix: nil, deps: [])
-      super(type, element, prefix, deps)
+      super(type, element, prefix, deps << memory)
       if (@auto_create = auto_create)
         raise TraitError, 'can not create auto constructor due non-auto constructible element type' unless self.element.auto_constructible?
       else
@@ -81,7 +85,7 @@ module AutoC
           assert(self);
           assert(element_count > 0);
           self->element_count = element_count;
-          self->elements = (#{element.type}*)malloc(element_count*sizeof(#{element.type})); assert(self->elements);
+          self->elements = #{memory.allocate(element.type)}; assert(self->elements);
         }
       $
       stream << %$
@@ -93,7 +97,7 @@ module AutoC
           for(index = 0; index < size; ++index) #{element.destroy("self->elements[index]")};
       }$ if element.destructible?
       stream << %$
-          free(self->elements);
+          #{memory.free('self->elements')};
           return NULL;
         }
       $
@@ -111,7 +115,7 @@ module AutoC
           size_t index, size, from, to;
           assert(self);
           if((size = #{size}(self)) != new_size) {
-            #{element.type}* elements = (#{element.type}*)malloc(new_size*sizeof(#{element.type})); assert(elements);
+            #{element.type}* elements = #{memory.allocate(element.type)}; assert(elements);
             from = AUTOC_MIN(size, new_size);
             to = AUTOC_MAX(size, new_size);
             for(index = 0; index < from; ++index) {
@@ -124,7 +128,7 @@ module AutoC
                 #{element.create('elements[index]')};
               }
             }
-            free(self->elements);
+            #{memory.free('self->elements')};
             self->elements = elements;
             self->element_count = new_size;
           }

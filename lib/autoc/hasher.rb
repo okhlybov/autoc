@@ -78,15 +78,9 @@ module AutoC
       $
     end
 
-    def self.default
-      @@default
-    end
-
-    def self.default=(hasher)
-      @@default = hasher
-    end
-
-    @@default = Hasher.instance
+    @@default = instance
+    def self.default; @@default end
+    def self.default=(hasher) @@default = hasher end
 
   end # Hasher
 
