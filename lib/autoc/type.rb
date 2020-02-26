@@ -199,7 +199,7 @@ module AutoC
                       false
                     end
       function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
-      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore
+      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore(s)
     end
 
   end # Derived
@@ -337,49 +337,59 @@ module AutoC
 
 
   #
+  module AutoConstructible
+    def create(*args)
+      args = args[1..-1].unshift("&#{args.first}") unless args.size.zero?
+      @auto_construct ? create!(*args) : createEx!(*args)
+    end
+  end
+
+
+  #
   class Structure < Composite
 
-    def initialize(type, auto_create = false, prefix = nil, **fields)
+    include AutoConstructible
+
+    def initialize(type, auto_construct = false, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
       super(type, prefix, @fields.values + [CODE])
-      if (@auto_create = auto_create)
-        raise TraitError, 'can not create auto constructor due to present non-auto constructible field(s)' unless fields_auto_constructible?
+      if (@auto_construct = auto_construct)
+        raise TraitError, 'can not synthesize requested automatic constructor' unless auto_constructible?
       else
-        raise TraitError, 'can not create initializing constructor due to present non-copyable field(s)' unless fields_copyable?
+        raise TraitError, 'can not synthesize requested initializing constructor' unless copyable?
       end
     end
 
-    %i(create createEx destroy).each {|s| def_redirector(s, 1)}
+    %i(destroy).each {|s| def_redirector(s, 1)}
     %i(copy equal).each {|s| def_redirector(s, 2)}
 
-    alias createAuto create
-
-    def create(*args)
-      @auto_create ? createAuto(*args) : createEx(*args)
-    end
-
     def create_params
-      @auto_create ? [] : @fields.values
+      @auto_construct ? [] : @fields.values
     end
 
     def constructible?
-      fields_constructible?
+      @fields.each_value {|type| return false unless type.constructible?}
+      true
     end
 
     def auto_constructible?
-      fields_auto_constructible?
+      @fields.each_value {|type| return false unless type.auto_constructible?}
+      true
     end
 
     def copyable?
-      fields_copyable?
+      @fields.each_value {|type| return false unless type.copyable?}
+      true
     end
 
     def equality_testable?
-      fields_equality_testable?
+      @fields.each_value {|type| return false unless type.equality_testable?}
+      true
     end
 
     def destructible?
-      fields_destructible?
+      @fields.each_value {|type| return true if type.destructible?}
+      false
     end
 
     def create_params_declare_list
@@ -397,9 +407,9 @@ module AutoC
         @fields.each {|field, element| stream << "#{element.type} #{field};"}
       stream << '};'
       #
-      stream << "#{declare} #{type}* #{createAuto}(#{type}* self);" if auto_constructible?
+      stream << "#{declare} #{type}* #{create!}(#{type}* self);" if auto_constructible?
       stream << %$
-        #{declare} #{type}* #{createEx}(#{type}* self, #{create_params_declare});
+        #{declare} #{type}* #{createEx!}(#{type}* self, #{create_params_declare});
         #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
       $ if copyable?
       stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
@@ -408,12 +418,12 @@ module AutoC
 
     def definition(stream)
       if auto_constructible?
-        stream << "#{define} #{type}* #{createAuto}(#{type}* self) { assert(self);"
+        stream << "#{define} #{type}* #{create!}(#{type}* self) { assert(self);"
           @fields.each {|field, element| stream << element.create("self->#{field}") << ';'}
         stream << 'return self;}'
       end
       if copyable?
-        stream << "#{define} #{type}* #{createEx}(#{type}* self, #{create_params_declare}) { assert(self);"
+        stream << "#{define} #{type}* #{createEx!}(#{type}* self, #{create_params_declare}) { assert(self);"
           @fields.each {|field, element| stream << element.copy("self->#{field}", field) << ';'}
         stream << 'return self;}'
         stream << "#{define} #{type}* #{copy}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
@@ -436,33 +446,6 @@ module AutoC
     CODE = Code.interface %$
       #include <assert.h>
     $
-
-    private
-
-    def fields_constructible?
-      @fields.each_value {|type| return false unless type.constructible?}
-      true
-    end
-
-    def fields_auto_constructible?
-      @fields.each_value {|type| return false unless type.auto_constructible?}
-      true
-    end
-
-    def fields_copyable?
-      @fields.each_value {|type| return false unless type.copyable?}
-      true
-    end
-
-    def fields_equality_testable?
-      @fields.each_value {|type| return false unless type.equality_testable?}
-      true
-    end
-
-    def fields_destructible?
-      @fields.each_value {|type| return true if type.destructible?}
-      false
-    end
 
   end # Structure
 
