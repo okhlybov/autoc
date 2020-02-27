@@ -8,6 +8,125 @@ module AutoC
   class TraitError < TypeError; end # TraitError
 
 
+  # A base for the source side types.
+  module T
+
+    # Return source side type string identifier.
+    # @return [String] source side type identifier
+    attr_reader :type
+
+    # @!group Rule-Of-Five concepts controlling the type's instance lifetime
+
+    # @abstract
+    # Synthesize the source side code to create an instance in place of the +value+ and perform its default initialization (the default constructor).
+    #
+    # Original contents of the +value+ is overwritten.
+    #
+    # @param value [String | Symbol] source side storage designation where the instance is to be created
+    # @return [String] source side code snippet
+    def default_create(value) end; remove_method :default_create
+
+    # @abstract
+    # Synthesize the source side code to create an instance in place of the +value+ and and initialize it with supplied +args+ (the custom constructor).
+    #
+    # The +args+ elements are expected to be of the {Type} type.
+    #
+    # Original contents of the +value+ is overwritten.
+    #
+    # @param value [String | Symbol] source side storage designation where the instance is to be created
+    # @param args [Array] list of types to be supplied to the constructor
+    # @return [String] source side code snippet
+    def custom_create(value, *args) end; remove_method :custom_create
+
+    # @abstract
+    # Synthesize the source side code to create an instance in place of the +value+ initializing it with a contents of the +origin+ instance (the copy constructor).
+    #
+    # Original contents of the +value+ is overwritten.
+    # The contents of the +origin+ is left intact.
+    #
+    # @param value [String | Symbol] source side storage designation where the instance is to be created
+    # @param origin [String | Symbol] source side storage designation taken as the origin for the cloning operation
+    # @return [String] source side code snippet
+    def clone(value, origin) end; remove_method :clone
+
+    # @abstract
+    # Synthesize the source side code to transfer the contents of +origin+ into the +value+ (the move constructor).
+    # This code may either create a instance in place of +value+ or move the data from +origin+ to +value+, depending on the implementation.
+    #
+    # Original contents of the +value+ is overwritten.
+    # The contents of the +origin+ is no longer valid afterwards.
+    #
+    # @param value [String | Symbol] source side storage designation where the instance is to be placed
+    # @param origin [String | Symbol] source side storage designation taken as the origin for the transfer operation
+    # @return [String] source side code snippet
+    def move(value, origin) end; remove_method :move
+
+    # @abstract
+    # @note Optional operation.
+    # Synthesize the source side code to destroy the instance in place of the +value+ (the destructor).
+    #
+    # @param value [String | Symbol] source side storage designation for the instance to be destroyed
+    # @return [String] source side code snippet
+    def destroy(value) end; remove_method :destroy
+
+    # Test whether the type has a default (parameterless) constructor.
+    #
+    # This implementation looks up the {#default_create} method.
+    def default_constructible?
+      respond_to?(:default_create)
+    end
+
+    # Test whether the type has a custom constructor which accepts a number of parameters.
+    #
+    # This implementation looks up the {#custom_create} method.
+    def custom_constructible?
+      respond_to?(:custom_create)
+    end
+
+    # Test whether the type can be constructed, with either default or parametrized initialization.
+    #
+    # This implementation queries {#custom_constructible?} and {#default_constructible?}.
+    def constructible?
+      custom_constructible? || default_constructible?
+    end
+
+    # Test whether the type can be created from an instance of the same type (cloned).
+    #
+    # This implementation looks up the {#clone} method.
+    def cloneable?
+      respond_to?(:clone)
+    end
+
+    # Test whether the type's instance can be transferred from one location to another.
+    #
+    # This implementation looks up the {#move} method.
+    def movable?
+      respond_to?(:move)
+    end
+
+    # Test whether the type has a non-trivial destructor.
+    #
+    # This implementation looks up the {#destroy} method.
+    def destructible?
+      respond_to(:destroy)
+    end
+
+    #@!endgroup
+
+    # Array of types to be supplied to custom constructor {#custom_create}.
+    #
+    # @note Array elements are assumed to be of the {Type} type.
+    attr_reader :custom_create_params
+
+    # Set the custom constructor parameters.
+    # @note Performs the type coercion procedure on supplied arguments.
+    protected def custom_create_params=(ary)
+      @custom_create_params = ary.collect {|p| Type.coerce(p)}
+    end
+
+  end # Type
+
+
   #
   module Type
 
