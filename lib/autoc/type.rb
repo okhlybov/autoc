@@ -121,8 +121,27 @@ module AutoC
     # Set the custom constructor parameters.
     # @note Performs the type coercion procedure on supplied arguments.
     protected def custom_create_params=(ary)
-      @custom_create_params = ary.collect {|p| Type.coerce(p)}
+      @custom_create_params = Params.new(ary)
     end
+
+    # @private
+    class Params < Array
+      def initialize(ary)
+        super(ary.collect {|t| AutoC::Type.coerce(t)})
+      end
+      def declare_list
+        i = 0; collect {|t| "#{t.type} __#{i+=1}__"}
+      end
+      def declare
+        declare_list.join(',')
+      end
+      def pass_list
+        (1..size).collect {|i| "__#{i}__"}
+      end
+      def pass
+        pass_list.join(',')
+      end
+    end # Params
 
   end # Type
 
