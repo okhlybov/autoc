@@ -9,11 +9,20 @@ module AutoC
 
 
   # A base for the source side types.
-  module T
+  module Type
+
+    #
+    def self.coerce(obj)
+      obj.is_a?(Type) ? obj : Primitive.new(obj)
+    end
 
     # Return source side type string identifier.
     # @return [String] source side type identifier
     attr_reader :type
+
+    def initialize(type)
+      @type = type.to_s
+    end
 
     # @!group Rule-Of-Five concepts controlling the type's instance lifetime
 
@@ -37,6 +46,17 @@ module AutoC
     # @param args [Array] list of types to be supplied to the constructor
     # @return [String] source side code snippet
     def custom_create(value, *args) end; remove_method :custom_create
+
+    # Array of types to be supplied to custom constructor {#custom_create}.
+    #
+    # @note Array elements are assumed to be of the {Type} type.
+    attr_reader :custom_create_params
+
+    # Set the custom constructor parameters.
+    # @note Performs the type coercion procedure on supplied arguments.
+    protected def custom_create_params=(ary)
+      @custom_create_params = Params.new(ary)
+    end
 
     # @abstract
     # Synthesize the source side code to create an instance in place of the +value+ initializing it with a contents of the +origin+ instance (the copy constructor).
@@ -111,18 +131,35 @@ module AutoC
       respond_to(:destroy)
     end
 
-    #@!endgroup
+    #@!group Comparison traits
 
-    # Array of types to be supplied to custom constructor {#custom_create}.
     #
-    # @note Array elements are assumed to be of the {Type} type.
-    attr_reader :custom_create_params
+    def equal(value, other) end; remove_method :equal
 
-    # Set the custom constructor parameters.
-    # @note Performs the type coercion procedure on supplied arguments.
-    protected def custom_create_params=(ary)
-      @custom_create_params = Params.new(ary)
+    #
+    def less(value, other) end; remove_method :less
+
+    #
+    def equality_testable?
+      respond_to?(:equal)
     end
+
+    #
+    def comparable?
+      equality_testable? && respond_to?(:less)
+    end
+
+    #@!group Hashing traits
+
+    #
+    def identify(value) end; remove_method :identify
+
+    #
+    def hashable?
+      respond_to?(:equal) && respond_to?(:identify)
+    end
+
+    #@!endgroup
 
     # @private
     class Params < Array
@@ -147,136 +184,25 @@ module AutoC
 
 
   #
-  module Type
-
-    #
-    def self.coerce(obj)
-      obj.is_a?(Type) ? obj : Primitive.new(obj)
-    end
-
-    #
-    attr_reader :type
-
-    def initialize(type)
-      @type = type
-    end
-
-    def ==(other)
-      type == other.type
-    end
-
-    def eql?(other)
-      self.class.eql?(other.class) && type.eql?(other.type)
-    end
-
-    def hash
-      type.hash
-    end
-
-    #
-    def create(value, *args) end; remove_method :create
-
-    #
-    attr_reader :create_params; remove_method :create_params
-
-    #
-    def create_params_declare_list
-      i = 0; create_params.collect{|p| "#{p} _#{i+=1}"}
-    end
-
-    #
-    def create_params_declare
-      create_params_declare_list.join(',')
-    end
-
-    #
-    def create_params_pass_list
-      (1..create_params.size).collect {|i| "_#{i}"}
-    end
-
-    #
-    def create_params_pass
-      create_params_pass_list.join(',')
-    end
-
-    #
-    def destroy(value) end; remove_method :destroy
-
-    #
-    def copy(value, origin) end; remove_method :copy
-
-    #
-    def equal(value, other) end; remove_method :equal
-
-    #
-    def less(value, other) end; remove_method :less
-
-    #
-    def identify(value) end; remove_method :identify
-
-    # Type trait tests
-
-    #
-    def constructible?
-      respond_to?(:create)
-    end
-
-    #
-    def auto_constructible?
-      constructible? && create_params.size.zero?
-    end
-
-    #
-    def destructible?
-      respond_to?(:destroy)
-    end
-
-    #
-    def copyable?
-      respond_to?(:copy)
-    end
-
-    #
-    def equality_testable?
-      respond_to?(:equal)
-    end
-
-    #
-    def comparable?
-      equality_testable? && respond_to?(:less)
-    end
-
-    #
-    def hashable?
-      respond_to?(:equal) && respond_to?(:identify)
-    end
-
-  end
-
-
-  #
   class Primitive
 
     include Type
     include Module::Entity
 
-    def create(value, *args)
-      init = case args.length
-             when 0
-               0
-             when 1
-               args.first
-             else
-               raise ArgumentError, 'expected at most one initializer'
-      end
+    def initialize(*args)
+      super
+      custom_create_params = [self]
+    end
+
+    def default_create(value)
+      custom_create(value, 0)
+    end
+
+    def custom_create(value, init)
       "(#{value}) = (#{init})"
     end
 
-    EMPTY_ARRAY = [].freeze
-
-    def create_params; EMPTY_ARRAY end
-
-    def copy(value, origin)
+    def clone(value, origin)
       "(#{value}) = (#{origin})"
     end
 
@@ -295,23 +221,8 @@ module AutoC
   end # Primitive
 
 
-  #
-  class Derived
-
-    include Type
-    include Module::Entity
-
-    attr_reader :dependencies
-
-    def initialize(type, prefix, deps)
-      super(type)
-      @prefix = prefix.to_s unless prefix.nil?
-      @dependencies = Set[*deps].freeze
-    end
-
-    def prefix
-      @prefix ||= type.to_s
-    end
+  # @private
+  module MethodSynthesizer
 
     #
     def method_missing(symbol, *args)
@@ -323,6 +234,25 @@ module AutoC
       else
         function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
       end
+    end
+
+  end # MethodSynthesizer
+
+
+  # @abstract
+  class Derived
+
+    include Type
+    include Module::Entity
+    include MethodSynthesizer
+
+    attr_reader :prefix
+    attr_reader :dependencies
+
+    def initialize(type, prefix, deps)
+      super(type)
+      @dependencies = Set[*deps].freeze
+      @prefix = (prefix.nil? ? type : prefix).to_s
     end
 
     #
@@ -343,7 +273,7 @@ module AutoC
   end # Derived
 
 
-  #
+  # @private
   module Redirecting
     def def_redirector(meth, redirect_args = 0)
       class_eval %~
@@ -362,13 +292,38 @@ module AutoC
   end
 
 
-  #
-  class Composite < Derived
+  # @abstract
+  class Composite
+
+    include Type
+    include Module::Entity
+
+    include MethodSynthesizer
 
     extend Redirecting
 
+    attr_reader :prefix
+    attr_reader :dependencies
+
     def initialize(type, prefix, deps)
-      super(type, prefix, deps << CODE)
+      super(type)
+      @prefix = (prefix.nil? ? type : prefix).to_s
+      @dependencies = Set.new(deps.collect {|t| Type.coerce(t)} << CODE)
+    end
+
+    #
+    def decorate_method(symbol)
+      method = symbol.to_s
+      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
+      # Check for leading underscore
+      underscored = if /(_+)(.*)/ =~ method
+                      method = $2
+                      true
+                    else
+                      false
+                    end
+      function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
+      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore(s)
     end
 
     def inline; :AUTOC_INLINE end
@@ -415,29 +370,42 @@ module AutoC
 
 
   #
-  class Synthetic < Derived
+  class Synthetic
 
-    attr_reader :create_params
+    include Type
+    include Module::Entity
+    include MethodSynthesizer
 
-    def initialize(type, deps: [], prefix: nil, interface: nil, declaration: nil, definition: nil, create_params: [], **calls)
+    attr_reader :dependencies
+
+    def initialize(type, deps: [], prefix: nil, interface: nil, declaration: nil, definition: nil, custom_create_params: [], **calls)
+      super(type)
       @calls = calls
       @interface = interface
       @declaration = declaration
       @definition = definition
-      @create_params = create_params.collect {|e| Type.coerce(e)}
-      super(type, prefix, deps.collect {|e| Type.coerce(e)} + @create_params)
+      deps.concat(self.custom_create_params = custom_create_params) if custom_constructible?
+      @dependencies = Set.new(deps.collect {|t| Type.coerce(t)})
     end
 
-    def constructible?
-      !@calls[:create].nil?
+    def default_constructible?
+      !@calls[:default_create].nil?
+    end
+
+    def custom_constructible?
+      !@calls[:custom_create].nil?
     end
 
     def destructible?
       !@calls[:destroy].nil?
     end
 
-    def copyable?
-      !@calls[:copy].nil?
+    def cloneable?
+      !@calls[:clone].nil?
+    end
+
+    def movable?
+      !@calls[:move].nil?
     end
 
     def equality_testable?
@@ -474,8 +442,8 @@ module AutoC
   end # Synthetic
 
 
-  #
-  module AutoConstructible
+  # FIXME REMOVE
+  module AutoConstructible1
     def create(*args)
       args = args[1..-1].unshift("&#{args.first}") unless args.size.zero?
       @auto_construct ? create!(*args) : createEx!(*args)
@@ -486,37 +454,34 @@ module AutoC
   #
   class Structure < Composite
 
-    include AutoConstructible
-
-    def initialize(type, auto_construct = false, prefix = nil, **fields)
+    def initialize(type, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
       super(type, prefix, @fields.values + [CODE])
-      if (@auto_construct = auto_construct)
-        raise TraitError, 'can not synthesize requested automatic constructor' unless auto_constructible?
-      else
-        raise TraitError, 'can not synthesize requested initializing constructor' unless copyable?
-      end
+      self.custom_create_params = @fields.values if custom_constructible?
     end
+
+    # TODO **create
 
     %i(destroy).each {|s| def_redirector(s, 1)}
-    %i(copy equal).each {|s| def_redirector(s, 2)}
-
-    def create_params
-      @auto_construct ? [] : @fields.values
-    end
+    %i(clone equal).each {|s| def_redirector(s, 2)}
 
     def constructible?
       @fields.each_value {|type| return false unless type.constructible?}
       true
     end
 
-    def auto_constructible?
-      @fields.each_value {|type| return false unless type.auto_constructible?}
+    def default_constructible?
+      @fields.each_value {|type| return false unless type.default_constructible?}
       true
     end
 
-    def copyable?
-      @fields.each_value {|type| return false unless type.copyable?}
+    def custom_constructible?
+      @fields.each_value {|type| return false unless type.custom_constructible?}
+      true
+    end
+
+    def cloneable?
+      @fields.each_value {|type| return false unless type.cloneable?}
       true
     end
 
@@ -528,16 +493,6 @@ module AutoC
     def destructible?
       @fields.each_value {|type| return true if type.destructible?}
       false
-    end
-
-    def create_params_declare_list
-      xs = []
-      @fields.each {|field, element| xs << "#{element.type} #{field}"}
-      xs
-    end
-
-    def create_params_pass_list
-      @fields.keys
     end
 
     def interface(stream)
