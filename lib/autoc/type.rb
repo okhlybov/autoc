@@ -223,8 +223,6 @@ module AutoC
 
   # @private
   module MethodSynthesizer
-
-    #
     def method_missing(symbol, *args)
       function = decorate_method(symbol) # Construct C function name for the method
       if args.empty?
@@ -235,59 +233,37 @@ module AutoC
         function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
       end
     end
-
+    def decorate_method(symbol) end; remove_method :decorate_method
   end # MethodSynthesizer
 
 
-  # @abstract
-  class Derived
-
-    include Type
-    include Module::Entity
-    include MethodSynthesizer
-
-    attr_reader :prefix
+  # @private
+  module DependencyComposer
     attr_reader :dependencies
-
-    def initialize(type, prefix, deps)
-      super(type)
-      @dependencies = Set[*deps].freeze
-      @prefix = (prefix.nil? ? type : prefix).to_s
+    def dependencies=(ary)
+      @dependencies = Set.new(ary.collect {|t| AutoC::Type.coerce(t)})
     end
-
-    #
-    def decorate_method(symbol)
-      method = symbol.to_s
-      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
-      # Check for leading underscore
-      underscored = if /(_+)(.*)/ =~ method
-                      method = $2
-                      true
-                    else
-                      false
-                    end
-      function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
-      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore(s)
-    end
-
-  end # Derived
+  end # DependencyComposer
 
 
   # @private
-  module Redirecting
-    def def_redirector(meth, redirect_args = 0)
+  module Redirector
+    def redirect(meth, redirect_args = 0)
       class_eval %~
         def #{meth}(*args)
-          if args.size == 1 && args.first.nil?
-            method_missing(:#{meth}, nil)
-          else
-            n = [#{redirect_args}, args.size].min
-            ls = (n.zero? ? args : args[0..n-1]).collect {|arg| %"&\#{arg}"}
-            rs = n.zero? ? [] : args[n..-1]
-            method_missing(:#{meth}, *(ls + rs))
-          end
+          method_missing(:#{meth}, *Redirector.redirect(args, #{redirect_args}))
         end
       ~
+    end
+    def self.redirect(args, redirect_args = 0)
+      if args.size == 1 && args.first.nil?
+        [nil]
+      else
+        n = [redirect_args, args.size].min
+        ls = (n.zero? ? args : args[0..n-1]).collect {|x| "&#{x}"}
+        rs = n.zero? ? [] : args[n..-1]
+        ls + rs
+      end
     end
   end
 
@@ -297,24 +273,22 @@ module AutoC
 
     include Type
     include Module::Entity
-
     include MethodSynthesizer
+    include DependencyComposer
 
-    extend Redirecting
+    extend Redirector
 
     attr_reader :prefix
-    attr_reader :dependencies
 
     def initialize(type, prefix, deps)
       super(type)
       @prefix = (prefix.nil? ? type : prefix).to_s
-      @dependencies = Set.new(deps.collect {|t| Type.coerce(t)} << CODE)
+      self.dependencies = deps << CODE
     end
 
     #
     def decorate_method(symbol)
-      method = symbol.to_s
-      method = method.sub(/[!?]$/, '') # Strip trailing ? or !
+      method = symbol.to_s.sub(/[!?]$/, '') # Strip trailing ? or !
       # Check for leading underscore
       underscored = if /(_+)(.*)/ =~ method
                       method = $2
@@ -369,14 +343,13 @@ module AutoC
   end # Composite
 
 
-  #
+  # User-defined value type.
   class Synthetic
 
     include Type
     include Module::Entity
     include MethodSynthesizer
-
-    attr_reader :dependencies
+    include DependencyComposer
 
     def initialize(type, deps: [], prefix: nil, interface: nil, declaration: nil, definition: nil, custom_create_params: [], **calls)
       super(type)
@@ -385,7 +358,7 @@ module AutoC
       @declaration = declaration
       @definition = definition
       deps.concat(self.custom_create_params = custom_create_params) if custom_constructible?
-      @dependencies = Set.new(deps.collect {|t| Type.coerce(t)})
+      self.dependencies = deps
     end
 
     def default_constructible?
@@ -442,28 +415,31 @@ module AutoC
   end # Synthetic
 
 
-  # FIXME REMOVE
-  module AutoConstructible1
-    def create(*args)
-      args = args[1..-1].unshift("&#{args.first}") unless args.size.zero?
-      @auto_construct ? create!(*args) : createEx!(*args)
-    end
-  end
-
-
-  #
+  # Aggregate value type.
   class Structure < Composite
 
     def initialize(type, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
       super(type, prefix, @fields.values + [CODE])
       self.custom_create_params = @fields.values if custom_constructible?
+      if default_constructible?
+        @default_create = :create
+        @custom_create = :createEx
+      else
+        @custom_create = :create
+      end
     end
 
-    # TODO **create
+    def default_create(value)
+      send(@default_create, *Redirector.redirect([value], 1))
+    end
 
-    %i(destroy).each {|s| def_redirector(s, 1)}
-    %i(clone equal).each {|s| def_redirector(s, 2)}
+    def custom_create(value, *args)
+      send(@custom_create, *Redirector.redirect([value] + args, 1))
+    end
+
+    %i(destroy).each {|s| redirect(s, 1)}
+    %i(clone equal).each {|s| redirect(s, 2)}
 
     def constructible?
       @fields.each_value {|type| return false unless type.constructible?}
@@ -476,7 +452,7 @@ module AutoC
     end
 
     def custom_constructible?
-      @fields.each_value {|type| return false unless type.custom_constructible?}
+      @fields.each_value {|type| return false unless type.cloneable?}
       true
     end
 
@@ -500,27 +476,27 @@ module AutoC
         @fields.each {|field, element| stream << "#{element.type} #{field};"}
       stream << '};'
       #
-      stream << "#{declare} #{type}* #{create!}(#{type}* self);" if auto_constructible?
-      stream << %$
-        #{declare} #{type}* #{createEx!}(#{type}* self, #{create_params_declare});
-        #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
-      $ if copyable?
+      stream << "#{declare} #{type}* #{@default_create}(#{type}* self);" if default_constructible?
+      stream << "#{declare} #{type}* #{@custom_create}(#{type}* self, #{custom_create_params.declare});" if custom_constructible?
+      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
       stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
     def definition(stream)
-      if auto_constructible?
-        stream << "#{define} #{type}* #{create!}(#{type}* self) { assert(self);"
-          @fields.each {|field, element| stream << element.create("self->#{field}") << ';'}
+      if default_constructible?
+        stream << "#{define} #{type}* #{@default_create}(#{type}* self) { assert(self);"
+          @fields.each {|field, element| stream << element.default_create("self->#{field}") << ';'}
         stream << 'return self;}'
       end
-      if copyable?
-        stream << "#{define} #{type}* #{createEx!}(#{type}* self, #{create_params_declare}) { assert(self);"
-          @fields.each {|field, element| stream << element.copy("self->#{field}", field) << ';'}
+      if custom_constructible?
+        stream << "#{define} #{type}* #{@custom_create}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
+        @fields.each {|field, element| stream << element.clone("self->#{field}", field) << ';'}
         stream << 'return self;}'
-        stream << "#{define} #{type}* #{copy}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
-          @fields.each {|field, element| stream << element.copy("self->#{field}", "origin->#{field}") << ';'}
+      end
+      if cloneable?
+        stream << "#{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
+          @fields.each {|field, element| stream << element.clone("self->#{field}", "origin->#{field}") << ';'}
         stream << 'return self;}'
       end
       if destructible?
@@ -543,7 +519,7 @@ module AutoC
   end # Structure
 
 
-  #
+  # @abstract
   class Container < Composite
 
     attr_reader :element
@@ -586,8 +562,9 @@ module AutoC
   #
   module Container::Hashable
 
-    extend Redirecting
-    def_redirector :identify, 1
+    extend Redirector
+
+    redirect :identify, 1
 
     def hasher
       AutoC::Hasher.default
