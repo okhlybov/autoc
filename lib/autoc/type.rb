@@ -1,3 +1,4 @@
+require 'set'
 require 'autoc/module'
 
 
@@ -54,7 +55,7 @@ module AutoC
 
     # Set the custom constructor parameters.
     # @note Performs the type coercion procedure on supplied arguments.
-    protected def custom_create_params=(ary)
+    private def custom_create_params=(ary)
       @custom_create_params = Params.new(ary)
     end
 
@@ -128,7 +129,7 @@ module AutoC
     #
     # This implementation looks up the {#destroy} method.
     def destructible?
-      respond_to(:destroy)
+      respond_to?(:destroy)
     end
 
     #@!group Comparison traits
@@ -191,7 +192,7 @@ module AutoC
 
     def initialize(*args)
       super
-      custom_create_params = [self]
+      self.custom_create_params = [self]
     end
 
     def default_create(value)
@@ -240,8 +241,8 @@ module AutoC
   # @private
   module DependencyComposer
     attr_reader :dependencies
-    def dependencies=(ary)
-      @dependencies = Set.new(ary.collect {|t| AutoC::Type.coerce(t)})
+    private def dependencies=(ary)
+      @dependencies = Set[*ary]
     end
   end # DependencyComposer
 
@@ -361,6 +362,8 @@ module AutoC
       self.dependencies = deps
     end
 
+    undef_method :clone # Custom #clone shadows the Object#clone
+
     def default_constructible?
       !@calls[:default_create].nil?
     end
@@ -476,8 +479,8 @@ module AutoC
         @fields.each {|field, element| stream << "#{element.type} #{field};"}
       stream << '};'
       #
-      stream << "#{declare} #{type}* #{@default_create}(#{type}* self);" if default_constructible?
-      stream << "#{declare} #{type}* #{@custom_create}(#{type}* self, #{custom_create_params.declare});" if custom_constructible?
+      stream << "#{declare} #{type}* #{send(@default_create)}(#{type}* self);" if default_constructible?
+      stream << "#{declare} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare});" if custom_constructible?
       stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
       stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
@@ -485,12 +488,12 @@ module AutoC
 
     def definition(stream)
       if default_constructible?
-        stream << "#{define} #{type}* #{@default_create}(#{type}* self) { assert(self);"
+        stream << "#{define} #{type}* #{send(@default_create)}(#{type}* self) { assert(self);"
           @fields.each {|field, element| stream << element.default_create("self->#{field}") << ';'}
         stream << 'return self;}'
       end
       if custom_constructible?
-        stream << "#{define} #{type}* #{@custom_create}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
+        stream << "#{define} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
         @fields.each {|field, element| stream << element.clone("self->#{field}", field) << ';'}
         stream << 'return self;}'
       end
