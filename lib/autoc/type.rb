@@ -418,13 +418,11 @@ module AutoC
   end # Synthetic
 
 
-  # Aggregate value type.
-  class Structure < Composite
+  # @private
+  module ConstructibleAdapter
 
-    def initialize(type, prefix = nil, **fields)
-      @fields = fields.transform_values {|e| Type.coerce(e)}
-      super(type, prefix, @fields.values + [CODE])
-      self.custom_create_params = @fields.values if custom_constructible?
+    def initialize(*args, **kws)
+      super(*args, **kws)
       if default_constructible?
         @default_create = :create
         @custom_create = :createEx
@@ -439,6 +437,20 @@ module AutoC
 
     def custom_create(value, *args)
       send(@custom_create, *Redirector.redirect([value] + args, 1))
+    end
+
+  end # CreateForwarder
+
+
+  # Aggregate value type.
+  class Structure < Composite
+
+    include ConstructibleAdapter
+
+    def initialize(type, prefix = nil, **fields)
+      @fields = fields.transform_values {|e| Type.coerce(e)}
+      super(type, prefix, @fields.values + [CODE])
+      self.custom_create_params = @fields.values if custom_constructible?
     end
 
     %i(destroy).each {|s| redirect(s, 1)}
