@@ -15,7 +15,7 @@ module AutoC
       @type ||= "#{@container.type}Range"
     end
 
-    def_redirector :create, 1
+    redirect :create, 1
 
     def interface(stream)
       stream << %$
@@ -44,7 +44,7 @@ module AutoC
 
   class Range::Input < Range
 
-    %i(empty popFront front frontView).each {|s| def_redirector s, 1}
+    %i(empty popFront front frontView).each {|s| redirect s, 1}
 
     def interface(stream)
       super
@@ -61,7 +61,7 @@ module AutoC
 
   class Range::Forward < Range::Input
 
-    def_redirector :save, 2
+    redirect :save, 2
 
     def interface(stream)
       super
@@ -74,7 +74,7 @@ module AutoC
 
   class Range::Bidirectional < Range::Forward
 
-    %i(popBack back backView).each {|s| def_redirector s, 1}
+    %i(popBack back backView).each {|s| redirect s, 1}
 
     def interface(stream)
       super
@@ -90,7 +90,7 @@ module AutoC
 
   class Range::RandomAccess < Range::Bidirectional
 
-    %i(size get view).each {|s| def_redirector s, 1}
+    %i(size get view).each {|s| redirect s, 1}
 
     def interface(stream)
       super

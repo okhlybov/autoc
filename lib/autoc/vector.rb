@@ -1,7 +1,7 @@
 require 'autoc/type'
 require 'autoc/stdc'
 require 'autoc/range'
-require 'autoc/hasher'
+require 'autoc/memory'
 
 
 module AutoC
@@ -9,30 +9,38 @@ module AutoC
 
   class Vector < Container
 
-    %i(create createEx destroy).each {|s| def_redirector(s, 1)}
-    %i(copy equal).each {|s| def_redirector(s, 2)}
+    include ConstructibleAdapter
+
+    %i(destroy).each {|s| redirect(s, 1)}
+    %i(copy equal).each {|s| redirect(s, 2)}
 
     def memory
       AutoC::Allocator.default
     end
 
-    def initialize(type, element, auto_create = false, prefix: nil, deps: [])
+    attr_reader :range
+
+    # @note Vector has no default constructor regardless of the element type traits since it requires the size value.
+    def default_constructible?
+      false
+    end
+
+    # @note Vector itself has custom constructor only if the element type has copy constructor defined.
+    def custom_constructible?
+      element.cloneable?
+    end
+
+    def initialize(type, element, prefix: nil, deps: [])
       super(type, element, prefix, deps << memory)
-      if (@auto_create = auto_create)
-        raise TraitError, 'can not create auto constructor due non-auto constructible element type' unless self.element.auto_constructible?
+      raise TraitError, 'element type must have default constructor or copy constructor' unless self.element.default_constructible? || self.element.cloneable?
+      @default_create = self.element.default_constructible? ? :create : nil
+      @custom_create = if self.element.cloneable?
+        self.custom_create_params = [SIZE_T, self.element]
+        :createEx
       else
-        raise TraitError, 'can not create initializing constructor due to non-copyable element type' unless self.element.copyable?
+        nil
       end
-    end
-
-    alias createAuto create
-
-    def create(*args)
-      @auto_create ? createAuto(*args) : createEx(*args)
-    end
-
-    def create_params
-      @auto_create ? [STDC::SIZE_T] : [STDC::SIZE_T, element]
+      @range = Range.new(self)
     end
 
     def interface(stream)
@@ -57,25 +65,25 @@ module AutoC
         #{declare} #{type}* #{destroy}(#{type}* self);
       $
       stream << %$
-        #{declare} #{type}* #{createAuto}(#{type}* self, size_t size);
+        #{declare} #{type}* #{send(@default_create)}(#{type}* self, size_t size);
         #{declare} void #{resize}(#{type}* self, size_t new_size);
-      $ if element.auto_constructible?
+      $ if element.default_constructible?
       stream << %$
-        #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
+        #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size, const #{element.type} element);
         #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
         #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
           #{element.type} value;
           const #{element.type}* p = #{view(:self, :index)};
-          #{element.copy(:value, '*p')};
+          #{element.clone(:value, '*p')};
           return value;
         }
         #{inline} void #{set}(#{type}* self, size_t index, #{element.type} value) {
           assert(self);
           assert(#{within}(self, index));
           #{element.destroy('self->elements[index]') if element.destructible?};
-          #{element.copy('self->elements[index]', :value)};
+          #{element.clone('self->elements[index]', :value)};
         }
-      $ if element.copyable?
+      $ if element.cloneable?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
@@ -102,12 +110,12 @@ module AutoC
         }
       $
       stream << %$
-        #{define} #{type}* #{createAuto}(#{type}* self, size_t size) {
+        #{define} #{type}* #{send(@default_create)}(#{type}* self, size_t size) {
           size_t index;
           assert(self);
           #{allocate}(self, size);
           for(index = 0; index < size; ++index) {
-            #{element.create('self->elements[index]')};
+            #{element.default_create('self->elements[index]')};
           }
           return self;
         }
@@ -125,7 +133,7 @@ module AutoC
               #{'for(index = from; index < to; ++index)' + element.destroy('self->elements[index]') if element.destructible?};
             } else {
               for(index = from; index < to; ++index) {
-                #{element.create('elements[index]')};
+                #{element.default_create('elements[index]')};
               }
             }
             #{memory.free('self->elements')};
@@ -133,14 +141,14 @@ module AutoC
             self->element_count = new_size;
           }
         }
-      $ if element.auto_constructible?
+      $ if element.default_constructible?
       stream << %$
-        #{define} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value) {
+        #{define} #{type}* #{send(@custom_create)}(#{type}* self, size_t size, const #{element.type} value) {
           size_t index;
           assert(self);
           #{allocate}(self, size);
-          for(index = 0; index < #{size}(self); ++index) {
-            #{element.copy('self->elements[index]', :value)};
+          for(index = 0; index < size; ++index) {
+            #{element.clone('self->elements[index]', :value)};
           }
           return self;
         }
@@ -151,11 +159,11 @@ module AutoC
           #{destroy}(self);
           #{allocate}(self, size = #{size}(origin));
           for(index = 0; index < size; ++index) {
-            #{element.copy('self->elements[index]', 'origin->elements[index]')};
+            #{element.clone('self->elements[index]', 'origin->elements[index]')};
           }
           return self;
         }
-      $ if element.copyable?
+      $ if element.cloneable?
       stream << %$
         #{define} int #{equal}(const #{type}* self, const #{type}* other) {
           size_t index, size;
@@ -169,10 +177,6 @@ module AutoC
           } else return 0;
         }
       $ if equality_testable?
-    end
-
-    def range
-      @range ||= Range.new(self)
     end
 
   end # Vector

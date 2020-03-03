@@ -6,6 +6,7 @@ require 'autoc/module'
 module AutoC
 
 
+  # Standard C malloc()-based allocator.
   class Allocator
 
     include Singleton
@@ -36,6 +37,7 @@ module AutoC
   end # Allocator
 
 
+  # Boehm garbage-collecting allocator.
   class Allocator::BDW
 
     include Singleton
