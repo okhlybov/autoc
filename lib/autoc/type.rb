@@ -269,6 +269,65 @@ module AutoC
   end
 
 
+  # @private
+  module ConstructibleAdapter
+
+    def initialize(*args, **kws)
+      super(*args, **kws)
+      if default_constructible?
+        @default_create = :create
+        @custom_create = :createEx
+      else
+        @custom_create = :create
+      end
+    end
+
+    def default_create(value)
+      send(@default_create, *Redirector.redirect([value], 1))
+    end
+
+    def custom_create(value, *args)
+      send(@custom_create, *Redirector.redirect([value] + args, 1))
+    end
+
+  end # CreateForwarder
+
+
+  # @private
+  module Hashable
+
+    extend Redirector
+
+    redirect :identify, 1
+
+    def hasher
+      AutoC::Hasher.default
+    end
+
+    def initialize(*args, **kws)
+      super(*args, **kws)
+      dependencies << hasher
+    end
+
+    def interface(stream)
+      super
+      interface_identify(stream)
+    end
+
+    def definition(stream)
+      super
+      define_identify(stream)
+    end
+
+    def interface_identify(stream)
+      stream << "#{declare} size_t #{identify}(const #{type}* self);"
+    end
+
+    def define_identify(stream) end; remove_method :define_identify
+
+  end # Hashable
+
+
   # @abstract
   class Composite
 
@@ -418,30 +477,6 @@ module AutoC
   end # Synthetic
 
 
-  # @private
-  module ConstructibleAdapter
-
-    def initialize(*args, **kws)
-      super(*args, **kws)
-      if default_constructible?
-        @default_create = :create
-        @custom_create = :createEx
-      else
-        @custom_create = :create
-      end
-    end
-
-    def default_create(value)
-      send(@default_create, *Redirector.redirect([value], 1))
-    end
-
-    def custom_create(value, *args)
-      send(@custom_create, *Redirector.redirect([value] + args, 1))
-    end
-
-  end # CreateForwarder
-
-
   # Aggregate value type.
   class Structure < Composite
 
@@ -506,7 +541,8 @@ module AutoC
       end
       if custom_constructible?
         stream << "#{define} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
-        @fields.each {|field, element| stream << element.clone("self->#{field}", field) << ';'}
+        list = custom_create_params.pass_list
+        i = -1; @fields.each {|field, element| stream << element.clone("self->#{field}", list[i+=1]) << ';'}
         stream << 'return self;}'
       end
       if cloneable?
@@ -532,6 +568,42 @@ module AutoC
     $
 
   end # Structure
+
+
+  #
+  module Structure::Hashable
+
+    include Hashable
+
+    def initialize(*args, **kws)
+      super(*args, **kws)
+      raise TraitError, 'including type must be a Structure descendant' unless is_a?(Structure)
+      raise TraitError, 'structure has non-hashable field(s)' unless hashable?
+    end
+
+    def hashable?
+      @fields.each_value {|type| return false unless type.hashable?}
+      true
+    end
+
+    def define_identify(stream)
+      stream << %$
+        #{define} size_t #{identify}(const #{type}* self) {
+          size_t hash;
+          #{hasher.type} hasher;
+          assert(self);
+          #{hasher.create(:hasher)};
+      $
+      @fields.each {|field, element| stream << hasher.update(:hasher, element.identify("self->#{field}")) << ';'}
+      stream << %$
+          hash = #{hasher.result(:hasher)};
+          #{hasher.destroy(:hasher)};
+          return hash;
+        }
+      $
+    end
+
+  end # Hashable
 
 
   # @abstract
@@ -577,35 +649,19 @@ module AutoC
   #
   module Container::Hashable
 
-    extend Redirector
-
-    redirect :identify, 1
-
-    def hasher
-      AutoC::Hasher.default
-    end
+    include Hashable
 
     def initialize(*args, **kws)
-      kws[:deps] = (deps = kws[:deps]).nil? ? [hasher, range] : deps << hasher << range
       super(*args, **kws)
       @weak << range
-      raise TraitError, 'enclosing class must be a Container descendant' unless is_a?(Container)
+      dependencies << hasher << range
+      raise TraitError, 'including type must be a Container descendant' unless is_a?(Container)
       raise TraitError, 'container element must be hashable' unless element.hashable?
     end
 
-    def interface(stream)
-      super
-      stream << %$
-        #{declare} size_t #{identify}(const #{type}* self);
-      $
+    def hashable?
+      element.hashable?
     end
-
-    def definition(stream)
-      super
-      define_identify(stream)
-    end
-
-    private
 
     def define_identify(stream)
       stream << %$
@@ -630,7 +686,7 @@ module AutoC
   end # Hashable
 
 
-  #
+  # @abstract
   class AssociativeContainer < Container
 
     attr_reader :key

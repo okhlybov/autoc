@@ -20,7 +20,7 @@ module AutoC
     end
 
     def update(hasher, value)
-      "#{hasher} = ((#{hasher} << 1) | (#{hasher} >> (sizeof(#{hasher})*CHAR_BIT - 1))) ^ ((#{type})#{value})"
+      "#{hasher} = ((#{hasher} << 1) | (#{hasher} >> (sizeof(#{hasher})*CHAR_BIT - 1))) ^ (#{value})"
     end
 
     def result(hasher)
