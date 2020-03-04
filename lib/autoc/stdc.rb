@@ -33,6 +33,7 @@ module AutoC
     class COMPLEX_H < Primitive
       def comparable?; false end
       def dependencies; SET end
+      def identify(value) "(size_t)creal(#{value})^(size_t)cimag(#{value})" end
       SET = Set[Code.interface %$
         #include <complex.h>
       $].freeze
