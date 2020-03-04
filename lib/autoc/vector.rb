@@ -18,8 +18,6 @@ module AutoC
       AutoC::Allocator.default
     end
 
-    attr_reader :range
-
     # @note Vector has no default constructor regardless of the element type traits since it requires the size value.
     def default_constructible?
       false
@@ -29,6 +27,8 @@ module AutoC
     def custom_constructible?
       element.cloneable?
     end
+
+    attr_reader :range
 
     def initialize(type, element, prefix: nil, deps: [])
       super(type, element, prefix, deps << memory)
@@ -254,7 +254,7 @@ module AutoC
           assert(self);
           return #{get}(self, self->position);
         }
-      $ if @container.element.copyable?
+      $ if @container.element.cloneable?
     end
 
   end # Range

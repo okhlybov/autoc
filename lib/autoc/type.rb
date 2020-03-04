@@ -567,43 +567,42 @@ module AutoC
       #include <assert.h>
     $
 
-  end # Structure
+    #
+    module Hashable
 
+      include AutoC::Hashable
 
-  #
-  module Structure::Hashable
+      def initialize(*args, **kws)
+        super(*args, **kws)
+        raise TraitError, 'including type must be a Structure descendant' unless is_a?(Structure)
+        raise TraitError, 'structure has non-hashable field(s)' unless hashable?
+      end
 
-    include Hashable
+      def hashable?
+        @fields.each_value {|type| return false unless type.hashable?}
+        true
+      end
 
-    def initialize(*args, **kws)
-      super(*args, **kws)
-      raise TraitError, 'including type must be a Structure descendant' unless is_a?(Structure)
-      raise TraitError, 'structure has non-hashable field(s)' unless hashable?
-    end
-
-    def hashable?
-      @fields.each_value {|type| return false unless type.hashable?}
-      true
-    end
-
-    def define_identify(stream)
-      stream << %$
+      def define_identify(stream)
+        stream << %$
         #{define} size_t #{identify}(const #{type}* self) {
           size_t hash;
           #{hasher.type} hasher;
           assert(self);
           #{hasher.create(:hasher)};
       $
-      @fields.each {|field, element| stream << hasher.update(:hasher, element.identify("self->#{field}")) << ';'}
-      stream << %$
+        @fields.each {|field, element| stream << hasher.update(:hasher, element.identify("self->#{field}")) << ';'}
+        stream << %$
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};
           return hash;
         }
       $
-    end
+      end
 
-  end # Hashable
+    end # Hashable
+
+  end # Structure
 
 
   # @abstract
@@ -629,8 +628,8 @@ module AutoC
       true
     end
 
-    def copyable?
-      element.copyable?
+    def cloneable?
+      element.cloneable?
     end
 
     def equality_testable?
@@ -643,29 +642,26 @@ module AutoC
       #include <malloc.h>
     $
 
-  end # Container
+    #
+    module Hashable
 
+      include AutoC::Hashable
 
-  #
-  module Container::Hashable
+      def initialize(*args, **kws)
+        super(*args, **kws)
+        @weak << range
+        dependencies << hasher << range
+        raise TraitError, 'including type must be a Container descendant' unless is_a?(Container)
+        raise TraitError, 'container element must be hashable' unless element.hashable?
+      end
 
-    include Hashable
+      def hashable?
+        element.hashable?
+      end
 
-    def initialize(*args, **kws)
-      super(*args, **kws)
-      @weak << range
-      dependencies << hasher << range
-      raise TraitError, 'including type must be a Container descendant' unless is_a?(Container)
-      raise TraitError, 'container element must be hashable' unless element.hashable?
-    end
-
-    def hashable?
-      element.hashable?
-    end
-
-    def define_identify(stream)
-      stream << %$
-      #{define} size_t #{identify}(const #{type}* self) {
+      def define_identify(stream)
+        stream << %$
+        #{define} size_t #{identify}(const #{type}* self) {
           #{hasher.type} hasher;
           #{range.type} range;
           size_t hash;
@@ -681,9 +677,11 @@ module AutoC
           return hash;
         }
       $
-    end
+      end
 
-  end # Hashable
+    end # Hashable
+
+  end # Container
 
 
   # @abstract

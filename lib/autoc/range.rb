@@ -8,11 +8,8 @@ module AutoC
 
     def initialize(container, prefix, deps)
       @container = Type.coerce(container)
-      super(nil, prefix, deps << @container)
-    end
-
-    def type
-      @type ||= "#{@container.type}Range"
+      super("#{@container.type}Range", prefix, deps)
+      self.dependencies << @container
     end
 
     redirect :create, 1
@@ -53,7 +50,7 @@ module AutoC
         #{declare} void #{popFront}(#{type}* self);
         #{declare} const #{@container.element.type}* #{frontView}(const #{type}* self);
       $
-      stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.copyable?
+      stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.cloneable?
     end
 
   end # Input
@@ -82,7 +79,7 @@ module AutoC
         #{declare} void #{popBack}(#{type}* self);
         #{declare} const #{@container.element.type}* #{backView}(const #{type}* self);
       $
-      stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.copyable?
+      stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.cloneable?
     end
 
   end # Bidirectional
@@ -98,7 +95,7 @@ module AutoC
         #{declare} size_t #{size}(const #{type}* self);
         #{declare} const #{@container.element.type}* #{view}(const #{type}* self, size_t index);
       $
-      stream << "#{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);" if @container.element.copyable?
+      stream << "#{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);" if @container.element.cloneable?
     end
 
   end # RandomAccess
