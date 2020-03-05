@@ -4,6 +4,7 @@ require 'autoc/type'
 module AutoC
 
 
+  # @abstract
   class Range < Composite
 
     def initialize(container, prefix, deps)

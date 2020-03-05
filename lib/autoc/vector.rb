@@ -102,7 +102,7 @@ module AutoC
       $
       stream << %${
           size_t index, size = #{size}(self);
-          for(index = 0; index < size; ++index) #{element.destroy("self->elements[index]")};
+          for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
       }$ if element.destructible?
       stream << %$
           #{memory.free('self->elements')};
