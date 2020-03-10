@@ -200,19 +200,19 @@ module AutoC
     end
 
     def custom_create(value, init)
-      "(#{value}) = (#{init})"
+      "(#{value} = #{init})"
     end
 
     def clone(value, origin)
-      "(#{value}) = (#{origin})"
+      "(#{value} = #{origin})"
     end
 
     def equal(value, other)
-      "(#{value}) == (#{other})"
+      "(#{value} == #{other})"
     end
 
     def less(value, other)
-      "(#{value}) < (#{other})"
+      "(#{value} < #{other})"
     end
 
     def identify(value)

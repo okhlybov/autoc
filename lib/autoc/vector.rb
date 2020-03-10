@@ -12,7 +12,7 @@ module AutoC
     include ConstructibleAdapter
 
     %i(destroy).each {|s| redirect(s, 1)}
-    %i(copy equal).each {|s| redirect(s, 2)}
+    %i(clone equal).each {|s| redirect(s, 2)}
 
     def memory
       AutoC::Allocator.default
@@ -70,7 +70,7 @@ module AutoC
       $ if element.default_constructible?
       stream << %$
         #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size, const #{element.type} element);
-        #{declare} #{type}* #{copy}(#{type}* self, const #{type}* origin);
+        #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
         #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
           #{element.type} value;
           const #{element.type}* p = #{view(:self, :index)};
@@ -152,7 +152,7 @@ module AutoC
           }
           return self;
         }
-        #{define} #{type}* #{copy}(#{type}* self, const #{type}* origin) {
+        #{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) {
           size_t index, size;
           assert(self);
           assert(origin);
