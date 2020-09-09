@@ -91,9 +91,11 @@ module AutoC
       stream << %$
         #{static} void #{allocate}(#{type}* self, size_t element_count) {
           assert(self);
-          assert(element_count > 0);
-          self->element_count = element_count;
-          self->elements = #{memory.allocate(element.type)}; assert(self->elements);
+          if((self->element_count = element_count) > 0) {
+            self->elements = #{memory.allocate(element.type)}; assert(self->elements);
+          } else {
+            self->elements = NULL;
+          }
         }
       $
       stream << %$
