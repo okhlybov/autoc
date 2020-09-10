@@ -18,29 +18,26 @@ module AutoC
       AutoC::Allocator.default
     end
 
-    # @note Vector has no default constructor regardless of the element type traits since it requires the size value.
+    # @note Vector is default constructible regardless of the element's traits since zero-size instance is allowed.
     def default_constructible?
-      false
+      true
     end
 
-    # @note Vector itself has custom constructor only if the element type has copy constructor defined.
+    # @note Vector itself has custom constructor only if the element type has default constructor defined.
     def custom_constructible?
-      element.cloneable?
+      element.default_constructible?
     end
 
     attr_reader :range
 
     def initialize(type, element, prefix: nil, deps: [])
       super(type, element, prefix, deps << memory)
-      raise TraitError, 'element type must have default constructor or copy constructor' unless self.element.default_constructible? || self.element.cloneable?
-      @default_create = self.element.default_constructible? ? :create : nil
-      @custom_create = if self.element.cloneable?
-        self.custom_create_params = [SIZE_T, self.element]
-        :createEx
-      else
-        nil
+      @default_create = :create0
+      if custom_constructible?
+        @custom_create = :create
+        self.custom_create_params = [STDC::SIZE_T]
       end
-      @range = Range.new(self)
+      @range = Range.new(self) # Range is not listed as vector's dependency since is is not used internally
     end
 
     def interface(stream)
@@ -62,14 +59,22 @@ module AutoC
           assert(#{within}(self, index));
           return &self->elements[index];
         }
+        #{inline} #{type}* #{send(@default_create)}(#{type}* self) {
+          assert(self);
+          self->element_count = 0;
+          self->elements = NULL;
+          return self;
+        }
         #{declare} #{type}* #{destroy}(#{type}* self);
       $
       stream << %$
-        #{declare} #{type}* #{send(@default_create)}(#{type}* self, size_t size);
+        #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size);
+      $ if custom_constructible?
+      stream << %$
         #{declare} void #{resize}(#{type}* self, size_t new_size);
       $ if element.default_constructible?
       stream << %$
-        #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size, const #{element.type} element);
+        #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
         #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
         #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
           #{element.type} value;
@@ -112,7 +117,7 @@ module AutoC
         }
       $
       stream << %$
-        #{define} #{type}* #{send(@default_create)}(#{type}* self, size_t size) {
+        #{define} #{type}* #{send(@custom_create)}(#{type}* self, size_t size) {
           size_t index;
           assert(self);
           #{allocate}(self, size);
@@ -121,6 +126,8 @@ module AutoC
           }
           return self;
         }
+      $ if custom_constructible?
+      stream << %$
         #{define} void #{resize}(#{type}* self, size_t new_size) {
           size_t index, size, from, to;
           assert(self);
@@ -145,7 +152,7 @@ module AutoC
         }
       $ if element.default_constructible?
       stream << %$
-        #{define} #{type}* #{send(@custom_create)}(#{type}* self, size_t size, const #{element.type} value) {
+        #{define} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value) {
           size_t index;
           assert(self);
           #{allocate}(self, size);
