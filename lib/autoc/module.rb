@@ -242,25 +242,24 @@ module AutoC
 
     include Comparable
 
-    #
+    # Return a set of immediate dependencies of self.
     def dependencies
       EMPTY_SET
     end
 
-    #
+    # Return a set of all entities including self and transient dependencies.
     def total_entities
       @total_entities ||= begin
-        set = Set[self]
-        merge_total_dependencies(set).freeze
+        merge_total_dependencies(Set[self]).freeze
       end
     end
 
-    #
+    # Merge a set of all entities including self as well as self's transient dependencies into specified set.
     def merge_total_dependencies(set)
       dependencies.each do |d|
         unless set.include?(d)
-          d.merge_total_dependencies(set)
           set << d
+          d.merge_total_dependencies(set)
         end
       end
       set
