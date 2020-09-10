@@ -11,6 +11,8 @@ module AutoC
     %i(create destroy).each {|s| redirect(s, 1)}
     %i(clone equal).each {|s| redirect(s, 2)}
 
+    alias default_create create
+
     def memory
       AutoC::Allocator.default
     end
