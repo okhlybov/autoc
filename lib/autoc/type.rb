@@ -234,6 +234,7 @@ module AutoC
         function + '(' + args.join(',') + ')' # Emit normal function call with supplied arguments
       end
     end
+    # @abstract
     def decorate_method(symbol) end; remove_method :decorate_method
   end # MethodSynthesizer
 
@@ -357,7 +358,8 @@ module AutoC
                       false
                     end
       function = prefix + method[0,1].capitalize + method[1..-1] # Ruby 1.8 compatible
-      underscored ? "#{$1}#{function}" : function # Preserve the leading underscore(s)
+      # Carry over the method name's leading underscore only if the prefix is not in turn underscored
+      underscored && !(prefix[0] == '_') ? "#{$1}#{function}" : function
     end
 
     def inline; :AUTOC_INLINE end
@@ -455,7 +457,7 @@ module AutoC
       equality_testable? && !@calls[:identify].nil?
     end
 
-    NEW_LINE = "\n"
+    NEW_LINE = "\n".freeze
 
     def interface(stream)
       stream << NEW_LINE << @interface << NEW_LINE unless @interface.nil?
