@@ -92,6 +92,12 @@ module AutoC
       $ if element.cloneable?
       stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
+      stream << %$
+        #{declare} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element);
+        #{inline} int #{contains}(const #{type}* self, #{element.type} element) {
+          return #{_findView}(self, element) != NULL;
+        }
+      $ if element.equality_testable?
     end
 
     def definition(stream)
@@ -129,6 +135,16 @@ module AutoC
           } else return 0;
         }
       $ if equality_testable?
+      stream << %$
+        #{define} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element) {
+          #{range.type} r;
+          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
+            const #{element.type}* e = #{range.frontView}(&r);
+            if(#{element.equal('*e', :element)}) return e;
+          }
+          return NULL;
+        }
+      $ if element.equality_testable?
     end
   end # List
 
