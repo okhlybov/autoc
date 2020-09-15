@@ -37,18 +37,17 @@ type_test(AutoC::Vector, :IntVector, :int) do
     #{destroy}(&t2);
   $
 
-  # FIXME
   test :sort, %$
-    #{sortEx}(&t2, 0);
+    #{sort}(&t2, -1);
     /* 2,1,0 */
     TEST_FALSE( #{equal}(&t1, &t2) );
     TEST_EQUAL( #{get}(&t2, 0), 2 );
     TEST_EQUAL( #{get}(&t2, 1), 1 );
-    #{sortEx}(&t2, 1);
+    #{sort}(&t2, 1);
     /* 0,1,2 */
     TEST_TRUE( #{equal}(&t1, &t2) );
     TEST_EQUAL( #{get}(&t2, 0), 0 );
     TEST_EQUAL( #{get}(&t2, 1), 1 );
-  $ if false
+  $
 
 end

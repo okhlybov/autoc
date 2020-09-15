@@ -90,6 +90,7 @@ module AutoC
         }
       $ if element.cloneable?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
+      stream << "#{declare} void #{sort}(#{type}* self, int direction);" if element.comparable?
     end
 
     def definition(stream)
@@ -186,6 +187,28 @@ module AutoC
           } else return 0;
         }
       $ if equality_testable?
+      stream << %$
+        static int #{ascend}(void* lp_, void* rp_) {
+          #{element.type}* lp = (#{element.type}*)lp_;
+          #{element.type}* rp = (#{element.type}*)rp_;
+          if(#{element.equal('*lp', '*rp')}) {
+            return 0;
+          } else if(#{element.less('*lp', '*rp')}) {
+            return -1;
+          } else {
+            return +1;
+          }
+        }
+        static int #{descend}(void* lp_, void* rp_) {
+          return -#{ascend}(lp_, rp_);
+        }
+        #include <stdlib.h>
+        #{declare} void #{sort}(#{type}* self, int order) {
+          typedef int (*F)(const void*, const void*);
+          assert(self);
+          qsort(self->elements, #{size}(self), sizeof(#{element.type}), order > 0 ? (F)#{ascend} : (F)#{descend});
+        }
+      $ if element.comparable?
     end
 
   end # Vector
