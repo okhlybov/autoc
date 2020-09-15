@@ -97,7 +97,7 @@ module AutoC
         #{static} void #{allocate}(#{type}* self, size_t element_count) {
           assert(self);
           if((self->element_count = element_count) > 0) {
-            self->elements = #{memory.allocate(element.type)}; assert(self->elements);
+            self->elements = #{memory.allocate(element.type, :element_count)}; assert(self->elements);
           } else {
             self->elements = NULL;
           }
