@@ -26,8 +26,8 @@ module AutoC
       @weak << @range
     end
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct #{node} #{node};
         typedef struct #{type} #{type};
         struct #{type} {
@@ -71,7 +71,7 @@ module AutoC
           return &self->head_node->element;
         }
       $
-      stream << %$
+      @stream << %$
         #{inline} #{element.type} #{peek}(const #{type}* self) {
           #{element.type} result;
           const #{element.type}* e = #{view}(self);
@@ -90,9 +90,9 @@ module AutoC
           ++self->node_count;
         }
       $ if element.cloneable?
-      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
-      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
-      stream << %$
+      @stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
+      @stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
+      @stream << %$
         #{declare} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element);
         #{inline} int #{contains}(const #{type}* self, #{element.type} element) {
           return #{_findView}(self, element) != NULL;
@@ -100,8 +100,8 @@ module AutoC
       $ if element.equality_testable?
     end
 
-    def definition(stream)
-      stream << %$
+    def definitions
+      @stream << %$
         #{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) {
           #{range.type} r;
           #{node}* new_node;
@@ -122,7 +122,7 @@ module AutoC
           return self;
         }
       $ if cloneable?
-      stream << %$
+      @stream << %$
         #{define} int #{equal}(const #{type}* self, const #{type}* other) {
           if(#{size}(self) == #{size}(other)) {
             #{range.type} ra, rb;
@@ -135,7 +135,7 @@ module AutoC
           } else return 0;
         }
       $ if equality_testable?
-      stream << %$
+      @stream << %$
         #{define} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
@@ -156,14 +156,14 @@ module AutoC
       super(list, nil, [])
     end
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct {
           const #{@container.node}* node;
         } #{type};
       $
       super
-      stream << %$
+      @stream << %$
         #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
           assert(self);
           assert(container);
@@ -189,7 +189,7 @@ module AutoC
           return &self->node->element;
         }
       $
-      stream << %$
+      @stream << %$
         #{inline} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
           const #{@container.element.type}* e = #{frontView}(self);

@@ -27,8 +27,8 @@ module AutoC
       @weak << @range
     end
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct #{type} #{type};
         struct #{type} {
           #{@buckets.type} buckets;
@@ -46,15 +46,14 @@ module AutoC
         #define #{rehash}(self, capacity) #{_rehash}(self, capacity, 1)
         #{declare} void #{_rehash}(#{type}* self, size_t capacity, int live);
       $
-      stream << %$
+      @stream << %$
         #{declare} int #{put}(#{type}* self, #{element.type} element);
-
-      $ if element.cloneable? && element.hashable?
+      $ if element.cloneable?
       super
     end
 
-    def definition(stream)
-      stream << %$
+    def definitions
+      @stream << %$
         #{define} void #{_rehash}(#{type}* self, size_t capacity, int live) {
           #{type} origin = *self;
           assert(self);
@@ -80,7 +79,7 @@ module AutoC
           #{@buckets.destroy}(&self->buckets);
         }
       $
-      stream << %$
+      @stream << %$
         static #{@bucket.type}* #{_findBucket}(#{type}* self, #{element.type} element) {
           return (#{@bucket.type}*)#{@buckets.view}(&self->buckets, #{element.identify(:element)} % #{@buckets.size}(&self->buckets));
         }
@@ -94,7 +93,7 @@ module AutoC
           return 1;
         }
       }
-      $ if element.cloneable? && element.hashable?
+      $ if element.cloneable?
       # TODO equal()
       super
     end
@@ -109,15 +108,15 @@ module AutoC
       super(container, nil, [@bucket = bucket, @bucketsRange = buckets.range, @bucketRange = bucket.range])
     end
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct {
           #{@bucketsRange.type} buckets_range;
           #{@bucketRange.type} bucket_range;
         } #{type};
       $
       super
-      stream << %$
+      @stream << %$
         AUTOC_EXTERN void #{_bucketFF}(#{type}* self);
         #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
           assert(self);
@@ -146,7 +145,7 @@ module AutoC
           return #{@bucketRange.frontView}(&self->bucket_range);
         }
       $
-      stream << %$
+      @stream << %$
         #{inline} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
           const #{@container.element.type}* e = #{frontView}(self);
@@ -156,17 +155,15 @@ module AutoC
       $ if @container.element.cloneable?
     end
 
-    def definition(stream)
+    def definitions
       super
-      stream << %$
+      @stream << %$
         /* Fast forward to the next non-empty bucket if any */
         #{define} void #{_bucketFF}(#{type}* self) {
           assert(self);
           while(#{@bucket.empty}(#{@bucketsRange.frontView}(&self->buckets_range))) {
             #{@bucketsRange.popFront}(&self->buckets_range);
-            if(#{@bucketsRange.empty}(&self->buckets_range)) {
-              return;
-            }
+            if(#{@bucketsRange.empty}(&self->buckets_range)) return;
           }
           #{@bucketRange.create}(&self->bucket_range, #{@bucketsRange.frontView}(&self->buckets_range));
         }

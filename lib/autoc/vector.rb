@@ -40,8 +40,8 @@ module AutoC
       @range = Range.new(self) # Range is not listed as vector's dependency since is is not used internally
     end
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct {
           #{element.type}* elements;
           size_t element_count;
@@ -67,13 +67,13 @@ module AutoC
         }
         #{declare} #{type}* #{destroy}(#{type}* self);
       $
-      stream << %$
+      @stream << %$
         #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size);
       $ if custom_constructible?
-      stream << %$
+      @stream << %$
         #{declare} void #{resize}(#{type}* self, size_t new_size);
       $ if element.default_constructible?
-      stream << %$
+      @stream << %$
         #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
         #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
         #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
@@ -89,12 +89,12 @@ module AutoC
           #{element.clone('self->elements[index]', :value)};
         }
       $ if element.cloneable?
-      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
-      stream << "#{declare} void #{sort}(#{type}* self, int direction);" if element.comparable?
+      @stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
+      @stream << "#{declare} void #{sort}(#{type}* self, int direction);" if element.comparable?
     end
 
-    def definition(stream)
-      stream << %$
+    def definitions
+      @stream << %$
         #{static} void #{allocate}(#{type}* self, size_t element_count) {
           assert(self);
           if((self->element_count = element_count) > 0) {
@@ -104,20 +104,20 @@ module AutoC
           }
         }
       $
-      stream << %$
+      @stream << %$
         #{define} #{type}* #{destroy}(#{type}* self) {
           assert(self);
       $
-      stream << %${
+      @stream << %${
           size_t index, size = #{size}(self);
           for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
       }$ if element.destructible?
-      stream << %$
+      @stream << %$
           #{memory.free('self->elements')};
           return NULL;
         }
       $
-      stream << %$
+      @stream << %$
         #{define} #{type}* #{send(@custom_create)}(#{type}* self, size_t size) {
           size_t index;
           assert(self);
@@ -128,7 +128,7 @@ module AutoC
           return self;
         }
       $ if custom_constructible?
-      stream << %$
+      @stream << %$
         #{define} void #{resize}(#{type}* self, size_t new_size) {
           size_t index, size, from, to;
           assert(self);
@@ -152,7 +152,7 @@ module AutoC
           }
         }
       $ if element.default_constructible?
-      stream << %$
+      @stream << %$
         #{define} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value) {
           size_t index;
           assert(self);
@@ -174,7 +174,7 @@ module AutoC
           return self;
         }
       $ if element.cloneable?
-      stream << %$
+      @stream << %$
         #{define} int #{equal}(const #{type}* self, const #{type}* other) {
           size_t index, size;
           assert(self);
@@ -187,7 +187,7 @@ module AutoC
           } else return 0;
         }
       $ if equality_testable?
-      stream << %$
+      @stream << %$
         static int #{ascend}(void* lp_, void* rp_) {
           #{element.type}* lp = (#{element.type}*)lp_;
           #{element.type}* rp = (#{element.type}*)rp_;
@@ -222,15 +222,15 @@ module AutoC
 
     alias declare inline
 
-    def interface(stream)
-      stream << %$
+    def interface
+      @stream << %$
         typedef struct {
           const #{@container.type}* container;
           size_t position;
         } #{type};
       $
       super
-      stream << %$
+      @stream << %$
         #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
             assert(self);
             assert(container);
@@ -273,7 +273,7 @@ module AutoC
           return #{view}(self, self->position);
         }
       $
-      stream << %$
+      @stream << %$
         #{inline} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
             assert(self);
             return #{@container.get('self->container', :index)};

@@ -17,15 +17,15 @@ module AutoC
 
     attr_reader :name, :entities, :total_entities
 
-    attr_reader :interface, :declaration, :definition
+    attr_reader :interface, :declarations, :definitions
 
     def initialize(name, source_count: 0, size_threshold: 100*1024)
       @name = Module.c_id(name)
       @entities = Set.new
       @total_entities = Set.new
-      @interface = Render.new(:interface)
-      @declaration = Render.new(:declaration)
-      @definition = Render.new(:definition)
+      @interface = Render.new(:interface!)
+      @declarations = Render.new(:declarations!)
+      @definitions = Render.new(:definitions!)
       @source_count = source_count
       @threshold = size_threshold
       raise ArgumentError, 'source count must be a non-negative number' if @source_count.negative?
@@ -39,6 +39,12 @@ module AutoC
 
     attr_reader :header, :sources
 
+    def self.render!(name, &code)
+      m = self.new(name, source_count: 1)
+      yield(m)
+      m.render!
+    end
+
     def render!
       setup_header!
       setup_sources!
@@ -51,11 +57,11 @@ module AutoC
       size = 0
       total_entities = entities.dup
       entities.each do |e|
-        definition[e].each {|x| size += x.length}
+        definitions[e].each {|x| size += x.length}
         total_entities.merge(e.dependencies)
       end
       total_entities.each do |e|
-        declaration[e].each {|x| size += x.length}
+        declarations[e].each {|x| size += x.length}
       end
       size
     end
@@ -106,12 +112,7 @@ module AutoC
     end
 
     def [](entity)
-      if (x = @render[entity]).nil?
-        entity.send(@meth, x = [])
-        @render[entity] = x
-      else
-        x
-      end
+      (x = @render[entity]).nil? ? @render[entity] = entity.send(@meth, []) : x
     end
 
   end # Render
@@ -207,10 +208,10 @@ module AutoC
         total_entities = entities.dup
         entities.each {|e| total_entities.merge(e.dependencies)}
         total_entities.each do |e|
-          self.module.declaration[e].each {|x| stream << x}
+          self.module.declarations[e].each {|x| stream << x}
         end
         entities.each do |e|
-          self.module.definition[e].each {|x| stream << x}
+          self.module.definitions[e].each {|x| stream << x}
         end
         epilogue(stream)
       ensure
@@ -279,13 +280,34 @@ module AutoC
     end
 
     #
-    def interface(stream) end
+    def interface!(stream)
+      @stream = stream
+      interface
+      @stream
+    end
 
     #
-    def declaration(stream) end
+    def interface; end
 
     #
-    def definition(stream) end
+    def declarations!(stream)
+      @stream = stream
+      declarations
+      @stream
+    end
+
+    #
+    def declarations; end
+
+    #
+    def definitions!(stream)
+      @stream = stream
+      definitions
+      @stream
+    end
+
+    #
+    def definitions; end
 
   end # Entity
 
@@ -299,22 +321,22 @@ module AutoC
       Code.new(interface: s)
     end
 
-    def initialize(interface: nil, declaration: nil, definition: nil)
+    def initialize(interface: nil, declarations: nil, definitions: nil)
       @interface = interface
-      @declaration = declaration
-      @definition = definition
+      @declarations = declarations
+      @definitions = definitions
     end
 
-    def interface(stream)
-      stream << @interface unless @interface.nil?
+    def interface
+      @stream << @interface unless @interface.nil?
     end
 
-    def definition(stream)
-      stream << @definition unless @definition.nil?
+    def definitions
+      @stream << @definitions unless @definitions.nil?
     end
 
-    def declaration(stream)
-      stream << @declaration unless @declaration.nil?
+    def declarations
+      @stream << @declarations unless @declarations.nil?
     end
 
   end # Code
