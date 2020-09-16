@@ -362,13 +362,25 @@ module AutoC
       underscored && !(prefix[0] == '_') ? "#{$1}#{function}" : function
     end
 
-    def inline; :AUTOC_INLINE end
+    attr_reader :declare, :define
 
-    def static; :AUTOC_STATIC end
+    def interface!(stream)
+      @declare = :AUTOC_EXTERN
+      @define = :AUTOC_INLINE
+      super
+    end
 
-    def declare; :AUTOC_EXTERN end
+    def declarations!(stream)
+      @declare = :AUTOC_EXTERN
+      @define = :static
+      super
+    end
 
-    def define; end
+    def definitions!(stream)
+      @declare = :static
+      @define = nil
+      super
+    end
 
     CODE = Code.interface %$
       #ifndef AUTOC_INLINE

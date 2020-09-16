@@ -7,6 +7,11 @@ module AutoC
   # @abstract
   class Range < Composite
 
+    # Range's methods are assumed to be lightweight therefore are declared inline by default
+
+    def declare; :static end
+    def define; :AUTOC_INLINE end
+
     def initialize(container, prefix, deps)
       @container = Type.coerce(container)
       super("#{@container.type}Range", prefix, deps)
@@ -44,7 +49,7 @@ module AutoC
 
     %i(empty popFront front frontView).each {|s| redirect s, 1}
 
-    def interface
+      def interface
       super
       @stream << %$
         #{declare} int #{empty}(const #{type}* self);

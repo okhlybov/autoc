@@ -35,7 +35,7 @@ module AutoC
           size_t element_count, capacity;
           float overfill;
         };
-        #{inline} size_t #{size}(const #{type}* self) {
+        #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->element_count;
         }
@@ -118,7 +118,7 @@ module AutoC
       super
       @stream << %$
         AUTOC_EXTERN void #{_bucketFF}(#{type}* self);
-        #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
+        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
           assert(self);
           assert(container);
           #{@bucketsRange.create}(&self->buckets_range, &container->buckets);
@@ -126,11 +126,11 @@ module AutoC
           #{_bucketFF}(self);
           return self;
         }
-        #{inline} int #{empty}(const #{type}* self) {
+        #{define} int #{empty}(const #{type}* self) {
           assert(self);
           return #{@bucketRange.empty}(&self->bucket_range);
         }
-        #{inline} void #{popFront}(#{type}* self) {
+        #{define} void #{popFront}(#{type}* self) {
           /*assert(self);*/
           assert(!#{empty}(self));
           if(#{@bucketRange.empty}(&self->bucket_range)) {
@@ -139,14 +139,14 @@ module AutoC
             #{@bucketRange.popFront}(&self->bucket_range);
           }
         }
-        #{inline} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
           assert(self);
           assert(!#{@bucketRange.empty}(&self->bucket_range));
           return #{@bucketRange.frontView}(&self->bucket_range);
         }
       $
       @stream << %$
-        #{inline} #{@container.element.type} #{front}(const #{type}* self) {
+        #{define} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
           const #{@container.element.type}* e = #{frontView}(self);
           #{@container.element.clone(:result, '*e')};
@@ -159,7 +159,7 @@ module AutoC
       super
       @stream << %$
         /* Fast forward to the next non-empty bucket if any */
-        #{define} void #{_bucketFF}(#{type}* self) {
+        void #{_bucketFF}(#{type}* self) {
           assert(self);
           while(#{@bucket.empty}(#{@bucketsRange.frontView}(&self->buckets_range))) {
             #{@bucketsRange.popFront}(&self->buckets_range);

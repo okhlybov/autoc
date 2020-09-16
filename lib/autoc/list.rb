@@ -38,21 +38,21 @@ module AutoC
           #{element.type} element;
           #{node}* next_node;
         };
-        #{inline} size_t #{size}(const #{type}* self) {
+        #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->node_count;
         }
-        #{inline} int #{empty}(const #{type}* self) {
+        #{define} int #{empty}(const #{type}* self) {
           assert((self->node_count == 0) == (self->head_node == NULL));
           return #{size}(self) == 0;
         }
-        #{inline} #{type}* #{create}(#{type}* self) {
+        #{define} #{type}* #{create}(#{type}* self) {
           assert(self);
           self->head_node = NULL;
           self->node_count = 0;
           return self;
         }
-        #{inline} int #{remove}(#{type}* self) {
+        #{define} int #{remove}(#{type}* self) {
           if(!#{empty}(self)) {
             #{node}* this_node = self->head_node; assert(this_node);
             self->head_node = self->head_node->next_node;
@@ -62,27 +62,27 @@ module AutoC
             return 1;
           } else return 0;
         }
-        #{inline} #{type}* #{destroy}(#{type}* self) {
+        #{define} #{type}* #{destroy}(#{type}* self) {
           while(#{remove}(self));
           return NULL;
         }
-        #{inline} const #{element.type}* #{view}(const #{type}* self) {
+        #{define} const #{element.type}* #{view}(const #{type}* self) {
           assert(!#{empty}(self));
           return &self->head_node->element;
         }
       $
       @stream << %$
-        #{inline} #{element.type} #{peek}(const #{type}* self) {
+        #{define} #{element.type} #{peek}(const #{type}* self) {
           #{element.type} result;
           const #{element.type}* e = #{view}(self);
           #{element.clone(:result, '*e')};
           return result;
         }
-        #{inline} #{element.type} #{pop}(#{type}* self) {
+        #{define} #{element.type} #{pop}(#{type}* self) {
           #{element.type} result = #{peek}(self);
           return result;
         }
-        #{inline} void #{push}(#{type}* self, #{element.type} value) {
+        #{define} void #{push}(#{type}* self, #{element.type} value) {
           #{node}* new_node = #{memory.allocate(node)};
           #{element.clone('new_node->element', :value)};
           new_node->next_node = self->head_node;
@@ -94,7 +94,7 @@ module AutoC
       @stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
       @stream << %$
         #{declare} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element);
-        #{inline} int #{contains}(const #{type}* self, #{element.type} element) {
+        #{define} int #{contains}(const #{type}* self, #{element.type} element) {
           return #{_findView}(self, element) != NULL;
         }
       $ if element.equality_testable?
@@ -150,8 +150,6 @@ module AutoC
 
   class List::Range < Range::Forward
 
-    alias declare inline
-
     def initialize(list)
       super(list, nil, [])
     end
@@ -164,33 +162,33 @@ module AutoC
       $
       super
       @stream << %$
-        #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
+        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
           assert(self);
           assert(container);
           self->node = container->head_node;
           return self;
         }
-        #{inline} int #{empty}(const #{type}* self) {
+        #{define} int #{empty}(const #{type}* self) {
           assert(self);
           return self->node == NULL;
         }
-        #{inline} #{type}* #{save}(#{type}* self, const #{type}* origin) {
+        #{define} #{type}* #{save}(#{type}* self, const #{type}* origin) {
           assert(self);
           assert(origin);
           *self = *origin;
           return self;
         }
-        #{inline} void #{popFront}(#{type}* self) {
+        #{define} void #{popFront}(#{type}* self) {
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        #{inline} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
           assert(!#{empty}(self));
           return &self->node->element;
         }
       $
       @stream << %$
-        #{inline} #{@container.element.type} #{front}(const #{type}* self) {
+        #{define} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
           const #{@container.element.type}* e = #{frontView}(self);
           #{@container.element.clone(:result, '*e')};

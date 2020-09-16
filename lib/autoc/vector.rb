@@ -46,20 +46,20 @@ module AutoC
           #{element.type}* elements;
           size_t element_count;
         } #{type};
-        #{inline} size_t #{size}(const #{type}* self) {
+        #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->element_count;
         }
-        #{inline} int #{within}(const #{type}* self, size_t index) {
+        #{define} int #{within}(const #{type}* self, size_t index) {
           assert(self);
           return index < #{size}(self);
         }
-        #{inline} const #{element.type}* #{view}(const #{type}* self, size_t index) {
+        #{define} const #{element.type}* #{view}(const #{type}* self, size_t index) {
           assert(self);
           assert(#{within}(self, index));
           return &self->elements[index];
         }
-        #{inline} #{type}* #{send(@default_create)}(#{type}* self) {
+        #{define} #{type}* #{send(@default_create)}(#{type}* self) {
           assert(self);
           self->element_count = 0;
           self->elements = NULL;
@@ -76,13 +76,13 @@ module AutoC
       @stream << %$
         #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
         #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
-        #{inline} #{element.type} #{get}(const #{type}* self, size_t index) {
+        #{define} #{element.type} #{get}(const #{type}* self, size_t index) {
           #{element.type} value;
           const #{element.type}* p = #{view(:self, :index)};
           #{element.clone(:value, '*p')};
           return value;
         }
-        #{inline} void #{set}(#{type}* self, size_t index, #{element.type} value) {
+        #{define} void #{set}(#{type}* self, size_t index, #{element.type} value) {
           assert(self);
           assert(#{within}(self, index));
           #{element.destroy('self->elements[index]') if element.destructible?};
@@ -95,7 +95,7 @@ module AutoC
 
     def definitions
       @stream << %$
-        #{static} void #{allocate}(#{type}* self, size_t element_count) {
+        static void #{allocate}(#{type}* self, size_t element_count) {
           assert(self);
           if((self->element_count = element_count) > 0) {
             self->elements = #{memory.allocate(element.type, :element_count)}; assert(self->elements);
@@ -108,10 +108,10 @@ module AutoC
         #{define} #{type}* #{destroy}(#{type}* self) {
           assert(self);
       $
-      @stream << %${
-          size_t index, size = #{size}(self);
-          for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
-      }$ if element.destructible?
+        @stream << %${
+            size_t index, size = #{size}(self);
+            for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
+        }$ if element.destructible?
       @stream << %$
           #{memory.free('self->elements')};
           return NULL;
@@ -203,7 +203,7 @@ module AutoC
           return -#{ascend}(lp_, rp_);
         }
         #include <stdlib.h>
-        #{declare} void #{sort}(#{type}* self, int order) {
+        #{define} void #{sort}(#{type}* self, int order) {
           typedef int (*F)(const void*, const void*);
           assert(self);
           qsort(self->elements, #{size}(self), sizeof(#{element.type}), order > 0 ? (F)#{ascend} : (F)#{descend});
@@ -220,8 +220,6 @@ module AutoC
       super(vector, nil, [])
     end
 
-    alias declare inline
-
     def interface
       @stream << %$
         typedef struct {
@@ -231,58 +229,58 @@ module AutoC
       $
       super
       @stream << %$
-        #{inline} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
+        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
             assert(self);
             assert(container);
             self->container = container;
             self->position = 0;
             return self;
         }
-        #{inline} #{type}* #{save}(#{type}* self, const #{type}* origin) {
+        #{define} #{type}* #{save}(#{type}* self, const #{type}* origin) {
           assert(self);
           assert(origin);
           *self = *origin;
           return self;
         }
-        #{inline} size_t #{size}(const #{type}* self) {
+        #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return #{@container.size('self->container')};
         }
-        #{inline} const #{@container.element.type}* #{view}(const #{type}* self, size_t index) {
+        #{define} const #{@container.element.type}* #{view}(const #{type}* self, size_t index) {
           assert(self);
           return #{@container.view('self->container', :index)};
         }
-        #{inline} int #{empty}(const #{type}* self) {
+        #{define} int #{empty}(const #{type}* self) {
           assert(self);
           return !#{@container.within('self->container', 'self->position')};
         }
-        #{inline} void #{popFront}(#{type}* self) {
+        #{define} void #{popFront}(#{type}* self) {
           assert(self);
           ++self->position;
         }
-        #{inline} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
           assert(self);
           return #{view}(self, self->position);
         }
-        #{inline} void #{popBack}(#{type}* self) {
+        #{define} void #{popBack}(#{type}* self) {
           assert(self);
           --self->position;
         }
-        #{inline} const #{@container.element.type}* #{backView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{backView}(const #{type}* self) {
           assert(self);
           return #{view}(self, self->position);
         }
       $
       @stream << %$
-        #{inline} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
+        #{define} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
             assert(self);
             return #{@container.get('self->container', :index)};
         }
-        #{inline} #{@container.element.type} #{front}(const #{type}* self) {
+        #{define} #{@container.element.type} #{front}(const #{type}* self) {
           assert(self);
           return #{get}(self, self->position);
         }
-        #{inline} #{@container.element.type} #{back}(const #{type}* self) {
+        #{define} #{@container.element.type} #{back}(const #{type}* self) {
           assert(self);
           return #{get}(self, self->position);
         }

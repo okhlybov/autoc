@@ -100,12 +100,12 @@ module AutoC
       super
       @stream << %$
         typedef #{@value.type}* #{_p};
-        #{inline} #{_p} #{new}(#{@value.create_params_declare}) {
+        #{define} #{_p} #{new}(#{@value.create_params_declare}) {
           #{_p} p = #{memory.allocate(@value.type)}; assert(p);
           #{@value.create(*(['*p'] + @value.create_params_pass_list))};
           return p;
         }
-        #{inline} #{_p} #{free}(#{_p} p) {
+        #{define} #{_p} #{free}(#{_p} p) {
           assert(p);
           #{@value.destroy('*p') if @value.destructible?};
           #{memory.free(:p)};
@@ -158,18 +158,18 @@ module AutoC
           #{@value.type} value;
           unsigned count;
         } #{_s};
-        #{inline} #{_p} #{new}(#{@value.create_params_declare}) {
+        #{define} #{_p} #{new}(#{@value.create_params_declare}) {
           #{_s}* p = #{memory.allocate(_s)}; assert(p);
           #{@value.create(*(['p->value'] + @value.create_params_pass_list))};
           p->count = 1;
           return (#{_p})p;
         }
-        #{inline} #{_p} #{ref}(#{_p} p) {
+        #{define} #{_p} #{ref}(#{_p} p) {
           assert(p);
           ++((#{_s}*)p)->count;
           return p;
         }
-        #{inline} #{_p} #{unref}(#{_p} p) {
+        #{define} #{_p} #{unref}(#{_p} p) {
           assert(p);
           if(--((#{_s}*)p)->count == 0) {
             #{@value.destroy('*p') if @value.destructible?};
