@@ -141,7 +141,7 @@ module AutoC
           size_t index, size, from, to;
           assert(self);
           if((size = #{size}(self)) != new_size) {
-            #{element.type}* elements = #{memory.allocate(element.type)}; assert(elements);
+            #{element.type}* elements = #{memory.allocate(element.type, :new_size)}; assert(elements);
             from = AUTOC_MIN(size, new_size);
             to = AUTOC_MAX(size, new_size);
             for(index = 0; index < from; ++index) {
