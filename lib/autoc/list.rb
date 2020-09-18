@@ -59,7 +59,7 @@ module AutoC
           self->node_count = 0;
           return self;
         }
-        #{define} int #{remove}(#{type}* self) {
+        #{define} int #{drop}(#{type}* self) {
           if(!#{empty}(self)) {
             #{node}* this_node = self->head_node; assert(this_node);
             self->head_node = self->head_node->next_node;
@@ -70,7 +70,7 @@ module AutoC
           } else return 0;
         }
         #{define} #{type}* #{destroy}(#{type}* self) {
-          while(#{remove}(self));
+          while(#{drop}(self));
           return NULL;
         }
         #{define} const #{element.type}* #{view}(const #{type}* self) {
@@ -91,7 +91,7 @@ module AutoC
           #{element.type} result;
           assert(!#{empty}(self));
           result = #{peek}(self);
-          #{remove}(self);
+          #{drop}(self);
           return result;
         }
         #{define} void #{push}(#{type}* self, const #{element.type} value) {
@@ -103,10 +103,11 @@ module AutoC
         }
       $ if element.cloneable?
       stream << %$
-        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value);
-        #{define} int contains(const #{type}* self, const #{element.type} value) {
-          return #{findView}(self, value) != NULL;
+        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} what);
+        #{define} int contains(const #{type}* self, const #{element.type} what) {
+          return #{findView}(self, what) != NULL;
         }
+        #{declare} int #{remove}(#{type}* self, const #{element.type} what);
       $ if element.equality_testable?
       stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
       stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
@@ -149,13 +150,40 @@ module AutoC
         }
       $ if equality_testable?
       stream << %$
-        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value) {
+        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} what) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
             const #{element.type}* e = #{range.frontView}(&r);
-            if(#{element.equal('*e', :value)}) return e;
+            if(#{element.equal('*e', :what)}) return e;
           }
           return NULL;
+        }
+        #{define} int #{remove}(#{type}* self, const #{element.type} what) {
+          #{node} *node, *prev_node;
+          int removed = 0;
+          assert(self);
+          node = self->head_node;
+          prev_node = NULL;
+          while(node) {
+            if(#{element.equal('node->element', :what)}) {
+              #{node}* this_node;
+              if(prev_node) {
+                this_node = prev_node->next_node = node->next_node;
+              } else {
+                this_node = self->head_node = node->next_node;
+              }
+              removed = 1;
+              --self->node_count;
+              #{element.destroy('node->element') if element.destructible?};
+              #{memory.free(:node)};
+              node = this_node;
+              if(removed) break;
+            } else {
+              prev_node = node;
+              node = node->next_node;
+            }
+          }
+          return removed;
         }
       $ if element.equality_testable?
     end
