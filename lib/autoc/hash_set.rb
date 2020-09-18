@@ -71,6 +71,7 @@ module AutoC
           return #{findView}(self, value) != NULL;
         }
         #{declare} int #{subsetOf}(const #{type}* self, const #{type}* other);
+        #{declare} int #{remove}(#{type}* self, const #{element.type} what);
       $ if element.equality_testable?
       stream << %$
         #{define} int #{equal}(const #{type}* self, const #{type}* other) {
@@ -137,6 +138,10 @@ module AutoC
             if(!#{contains}(other, *#{range.frontView}(&r))) return 0;
           }
           return 1;
+        }
+        #{define} int #{remove}(#{type}* self, const #{element.type} what) {
+          assert(self);
+          return #{@bucket.remove}(#{findBucket}(self, what), what);
         }
       $ if element.equality_testable?
     end
