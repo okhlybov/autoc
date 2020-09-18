@@ -310,17 +310,17 @@ module AutoC
       dependencies << hasher
     end
 
-    def interface
+    def interface(stream)
       super
-      interface_identify(@stream)
+      interface_identify(stream)
     end
 
-    def definitions
+    def definitions(stream)
       super
-      define_identify(@stream)
+      define_identify(stream)
     end
 
-    def interface_identify(stream)
+    def interface(stream)_identify(stream)
       stream << "#{declare} size_t #{identify}(const #{type}* self);"
     end
 
@@ -364,22 +364,25 @@ module AutoC
 
     attr_reader :declare, :define
 
-    def interface!(stream)
+    def interface(stream)
       @declare = :AUTOC_EXTERN
       @define = :AUTOC_INLINE
-      super
+      interface_declarations(stream)
+      interface_definitions(stream)
     end
 
-    def declarations!(stream)
+    def interface_definitions(stream) end
+
+    def interface_declarations(stream) end
+
+    def declarations(stream)
       @declare = :AUTOC_EXTERN
       @define = :static
-      super
     end
 
-    def definitions!(stream)
+    def definitions(stream)
       @declare = :static
       @define = nil
-      super
     end
 
     CODE = Code.interface %$
@@ -471,16 +474,19 @@ module AutoC
 
     NEW_LINE = "\n".freeze
 
-    def interface
-      @stream << NEW_LINE << @interface << NEW_LINE unless @interface.nil?
+    def interface(stream)
+      super
+      stream << NEW_LINE << @interface << NEW_LINE unless @interface.nil?
     end
 
-    def declarations
-      @stream << NEW_LINE << @declarations << NEW_LINE unless @declarations.nil?
+    def declarations(stream)
+      super
+      stream << NEW_LINE << @declarations << NEW_LINE unless @declarations.nil?
     end
 
-    def definitions
-      @stream << NEW_LINE << @definitions << NEW_LINE unless @definitions.nil?
+    def definitions(stream)
+      super
+      stream << NEW_LINE << @definitions << NEW_LINE unless @definitions.nil?
     end
 
     def decorate_method(symbol)
@@ -535,45 +541,45 @@ module AutoC
       false
     end
 
-    def interface
-      @stream << "typedef struct #{type} #{type}; struct #{type} {"
-        @fields.each {|field, element| @stream << "#{element.type} #{field};"}
-      @stream << '};'
+    def interface(stream)
+      stream << "typedef struct #{type} #{type}; struct #{type} {"
+        @fields.each {|field, element| stream << "#{element.type} #{field};"}
+      stream << '};'
       #
-      @stream << "#{declare} #{type}* #{send(@default_create)}(#{type}* self);" if default_constructible?
-      @stream << "#{declare} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare});" if custom_constructible?
-      @stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
-      @stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
-      @stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
+      stream << "#{declare} #{type}* #{send(@default_create)}(#{type}* self);" if default_constructible?
+      stream << "#{declare} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare});" if custom_constructible?
+      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
+      stream << "#{declare} void #{destroy}(#{type}* self);" if destructible?
+      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
-    def definitions
+    def definitions(stream)
       if default_constructible?
-        @stream << "#{define} #{type}* #{send(@default_create)}(#{type}* self) { assert(self);"
-          @fields.each {|field, element| @stream << element.default_create("self->#{field}") << ';'}
-        @stream << 'return self;}'
+        stream << "#{define} #{type}* #{send(@default_create)}(#{type}* self) { assert(self);"
+          @fields.each {|field, element| stream << element.default_create("self->#{field}") << ';'}
+        stream << 'return self;}'
       end
       if custom_constructible?
-        @stream << "#{define} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
+        stream << "#{define} #{type}* #{send(@custom_create)}(#{type}* self, #{custom_create_params.declare}) { assert(self);"
         list = custom_create_params.pass_list
-        i = -1; @fields.each {|field, element| @stream << element.clone("self->#{field}", list[i+=1]) << ';'}
-        @stream << 'return self;}'
+        i = -1; @fields.each {|field, element| stream << element.clone("self->#{field}", list[i+=1]) << ';'}
+        stream << 'return self;}'
       end
       if cloneable?
-        @stream << "#{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
-          @fields.each {|field, element| @stream << element.clone("self->#{field}", "origin->#{field}") << ';'}
-        @stream << 'return self;}'
+        stream << "#{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) { assert(self); assert(origin);"
+          @fields.each {|field, element| stream << element.clone("self->#{field}", "origin->#{field}") << ';'}
+        stream << 'return self;}'
       end
       if destructible?
-        @stream << "#{define} void #{destroy}(#{type}* self) { assert(self);"
-          @fields.each {|field, element| @stream << element.destroy("self->#{field}") << ';' if element.destructible?}
-        @stream << '}'
+        stream << "#{define} void #{destroy}(#{type}* self) { assert(self);"
+          @fields.each {|field, element| stream << element.destroy("self->#{field}") << ';' if element.destructible?}
+        stream << '}'
       end
       if equality_testable?
-        @stream << "#{define} int #{equal}(const #{type}* self, const #{type}* other) { assert(self); assert(other);"
+        stream << "#{define} int #{equal}(const #{type}* self, const #{type}* other) { assert(self); assert(other);"
         xs = []; @fields.each {|field, element| xs << element.equal("self->#{field}", "other->#{field}")}
         s = ['self == other', "(#{xs.join(' && ')})"].join(' || ')
-        @stream << "return #{s};}"
+        stream << "return #{s};}"
       end
     end
 

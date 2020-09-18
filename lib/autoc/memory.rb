@@ -24,8 +24,8 @@ module AutoC
       "free(#{ptr})"
     end
 
-    def interface
-      @stream << %$
+    def interface(stream)
+      stream << %$
         #include <malloc.h>
       $
     end
@@ -49,8 +49,8 @@ module AutoC
 
     def free(ptr) end
 
-    def interface
-      @stream << %$
+    def interface(stream)
+      stream << %$
         #include <gc.h>
       $
     end
@@ -78,8 +78,8 @@ module AutoC
       @value.create_params
     end
 
-    def interface
-      @stream << %$
+    def interface(stream)
+      stream << %$
         #include <assert.h>
       $
     end
@@ -96,9 +96,9 @@ module AutoC
       "(#{value}) = #{free(value)}"
     end
 
-    def interface
+    def interface(stream)
       super
-      @stream << %$
+      stream << %$
         typedef #{@value.type}* #{_p};
         #{define} #{_p} #{new}(#{@value.create_params_declare}) {
           #{_p} p = #{memory.allocate(@value.type)}; assert(p);
@@ -150,9 +150,9 @@ module AutoC
       @value.hashable?
     end
 
-    def interface
+    def interface(stream)
       super
-      @stream << %$
+      stream << %$
         typedef #{@value.type}* #{_p};
         typedef struct {
           #{@value.type} value;

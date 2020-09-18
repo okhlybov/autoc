@@ -52,23 +52,24 @@ def type_test(cls, *opts, &code)
         }
       ~
     end
-    def declarations
-      @stream << "void #{runTests}(void);"
-    end
-    def definitions
+    def declarations(stream)
       super
-      @tests.each {|f| @stream << f}
-      @stream << %~void #{runTests}(void) {~
-      @stream << %~
+      stream << "void #{runTests}(void);"
+    end
+    def definitions(stream)
+      super
+      @tests.each {|f| stream << f}
+      stream << %~void #{runTests}(void) {~
+      stream << %~
           fprintf(stdout, "* %s\\n", "#{type}");
           fflush(stdout);
         ~
         @test_names.each do |name, func_name|
-          @stream << %~
+          stream << %~
             run_test("#{name}", #{func_name});
           ~
         end
-      @stream << %~
+      stream << %~
         fputs("\\n", stdout); fflush(stdout);}
       ~
     end
@@ -85,8 +86,8 @@ class TestSuite
 
   include AutoC::Module::Entity
 
-  def interface
-    @stream << %$
+  def interface(stream)
+    stream << %$
       #include <stdio.h>
       struct {
         int total, processed, failed;
@@ -131,17 +132,17 @@ class TestSuite
     $
   end
 
-  def definitions
+  def definitions(stream)
     total = 0
     $tests.each {|t| total += t.tests.size}
-    @stream << "int main(int argc, char** argv) {"
-    @stream << %$
+    stream << "int main(int argc, char** argv) {"
+    stream << %$
       tests.total = #{total};
       tests.processed = tests.failed = 0;
     $
-    $tests.each {|t| t.write_test_calls(@stream)}
-    @stream << "print_summary();"
-    @stream << "return tests.failed > 0;}"
+    $tests.each {|t| t.write_test_calls(stream)}
+    stream << "print_summary();"
+    stream << "return tests.failed > 0;}"
   end
 end
 

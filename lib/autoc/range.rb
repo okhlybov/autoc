@@ -20,26 +20,11 @@ module AutoC
 
     redirect :create, 1
 
-    def interface
-      @stream << %$
+    def interface_definitions(stream)
+      super
+      stream << %$
         #{declare} #{type}* #{create}(#{type}* self, const #{@container.type}* iterable);
       $
-    end
-
-    def input?
-      is_a?(Input)
-    end
-
-    def forward?
-      is_a?(Forward)
-    end
-
-    def bidirectional?
-      is_a?(Bidirectional)
-    end
-
-    def random_access?
-      is_a?(RandomAccess)
     end
 
   end # Range
@@ -49,14 +34,14 @@ module AutoC
 
     %i(empty popFront front frontView).each {|s| redirect s, 1}
 
-      def interface
+    def interface_definitions(stream)
       super
-      @stream << %$
+      stream << %$
         #{declare} int #{empty}(const #{type}* self);
         #{declare} void #{popFront}(#{type}* self);
         #{declare} const #{@container.element.type}* #{frontView}(const #{type}* self);
       $
-      @stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.cloneable?
+      stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.cloneable?
     end
 
   end # Input
@@ -66,9 +51,9 @@ module AutoC
 
     redirect :save, 2
 
-    def interface
+    def interface_definitions(stream)
       super
-      @stream << %$
+      stream << %$
         #{declare} #{type}* #{save}(#{type}* self, const #{type}* origin);
       $
     end
@@ -79,13 +64,13 @@ module AutoC
 
     %i(popBack back backView).each {|s| redirect s, 1}
 
-    def interface
+    def interface_definitions(stream)
       super
-      @stream << %$
+      stream << %$
         #{declare} void #{popBack}(#{type}* self);
         #{declare} const #{@container.element.type}* #{backView}(const #{type}* self);
       $
-      @stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.cloneable?
+      stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.cloneable?
     end
 
   end # Bidirectional
@@ -95,13 +80,13 @@ module AutoC
 
     %i(size get view).each {|s| redirect s, 1}
 
-    def interface
+    def interface_definitions(stream)
       super
-      @stream << %$
+      stream << %$
         #{declare} size_t #{size}(const #{type}* self);
         #{declare} const #{@container.element.type}* #{view}(const #{type}* self, size_t index);
       $
-      @stream << "#{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);" if @container.element.cloneable?
+      stream << "#{declare} #{@container.element.type} #{get}(const #{type}* self, size_t index);" if @container.element.cloneable?
     end
 
   end # RandomAccess

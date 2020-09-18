@@ -23,9 +23,9 @@ module AutoC
       @name = Module.c_id(name)
       @entities = Set.new
       @total_entities = Set.new
-      @interface = Render.new(:interface!)
-      @declarations = Render.new(:declarations!)
-      @definitions = Render.new(:definitions!)
+      @interface = Render.new(:interface)
+      @declarations = Render.new(:declarations)
+      @definitions = Render.new(:definitions)
       @source_count = source_count
       @threshold = size_threshold
       raise ArgumentError, 'source count must be a non-negative number' if @source_count.negative?
@@ -112,7 +112,8 @@ module AutoC
     end
 
     def [](entity)
-      (x = @render[entity]).nil? ? @render[entity] = entity.send(@meth, []) : x
+      entity.send(@meth, x = []) if (x = @render[entity]).nil?
+      @render[entity] = x
     end
 
   end # Render
@@ -280,34 +281,13 @@ module AutoC
     end
 
     #
-    def interface!(stream)
-      @stream = stream
-      interface
-      @stream
-    end
+    def interface(stream) end
 
     #
-    def interface; end
+    def declarations(stream)(stream) end
 
     #
-    def declarations!(stream)
-      @stream = stream
-      declarations
-      @stream
-    end
-
-    #
-    def declarations; end
-
-    #
-    def definitions!(stream)
-      @stream = stream
-      definitions
-      @stream
-    end
-
-    #
-    def definitions; end
+    def definitions(stream)(stream) end
 
   end # Entity
 
@@ -327,16 +307,19 @@ module AutoC
       @definitions = definitions
     end
 
-    def interface
-      @stream << @interface unless @interface.nil?
+    def interface(stream)
+      super
+      stream << @interface unless @interface.nil?
     end
 
-    def definitions
-      @stream << @definitions unless @definitions.nil?
+    def definitions(stream)
+      super
+      stream << @definitions unless @definitions.nil?
     end
 
-    def declarations
-      @stream << @declarations unless @declarations.nil?
+    def declarations(stream)
+      super
+      stream << @declarations unless @declarations.nil?
     end
 
   end # Code

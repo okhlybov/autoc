@@ -27,14 +27,21 @@ module AutoC
       @weak << @range
     end
 
-    def interface
-      @stream << %$
+    def interface_declarations(stream)
+      super
+      stream << %$
         typedef struct #{type} #{type};
         struct #{type} {
           #{@buckets.type} buckets;
           size_t element_count, capacity;
           float overfill;
         };
+      $
+    end
+
+    def interface_definitions(stream)
+      super
+      stream << %$
         #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->element_count;
@@ -46,14 +53,14 @@ module AutoC
         #define #{rehash}(self, capacity) #{_rehash}(self, capacity, 1)
         #{declare} void #{_rehash}(#{type}* self, size_t capacity, int live);
       $
-      @stream << %$
+      stream << %$
         #{declare} int #{put}(#{type}* self, #{element.type} element);
       $ if element.cloneable?
       super
     end
 
-    def definitions
-      @stream << %$
+    def definitions(stream)
+      stream << %$
         #{define} void #{_rehash}(#{type}* self, size_t capacity, int live) {
           #{type} origin = *self;
           assert(self);
@@ -79,7 +86,7 @@ module AutoC
           #{@buckets.destroy}(&self->buckets);
         }
       $
-      @stream << %$
+      stream << %$
         static #{@bucket.type}* #{_findBucket}(#{type}* self, #{element.type} element) {
           return (#{@bucket.type}*)#{@buckets.view}(&self->buckets, #{element.identify(:element)} % #{@buckets.size}(&self->buckets));
         }
@@ -102,21 +109,23 @@ module AutoC
 
   class HashSet::Range < Range::Input
 
-    alias declare inline
-
     def initialize(container, buckets, bucket)
       super(container, nil, [@bucket = bucket, @bucketsRange = buckets.range, @bucketRange = bucket.range])
     end
 
-    def interface
-      @stream << %$
+    def interface_declarations(stream)
+      super
+      stream << %$
         typedef struct {
           #{@bucketsRange.type} buckets_range;
           #{@bucketRange.type} bucket_range;
         } #{type};
       $
+    end
+
+    def interface_definitions(stream)
       super
-      @stream << %$
+      stream << %$
         AUTOC_EXTERN void #{_bucketFF}(#{type}* self);
         #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
           assert(self);
@@ -131,7 +140,6 @@ module AutoC
           return #{@bucketRange.empty}(&self->bucket_range);
         }
         #{define} void #{popFront}(#{type}* self) {
-          /*assert(self);*/
           assert(!#{empty}(self));
           if(#{@bucketRange.empty}(&self->bucket_range)) {
             #{_bucketFF}(self);
@@ -145,7 +153,7 @@ module AutoC
           return #{@bucketRange.frontView}(&self->bucket_range);
         }
       $
-      @stream << %$
+      stream << %$
         #{define} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
           const #{@container.element.type}* e = #{frontView}(self);
@@ -155,9 +163,9 @@ module AutoC
       $ if @container.element.cloneable?
     end
 
-    def definitions
+    def definitions(stream)
       super
-      @stream << %$
+      stream << %$
         /* Fast forward to the next non-empty bucket if any */
         void #{_bucketFF}(#{type}* self) {
           assert(self);

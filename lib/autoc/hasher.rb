@@ -29,8 +29,8 @@ module AutoC
 
     def destroy(hasher) end
 
-    def interface
-      @stream << %$
+    def interface(stream)
+      stream << %$
         #include <limits.h>
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
           #if defined(__GNUC__) || defined(__clang__)
@@ -48,8 +48,8 @@ module AutoC
       $
     end
 
-    def definitions
-      @stream << %$
+    def definitions(stream)
+      stream << %$
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
           #include <time.h>
           #include <stdlib.h>
