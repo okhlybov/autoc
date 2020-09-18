@@ -81,15 +81,20 @@ module AutoC
       stream << %$
         #{define} #{element.type} #{peek}(const #{type}* self) {
           #{element.type} result;
-          const #{element.type}* e = #{view}(self);
+          const #{element.type}* e;
+          assert(!#{empty}(self));
+          e = #{view}(self);
           #{element.clone(:result, '*e')};
           return result;
         }
         #{define} #{element.type} #{pop}(#{type}* self) {
-          #{element.type} result = #{peek}(self);
+          #{element.type} result;
+          assert(!#{empty}(self));
+          result = #{peek}(self);
+          #{remove}(self);
           return result;
         }
-        #{define} void #{push}(#{type}* self, #{element.type} value) {
+        #{define} void #{push}(#{type}* self, const #{element.type} value) {
           #{node}* new_node = #{memory.allocate(node)};
           #{element.clone('new_node->element', :value)};
           new_node->next_node = self->head_node;
@@ -97,14 +102,14 @@ module AutoC
           ++self->node_count;
         }
       $ if element.cloneable?
-      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
-      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
       stream << %$
-        #{declare} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element);
-        #{define} int #{contains}(const #{type}* self, #{element.type} element) {
-          return #{_findView}(self, element) != NULL;
+        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value);
+        #{define} int contains(const #{type}* self, const #{element.type} value) {
+          return #{findView}(self, value) != NULL;
         }
       $ if element.equality_testable?
+      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
+      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
     end
 
     def definitions(stream)
@@ -144,11 +149,11 @@ module AutoC
         }
       $ if equality_testable?
       stream << %$
-        #{define} const #{element.type}* #{_findView}(const #{type}* self, #{element.type} element) {
+        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
             const #{element.type}* e = #{range.frontView}(&r);
-            if(#{element.equal('*e', :element)}) return e;
+            if(#{element.equal('*e', :value)}) return e;
           }
           return NULL;
         }

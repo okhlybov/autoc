@@ -42,21 +42,43 @@ module AutoC
     def interface_definitions(stream)
       super
       stream << %$
+        #{declare} #{type}* #{createEx}(#{type}* self, size_t capacity);
+        #{define} #{type}* #{create}(#{type}* self) {
+          assert(self);
+          return #{createEx}(self, 16);
+        }
         #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->element_count;
         }
-        #define #{empty}(self) (#{size}(self) == 0)
-        #define #{create}(self) #{createEx}(self, 16)
-        #{declare} #{type}* #{createEx}(#{type}* self, size_t capacity);
+        #{define} int #{empty}(const #{type}* self) {
+          assert(self);
+          return #{size}(self) == 0;
+        }
         #{declare} void #{destroy}(#{type}* self);
-        #define #{rehash}(self, capacity) #{_rehash}(self, capacity, 1)
         #{declare} void #{_rehash}(#{type}* self, size_t capacity, int live);
+        #{define} void #{rehash}(#{type}* self, size_t capacity) {
+          assert(self);
+          #{_rehash}(self, capacity, 1);
+        }
       $
       stream << %$
-        #{declare} int #{put}(#{type}* self, #{element.type} element);
+        #{declare} int #{put}(#{type}* self, const #{element.type} value);
       $ if element.cloneable?
-      super
+      stream << %$
+        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value);
+        #{define} int #{contains}(const #{type}* self, const #{element.type} value) {
+          return #{findView}(self, value) != NULL;
+        }
+        #{declare} int #{subsetOf}(const #{type}* self, const #{type}* other);
+      $ if element.equality_testable?
+      stream << %$
+        #{define} int #{equal}(const #{type}* self, const #{type}* other) {
+          assert(self);
+          assert(other);
+          return #{size}(self) == #{size}(other) && #{subsetOf}(self, other) && #{subsetOf}(other, self);
+        }
+      $ if equality_testable?
     end
 
     def definitions(stream)
@@ -76,7 +98,7 @@ module AutoC
         #{define} #{type}* #{createEx}(#{type}* self, size_t capacity) {
           assert(self);
           self->element_count = 0;
-          self->overfill = 1.25;
+          self->overfill = 2.0;
           #{_rehash}(self, capacity, 0);
           assert(#{@buckets.size}(&self->buckets) > 0);
           return self;
@@ -87,22 +109,36 @@ module AutoC
         }
       $
       stream << %$
-        static #{@bucket.type}* #{_findBucket}(#{type}* self, #{element.type} element) {
-          return (#{@bucket.type}*)#{@buckets.view}(&self->buckets, #{element.identify(:element)} % #{@buckets.size}(&self->buckets));
+        static #{@bucket.type}* #{findBucket}(#{type}* self, const #{element.type} value) {
+          return (#{@bucket.type}*)#{@buckets.view}(&self->buckets, #{element.identify(:value)} % #{@buckets.size}(&self->buckets));
         }
-        #{define} int #{put}(#{type}* self, #{element.type} element) {
+        #{define} int #{put}(#{type}* self, const #{element.type} value) {
         #{@bucket.type}* bucket;
         assert(self);
-        if(#{@bucket.contains}(bucket = #{_findBucket}(self, element), element)) {
+        if(#{@bucket.contains}(bucket = #{findBucket}(self, value), value)) {
           return 0;
         } else {
-          #{@bucket.push}(bucket, element);
+          #{@bucket.push}(bucket, value);
           return 1;
         }
       }
       $ if element.cloneable?
-      # TODO equal()
-      super
+      stream << %$
+        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value) {
+          assert(self);
+          return #{@bucket.findView}(#{findBucket}(self, value), value);
+        }
+        #{define} int #{subsetOf}(const #{type}* self, const #{type}* other) {
+          #{range} r;
+          assert(self);
+          assert(other);
+          if(#{size}(self) > #{size}(other)) return 0;
+          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
+            if(!#{contains}(other, *#{range.frontView}(&r))) return 0;
+          }
+          return 1;
+        }
+      $ if element.equality_testable?
     end
   end # HashSet
 

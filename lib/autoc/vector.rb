@@ -81,7 +81,7 @@ module AutoC
         #{declare} void #{resize}(#{type}* self, size_t new_size);
       $ if element.default_constructible?
       stream << %$
-        #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} element);
+        #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value);
         #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
         #{define} #{element.type} #{get}(const #{type}* self, size_t index) {
           #{element.type} value;
@@ -89,7 +89,7 @@ module AutoC
           #{element.clone(:value, '*p')};
           return value;
         }
-        #{define} void #{set}(#{type}* self, size_t index, #{element.type} value) {
+        #{define} void #{set}(#{type}* self, size_t index, const #{element.type} value) {
           assert(self);
           assert(#{within}(self, index));
           #{element.destroy('self->elements[index]') if element.destructible?};
