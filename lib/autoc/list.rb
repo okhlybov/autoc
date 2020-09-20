@@ -1,4 +1,5 @@
 require 'autoc/type'
+require 'autoc/range'
 require 'autoc/memory'
 
 
@@ -42,7 +43,7 @@ module AutoC
       $
     end
 
-    def interface(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         #{define} size_t #{size}(const #{type}* self) {
@@ -199,7 +200,7 @@ module AutoC
       super
       stream << %$
         typedef struct {
-          const #{@container.node}* node;
+          #{@container.node}* node;
         } #{type};
       $
     end
