@@ -1,5 +1,6 @@
 require 'set'
 require 'autoc/module'
+require 'autoc/hasher'
 
 
 module AutoC
@@ -630,10 +631,14 @@ module AutoC
 
     attr_reader :element
 
+    def memory
+      AutoC::Allocator.default
+    end
+
     def initialize(type, element, prefix, deps)
       @weak = [] # Dependencies with back references to self do create dependency cycles and hence must be excluded from comparison
       @element = Type.coerce(element)
-      super(type, prefix, deps << self.element << CODE)
+      super(type, prefix, deps + [memory, self.element])
     end
 
     def <=>(other)

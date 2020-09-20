@@ -14,17 +14,11 @@ module AutoC
 
     alias default_create create
 
-    def memory
-      AutoC::Allocator.default
-    end
-
     attr_reader :range
 
     def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps << memory)
-      @range = Range.new(self)
-      self.dependencies << @range
-      @weak << @range
+      super(type, element, prefix, deps << (@range = Range.new(self)))
+      @weak << range
     end
 
     def interface_declarations(stream)

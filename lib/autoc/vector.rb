@@ -14,10 +14,6 @@ module AutoC
     %i(destroy).each {|s| redirect(s, 1)}
     %i(clone equal).each {|s| redirect(s, 2)}
 
-    def memory
-      AutoC::Allocator.default
-    end
-
     # @note Vector is default constructible regardless of the element's traits since zero-size instance is allowed.
     def default_constructible?
       true
@@ -31,13 +27,13 @@ module AutoC
     attr_reader :range
 
     def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps << memory)
+      super(type, element, prefix, deps << (@range = Range.new(self)))
+      @weak << range
       @default_create = :create0
       if custom_constructible?
         @custom_create = :create
         self.custom_create_params = [STDC::SIZE_T]
       end
-      @range = Range.new(self) # Range is not listed as vector's dependency since is is not used internally
     end
 
     def interface_declarations(stream)

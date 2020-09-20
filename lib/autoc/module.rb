@@ -251,17 +251,15 @@ module AutoC
 
     # Return a set of all entities including self and transient dependencies.
     def total_entities
-      @total_entities ||= begin
-        merge_total_dependencies(Set[self]).freeze
-      end
+      @total_entities ||= merge_total_dependencies(Set[self]).freeze
     end
 
     # Merge a set of all entities including self as well as self's transient dependencies into specified set.
     def merge_total_dependencies(set)
       dependencies.each do |d|
         unless set.include?(d)
-          set << d
           d.merge_total_dependencies(set)
+          set << d
         end
       end
       set

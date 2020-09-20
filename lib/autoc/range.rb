@@ -14,8 +14,7 @@ module AutoC
 
     def initialize(container, prefix, deps)
       @container = Type.coerce(container)
-      super("#{@container.type}Range", prefix, deps)
-      self.dependencies << @container
+      super("#{@container.type}Range", prefix, deps << @container)
     end
 
     redirect :create, 1
