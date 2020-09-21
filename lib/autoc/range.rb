@@ -12,9 +12,13 @@ module AutoC
     def declare; :static end
     def define; :AUTOC_INLINE end
 
+    def type
+      @type ||= "#{@container.type}Range"
+    end
+
     def initialize(container, prefix, deps)
       @container = Type.coerce(container)
-      super("#{@container.type}Range", prefix, deps << @container)
+      super(nil, prefix, deps << @container)
     end
 
     redirect :create, 1

@@ -19,12 +19,11 @@ module AutoC
     attr_reader :range
 
     def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps)
-      @bucket = List.new("_#{self.type}Bucket", self.element)
-      @buckets = Vector.new("_#{self.type}Buckets", @bucket)
+      @bucket = List.new("_#{type}Bucket", self.element)
+      @buckets = Vector.new("_#{type}Buckets", @bucket)
       @range = Range.new(self, @buckets, @bucket)
-      self.dependencies << @range
-      @weak << @range
+      super(type, element, prefix, deps + [@range, @buckets, @bucket])
+      @weak << range
     end
 
     def interface_declarations(stream)
@@ -47,6 +46,7 @@ module AutoC
           assert(self);
           return #{createEx}(self, 16);
         }
+        #{declare} #{type}* #{createUnion}(#{type}* self, const #{type}* lt, const #{type}* lt);
         #{define} size_t #{size}(const #{type}* self) {
           assert(self);
           return self->element_count;
@@ -102,6 +102,30 @@ module AutoC
           self->overfill = 2.0;
           #{_rehash}(self, capacity, 0);
           assert(#{@buckets.size}(&self->buckets) > 0);
+          return self;
+        }
+        #{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) {
+          #{range.type} r;
+          assert(self);
+          assert(origin);
+          #{createEx}(self, #{size}(origin));
+          for(#{range.create}(&r, origin); !#{range.empty}(&r); #{range.popFront}(&r)) {
+            #{put}(self, *#{range.frontView}(&r));
+          }
+          return self;
+        }
+        #{define} #{type}* #{createUnion}(#{type}* self, const #{type}* lt, const #{type}* lt) {
+          #{range.type} r;
+          assert(self);
+          assert(lt);
+          assert(rt);
+          #{createEx}(&self, #{size}(&lt) + #{size}(&rt));
+          for(#{range.create}(&r, lt); !#{range.empty}(&r); #{range.popFront}(&r)) {
+            #{put}(self, *#{range.frontView}(&r));
+          }
+          for(#{range.create}(&r, rt); !#{range.empty}(&r); #{range.popFront}(&r)) {
+            #{put}(self, *#{range.frontView}(&r));
+          }
           return self;
         }
         #{define} void #{destroy}(#{type}* self) {

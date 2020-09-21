@@ -258,8 +258,8 @@ module AutoC
     def merge_total_dependencies(set)
       dependencies.each do |d|
         unless set.include?(d)
-          d.merge_total_dependencies(set)
           set << d
+          d.merge_total_dependencies(set)
         end
       end
       set
@@ -282,10 +282,10 @@ module AutoC
     def interface(stream) end
 
     #
-    def declarations(stream)(stream) end
+    def declarations(stream) end
 
     #
-    def definitions(stream)(stream) end
+    def definitions(stream) end
 
   end # Entity
 

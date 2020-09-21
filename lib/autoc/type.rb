@@ -20,10 +20,12 @@ module AutoC
 
     # Return source side type string identifier.
     # @return [String] source side type identifier
-    attr_reader :type
+    def type
+      @type ||= @type_.to_s
+    end
 
     def initialize(type)
-      @type = type.to_s
+      @type_ = type
     end
 
     # @!group Rule-Of-Five concepts controlling the type's instance lifetime
@@ -340,11 +342,13 @@ module AutoC
 
     extend Redirector
 
-    attr_reader :prefix
+    def prefix
+      @prefix ||= (@prefix_.nil? ? type : @prefix_).to_s
+    end
 
     def initialize(type, prefix, deps)
       super(type)
-      @prefix = (prefix.nil? ? type : prefix).to_s
+      @prefix_ = prefix
       self.dependencies = deps << CODE
     end
 
@@ -387,6 +391,7 @@ module AutoC
     end
 
     CODE = Code.interface %$
+      #include <assert.h>
       #ifndef AUTOC_INLINE
         #if defined(_MSC_VER) || defined(__DMC__)
           #define AUTOC_INLINE AUTOC_STATIC __inline

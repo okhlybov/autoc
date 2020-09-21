@@ -115,6 +115,8 @@ module AutoC
           #{range.type} r;
           #{node}* new_node;
           #{node}* last_node = NULL;
+          assert(self);
+          assert(origin);
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
             const #{element.type}* e = #{range.frontView}(&r);
             new_node = #{memory.allocate(node)};
