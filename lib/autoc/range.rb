@@ -13,9 +13,10 @@ module AutoC
     def define; :AUTOC_INLINE end
 
     def initialize(container, prefix, deps)
-      @container = Type.coerce(container)
-      super("#{@container.type}Range", prefix, deps << @container)
+      super(nil, prefix, deps << (@container = Type.coerce(container)))
     end
+
+    def type; "#{@container.type}Range" end # Lazy container type query as it may be unset by the time the Range's type is computed
 
     redirect :create, 1
 
@@ -38,7 +39,7 @@ module AutoC
       stream << %$
         #{declare} int #{empty}(const #{type}* self);
         #{declare} void #{popFront}(#{type}* self);
-        #{declare} const #{@container.element.type}* #{frontView}(const #{type}* self);
+        #{declare} const #{@container.element.type}* #{viewFront}(const #{type}* self);
       $
       stream << "#{declare} #{@container.element.type} #{front}(const #{type}* self);" if @container.element.cloneable?
     end
@@ -67,7 +68,7 @@ module AutoC
       super
       stream << %$
         #{declare} void #{popBack}(#{type}* self);
-        #{declare} const #{@container.element.type}* #{backView}(const #{type}* self);
+        #{declare} const #{@container.element.type}* #{viewBack}(const #{type}* self);
       $
       stream << "#{declare} #{@container.element.type} #{back}(const #{type}* self);" if @container.element.cloneable?
     end

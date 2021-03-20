@@ -1,6 +1,6 @@
-require 'set'
 require 'autoc/module'
 require 'autoc/hasher'
+require 'set/sorted_set'
 
 
 module AutoC
@@ -340,12 +340,15 @@ module AutoC
 
     extend Redirector
 
-    attr_reader :prefix
-
     def initialize(type, prefix, deps)
       super(type)
-      @prefix = (prefix.nil? ? type : prefix).to_s
+      @prefix = prefix
       self.dependencies = deps << CODE
+    end
+
+    #
+    def prefix
+      (@prefix.nil? ? type : @prefix).to_s
     end
 
     #
@@ -416,6 +419,7 @@ module AutoC
       #endif
       #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
       #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
+      #include <assert.h>
     $
 
   end # Composite
@@ -505,7 +509,7 @@ module AutoC
 
     def initialize(type, prefix = nil, **fields)
       @fields = fields.transform_values {|e| Type.coerce(e)}
-      super(type, prefix, @fields.values + [CODE])
+      super(type, prefix, @fields.values)
       self.custom_create_params = @fields.values if custom_constructible?
     end
 
@@ -584,10 +588,6 @@ module AutoC
       end
     end
 
-    CODE = Code.interface %$
-      #include <assert.h>
-    $
-
     #
     module Hashable
 
@@ -661,12 +661,6 @@ module AutoC
       element.equality_testable?
     end
 
-    CODE = Code.interface %$
-      #include <assert.h>
-      #include <stddef.h>
-      #include <malloc.h>
-    $
-
     #
     module Hashable
 
@@ -686,22 +680,22 @@ module AutoC
 
       def define_identify(stream)
         stream << %$
-        #{define} size_t #{identify}(const #{type}* self) {
-          #{hasher.type} hasher;
-          #{range.type} range;
-          size_t hash;
-          assert(self);
-          #{hasher.create(:hasher)};
-          #{range.create(:range, :self)};
-          for(; !#{range.empty(:range)}; #{range.popFront(:range)}) {
-            const #{element.type}* e = #{range.frontView(:range)};
-            #{hasher.update(:hasher, element.identify('*e'))};
+          #{define} size_t #{identify}(const #{type}* self) {
+            #{hasher.type} hasher;
+            #{range.type} range;
+            size_t hash;
+            assert(self);
+            #{hasher.create(:hasher)};
+            #{range.create(:range, :self)};
+            for(; !#{range.empty(:range)}; #{range.popFront(:range)}) {
+              const #{element.type}* e = #{range.frontView(:range)};
+              #{hasher.update(:hasher, element.identify('*e'))};
+            }
+            hash = #{hasher.result(:hasher)};
+            #{hasher.destroy(:hasher)};
+            return hash;
           }
-          hash = #{hasher.result(:hasher)};
-          #{hasher.destroy(:hasher)};
-          return hash;
-        }
-      $
+        $
       end
 
     end # Hashable

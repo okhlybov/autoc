@@ -282,10 +282,10 @@ module AutoC
     def interface(stream) end
 
     #
-    def declarations(stream)(stream) end
+    def declarations(stream) end
 
     #
-    def definitions(stream)(stream) end
+    def definitions(stream) end
 
   end # Entity
 

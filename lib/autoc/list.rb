@@ -116,7 +116,7 @@ module AutoC
           #{node}* new_node;
           #{node}* last_node = NULL;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
-            const #{element.type}* e = #{range.frontView}(&r);
+            const #{element.type}* e = #{range.viewFront}(&r);
             new_node = #{memory.allocate(node)};
             #{element.clone('new_node->element', '*e')};
             new_node->next_node = NULL;
@@ -136,8 +136,8 @@ module AutoC
           if(#{size}(self) == #{size}(other)) {
             #{range.type} ra, rb;
             for(#{range.create}(&ra, self), #{range.create}(&rb, other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.popFront}(&ra), #{range.popFront}(&rb)) {
-              const #{element.type}* a = #{range.frontView}(&ra);
-              const #{element.type}* b = #{range.frontView}(&rb);
+              const #{element.type}* a = #{range.viewFront}(&ra);
+              const #{element.type}* b = #{range.viewFront}(&rb);
               if(!#{element.equal('*a', '*b')}) return 0;
             }
             return 1;
@@ -148,7 +148,7 @@ module AutoC
         #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} what) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
-            const #{element.type}* e = #{range.frontView}(&r);
+            const #{element.type}* e = #{range.viewFront}(&r);
             if(#{element.equal('*e', :what)}) return e;
           }
           return NULL;
@@ -222,7 +222,7 @@ module AutoC
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{viewFront}(const #{type}* self) {
           assert(!#{empty}(self));
           return &self->node->element;
         }
@@ -230,7 +230,7 @@ module AutoC
       stream << %$
         #{define} #{@container.element.type} #{front}(const #{type}* self) {
           #{@container.element.type} result;
-          const #{@container.element.type}* e = #{frontView}(self);
+          const #{@container.element.type}* e = #{viewFront}(self);
           #{@container.element.clone(:result, '*e')};
           return result;
         }

@@ -266,7 +266,7 @@ module AutoC
           assert(self);
           ++self->position;
         }
-        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{viewFront}(const #{type}* self) {
           assert(self);
           return #{view}(self, self->position);
         }
@@ -274,7 +274,7 @@ module AutoC
           assert(self);
           --self->position;
         }
-        #{define} const #{@container.element.type}* #{backView}(const #{type}* self) {
+        #{define} const #{@container.element.type}* #{viewBack}(const #{type}* self) {
           assert(self);
           return #{view}(self, self->position);
         }
