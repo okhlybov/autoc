@@ -1,0 +1,4 @@
+build
+.idea
+*_auto*.c
+*_auto*.h
