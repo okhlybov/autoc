@@ -23,7 +23,7 @@ find_program(Ruby_EXECUTABLE ruby)
 add_custom_target(
     code
     BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.h
-    COMMAND ${Ruby_EXECUTABLE} -I. -I../lib test.rb
+    COMMAND ${Ruby_EXECUTABLE} -I. -I../next test.rb
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     VERBATIM
 )

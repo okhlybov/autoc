@@ -52,10 +52,6 @@ def type_test(cls, *opts, &code)
         }
       ~
     end
-    def declarations(stream)
-      super
-      stream << "void #{runTests}(void);"
-    end
     def definitions(stream)
       super
       @tests.each {|f| stream << f}
@@ -86,7 +82,7 @@ class TestSuite
 
   include AutoC::Module::Entity
 
-  def interface(stream)
+  def declarations(stream)
     stream << %$
       #include <stdio.h>
       struct {
