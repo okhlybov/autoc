@@ -459,18 +459,6 @@ module AutoC
 
 
   #
-  class Vector < Container
-
-  end
-
-
-  #
-  class List < Container
-
-  end
-
-
-  #
   class Queue < Container
 
   end

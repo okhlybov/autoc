@@ -47,21 +47,27 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief Return true if there it no element left in the range
+        * @brief Return non-zero if range is empty (that is there are no elements left) and zero otherwise
         */
         #{declare(@empty)};
         /**
-        * @brief
+        * @brief Advance current position to the next element
+        *
+        * There is a valid element at current position as long as @ref #{@empty}() returns zero.
         */
         #{declare(@pop_front)};
         /**
-        * @brief
+        * @brief Return a view of current element
+        *
+        * Range must not be empty (refer to #{@empty}()).
         */
         #{declare(@front_view)};
       $
       stream << %$
         /**
-        * @brief
+        * @brief Return a copy of current element
+        *
+        * Range must not be empty (refer to #{@empty}()).
         */
         #{declare(@front)};
       $ if iterable.element.copyable?

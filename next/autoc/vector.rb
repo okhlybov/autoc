@@ -41,7 +41,7 @@ module AutoC
          * @{
          */
         /**
-         * @brief Create a new vector of zero size at self
+         * @brief Create a new vector of zero size
          */
         #{define(default_create)} {
           assert(self);
@@ -49,69 +49,108 @@ module AutoC
           self->elements = NULL;
         }
         /**
-         * @brief Destroy the vector at self along with its elements and free storage
+         * @brief Destroy the vector along with all contained elements
+         *
+         * The contained elements are destroyed with the respective destructor.
          */
         #{declare(destroy)};
+        /**
+         * @brief Return a number of contained elements
+         */
+        #{define} size_t #{size}(#{const_ptr_type} self) {
+          assert(self);
+          return self->element_count;
+        }
+        /**
+         * @brief Return non-zero if the specified position is valid and zero otherwise
+         *
+         * A valid position can be used to set or retreive the contained element.
+         */
+        #{define} int #{within}(#{const_ptr_type} self, size_t position) {
+          assert(self);
+          return position < #{size}(self);
+        }
+        /**
+         * @brief Return a view of the element at specified position.
+         *
+         * Position must be valid (refer to @ref #{within}()).
+         */
+        #{define} #{element.const_ptr_type} #{view}(#{const_ptr_type} self, size_t position) {
+          assert(self);
+          assert(#{within}(self, position));
+          return &(self->elements[position]);
+        }
       $
       stream << %$
         /**
-         * @brief Create a new vector at self of specified size
+         * @brief Create a new vector of specified size
          *
-         * Each vector's element is initialized with the respective default constructor.
+         * Each new vector's element is initialized with the respective default constructor.
          */
         #{declare(custom_create)};
       $ if custom_constructible?
       stream << %$
         /**
-         * @brief Create a new vector of specified size at self
+         * @brief Create a new vector of specified size
          *
-         * Each vector's element is initialized with the specified value.
+         * Each new vector's element is set to a copy of the specified value.
          */
-        #{declare} void #{create_fill}(#{type}* self, size_t size, #{element.const_type} value);
+        #{declare} void #{create_fill}(#{ptr_type} self, size_t size, #{element.const_type} value);
       $ if element.copyable?
       stream << %$
-        #include <stddef.h>
-        #{define} size_t #{size}(#{const_type}* self) {
-          assert(self);
-          return self->element_count;
-        }
-        #{define} int #{within}(#{const_type}* self, size_t index) {
-          assert(self);
-          return index < #{size}(self);
-        }
-        #{define} const #{element.type}* #{view}(#{const_type}* self, size_t index) {
-          assert(self);
-          assert(#{within}(self, index));
-          return &(self->elements[index]);
-        }
-      $
-      stream << %$
         /**
-         * @brief Resize the vector at self to contain the specified number of elements
+         * @brief Resize the vector to contain the specified number of elements
          *
-         * If the new size is smaller than current size, the excessive elements are destroyed with the element's destructor.
+         * If the new size is smaller than current vector's size, the excessive elements are destroyed with the respective destructor.
          *
-         * If the new size is greater that current size the extra elements are created with the element's default constructor.
+         * If the new size is greater that current vector's size, the extra elements are created with the respective default constructor.
          */
         #{declare} void #{resize}(#{type}* self, size_t new_size);
       $ if element.default_constructible?
       stream << %$
-        #{declare(copy)};
-        #{define} #{element.type} #{get}(#{const_type}* self, size_t index) {
+        /**
+         * @brief Return a copy of the element at specified position
+         *
+         * Position must be valid (refer to @ref #{within}()).
+         */
+        #{define} #{element.type} #{get}(#{const_ptr_type} self, size_t position) {
           #{element.type} value;
-          #{element.const_type}* p = #{view(:self, :index)};
+          #{element.const_ptr_type} p = #{view(:self, :position)};
           #{element.copy(:value, '*p')};
           return value;
         }
-        #{define} void #{set}(#{type}* self, size_t index, #{element.const_type} value) {
+        /**
+         * @brief Replace the element in self at specified position with a copy of the specified value.
+         *
+         * Position must be valid (refer to @ref #{within}()).
+         *
+         * Previous element is destroyed with the respective destructor.
+         */
+        #{define} void #{set}(#{ptr_type} self, size_t position, #{element.const_type} value) {
           assert(self);
-          assert(#{within}(self, index));
-          #{element.destroy('self->elements[index]') if element.destructible?};
-          #{element.copy('self->elements[index]', :value)};
+          assert(#{within}(self, position));
+          #{element.destroy('self->elements[position]') if element.destructible?};
+          #{element.copy('self->elements[position]', :value)};
         }
       $ if element.copyable?
-      stream << "#{declare} #{equal.declaration};" if comparable?
-      stream << "#{declare} void #{sort}(#{type}* self, int direction);" if element.orderable?
+      stream << %$
+        /**
+         * @brief Create a new vector with the copies of the source vector's elements
+         */
+        #{declare(copy)};
+      $ if copyable?
+      stream << %$
+        /**
+         * @brief Return true if both vectors contain equal elements
+         */
+        #{declare(equal)};
+      $ if comparable?
+      stream << %$
+        /**
+         * @brief Perform an in-place sorting of the elements
+         */
+        #{declare} void #{sort}(#{type}* self, int direction);
+      $ if element.orderable?
       stream << %$/** @} */$
     end
 
@@ -181,17 +220,18 @@ module AutoC
             #{element.copy('self->elements[index]', :value)};
           }
         }
-        #{define} #{copy.definition} {
+      $ if element.copyable?
+      stream << %$
+        #{define(copy)} {
           size_t index, size;
           assert(self);
           assert(source);
-          #{destroy}(self);
           #{allocate}(self, size = #{size}(source));
           for(index = 0; index < size; ++index) {
             #{element.copy('self->elements[index]', 'source->elements[index]')};
           }
         }
-      $ if element.copyable?
+      $ if copyable?
       stream << %$
         #{define(equal)} {
           size_t index, size;
@@ -227,14 +267,13 @@ module AutoC
     class Vector::Range < Range::RandomAccess
 
       def interface_declarations(stream)
-        @declare = :AUTOC_INLINE
         stream << %$
           /**
-          * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
-          * @{
-          */
+           * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
+           * @{
+           */
           typedef struct {
-            #{iterable.const_type}* iterable;
+            #{iterable.const_ptr_type} iterable;
             size_t position;
           } #{type};
         $

@@ -207,7 +207,7 @@ module AutoC
 
     def new_stream = File.new(file_name, 'w')
 
-    def prologue(stream) = stream << NEW_LINE << %~#include "#{self.module.header.file_name}"~ << NEW_LINE
+    def prologue(stream) = stream << NEW_LINE << %$#include "#{self.module.header.file_name}"$ << NEW_LINE
 
     def epilogue(stream) = nil
 
