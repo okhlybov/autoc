@@ -17,7 +17,7 @@ module AutoC
       @range = Range.new(self)
       @initial_dependencies << range
       @custom_create = Composite::Function.new(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
-      @default_create.inline!
+      [default_create, @size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
@@ -48,12 +48,13 @@ module AutoC
           self->element_count = 0;
           self->elements = NULL;
         }
-        /**
-         * @brief Return a number of contained elements
-         */
-        #{define} size_t #{size}(#{const_ptr_type} self) {
+        #{define(@size)} {
           assert(self);
           return self->element_count;
+        }
+        #{define(@empty)} {
+          assert(self);
+          return #{size}(self) == 0;
         }
         /**
          * @brief Return non-zero if the specified position is valid and zero otherwise

@@ -16,6 +16,10 @@ module AutoC
       @element = Type.coerce(element)
       @initial_dependencies << self.element
       @generate_declarations = true # Emit generic documented method declarations
+      # Declare the common container functions which should exist for all containers
+      @size = Composite::Function.new(self, :size, 1, { self: const_type }, :size_t)
+      @empty = Composite::Function.new(self, :empty, 1, { self: const_type }, :int)
+      @contains = Composite::Function.new(self, :contains, 1, { self: const_type, what: self.element.const_type }, :int)
     end
 
     # Additional container-specific trait restrictions
@@ -72,6 +76,10 @@ module AutoC
            * @brief Return non-zero if both containers are considered equal by contents
            */
           #{declare(equal)};
+          /**
+          * @brief Return non-zero if there is at least one element in the container equal to the specified value
+          */
+          #{declare(@contains)};
         $ if comparable?
         stream << %$
           /**
@@ -85,6 +93,16 @@ module AutoC
            */
           #{declare(compare)};
         $ if orderable?
+        stream << %$
+          /**
+           * @brief Return number of contained elements in the container
+           */
+          #{declare(@size)};
+          /**
+           * @brief Return non-zero if there are no elements in the container and zero otherwise
+           */
+          #{declare(@empty)};
+        $
         stream << %$/** @} */$
       end
     end

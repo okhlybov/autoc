@@ -8,7 +8,7 @@ module AutoC
   class List < Container
 
     include Hashable
-    
+
     #
     attr_reader :range
 
@@ -16,7 +16,7 @@ module AutoC
       super
       @range = Range.new(self)
       @initial_dependencies << range
-      [@default_create, @destroy].each(&:inline!)
+      [default_create, destroy, @size, @empty, @contains].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
@@ -64,17 +64,11 @@ module AutoC
           assert(self);
           while(#{drop}(self));
         }
-        /**
-         * @brief Return number of elements contained
-         */
-        #{define} size_t #{size}(#{const_ptr_type} self) {
+        #{define(@size)} {
           assert(self);
           return self->node_count;
         }
-        /**
-         * @brief Return true if list contains at least one element
-         */
-        #{define} int #{empty}(#{const_ptr_type} self) {
+        #{define(@empty)} {
           assert((self->node_count == 0) == (self->head_node == NULL));
           return #{size}(self) == 0;
         }
@@ -124,10 +118,7 @@ module AutoC
         * @brief Return a view of the contained element equal to the specified element or NULL is no such element found
         */
         #{declare} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} what);
-        /**
-        * @brief Return true if there is at least one the contained element equal to the specified element
-        */
-        #{define} int #{contains}(#{const_ptr_type} self, #{element.const_type} what) {
+        #{define(@contains)} {
           return #{find_view}(self, what) != NULL;
         }
         /**
