@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
+
 require 'autoc/module'
-require 'autoc/memory'
 
 
 module AutoC
@@ -125,10 +125,10 @@ module AutoC
     # Original contents of the +value+ is overwritten.
     # The contents of the +origin+ is no longer valid afterwards.
     #
-    # @param value [String | Symbol] source side storage designation where the instance is to be placed
-    # @param origin [String | Symbol] source side storage designation taken as the origin for the transfer operation
+    # @param destination [String | Symbol] source side storage designation where the instance is to be placed
+    # @param source [String | Symbol] source side storage designation taken as the origin for the transfer operation
     # @return [String] source side code snippet
-    abstract def move(value, origin) = nil
+    abstract def move(destination, source) = nil
 
     # @abstract TODO
     abstract def equal(value, other) = nil
@@ -172,7 +172,7 @@ module AutoC
     # For the type to be comparable this implementation looks up the {#compare} method.
     def orderable? = respond_to?(:compare)
 
-    # Test whether the type's values can be put into hash-based containers.
+    # Test whether the type's values which can be the elements of hash-based containers.
     def hashable? = comparable? && respond_to?(:code)
   end
 
@@ -186,7 +186,7 @@ module AutoC
 
     def copy(value, source) = "((#{value}) = (#{source}))"
 
-    def move(value, origin) = copy(value, origin)
+    def move(destination, source) = copy(destination, source)
 
     def equal(value, other) = "((#{value}) == (#{other}))"
 
@@ -251,210 +251,10 @@ module AutoC
   end
 
 
-  # @abstract
-  # Generator type for composite types which comprise of other primitive or composite types such as bare C structs
-  # or elaborate data containers.
-  class Composite < Type
-
-    # Type-bound function with first refs parameters converted to references (mapped to C pointers).
-    class Function < AutoC::Function
-
-      attr_reader :type
-
-      def name = @name ||= type.decorate_identifier(@initial_name)
-
-      def initialize(type, name, refs, parameters, result)
-        i = 0
-        parameters =
-          if parameters.is_a?(Array)
-            parameters.collect { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-          else
-            parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-          end
-        super(nil, parameters, result)
-        @initial_name = name
-        @type = type
-        @refs = refs
-      end
-
-      # Set new name for the function.
-      def rename!(name)
-        @name = nil
-        @initial_name = name
-        self
-      end
-
-      def call(*args)
-        if args.empty? then name # Emit function name
-        elsif args.first.nil? then super() # Emit function call without parameters, fn()
-        else
-          i = 0
-          super(args.collect { |v| (i += 1) <= @refs ? ref_value_call(v) : v }) # Emit function call with specified parameters, fn(...)
-        end
-      end
-
-      private
-
-      # Convert C value type to a pointer type
-      def ref_value_type(type) = "#{type}*"
-
-      def ref_value_call(arg) = "&(#{arg})"
-    end
-
-    # Prefix used to generate fully qualified type-specific identifiers.
-    def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
-
-    #
-    def dependencies = @dependencies ||= @initial_dependencies.nil? ? super : ::Set[*@initial_dependencies].freeze
-
-
-    #
-    def declare(obj = nil) = obj.nil? ? @declare : "#{@declare} #{obj.declaration}"
-
-    #
-    def define(obj = nil) = obj.nil? ? @define : "#{@define} #{obj.definition}"
-
-    def memory = AutoC::Allocator.default
-
-    def initialize(type)
-      super(type)
-      # @custom_create
-      @default_create = Function.new(self, :create, 1, { self: type }, :void)
-      @destroy = Function.new(self, :destroy, 1, { self: type }, :void)
-      @copy = Function.new(self, :copy, 2, { self: type, source: const_type }, :void)
-      @move = Function.new(self, :move, 2, { self: type, source: type }, :void)
-      @equal = Function.new(self, :equal, 2, { self: const_type, other: const_type }, :int)
-      @compare = Function.new(self, :compare, 2, { self: const_type, other: const_type }, :int)
-      @code = Function.new(self, :compare, 1, { self: const_type }, :size_t)
-      @initial_dependencies = [CODE, memory]
-      @initial_prefix = nil
-    end
-
-    def respond_to_missing?(*args) = SPECIAL_METHODS.include?(args.first) ? !instance_variable_get("@#{args.first}").nil? : super
-
-    def method_missing(symbol, *args)
-      if SPECIAL_METHODS.include?(symbol) && !(special = instance_variable_get("@#{symbol}")).nil?
-        args.empty? ? special : special[*args]
-      else
-        function = decorate_identifier(symbol) # Construct C function name for the method
-        if args.empty? then function # Emit bare function name
-        elsif args.first.nil? then function + '()' # Use first nil argument to emit function call with no parameters
-        else function + '(' + args.join(', ') + ')' # Emit normal function call with specified parameters
-        end
-      end
-    end
-
-    #
-    def decorate_identifier(symbol)
-      method = symbol.to_s.sub(/[!?]$/, '') # Strip trailing ? or !
-      # Check for leading underscore
-      underscored =
-        if /^(_+)(.*)/ =~ method
-          method = $2
-          true
-        else
-          false
-        end
-      # Convert _separated_names to the CamelCase
-      id = prefix + method.split('_').collect(&:capitalize).join
-      # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-      underscored && prefix[0] != '_' ? "#{$1}#{id}" : id
-    end
-
-    def interface_declarations(stream)
-      super
-      setup_interface_declarations
-    end
-
-    def interface_definitions(stream)
-      super
-      setup_interface_definitions
-    end
-
-    def declarations(stream)
-      super
-      setup_declarations
-    end
-
-    def definitions(stream)
-      super
-      setup_definitions
-    end
-
-    private
-
-    def setup_interface_declarations
-      @declare = @define = nil
-    end
-
-    def setup_interface_definitions
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_INLINE
-    end
-
-    def setup_declarations
-      @declare = @define = :AUTOC_STATIC
-    end
-
-    def setup_definitions
-      @declare = @define = nil
-    end
-
-    CODE = Code.interface %$
-      #include <stddef.h>
-      #include <assert.h>
-      #ifndef AUTOC_INLINE
-        #if defined(_MSC_VER) || defined(__DMC__)
-          #define AUTOC_INLINE AUTOC_STATIC __inline
-        #elif defined(__LCC__)
-          #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
-        #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
-          #define AUTOC_INLINE  AUTOC_STATIC inline
-        #else
-          #define AUTOC_INLINE AUTOC_STATIC
-        #endif
-      #endif
-      #ifndef AUTOC_EXTERN
-        #ifdef __cplusplus
-          #define AUTOC_EXTERN extern "C"
-        #else
-          #define AUTOC_EXTERN extern
-        #endif
-      #endif
-      #ifndef AUTOC_STATIC
-        #if defined(_MSC_VER)
-          #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
-        #elif defined(__GNUC__)
-          #define AUTOC_STATIC __attribute__((__used__)) static
-        #else
-          #define AUTOC_STATIC static
-        #endif
-      #endif
-      #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
-      #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
-    $
-
-  end
-
-
+=begin
   # Generator type for managed C structures which can take ownership over the values it contains.
   class Structure < Composite
 
-  end
-
-
-  # @abstract
-  # Generator type for container types which contain arbitrary number of values of the same type
-  # such as vector, list, map etc.
-  class Container < Composite
-
-    attr_reader :element
-
-    def initialize(type, element)
-      super(type)
-      @element = Type.coerce(element)
-      @initial_dependencies << self.element
-    end
   end
 
 
@@ -484,5 +284,7 @@ module AutoC
   class TreeSet < Container
     include Set
   end
+=end
+
 
 end

@@ -1,4 +1,4 @@
-require 'autoc/type'
+require 'autoc/composite'
 
 
 module AutoC
@@ -53,13 +53,13 @@ module AutoC
         /**
         * @brief Advance current position to the next element
         *
-        * There is a valid element at current position as long as @ref #{@empty}() returns zero.
+        * There is a valid element at new position as long as @ref #{@empty}() returns zero.
         */
         #{declare(@pop_front)};
         /**
         * @brief Return a view of current element
         *
-        * Range must not be empty (refer to #{@empty}()).
+        * Range must not be empty (refer to @ref #{@empty}()).
         */
         #{declare(@front_view)};
       $
@@ -67,7 +67,7 @@ module AutoC
         /**
         * @brief Return a copy of current element
         *
-        * Range must not be empty (refer to #{@empty}()).
+        * Range must not be empty (refer to @ref #{@empty}()).
         */
         #{declare(@front)};
       $ if iterable.element.copyable?
@@ -88,7 +88,7 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief
+        * @brief Capture current state of the original range
         */
         #{declare(@save)};
       $
@@ -111,18 +111,24 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief
-        */
+         * @brief Rewind current position to the previous element
+         *
+         * There is a valid element at new position as long as @ref #{@empty}() returns zero.
+         */
         #{declare(@pop_back)};
         /**
-        * @brief
-        */
+         * @brief Return a view of current element
+         *
+         * Range must not be empty (refer to @ref #{@empty}()).
+         */
         #{declare(@back_view)};
       $
       stream << %$
         /**
-        * @brief
-        */
+         * @brief Return a copy of current element
+         *
+         * Range must not be empty (refer to @ref #{@empty}()).
+         */
         #{declare(@back)};
       $ if iterable.element.copyable?
     end
@@ -144,17 +150,17 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief
+        * @brief Return a number of elements in the range
         */
         #{declare(@size)};
         /**
-        * @brief
+        * @brief Return a view of the element at specified position
         */
         #{declare(@view)};
       $
       stream << %$
         /**
-        * @brief
+        * @brief Return a copy of the element at specified position
         */
         #{declare(@get)};
       $ if iterable.element.copyable?

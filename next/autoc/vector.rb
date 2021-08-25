@@ -1,5 +1,4 @@
-require 'autoc/type'
-require 'autoc/memory'
+require 'autoc/container'
 require 'autoc/range'
 
 
@@ -8,14 +7,18 @@ module AutoC
 
   class Vector < Container
 
+    include Hashable
+
     #
     attr_reader :range
 
     def initialize(type, element)
       super
-      @custom_create = Composite::Function.new(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
       @range = Range.new(self)
       @initial_dependencies << range
+      @custom_create = Composite::Function.new(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
+      @default_create.inline!
+      @compare = nil # Don't know how to order the vectors
     end
 
     def interface_declarations(stream)
@@ -25,8 +28,8 @@ module AutoC
          * @{
          */
         typedef struct {
-          #{element.type}* elements;
-          size_t element_count;
+          #{element.type}* elements; /**< @private */
+          size_t element_count; /**< @private */
         } #{type};
       $
       super
@@ -40,20 +43,11 @@ module AutoC
          * @addtogroup #{type}
          * @{
          */
-        /**
-         * @brief Create a new vector of zero size
-         */
         #{define(default_create)} {
           assert(self);
           self->element_count = 0;
           self->elements = NULL;
         }
-        /**
-         * @brief Destroy the vector along with all contained elements
-         *
-         * The contained elements are destroyed with the respective destructor.
-         */
-        #{declare(destroy)};
         /**
          * @brief Return a number of contained elements
          */
@@ -105,7 +99,7 @@ module AutoC
          *
          * If the new size is greater that current vector's size, the extra elements are created with the respective default constructor.
          */
-        #{declare} void #{resize}(#{type}* self, size_t new_size);
+        #{declare} void #{resize}(#{ptr_type} self, size_t new_size);
       $ if element.default_constructible?
       stream << %$
         /**
@@ -135,21 +129,9 @@ module AutoC
       $ if element.copyable?
       stream << %$
         /**
-         * @brief Create a new vector with the copies of the source vector's elements
-         */
-        #{declare(copy)};
-      $ if copyable?
-      stream << %$
-        /**
-         * @brief Return true if both vectors contain equal elements
-         */
-        #{declare(equal)};
-      $ if comparable?
-      stream << %$
-        /**
          * @brief Perform an in-place sorting of the elements
          */
-        #{declare} void #{sort}(#{type}* self, int direction);
+        #{declare} void #{sort}(#{ptr_type} self, int direction);
       $ if element.orderable?
       stream << %$/** @} */$
     end
@@ -273,8 +255,8 @@ module AutoC
            * @{
            */
           typedef struct {
-            #{iterable.const_ptr_type} iterable;
-            size_t position;
+            #{iterable.const_ptr_type} iterable; /**< @private */
+            size_t position; /**< @private */
           } #{type};
         $
         super

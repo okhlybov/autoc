@@ -1,5 +1,4 @@
-require 'autoc/type'
-require 'autoc/memory'
+require 'autoc/container'
 require 'autoc/range'
 
 
@@ -133,7 +132,7 @@ module AutoC
         /**
         * @brief Return true if there is at least one the contained element equal to the specified element
         */
-        #{define} int contains(#{const_ptr_type} self, #{element.const_type} what) {
+        #{define} int #{contains}(#{const_ptr_type} self, #{element.const_type} what) {
           return #{findView}(self, what) != NULL;
         }
         /**
