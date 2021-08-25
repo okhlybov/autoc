@@ -7,6 +7,8 @@ module AutoC
 
   class List < Container
 
+    include Hashable
+    
     #
     attr_reader :range
 
@@ -14,6 +16,8 @@ module AutoC
       super
       @range = Range.new(self)
       @initial_dependencies << range
+      [@default_create, @destroy].each(&:inline!)
+      @compare = nil # Don't know how to order the vectors
     end
 
     def interface_declarations(stream)
@@ -22,12 +26,13 @@ module AutoC
         * @defgroup #{type} Singly linked list of values of type <#{element.type}>
         * @{
         */
-        typedef struct #{node} #{node};
-        typedef struct #{type} #{type};
+        typedef struct #{node} #{node}; /**< @private */
+        typedef struct #{type} #{type}; /**< @private */
         struct #{type} {
-          #{node}* head_node;
-          size_t node_count;
+          #{node}* head_node; /**< @private */
+          size_t node_count; /**< @private */
         };
+        /** @private */
         struct #{node} {
           #{element.type} element;
           #{node}* next_node;
@@ -44,21 +49,17 @@ module AutoC
          * @addtogroup #{type}
          * @{
          */
-        /**
-         * @brief Create a new empty list at self
-         */
         #{define(default_create)} {
           assert(self);
           self->head_node = NULL;
           self->node_count = 0;
         }
         /**
-         * @brief
+         * @brief Remove and destroy an element
+         *
+         * @return non-zero is there was an element and zero otherwise.
          */
         #{declare} int #{drop}(#{ptr_type} self);
-        /**
-         * @brief Destroy the list at self along with its elements and free storage
-         */
         #{define(destroy)} {
           assert(self);
           while(#{drop}(self));
@@ -120,32 +121,20 @@ module AutoC
       $ if element.copyable?
       stream << %$
         /**
-        * @brief Return true if two lists are equal by contents
-        */
-        #{declare(equal)};
-      $ if comparable?
-      stream << %$
-        /**
         * @brief Return a view of the contained element equal to the specified element or NULL is no such element found
         */
-        #{declare} #{element.const_ptr_type} #{findView}(#{const_ptr_type} self, #{element.const_type} what);
+        #{declare} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} what);
         /**
         * @brief Return true if there is at least one the contained element equal to the specified element
         */
         #{define} int #{contains}(#{const_ptr_type} self, #{element.const_type} what) {
-          return #{findView}(self, what) != NULL;
+          return #{find_view}(self, what) != NULL;
         }
         /**
         * @brief Remove and destroy the first contained element equal to the specified element
         */
         #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} what);
       $ if element.comparable?
-      stream << %$
-        /**
-        * @brief Create a new list containing copies of the original list's elements
-        */
-        #{declare(copy)};
-      $ if copyable?
       stream << %$/** @} */$
     end
 
@@ -175,7 +164,7 @@ module AutoC
         }
       $ if comparable?
       stream << %$
-        #{define} #{element.const_ptr_type} #{findView}(#{const_ptr_type} self, #{element.const_type} what) {
+        #{define} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} what) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} e = #{range.front_view}(&r);
@@ -223,7 +212,7 @@ module AutoC
           * @{
           */
           typedef struct {
-            #{iterable.node}* node;
+            #{iterable.node}* node; /**< @private */
           } #{type};
         $
         super

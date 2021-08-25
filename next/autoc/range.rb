@@ -47,7 +47,7 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief Return non-zero if range is empty (that is there are no elements left) and zero otherwise
+        * @brief Return non-zero if the range is empty (that is there are no elements left) and zero otherwise
         */
         #{declare(@empty)};
         /**
