@@ -57,7 +57,7 @@ module AutoC
         */
         #{declare(@pop_front)};
         /**
-        * @brief Return a view of current element
+        * @brief Return a view of front element
         *
         * Range must not be empty (refer to @ref #{@empty}()).
         */
@@ -65,7 +65,7 @@ module AutoC
       $
       stream << %$
         /**
-        * @brief Return a copy of current element
+        * @brief Return a copy of front element
         *
         * Range must not be empty (refer to @ref #{@empty}()).
         */
@@ -117,7 +117,7 @@ module AutoC
          */
         #{declare(@pop_back)};
         /**
-         * @brief Return a view of current element
+         * @brief Return a view of back element
          *
          * Range must not be empty (refer to @ref #{@empty}()).
          */
@@ -125,7 +125,7 @@ module AutoC
       $
       stream << %$
         /**
-         * @brief Return a copy of current element
+         * @brief Return a copy of back element
          *
          * Range must not be empty (refer to @ref #{@empty}()).
          */
@@ -141,7 +141,7 @@ module AutoC
 
     def initialize(iterable)
       super
-      @size = Composite::Function.new(self, :size, 1, { self: const_type }, :size_t)
+      @length = Composite::Function.new(self, :length, 1, { self: const_type }, :size_t)
       @view = Composite::Function.new(self, :view, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
       @get = Composite::Function.new(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
     end
@@ -152,7 +152,7 @@ module AutoC
         /**
         * @brief Return a number of elements in the range
         */
-        #{declare(@size)};
+        #{declare(@length)};
         /**
         * @brief Return a view of the element at specified position
         */

@@ -257,13 +257,13 @@ module AutoC
            */
           typedef struct {
             #{iterable.const_ptr_type} iterable; /**< @private */
-            size_t position; /**< @private */
+            size_t front_position, back_position; /**< @private */
           } #{type};
         $
         super
         stream << '/** @} */'
       end
-  
+
       def interface_definitions(stream)
         super
         stream << %$
@@ -271,15 +271,20 @@ module AutoC
             assert(self);
             assert(iterable);
             self->iterable = iterable;
-            self->position = 0;
+            self->front_position = 0;
+            self->back_position = #{iterable.size}(self->iterable) - 1;
           }
-          #{define(@size)} {
+          #{define(@length)} {
             assert(self);
-            return #{iterable.size}(self->iterable);
+            return #{@empty}(self) ? 0 : self->back_position - self->front_position + 1;
           }
           #{define(@empty)} {
             assert(self);
-            return self->position < #{size}(self);
+            return !(
+              self->front_position <= self->back_position &&
+              self->front_position <  #{iterable.size}(self->iterable) &&
+              self->back_position  <  #{iterable.size}(self->iterable)
+            );
           }
           #{define(@save)} {
             assert(self);
@@ -288,37 +293,43 @@ module AutoC
           }
           #{define(@pop_front)} {
             assert(self);
-            ++self->position;
+            ++self->front_position;
           }
           #{define(@pop_back)} {
             assert(self);
-            --self->position;
+            --self->back_position; /* This assumes the wrapping of unsigned integer, e.g. 0-1 --> max(size_t) */
           }
           #{define(@front_view)} {
             assert(self);
-            return #{iterable.view}(self->iterable, self->position);
+            assert(!#{@empty}(self));
+            return #{iterable.view}(self->iterable, self->front_position);
           }
           #{define(@back_view)} {
             assert(self);
-            return #{iterable.view}(self->iterable, self->position);
+            assert(!#{@empty}(self));
+            return #{iterable.view}(self->iterable, self->back_position);
           }
           #{define(@view)} {
             assert(self);
-            return #{iterable.view}(self->iterable, position);
+            assert(position < #{length}(self));
+            return #{iterable.view}(self->iterable, self->front_position + position);
           }
         $
         stream << %$
           #{define(@front)} {
             assert(self);
-            return #{iterable.get}(self->iterable, self->position);
+            assert(!#{@empty}(self));
+            return #{iterable.get}(self->iterable, self->front_position);
           }
           #{define(@back)} {
             assert(self);
-            return #{iterable.get}(self->iterable, self->position);
+            assert(!#{@empty}(self));
+            return #{iterable.get}(self->iterable, self->back_position);
           }
           #{define(@get)} {
             assert(self);
-            return #{iterable.get}(self->iterable, position);
+            assert(position < #{length}(self));
+            return #{iterable.get}(self->iterable, self->front_position + position);
           }
         $ if iterable.element.copyable?
       end
