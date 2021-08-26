@@ -7,11 +7,6 @@ module AutoC
 
   class List < Container
 
-    include Hashable
-
-    #
-    attr_reader :range
-
     def initialize(type, element)
       super
       @range = Range.new(self)

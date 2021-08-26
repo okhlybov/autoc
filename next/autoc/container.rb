@@ -11,6 +11,8 @@ module AutoC
 
     attr_reader :element
 
+    attr_reader :range
+
     def initialize(type, element)
       super(type)
       @element = Type.coerce(element)
@@ -106,12 +108,6 @@ module AutoC
         stream << %$/** @} */$
       end
     end
-
-  end
-
-
-  # Provides generic implementation of the code() function based on container-specific ranges
-  module Container::Hashable
 
     @@hashable_counter = 0 # Counter used to generate a hashable-unique type hash code
 
