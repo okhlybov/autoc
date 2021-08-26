@@ -74,7 +74,8 @@ module AutoC
     #
     def declare(obj = nil)
       if obj.nil? then @declare
-      else obj.inline? ? "#{@define} #{obj.declaration}" : "#{@declare} #{obj.declaration}"
+      elsif obj.inline? then "#{@define} #{obj.declaration}"
+      else "#{@declare} #{obj.declaration}"
       end
     end
 
@@ -153,7 +154,8 @@ module AutoC
     private
 
     def setup_interface_declarations
-      @declare = @define = nil
+      @declare = :AUTOC_EXTERN
+      @define = :AUTOC_INLINE
     end
 
     def setup_interface_definitions

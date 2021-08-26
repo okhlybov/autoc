@@ -196,6 +196,11 @@ module AutoC
 
     class List::Range < Range::Forward
 
+      def initialize(*args)
+        super
+        [custom_create, @empty, @save, @pop_front, @front_view, @front].each(&:inline!)
+      end
+
       def interface_declarations(stream)
         stream << %$
           /**
@@ -209,7 +214,7 @@ module AutoC
         super
         stream << '/** @} */'
       end
-  
+
       def interface_definitions(stream)
         super
         stream << %$
@@ -244,14 +249,6 @@ module AutoC
             return result;
           }
         $ if iterable.element.copyable?
-      end
-  
-      def setup_interface_declarations
-        @declare = @define = :AUTOC_INLINE
-      end
-
-      def setup_interface_definitions
-        @declare = @define = :AUTOC_INLINE
       end
 
     end

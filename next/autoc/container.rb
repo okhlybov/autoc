@@ -106,7 +106,7 @@ module AutoC
         stream << %$/** @} */$
       end
     end
-  
+
   end
 
 

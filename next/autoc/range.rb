@@ -20,7 +20,7 @@ module AutoC
       @initial_dependencies << iterable
     end
 
-    def interface_declarations(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         /**
@@ -43,7 +43,7 @@ module AutoC
       @front = Composite::Function.new(self, :front, 1, { self: const_type }, iterable.element.type)
     end
 
-    def interface_declarations(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         /**
@@ -84,7 +84,7 @@ module AutoC
       @save = Composite::Function.new(self, :save, 2, { self: type, origin: const_type }, :void)
     end
 
-    def interface_declarations(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         /**
@@ -107,7 +107,7 @@ module AutoC
       @back = Composite::Function.new(self, :back, 1, { self: const_type }, iterable.element.type)
     end
 
-    def interface_declarations(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         /**
@@ -146,7 +146,7 @@ module AutoC
       @get = Composite::Function.new(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
     end
 
-    def interface_declarations(stream)
+    def interface_definitions(stream)
       super
       stream << %$
         /**
