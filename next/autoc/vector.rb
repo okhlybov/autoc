@@ -249,6 +249,11 @@ module AutoC
 
     class Vector::Range < Range::RandomAccess
 
+      def initialize(*args)
+        super
+        [custom_create, @empty, @length, @view, @get, @save, @pop_front, @front_view, @front, @pop_back, @back_view, @back].each(&:inline!)
+      end
+
       def interface_declarations(stream)
         stream << %$
           /**
@@ -332,14 +337,6 @@ module AutoC
             return #{iterable.get}(self->iterable, self->front_position + position);
           }
         $ if iterable.element.copyable?
-      end
-  
-      def setup_interface_declarations
-        @declare = @define = :AUTOC_INLINE
-      end
-
-      def setup_interface_definitions
-        @declare = @define = :AUTOC_INLINE
       end
 
     end
