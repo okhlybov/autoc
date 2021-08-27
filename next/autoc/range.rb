@@ -15,7 +15,7 @@ module AutoC
     def initialize(iterable)
       @iterable = iterable
       super(nil)
-      @custom_create = Composite::Function.new(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
+      @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
       @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil
       @initial_dependencies << iterable
     end
@@ -37,10 +37,10 @@ module AutoC
 
     def initialize(iterable)
       super
-      @empty = Composite::Function.new(self, :empty, 1, { self: const_type }, :int)
-      @pop_front = Composite::Function.new(self, :pop_front, 1, { self: type }, :void)
-      @front_view = Composite::Function.new(self, :front_view, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @front = Composite::Function.new(self, :front, 1, { self: const_type }, iterable.element.type)
+      @empty = function(self, :empty, 1, { self: const_type }, :int)
+      @pop_front = function(self, :pop_front, 1, { self: type }, :void)
+      @front_view = function(self, :front_view, 1, { self: const_type }, iterable.element.const_ptr_type)
+      @front = function(self, :front, 1, { self: const_type }, iterable.element.type)
     end
 
     def interface_definitions(stream)
@@ -81,7 +81,7 @@ module AutoC
 
     def initialize(iterable)
       super
-      @save = Composite::Function.new(self, :save, 2, { self: type, origin: const_type }, :void)
+      @save = function(self, :save, 2, { self: type, origin: const_type }, :void)
     end
 
     def interface_definitions(stream)
@@ -102,9 +102,9 @@ module AutoC
 
     def initialize(iterable)
       super
-      @pop_back = Composite::Function.new(self, :pop_back, 1, { self: type }, :void)
-      @back_view = Composite::Function.new(self, :back_view, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @back = Composite::Function.new(self, :back, 1, { self: const_type }, iterable.element.type)
+      @pop_back = function(self, :pop_back, 1, { self: type }, :void)
+      @back_view = function(self, :back_view, 1, { self: const_type }, iterable.element.const_ptr_type)
+      @back = function(self, :back, 1, { self: const_type }, iterable.element.type)
     end
 
     def interface_definitions(stream)
@@ -141,9 +141,9 @@ module AutoC
 
     def initialize(iterable)
       super
-      @length = Composite::Function.new(self, :length, 1, { self: const_type }, :size_t)
-      @view = Composite::Function.new(self, :view, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
-      @get = Composite::Function.new(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
+      @length = function(self, :length, 1, { self: const_type }, :size_t)
+      @view = function(self, :view, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
+      @get = function(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
     end
 
     def interface_definitions(stream)

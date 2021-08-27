@@ -11,7 +11,7 @@ module AutoC
       super
       @range = Range.new(self)
       @initial_dependencies << range
-      @custom_create = Composite::Function.new(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
+      @custom_create = function(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
       [default_create, @size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end

@@ -41,7 +41,7 @@ module AutoC
       end
 
       def inline? = @inline
-    
+
       # Account for definition of an inline function.
       def inline!(inline = true)
         @inline = inline
@@ -89,16 +89,18 @@ module AutoC
     def initialize(type)
       super(type)
       # @custom_create
-      @default_create = Function.new(self, :create, 1, { self: type }, :void)
-      @destroy = Function.new(self, :destroy, 1, { self: type }, :void)
-      @copy = Function.new(self, :copy, 2, { self: type, source: const_type }, :void)
-      @move = Function.new(self, :move, 2, { self: type, source: type }, :void)
-      @equal = Function.new(self, :equal, 2, { self: const_type, other: const_type }, :int)
-      @compare = Function.new(self, :compare, 2, { self: const_type, other: const_type }, :int)
-      @code = Function.new(self, :code, 1, { self: const_type }, :size_t)
+      @default_create = function(self, :create, 1, { self: type }, :void)
+      @destroy = function(self, :destroy, 1, { self: type }, :void)
+      @copy = function(self, :copy, 2, { self: type, source: const_type }, :void)
+      @move = function(self, :move, 2, { self: type, source: type }, :void)
+      @equal = function(self, :equal, 2, { self: const_type, other: const_type }, :int)
+      @compare = function(self, :compare, 2, { self: const_type, other: const_type }, :int)
+      @code = function(self, :code, 1, { self: const_type }, :size_t)
       @initial_dependencies = [CODE, memory, hasher]
       @initial_prefix = nil
     end
+
+    private def function(*args) = Function.new(*args)
 
     def respond_to_missing?(*args) = SPECIAL_METHODS.include?(args.first) ? !instance_variable_get("@#{args.first}").nil? : super
 

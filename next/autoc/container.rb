@@ -19,9 +19,9 @@ module AutoC
       @initial_dependencies << self.element
       @generate_declarations = true # Emit generic documented method declarations
       # Declare the common container functions which should exist for all containers
-      @size = Composite::Function.new(self, :size, 1, { self: const_type }, :size_t)
-      @empty = Composite::Function.new(self, :empty, 1, { self: const_type }, :int)
-      @contains = Composite::Function.new(self, :contains, 1, { self: const_type, what: self.element.const_type }, :int)
+      @size = function(self, :size, 1, { self: const_type }, :size_t)
+      @empty = function(self, :empty, 1, { self: const_type }, :int)
+      @contains = function(self, :contains, 1, { self: const_type, what: self.element.const_type }, :int)
     end
 
     # Additional container-specific trait restrictions
