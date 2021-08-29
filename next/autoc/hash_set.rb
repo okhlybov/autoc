@@ -111,24 +111,14 @@ module AutoC
 
   class HashSet::Bucket < AutoC::List
 
-    def type = @type ||= "_#{@set.type}Bucket"
-
-    def initialize(set, element)
-      @set = set
-      super(nil, element)
-    end
+    def initialize(set, element) = super(Once.new { "_#{set.type}Bucket" }, element)
 
   end
 
 
   class HashSet::Buckets < AutoC::Vector
 
-    def type = @type ||= "_#{@set.type}Buckets"
-
-    def initialize(set, bucket)
-      @set = set
-      super(nil, bucket)
-    end
+    def initialize(set, bucket) = super(Once.new { "_#{set.type}Buckets" }, bucket)
 
   end
 

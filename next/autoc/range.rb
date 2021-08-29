@@ -7,14 +7,13 @@ module AutoC
   #
   class Range < Composite
 
-
-    def type = @type ||= "#{@iterable.type}Range"
-
     attr_reader :iterable
 
+    private def range_type = Once.new { "#{iterable.type}Range" }
+
     def initialize(iterable)
+      super(range_type)
       @iterable = iterable
-      super(nil)
       @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
       @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil
       @initial_dependencies << iterable

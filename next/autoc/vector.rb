@@ -23,7 +23,7 @@ module AutoC
          * @{
          */
         typedef struct {
-          #{element.type}* elements; /**< @private */
+          #{element.ptr_type} elements; /**< @private */
           size_t element_count; /**< @private */
         } #{type};
       $

@@ -7,6 +7,11 @@ require 'autoc/module'
 module AutoC
 
 
+  class Once < ::Proc
+    def to_s = @value ||= call
+  end
+
+
   # Generator class for C function declarator.
   class Function
 
@@ -29,9 +34,9 @@ module AutoC
         end
     end
 
-    def signature = @signature ||= '%s(%s)' % [result, parameters.values.join(', ')]
+    def signature = Once.new { '%s(%s)' % [result, parameters.values.join(', ')] }
 
-    def definition = @definition ||= '%s %s(%s)' % [result, name, parameters.collect{ |var, type| "#{type} #{var}" }.join(', ')]
+    def definition = Once.new { '%s %s(%s)' % [result, name, parameters.collect{ |var, type| "#{type} #{var}" }.join(', ')] }
 
     def declaration = definition
 
@@ -39,7 +44,7 @@ module AutoC
 
     def [](*args) = call(*args)
 
-    def to_s = name
+    def to_s = name.to_s
 
   end
 
@@ -59,21 +64,26 @@ module AutoC
 
     # C side type signature suitable for generating variable declarations.
     # This implementation sports lazy type definition based on the value supplied at object construction time.
-    def type = @type ||= @initial_type.to_s
+    attr_reader :type
 
     #
-    def const_type = @const_type ||= "const #{type}"
+    attr_reader :ptr_type
 
     #
-    def ptr_type = @ptr_type ||= "#{type}*"
+    attr_reader :const_type
 
     #
-    def const_ptr_type = @const_ptr_type ||= "#{const_type}*"
+    attr_reader :const_ptr_type
 
     #
     def to_s = type
 
-    def initialize(type) = @initial_type = type
+    def initialize(type)
+      @type = type
+      @ptr_type = Once.new { "#{type}*" }
+      @const_type = Once.new { "const #{type}" }
+      @const_ptr_type = Once.new { "const #{type}*" }
+    end
 
     # @abstract
     # Synthesize the source side code to create an instance in place of the +value+ and perform its default

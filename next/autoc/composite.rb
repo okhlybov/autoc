@@ -14,9 +14,8 @@ module AutoC
     # Type-bound function with first refs parameters converted to references (mapped to C pointers).
     class Function < AutoC::Function
 
+      #
       attr_reader :type
-
-      def name = @name ||= type.decorate_identifier(@initial_name)
 
       def initialize(type, name, refs, parameters, result, inline = false)
         i = 0
@@ -26,18 +25,10 @@ module AutoC
           else
             parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
           end
-        super(nil, parameters, result)
-        @initial_name = name
-        @type = type
-        @refs = refs
-        @inline = inline
-      end
-
-      # Set new name for the function.
-      def rename!(name)
-        @name = nil
-        @initial_name = name
-        self
+          super(Once.new { self.type.decorate_identifier(name) }, parameters, result)
+          @inline = inline
+          @type = type
+          @refs = refs
       end
 
       def inline? = @inline
@@ -49,7 +40,7 @@ module AutoC
       end
 
       def call(*args)
-        if args.empty? then name # Emit function name
+        if args.empty? then name # Emit bare function name
         elsif args.first.nil? then super() # Emit function call without parameters, fn()
         else
           i = 0
@@ -60,9 +51,9 @@ module AutoC
       private
 
       # Convert C value type to a pointer type
-      def ref_value_type(type) = "#{type}*"
+      def ref_value_type(type) = Once.new { "#{type}*" }
 
-      def ref_value_call(arg) = "&(#{arg})"
+      def ref_value_call(arg) = Once.new { "&(#{arg})" }
     end
 
     # Prefix used to generate fully qualified type-specific identifiers.
