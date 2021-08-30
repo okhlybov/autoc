@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'autoc/container'
 require 'autoc/vector'
 require 'autoc/list'
@@ -21,7 +24,7 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-        * @defgroup #{type} Hash-based set of unique values of type <#{element.type}>
+        * #{@defgroup} #{type} Hash-based set of unique values of type <#{element.type}>
         * @{
         */
         typedef struct {
@@ -36,7 +39,7 @@ module AutoC
       super
       stream << %$
         /**
-         * @addtogroup #{type}
+         * #{@addtogroup} #{type}
          * @{
          */
         #{define(@size)} {
@@ -72,7 +75,7 @@ module AutoC
       def composite_declarations(stream)
         stream << %$
           /**
-          * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
+          * #{@defgroup} #{type} Range iterator for <#{iterable.type}> iterable container
           * @{
           */
           typedef struct {

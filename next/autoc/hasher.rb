@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'singleton'
 require 'autoc/module'
 

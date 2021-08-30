@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'autoc/container'
 require 'autoc/range'
 
@@ -19,7 +22,7 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-         * @defgroup #{type} Resizeable vector of values of type <#{element.type}>
+         * #{@defgroup} #{type} Resizeable vector of values of type <#{element.type}>
          * @{
          */
         typedef struct {
@@ -35,7 +38,7 @@ module AutoC
       super
       stream << %$
         /**
-         * @addtogroup #{type}
+         * #{@addtogroup} #{type}
          * @{
          */
         #{define(default_create)} {
@@ -252,12 +255,12 @@ module AutoC
       def composite_declarations(stream)
         stream << %$
           /**
-           * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
+           * #{@defgroup} #{type} Range iterator for <#{iterable.type}> iterable container
            * @{
            */
           typedef struct {
             #{iterable.const_ptr_type} iterable; /**< @private */
-            size_t front_position, back_position; /**< @private */
+            size_t front_position /**< @private */, back_position; /**< @private */
           } #{type};
         $
         super

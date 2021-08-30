@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'autoc/composite'
 
 
@@ -46,7 +49,7 @@ module AutoC
       if @generate_declarations
         stream << %$
           /**
-           * @addtogroup #{type}
+           * #{@addtogroup} #{type}
            * @{
            */
         $

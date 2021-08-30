@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'autoc/container'
 require 'autoc/range'
 
@@ -18,7 +21,7 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-        * @defgroup #{type} Singly linked list of values of type <#{element.type}>
+        * #{@defgroup} #{type} Singly linked list of values of type <#{element.type}>
         * @{
         */
         typedef struct #{node} #{node}; /**< @private */
@@ -41,7 +44,7 @@ module AutoC
       super
       stream << %$
         /**
-         * @addtogroup #{type}
+         * #{@addtogroup} #{type}
          * @{
          */
         #{define(default_create)} {
@@ -208,7 +211,7 @@ module AutoC
       def composite_declarations(stream)
         stream << %$
           /**
-          * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
+          * #{@defgroup} #{type} Range iterator for <#{iterable.type}> iterable container
           * @{
           */
           typedef struct {

@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 module AutoC
 
   VERSION = '2.0.0'

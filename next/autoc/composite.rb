@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'autoc/type'
 require 'autoc/memory'
 require 'autoc/hasher'
@@ -136,61 +139,57 @@ module AutoC
     def interface_declarations(stream)
       super
       case visibility
-      when :public, :internal
-        setup_interface_declarations
+      when :public
+        @define = :AUTOC_INLINE
+        @declare = :AUTOC_EXTERN
+        @defgroup = '@public @defgroup'
+        @addtogroup = '@public @addtogroup'
+        composite_declarations(stream)
+      when :internal
+        @define = :AUTOC_INLINE
+        @declare = :AUTOC_EXTERN
+        @defgroup = '@internal @defgroup'
+        @addtogroup = '@internal @addtogroup'
         composite_declarations(stream)
       end
-      setup_interface_declarations
     end
 
     def interface_definitions(stream)
       super
       case visibility
       when :public
-        setup_interface_definitions
+        @define = :AUTOC_INLINE
+        @declare = :AUTOC_EXTERN
+        @defgroup = '@public @defgroup'
+        @addtogroup = '@public @addtogroup'
         composite_definitions(stream)
       end
-      setup_interface_definitions
     end
 
     def declarations(stream)
       super
       case visibility
       when :private
-        setup_declarations
+        @declare = @define = :AUTOC_STATIC
+        @defgroup = '@internal @defgroup'
+        @addtogroup = '@internal @addtogroup'
         composite_declarations(stream)
       end
       case visibility
       when :internal, :private
         @declare = @define = :AUTOC_STATIC
+        @defgroup = '@internal @defgroup'
+        @addtogroup = '@internal @addtogroup'
         composite_definitions(stream)
       end
-      setup_declarations
     end
 
     def definitions(stream)
       super
-      setup_definitions
-    end
-
-    private
-
-    def setup_interface_declarations
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_INLINE
-    end
-
-    def setup_interface_definitions
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_INLINE
-    end
-
-    def setup_declarations
-      @declare = @define = :AUTOC_STATIC
-    end
-
-    def setup_definitions
-      @declare = @define = nil
+      @define = nil
+      @declare = :static
+      @defgroup = '@internal @defgroup'
+      @addtogroup = '@internal @addtogroup'
     end
 
     CODE = Code.interface %$
