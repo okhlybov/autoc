@@ -127,6 +127,15 @@ module AutoC
     def definitions(stream)
       super
       stream << %$
+        #{define(copy)} {
+          #{range.type} r;
+          #{create}(self);
+          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{push}(self, *#{range.front_view}(&r));
+          }
+        }
+      $ if copyable?
+      stream << %$
         #{define} int #{drop}(#{ptr_type} self) {
           if(!#{empty}(self)) {
             #{node}* this_node = self->head_node; assert(this_node);
