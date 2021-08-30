@@ -7,15 +7,15 @@ module AutoC
 
   class List < Container
 
-    def initialize(type, element)
+    def initialize(type, element, visibility = :public)
       super
-      @range = Range.new(self)
+      @range = Range.new(self, visibility)
       @initial_dependencies << range
       [default_create, destroy, @size, @empty, @contains].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
-    def interface_declarations(stream)
+    def composite_declarations(stream)
       stream << %$
         /**
         * @defgroup #{type} Singly linked list of values of type <#{element.type}>
@@ -37,7 +37,7 @@ module AutoC
       stream << '/** @} */'
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -205,7 +205,7 @@ module AutoC
         [custom_create, @empty, @save, @pop_front, @front_view, @front].each(&:inline!)
       end
 
-      def interface_declarations(stream)
+      def composite_declarations(stream)
         stream << %$
           /**
           * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
@@ -219,7 +219,7 @@ module AutoC
         stream << '/** @} */'
       end
 
-      def interface_definitions(stream)
+      def composite_definitions(stream)
         super
         stream << %$
           #{define(custom_create)} {

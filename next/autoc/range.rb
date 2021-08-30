@@ -11,15 +11,15 @@ module AutoC
 
     private def range_type = Once.new { "#{iterable.type}Range" }
 
-    def initialize(iterable)
-      super(range_type)
+    def initialize(iterable, visibility)
+      super(range_type, visibility)
       @iterable = iterable
       @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
       @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil
       @initial_dependencies << iterable
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -34,7 +34,7 @@ module AutoC
   #
   class Range::Input < Range
 
-    def initialize(iterable)
+    def initialize(iterable, visibility)
       super
       @empty = function(self, :empty, 1, { self: const_type }, :int)
       @pop_front = function(self, :pop_front, 1, { self: type }, :void)
@@ -42,7 +42,7 @@ module AutoC
       @front = function(self, :front, 1, { self: const_type }, iterable.element.type)
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -78,12 +78,12 @@ module AutoC
   #
   class Range::Forward < Range::Input
 
-    def initialize(iterable)
+    def initialize(iterable, visibility)
       super
       @save = function(self, :save, 2, { self: type, origin: const_type }, :void)
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -99,14 +99,14 @@ module AutoC
   #
   class Range::Bidirectional < Range::Forward
 
-    def initialize(iterable)
+    def initialize(iterable, visibility)
       super
       @pop_back = function(self, :pop_back, 1, { self: type }, :void)
       @back_view = function(self, :back_view, 1, { self: const_type }, iterable.element.const_ptr_type)
       @back = function(self, :back, 1, { self: const_type }, iterable.element.type)
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -138,14 +138,14 @@ module AutoC
   #
   class Range::RandomAccess < Range::Bidirectional
 
-    def initialize(iterable)
+    def initialize(iterable, visibility)
       super
       @length = function(self, :length, 1, { self: const_type }, :size_t)
       @view = function(self, :view, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
       @get = function(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**

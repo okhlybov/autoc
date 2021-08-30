@@ -13,8 +13,8 @@ module AutoC
 
     attr_reader :range
 
-    def initialize(type, element)
-      super(type)
+    def initialize(type, element, visibility)
+      super(type, visibility)
       @element = Type.coerce(element)
       @initial_dependencies << self.element
       # Declare the common container functions which should exist for all containers
@@ -41,7 +41,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       if @generate_declarations
         stream << %$

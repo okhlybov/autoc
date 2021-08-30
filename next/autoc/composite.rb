@@ -77,7 +77,9 @@ module AutoC
 
     def hasher = AutoC::Hasher.default
 
-    def initialize(type)
+    attr_reader :visibility
+
+    def initialize(type, visibility)
       super(type)
       # @custom_create
       @default_create = function(self, :create, 1, { self: type }, :void)
@@ -89,6 +91,7 @@ module AutoC
       @code = function(self, :code, 1, { self: const_type }, :size_t)
       @initial_dependencies = [CODE, memory, hasher]
       @initial_prefix = nil
+      @visibility = visibility
     end
 
     private def function(*args) = Function.new(*args)
@@ -124,18 +127,42 @@ module AutoC
       underscored && prefix[0] != '_' ? "#{$1}#{id}" : id
     end
 
+    #
+    def composite_declarations(stream) = nil
+
+    #
+    def composite_definitions(stream) = nil
+
     def interface_declarations(stream)
       super
-      setup_interface_declarations
+      case visibility
+      when :public, :internal
+        setup_interface_declarations
+        composite_declarations(stream)
+      end
     end
 
     def interface_definitions(stream)
       super
-      setup_interface_definitions
+      case visibility
+      when :public
+        setup_interface_definitions
+        composite_definitions(stream)
+      end
     end
 
     def declarations(stream)
       super
+      case visibility
+      when :private
+        setup_declarations
+        composite_declarations(stream)
+      end
+      case visibility
+      when :internal, :private
+        setup_definitions
+        composite_definitions(stream)
+      end
       setup_declarations
     end
 

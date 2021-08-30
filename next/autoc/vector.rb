@@ -7,16 +7,16 @@ module AutoC
 
   class Vector < Container
 
-    def initialize(type, element)
+    def initialize(type, element, visibility = :public)
       super
-      @range = Range.new(self)
+      @range = Range.new(self, visibility)
       @initial_dependencies << range
       @custom_create = function(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
       [default_create, @size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
-    def interface_declarations(stream)
+    def composite_declarations(stream)
       stream << %$
         /**
          * @defgroup #{type} Resizeable vector of values of type <#{element.type}>
@@ -31,7 +31,7 @@ module AutoC
       stream << '/** @} */'
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -249,7 +249,7 @@ module AutoC
         [custom_create, @empty, @length, @view, @get, @save, @pop_front, @front_view, @front, @pop_back, @back_view, @back].each(&:inline!)
       end
 
-      def interface_declarations(stream)
+      def composite_declarations(stream)
         stream << %$
           /**
            * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
@@ -264,7 +264,7 @@ module AutoC
         stream << '/** @} */'
       end
 
-      def interface_definitions(stream)
+      def composite_definitions(stream)
         super
         stream << %$
           #{define(custom_create)} {

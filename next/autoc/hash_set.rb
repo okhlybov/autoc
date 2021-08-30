@@ -8,17 +8,17 @@ module AutoC
 
   class HashSet < Container
 
-    def initialize(type, element)
+    def initialize(type, element, visibility = :public)
       super
-      @range = Range.new(self)
+      @range = Range.new(self, visibility)
       @bucket = Bucket.new(self, element)
       @buckets = Buckets.new(self, @bucket)
-      @initial_dependencies << range << @bucket << @buckets
+      @initial_dependencies << range << @buckets << @bucket
       [@size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
-    def interface_declarations(stream)
+    def composite_declarations(stream)
       stream << %$
         /**
         * @defgroup #{type} Hash-based set of unique values of type <#{element.type}>
@@ -32,7 +32,7 @@ module AutoC
       stream << '/** @} */'
     end
 
-    def interface_definitions(stream)
+    def composite_definitions(stream)
       super
       stream << %$
         /**
@@ -69,7 +69,7 @@ module AutoC
         super
       end
 
-      def interface_declarations(stream)
+      def composite_declarations(stream)
         stream << %$
           /**
           * @defgroup #{type} Range iterator for <#{iterable.type}> iterable container
@@ -83,7 +83,7 @@ module AutoC
         stream << '/** @} */'
       end
 
-      def interface_definitions(stream)
+      def composite_definitions(stream)
         super
       end
 
@@ -109,16 +109,17 @@ module AutoC
 
   end
 
+
   class HashSet::Bucket < AutoC::List
 
-    def initialize(set, element) = super(Once.new { "_#{set.type}Bucket" }, element)
+    def initialize(set, element) = super(Once.new { "_#{set.type}Bucket" }, element, :internal)
 
   end
 
 
   class HashSet::Buckets < AutoC::Vector
 
-    def initialize(set, bucket) = super(Once.new { "_#{set.type}Buckets" }, bucket)
+    def initialize(set, bucket) = super(Once.new { "_#{set.type}Buckets" }, bucket, :internal)
 
   end
 
