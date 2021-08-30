@@ -140,6 +140,7 @@ module AutoC
         setup_interface_declarations
         composite_declarations(stream)
       end
+      setup_interface_declarations
     end
 
     def interface_definitions(stream)
@@ -149,6 +150,7 @@ module AutoC
         setup_interface_definitions
         composite_definitions(stream)
       end
+      setup_interface_definitions
     end
 
     def declarations(stream)
@@ -160,7 +162,7 @@ module AutoC
       end
       case visibility
       when :internal, :private
-        setup_definitions
+        @declare = @define = :AUTOC_STATIC
         composite_definitions(stream)
       end
       setup_declarations

@@ -45,7 +45,7 @@ def type_test(cls, *opts, &code)
       s = name.to_s
       @test_names << [name, func_name = eval("test#{s[0,1].upcase}#{s[1..-1]}")]
       @tests << %~
-        void #{func_name}(void) {
+        static void #{func_name}(void) {
           #{@setup_code}
           #{code}
           #{@cleanup_code}
@@ -55,7 +55,7 @@ def type_test(cls, *opts, &code)
     def definitions(stream)
       super
       @tests.each {|f| stream << f}
-      stream << %~void #{runTests}(void) {~
+      stream << %~static void #{runTests}(void) {~
       stream << %~
           fprintf(stdout, "* %s\\n", "#{type}");
           fflush(stdout);
@@ -90,7 +90,7 @@ class TestSuite
       } tests;
       int failure;
       typedef void (*test_func)(void);
-      void run_test(const char* name, test_func func) {
+      static void run_test(const char* name, test_func func) {
         fprintf(stdout, "|   %s\\n", name);
         fflush(stdout);
         failure = 0;
@@ -98,17 +98,17 @@ class TestSuite
         if(failure) tests.failed++;
         tests.processed++;
       }
-      void print_condition_failure(const char* message, const char* condition, const char* file, int line) {
+      static void print_condition_failure(const char* message, const char* condition, const char* file, int line) {
         fprintf(stderr, "*** %s : %s (%s:%d)\\n", condition, message, file, line);
         fflush(stderr);
         failure = 1;
       }
-      void print_equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
+      static void print_equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
         fprintf(stderr, "*** %s == %s : %s (%s:%d)\\n", x, y, message, file, line);
         fflush(stderr);
         failure = 1;
       }
-      void print_summary(void) {
+      static void print_summary(void) {
         if(tests.failed)
           fprintf(stdout, "*** Failed %d of %d tests\\n", tests.failed, tests.processed);
         else
