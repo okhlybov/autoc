@@ -20,11 +20,10 @@ module AutoC
       super(type, visibility)
       @element = Type.coerce(element)
       @initial_dependencies << self.element
-      # Declare the common container functions which should exist for all containers
+      # Declare the common container functions
       @size = function(self, :size, 1, { self: const_type }, :size_t)
       @empty = function(self, :empty, 1, { self: const_type }, :int)
-      @contains = function(self, :contains, 1, { self: const_type, what: self.element.const_type }, :int)
-      @generate_declarations = true # Emit generic documented method declarations
+      @contains = function(self, :contains, 1, { self: const_type, value: self.element.const_type }, :int)
     end
 
     # Additional container-specific trait restrictions
@@ -46,73 +45,66 @@ module AutoC
 
     def composite_definitions(stream)
       super
-      if @generate_declarations
-        stream << %$
-          /**
-           * #{@addtogroup} #{type}
-           * @{
-           */
-        $
-        stream << %$
-          /**
-           * @brief Create a new empty container
-           */
-        #{declare(default_create)};
-        $ if default_constructible?
-        stream << %$
-          /**
-           * @brief Destroy the container along with all contained elements
-           *
-           * The elements are destroyed with the element's respective destructor.
-           */
-          #{declare(destroy)};
-        $ if destructible?
-        stream << %$
-          /**
-           * @brief Create a container with the copies of the source container's elements
-           */
-          #{declare(copy)};
-        $ if copyable?
-        stream << %$
-          /**
-           * @brief Move the container to a new location with all its elements
-           */
-          #{declare(move)};
-        $ if movable?
-        stream << %$
-          /**
-           * @brief Return non-zero if both containers are considered equal by contents
-           */
-          #{declare(equal)};
-          /**
-          * @brief Return non-zero if there is at least one element in the container equal to the specified value
+      stream << %$
+        /**
+          * @brief Create a new empty container
           */
-          #{declare(@contains)};
-        $ if comparable?
-        stream << %$
-          /**
-           * @brief Return hash code for the container based on hash codes of contained elements
-           */
-          #{declare(code)};
-        $ if hashable?
-        stream << %$
-          /**
-           * @brief Return less-equal-more value for two containers
-           */
-          #{declare(compare)};
-        $ if orderable?
-        stream << %$
-          /**
-           * @brief Return number of contained elements in the container
-           */
-          #{declare(@size)};
-          /**
-           * @brief Return non-zero if there are no elements in the container and zero otherwise
-           */
-          #{declare(@empty)};
-        $
-        stream << %$/** @} */$
-      end
+      #{declare(default_create)};
+      $ if default_constructible?
+      stream << %$
+        /**
+          * @brief Destroy the container along with all contained elements
+          *
+          * The elements are destroyed with the element's respective destructor.
+          */
+        #{declare(destroy)};
+      $ if destructible?
+      stream << %$
+        /**
+          * @brief Create a container with the copies of the source container's elements
+          */
+        #{declare(copy)};
+      $ if copyable?
+      stream << %$
+        /**
+          * @brief Move the container to a new location with all its elements
+          */
+        #{declare(move)};
+      $ if movable?
+      stream << %$
+        /**
+          * @brief Return non-zero if both containers are considered equal by contents
+          */
+        #{declare(equal)};
+      $ if comparable?
+      stream << %$
+        /**
+         * @brief Return non-zero if there is at least one element in the container equal to the specified value
+         */
+        #{declare(@contains)};
+      $ if element.comparable?
+      stream << %$
+        /**
+          * @brief Return hash code for the container based on hash codes of contained elements
+          */
+        #{declare(code)};
+      $ if hashable?
+      stream << %$
+        /**
+          * @brief Return less-equal-more value for two containers
+          */
+        #{declare(compare)};
+      $ if orderable?
+      stream << %$
+        /**
+          * @brief Return number of contained elements in the container
+          */
+        #{declare(@size)};
+        /**
+          * @brief Return non-zero if there are no elements in the container and zero otherwise
+          */
+        #{declare(@empty)};
+      $
     end
 
     @@hashable_counter = 0 # Counter used to generate a hashable-unique type hash code

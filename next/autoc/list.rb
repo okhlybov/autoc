@@ -41,12 +41,14 @@ module AutoC
     end
 
     def composite_definitions(stream)
-      super
       stream << %$
         /**
          * #{@addtogroup} #{type}
          * @{
          */
+      $
+      super
+      stream << %$
         #{define(default_create)} {
           assert(self);
           self->head_node = NULL;
@@ -115,14 +117,14 @@ module AutoC
         /**
         * @brief Return a view of the contained element equal to the specified element or NULL is no such element found
         */
-        #{declare} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} what);
+        #{declare} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} value);
         #{define(@contains)} {
-          return #{find_view}(self, what) != NULL;
+          return #{find_view}(self, value) != NULL;
         }
         /**
         * @brief Remove and destroy the first contained element equal to the specified element
         */
-        #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} what);
+        #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} value);
       $ if element.comparable?
       stream << %$/** @} */$
     end
@@ -162,22 +164,22 @@ module AutoC
         }
       $ if comparable?
       stream << %$
-        #{define} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} what) {
+        #{define} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} value) {
           #{range.type} r;
           for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} e = #{range.front_view}(&r);
-            if(#{element.equal('*e', :what)}) return e;
+            if(#{element.equal('*e', :value)}) return e;
           }
           return NULL;
         }
-        #{define} int #{remove}(#{ptr_type} self, #{element.const_type} what) {
+        #{define} int #{remove}(#{ptr_type} self, #{element.const_type} value) {
           #{node} *node, *prev_node;
           int removed = 0;
           assert(self);
           node = self->head_node;
           prev_node = NULL;
           while(node) {
-            if(#{element.equal('node->element', :what)}) {
+            if(#{element.equal('node->element', :value)}) {
               #{node}* this_node;
               if(prev_node) {
                 this_node = prev_node->next_node = node->next_node;
@@ -223,6 +225,12 @@ module AutoC
       end
 
       def composite_definitions(stream)
+        stream << %$
+          /**
+           * #{@addtogroup} #{type}
+           * @{
+           */
+        $
         super
         stream << %$
           #{define(custom_create)} {
@@ -256,6 +264,7 @@ module AutoC
             return result;
           }
         $ if iterable.element.copyable?
+        stream << %$/** @} */$
       end
 
     end

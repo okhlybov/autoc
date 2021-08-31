@@ -35,12 +35,14 @@ module AutoC
     end
 
     def composite_definitions(stream)
-      super
       stream << %$
         /**
          * #{@addtogroup} #{type}
          * @{
          */
+      $
+      super
+      stream << %$
         #{define(default_create)} {
           assert(self);
           self->element_count = 0;
@@ -268,6 +270,12 @@ module AutoC
       end
 
       def composite_definitions(stream)
+        stream << %$
+          /**
+           * #{@addtogroup} #{type}
+           * @{
+           */
+        $
         super
         stream << %$
           #{define(custom_create)} {
@@ -335,6 +343,7 @@ module AutoC
             return #{iterable.get}(self->iterable, self->front_position + position);
           }
         $ if iterable.element.copyable?
+        stream << %$/** @} */$
       end
 
     end
