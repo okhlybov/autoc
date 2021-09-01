@@ -13,6 +13,7 @@ module AutoC
 
     def initialize(type, element, visibility = :public)
       super
+      raise unless self.element.hashable? # TODO
       @range = Range.new(self, visibility)
       @bucket = Bucket.new(self, element)
       @buckets = Buckets.new(self, @bucket)
@@ -25,14 +26,13 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} Hash-based set of unique values of type <#{element.type}>
+         * #{@defgroup} #{type} HashSet<#{element.type}> :: hash-based collection of unique values
          * @{
          */
         typedef struct {
-          #{@buckets.type} buckets;
+          #{@buckets.type} buckets; /**< @private */
           size_t element_count; /**< @private */
           size_t capacity; /**< @private */
-          size_t max_element_count; /**< @private */
         } #{type};
       $
       super
@@ -48,17 +48,17 @@ module AutoC
       $
       super
       stream << %$
+        /**
+         * @brief Create a container with specified initial capacity
+         */
+        #{declare} void #{create_capacity}(#{ptr_type} self, size_t capacity, int fixed_capacity);
         #{define(@size)} {
           assert(self);
-          return 0; // TODO
+          return self->element_count;
         }
         #{define(@empty)} {
           return #{size}(self) == 0;
         }
-        /**
-         * @brief Perform a rehash
-         */
-        #{declare} void #{rehash}(#{ptr_type} self);
       $
       stream << %$/** @} */$
     end
@@ -66,11 +66,31 @@ module AutoC
     def definitions(stream)
       super
       stream << %$
+        static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
+          return #{@buckets.view}(&self->buckets, #{element.code(:value)} % #{@buckets.size}(&self->buckets));
+        }
+        /* Push value to the set bypassing the element's copy function */
+        static void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {
+          #{@bucket._adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
+        }
+        static void #{rehash}(#{ptr_type} self) {
+          assert(self);
+          if(#{size}(self) > self->capacity) {
+            #{type} t;
+            #{range.type} r;
+            #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
+            for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+              #{_adopt}(&t, *#{range.front_view}(&r));
+            }
+            #{@buckets._dispose}(&self->buckets);
+            *self = t;
+          }
+        }
         #{define(default_create)} {
-          // TODO
+          #{create_capacity}(self, #{@manager[:minimum_capacity]}, 0);
         }
         #{define(destroy)} {
-          // TODO
+          #{@buckets.destroy('self->buckets')};
         }
         void #{create_capacity}(#{ptr_type} self, size_t capacity, int fixed_capacity) {
           assert(self);
@@ -78,27 +98,14 @@ module AutoC
           if(fixed_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
-        void #{rehash}(#{ptr_type} self) {
-          assert(self);
-          if(#{size}(self) > self->capacity) {
-            #{type} t;
-            #{range.type} r;
-            #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
-            for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-              #{put}(&t, *#{range.front_view}(&r)); // FIXME tranfser without copying
-            }
-            // FIXME destroy old self
-            *self = t;
-          }
-        }
         #{define(@contains)} {
-          #{@bucket.const_ptr_type} bucket = #{@buckets.view}(&self->buckets, #{element.code(:value)} % #{@buckets.size}(&self->buckets));
-          return #{@bucket.contains}(bucket, value);
+          return #{@bucket.contains}(#{_locate}(self, value), value);
         }
         #{define(@put)} {
-          #{@bucket.const_ptr_type} bucket = #{@buckets.view}(&self->buckets, #{element.code(:value)} % #{@buckets.size}(&self->buckets));
+          #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
           if(!#{@bucket.contains}(bucket, value)) {
             #{@bucket.push}((#{@bucket.ptr_type})bucket, value);
+            #{rehash}(self);
             return 1;
           } else return 0;
         }
@@ -164,24 +171,66 @@ module AutoC
 
     def initialize(set, element) = super(Once.new { "_#{set.type}Bucket" }, element, :internal)
 
+    def declarations(stream)
+      super
+      stream << %$
+        #{declare} void #{_adopt}(#{ptr_type} self, #{element.const_type} value);
+        #{declare} void #{_dispose}(#{ptr_type} self);
+      $
+    end
+
     def definitions(stream)
       super
       stream << %$
-        static void #{transfer}(#{ptr_type} self, #{element.const_ptr_type} p) {
+        /* Push value to the list bypassing the element's copy function */
+        #{define} void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {
+          /* Derived from ?push() */
           #{node}* new_node = #{memory.allocate(node)};
-          new_node->element = *p;
           new_node->next_node = self->head_node;
           self->head_node = new_node;
+          new_node->element = value;
           ++self->node_count;
+        }
+        /* Free the storage without calling the element's destructors */
+        #{define} void #{_dispose}(#{ptr_type} self) {
+          /* Derived from ?drop() */
+          while(!#{empty}(self)) {
+            #{node}* this_node = self->head_node; assert(this_node);
+            self->head_node = self->head_node->next_node;
+            #{memory.free(:this_node)};
+            --self->node_count;
+          }
         }
       $
     end
+
   end
 
 
   class HashSet::Buckets < AutoC::Vector
 
     def initialize(set, bucket) = super(Once.new { "_#{set.type}Buckets" }, bucket, :internal)
+
+      def declarations(stream)
+        super
+        stream << %$
+          #{declare} void #{_dispose}(#{ptr_type} self);
+        $
+      end
+
+      def definitions(stream)
+      super
+      stream << %$
+        /* Free the storage disposing the elements in turn */
+        #{define} void #{_dispose}(#{ptr_type} self) {
+          #{range.type} r;
+          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element._dispose}((#{element.ptr_type})#{range.front_view}(&r));
+          }
+          #{memory.free('self->elements')};
+        }
+      $
+    end
 
   end
 
