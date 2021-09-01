@@ -40,7 +40,7 @@ module AutoC
 
     def declaration = definition
 
-    def call(*args) = '%s(%s)' % [name, args.join(', ')]
+    def call(*args) = args.first.nil? ? to_s : '%s(%s)' % [name, args.join(', ')]
 
     def [](*args) = call(*args)
 
