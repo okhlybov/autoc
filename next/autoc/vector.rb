@@ -22,7 +22,7 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} Resizeable vector of values of type <#{element.type}>
+         * #{@defgroup} #{type} Vector<#{element.type}> :: resizeable vector
          * @{
          */
         typedef struct {

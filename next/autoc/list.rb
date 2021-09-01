@@ -21,7 +21,7 @@ module AutoC
     def composite_declarations(stream)
       stream << %$
         /**
-        * #{@defgroup} #{type} Singly linked list of values of type <#{element.type}>
+        * #{@defgroup} #{type} List<#{element.type}> :: singly linked list
         * @{
         */
         typedef struct #{node} #{node}; /**< @private */
@@ -132,15 +132,6 @@ module AutoC
     def definitions(stream)
       super
       stream << %$
-        #{define(copy)} {
-          #{range.type} r;
-          #{create}(self);
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{push}(self, *#{range.front_view}(&r));
-          }
-        }
-      $ if copyable?
-      stream << %$
         #{define} int #{drop}(#{ptr_type} self) {
           if(!#{empty}(self)) {
             #{node}* this_node = self->head_node; assert(this_node);
@@ -151,6 +142,17 @@ module AutoC
             return 1;
           } else return 0;
         }
+      $
+      stream << %$
+        #{define(copy)} {
+          #{range.type} r;
+          #{create}(self);
+          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{push}(self, *#{range.front_view}(&r));
+          }
+        }
+      $ if copyable?
+      stream << %$
         #{define(equal)} {
           if(#{size}(self) == #{size}(other)) {
             #{range.type} ra, rb;
