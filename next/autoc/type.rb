@@ -55,7 +55,7 @@ module AutoC
 
     SPECIAL_METHODS = %i[default_create custom_create destroy copy move equal compare code]
 
-    include Module::Entity
+    include Entity
 
     def self.abstract(meth) = remove_method(meth)
 
@@ -214,11 +214,11 @@ module AutoC
 
     def initialize(type, dependencies: [], interface: nil, declarations: nil, definitions: nil, **calls)
       super(type)
+      @specials = {}
       @interface = interface
       @declarations = declarations
       @definitions = definitions
-      @dependencies = ::Set[*dependencies].freeze
-      @specials = {}
+      self.dependencies.merge(dependencies)
       setup_call(calls, :custom_create, nil, nil)
       setup_call(calls, :default_create, {self: type}, type)
       setup_call(calls, :destroy, {self: type}, :void)
@@ -243,12 +243,12 @@ module AutoC
 
     def method_missing(symbol, *args) = SPECIAL_METHODS.include?(symbol) && !@specials[symbol].nil? ? @specials[symbol][*args] : super
 
-    def interface_declarations(stream)
+    def public_declarations(stream)
       super
       (stream << NEW_LINE << @interface << NEW_LINE) unless @interface.nil?
     end
 
-    def declarations(stream)
+    def forward_declarations(stream)
       super
       (stream << NEW_LINE << @declarations << NEW_LINE) unless @declarations.nil?
     end
@@ -259,42 +259,6 @@ module AutoC
     end
 
   end
-
-
-=begin
-  # Generator type for managed C structures which can take ownership over the values it contains.
-  class Structure < Composite
-
-  end
-
-
-  #
-  class Queue < Container
-
-  end
-
-
-  #
-  module Set
-
-  end
-
-
-  #
-  class HashSet < Container
-    include Set
-  end
-
-  #
-  class HashMap < Container
-
-  end
-
-  #
-  class TreeSet < Container
-    include Set
-  end
-=end
 
 
 end

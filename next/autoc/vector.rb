@@ -13,13 +13,13 @@ module AutoC
     def initialize(type, element, visibility = :public)
       super
       @range = Range.new(self, visibility)
-      @initial_dependencies << range
+      dependencies << range
       @custom_create = function(self, :create_size, 1, { self: type, size: :size_t }, :void) if self.element.default_constructible?
       [default_create, @size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
-    def composite_declarations(stream)
+    def public_declarations(stream)
       stream << %$
         /**
          * #{@defgroup} #{type} Vector<#{element.type}> :: resizeable vector
@@ -34,7 +34,7 @@ module AutoC
       stream << '/** @} */'
     end
 
-    def composite_definitions(stream)
+    def public_definitions(stream)
       stream << %$
         /**
          * #{@addtogroup} #{type}
@@ -251,7 +251,7 @@ module AutoC
 
       def initialize(*args)
         super
-        [custom_create, @empty, @length, @view, @get, @save, @pop_front, @front_view, @front, @pop_back, @back_view, @back].each(&:inline!)
+        [custom_create, @empty, @length, @view, @save, @pop_front, @front_view, @pop_back, @back_view].each(&:inline!)
       end
 
       def composite_declarations(stream)
@@ -283,7 +283,7 @@ module AutoC
             assert(iterable);
             self->iterable = iterable;
             self->front_position = 0;
-            self->back_position = #{iterable.size}(self->iterable) - 1;
+            self->back_position = self->iterable->element_count - 1; /* #{iterable.size(nil)} */
           }
           #{define(@length)} {
             assert(self);
@@ -293,8 +293,8 @@ module AutoC
             assert(self);
             return !(
               self->front_position <= self->back_position &&
-              self->front_position <  #{iterable.size}(self->iterable) &&
-              self->back_position  <  #{iterable.size}(self->iterable)
+              self->front_position <  self->iterable->element_count &&
+              self->back_position  <  self->iterable->element_count
             );
           }
           #{define(@save)} {
@@ -313,19 +313,24 @@ module AutoC
           #{define(@front_view)} {
             assert(self);
             assert(!#{@empty}(self));
-            return #{iterable.view}(self->iterable, self->front_position);
+            return &self->iterable->elements[self->front_position]; /* #{iterable.view(nil)} */
           }
           #{define(@back_view)} {
             assert(self);
             assert(!#{@empty}(self));
-            return #{iterable.view}(self->iterable, self->back_position);
+            return &self->iterable->elements[self->back_position];
           }
           #{define(@view)} {
             assert(self);
             assert(position < #{length}(self));
-            return #{iterable.view}(self->iterable, self->front_position + position);
+            return &self->iterable->elements[self->front_position + position];
           }
         $
+        stream << %$/** @} */$
+      end
+
+      def definitions(stream)
+        super
         stream << %$
           #{define(@front)} {
             assert(self);
@@ -343,9 +348,7 @@ module AutoC
             return #{iterable.get}(self->iterable, self->front_position + position);
           }
         $ if iterable.element.copyable?
-        stream << %$/** @} */$
       end
-
     end
 
 

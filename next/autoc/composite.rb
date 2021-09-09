@@ -63,9 +63,6 @@ module AutoC
     def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
 
     #
-    def dependencies = @dependencies ||= @initial_dependencies.nil? ? super : ::Set[*@initial_dependencies].freeze
-
-    #
     def declare(obj = nil)
       if obj.nil? then @declare
       elsif obj.inline? then "#{@define} #{obj.declaration}"
@@ -92,9 +89,9 @@ module AutoC
       @equal = function(self, :equal, 2, { self: const_type, other: const_type }, :int)
       @compare = function(self, :compare, 2, { self: const_type, other: const_type }, :int)
       @code = function(self, :code, 1, { self: const_type }, :size_t)
-      @initial_dependencies = [CODE, memory, hasher]
       @initial_prefix = nil
       @visibility = visibility
+      dependencies.merge [CODE, memory, hasher]
     end
 
     private def function(*args) = Function.new(*args)
@@ -130,64 +127,46 @@ module AutoC
       underscored && prefix[0] != '_' ? "#{$1}#{id}" : id
     end
 
-    #
-    def composite_declarations(stream) = nil
-
-    #
-    def composite_definitions(stream) = nil
-
-    def interface_declarations(stream)
+    def public_declarations(stream)
       super
+      @declare = :AUTOC_EXTERN
+      @define = :AUTOC_INLINE
       case visibility
       when :public
-        @define = :AUTOC_INLINE
-        @declare = :AUTOC_EXTERN
         @defgroup = '@public @defgroup'
         @addtogroup = '@public @addtogroup'
-        composite_declarations(stream)
-      when :internal
-        @define = :AUTOC_INLINE
-        @declare = :AUTOC_EXTERN
+      else
         @defgroup = '@internal @defgroup'
         @addtogroup = '@internal @addtogroup'
-        composite_declarations(stream)
       end
     end
 
-    def interface_definitions(stream)
+    def public_definitions(stream)
       super
+      @declare = :AUTOC_EXTERN
+      @define = :AUTOC_INLINE
       case visibility
       when :public
-        @define = :AUTOC_INLINE
-        @declare = :AUTOC_EXTERN
         @defgroup = '@public @defgroup'
         @addtogroup = '@public @addtogroup'
-        composite_definitions(stream)
+      else
+        @defgroup = '@internal @defgroup'
+        @addtogroup = '@internal @addtogroup'
       end
     end
 
-    def declarations(stream)
+    def forward_declarations(stream)
       super
-      case visibility
-      when :private
-        @declare = @define = :AUTOC_STATIC
-        @defgroup = '@internal @defgroup'
-        @addtogroup = '@internal @addtogroup'
-        composite_declarations(stream)
-      end
-      case visibility
-      when :internal, :private
-        @declare = @define = :AUTOC_STATIC
-        @defgroup = '@internal @defgroup'
-        @addtogroup = '@internal @addtogroup'
-        composite_definitions(stream)
-      end
+      @declare = :AUTOC_EXTERN
+      @define = :AUTOC_STATIC
+      @defgroup = '@internal @defgroup'
+      @addtogroup = '@internal @addtogroup'
     end
 
     def definitions(stream)
       super
+      @declare = :AUTOC_STATIC
       @define = nil
-      @declare = :static
       @defgroup = '@internal @defgroup'
       @addtogroup = '@internal @addtogroup'
     end

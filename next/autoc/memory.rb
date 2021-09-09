@@ -13,7 +13,7 @@ module AutoC
   class Allocator
 
     include Singleton
-    include Module::Entity
+    include Entity
 
     def allocate(type, count = 1, zero = false)
       zero ? "(#{type}*)calloc(#{count}, sizeof(#{type}))" : "(#{type}*)malloc((#{count})*sizeof(#{type}))"
@@ -21,7 +21,12 @@ module AutoC
 
     def free(ptr) = "free(#{ptr})"
 
-    def interface_declarations(stream)  = stream << NEW_LINE << "#include <stdlib.h>" << NEW_LINE
+    def public_declarations(stream)
+      super
+      stream << %$
+        #include <stdlib.h>"
+      $
+    end
 
     @@default = instance
 
@@ -36,13 +41,18 @@ module AutoC
   class Allocator::BDW
 
     include Singleton
-    include Module::Entity
+    include Entity
 
     def allocate(type, count = 1, zero = false) = "(#{type}*)GC_malloc((#{count})*sizeof(#{type}))"
 
     def free(ptr) = nil
 
-    def interface_declarations(stream) = stream << NEW_LINE << "#include <gc.h>" << NEW_LINE
+    def public_declarations(stream)
+      super
+      stream << %$
+        #include <gc.h>"
+      $
+    end
 
   end # BDW
 

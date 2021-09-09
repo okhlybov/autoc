@@ -12,7 +12,7 @@ module AutoC
   class Hasher
 
     include Singleton
-    include Module::Entity
+    include Entity
 
     def type = :size_t
 
@@ -24,7 +24,7 @@ module AutoC
 
     def destroy(hasher) = nil
 
-    def interface_definitions(stream)
+    def public_definitions(stream)
       stream << %$
         #include <limits.h>
         #ifndef AUTOC_HASHER_TRIVIAL_SEED

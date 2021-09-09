@@ -19,7 +19,7 @@ module AutoC
       @iterable = iterable
       @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
       @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil
-      @initial_dependencies << iterable
+      dependencies << iterable
     end
 
     def composite_definitions(stream)

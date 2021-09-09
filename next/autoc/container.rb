@@ -19,7 +19,7 @@ module AutoC
     def initialize(type, element, visibility)
       super(type, visibility)
       @element = Type.coerce(element)
-      @initial_dependencies << self.element
+      dependencies << self.element
       # Declare the common container functions
       @size = function(self, :size, 1, { self: const_type }, :size_t)
       @empty = function(self, :empty, 1, { self: const_type }, :int)
@@ -43,7 +43,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    def composite_definitions(stream)
+    def public_definitions(stream)
       super
       stream << %$
         /**
