@@ -21,7 +21,7 @@ module AutoC
 
     def free(ptr) = "free(#{ptr})"
 
-    def public_declarations(stream)
+    def interface_declarations(stream)
       super
       stream << %$
         #include <stdlib.h>"
@@ -47,7 +47,7 @@ module AutoC
 
     def free(ptr) = nil
 
-    def public_declarations(stream)
+    def interface_declarations(stream)
       super
       stream << %$
         #include <gc.h>"

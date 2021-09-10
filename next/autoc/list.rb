@@ -13,12 +13,12 @@ module AutoC
     def initialize(type, element, visibility = :public)
       super
       @range = Range.new(self, visibility)
-      @initial_dependencies << range
+      dependencies << range
       [default_create, destroy, @size, @empty, @contains].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
-    def composite_declarations(stream)
+    def composite_interface_declarations(stream)
       stream << %$
         /**
         * #{@defgroup} #{type} List<#{element.type}> :: singly linked list
@@ -40,7 +40,7 @@ module AutoC
       stream << '/** @} */'
     end
 
-    def composite_definitions(stream)
+    def composite_interface_definitions(stream)
       stream << %$
         /**
          * #{@addtogroup} #{type}
@@ -212,7 +212,7 @@ module AutoC
         [custom_create, @empty, @save, @pop_front, @front_view, @front].each(&:inline!)
       end
 
-      def composite_declarations(stream)
+      def composite_interface_declarations(stream)
         stream << %$
           /**
           * #{@defgroup} #{type} Range iterator for <#{iterable.type}> iterable container
@@ -226,7 +226,7 @@ module AutoC
         stream << '/** @} */'
       end
 
-      def composite_definitions(stream)
+      def composite_interface_definitions(stream)
         stream << %$
           /**
            * #{@addtogroup} #{type}

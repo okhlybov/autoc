@@ -127,7 +127,7 @@ module AutoC
       underscored && prefix[0] != '_' ? "#{$1}#{id}" : id
     end
 
-    def public_declarations(stream)
+    def interface_declarations(stream)
       super
       @declare = :AUTOC_EXTERN
       @define = :AUTOC_INLINE
@@ -139,9 +139,10 @@ module AutoC
         @defgroup = '@internal @defgroup'
         @addtogroup = '@internal @addtogroup'
       end
+      compostite_interface_declarations(stream)
     end
 
-    def public_definitions(stream)
+    def interface_definitions(stream)
       super
       @declare = :AUTOC_EXTERN
       @define = :AUTOC_INLINE
@@ -153,7 +154,12 @@ module AutoC
         @defgroup = '@internal @defgroup'
         @addtogroup = '@internal @addtogroup'
       end
+      composite_interface_definitions(stream)
     end
+
+    def compostite_interface_declarations(stream) = nil
+
+    def composite_interface_definitions(stream) = nil
 
     def forward_declarations(stream)
       super

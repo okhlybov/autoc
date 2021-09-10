@@ -132,8 +132,6 @@ module AutoC
 
     include EntityContainer
 
-    include Comparable
-
     attr_reader :module
 
     attr_reader :length
@@ -186,8 +184,9 @@ module AutoC
     def total_dependencies
       @total_dependencies ||=
         begin
-          set = ::Set.new [self]
-          dependencies.each { |d| set.merge(d.total_dependencies) }
+          set = ::Set.new
+          dependencies.each { |d| set.merge(d.total_dependencies) unless set.include?(d) }
+          set << self
           set
         end
     end
@@ -198,10 +197,10 @@ module AutoC
       @interface ||=
         begin
           stream = Module::Builder.new
-          public_declarations(stream)
+          interface_declarations(stream)
           case visibility
           when :public
-            public_definitions(stream)
+            interface_definitions(stream)
           end
           stream
         end
@@ -213,7 +212,7 @@ module AutoC
           stream = Module::Builder.new
           case visibility
           when :internal
-            public_definitions(stream)
+            interface_definitions(stream)
           end
           forward_declarations(stream)
           stream
@@ -231,9 +230,9 @@ module AutoC
 
     def length = declarations.length + implementation.length
 
-    def public_declarations(stream) = nil
+    def interface_declarations(stream) = nil
 
-    def public_definitions(stream) = nil
+    def interface_definitions(stream) = nil
 
     def forward_declarations(stream) = nil
 
@@ -254,7 +253,7 @@ module AutoC
       @definitions = definitions
     end
 
-    def public_declarations(stream)
+    def interface_declarations(stream)
       super
       stream << @interface unless @interface.nil?
     end

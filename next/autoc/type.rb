@@ -243,7 +243,7 @@ module AutoC
 
     def method_missing(symbol, *args) = SPECIAL_METHODS.include?(symbol) && !@specials[symbol].nil? ? @specials[symbol][*args] : super
 
-    def public_declarations(stream)
+    def interface_declarations(stream)
       super
       (stream << NEW_LINE << @interface << NEW_LINE) unless @interface.nil?
     end

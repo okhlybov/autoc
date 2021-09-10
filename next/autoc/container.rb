@@ -43,7 +43,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    def public_definitions(stream)
+    def composite_interface_definitions(stream)
       super
       stream << %$
         /**

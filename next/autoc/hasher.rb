@@ -24,7 +24,7 @@ module AutoC
 
     def destroy(hasher) = nil
 
-    def public_definitions(stream)
+    def interface_definitions(stream)
       stream << %$
         #include <limits.h>
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
