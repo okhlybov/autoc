@@ -181,14 +181,14 @@ module AutoC
     def dependencies = @dependencies ||= ::Set.new
 
     # Return the entire entity dependency set staring with self
-    def total_dependencies
-      @total_dependencies ||=
-        begin
-          set = ::Set.new
-          dependencies.each { |d| set.merge(d.total_dependencies) unless set.include?(d) }
-          set << self
-          set
-        end
+    def total_dependencies = @total_dependencies ||= collect_dependencies(::Set.new)
+
+    protected def collect_dependencies(set)
+      unless set.include?(self)
+        set << self
+        dependencies.each { |d| d.collect_dependencies(set) }
+      end
+      set
     end
 
     def <=>(other) = if self == other then 0 else (dependencies.include?(other) ? +1 : -1) end
