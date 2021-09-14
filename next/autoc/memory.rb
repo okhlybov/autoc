@@ -24,7 +24,7 @@ module AutoC
     def interface_declarations(stream)
       super
       stream << %$
-        #include <stdlib.h>"
+        #include <stdlib.h>
       $
     end
 

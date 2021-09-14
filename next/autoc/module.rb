@@ -248,24 +248,24 @@ module AutoC
     def self.interface(s) = Code.new(interface: s)
 
     def initialize(interface: nil, declarations: nil, definitions: nil)
-      @interface = interface
-      @declarations = declarations
-      @definitions = definitions
+      @interface_ = interface
+      @declarations_ = declarations
+      @definitions_ = definitions
     end
 
     def interface_declarations(stream)
       super
-      stream << @interface unless @interface.nil?
+      stream << @interface_ unless @interface_.nil?
     end
 
     def definitions(stream)
       super
-      stream << @definitions unless @definitions.nil?
+      stream << @definitions_ unless @definitions_.nil?
     end
 
     def forward_declarations(stream)
       super
-      stream << @declarations unless @declarations.nil?
+      stream << @declarations_ unless @declarations_.nil?
     end
 
   end
