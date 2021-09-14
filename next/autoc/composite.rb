@@ -139,7 +139,7 @@ module AutoC
         @defgroup = '@internal @defgroup'
         @addtogroup = '@internal @addtogroup'
       end
-      compostite_interface_declarations(stream)
+      composite_interface_declarations(stream)
     end
 
     def interface_definitions(stream)
@@ -157,7 +157,7 @@ module AutoC
       composite_interface_definitions(stream)
     end
 
-    def compostite_interface_declarations(stream) = nil
+    def composite_interface_declarations(stream) = nil
 
     def composite_interface_definitions(stream) = nil
 

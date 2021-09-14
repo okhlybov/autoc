@@ -126,7 +126,7 @@ module AutoC
         */
         #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} value);
       $ if element.comparable?
-      stream << %$/** @} */$
+      stream << '/** @} */'
     end
 
     def definitions(stream)
@@ -266,7 +266,7 @@ module AutoC
             return result;
           }
         $ if iterable.element.copyable?
-        stream << %$/** @} */$
+        stream << '/** @} */'
       end
 
     end

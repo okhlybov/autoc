@@ -26,15 +26,15 @@ module AutoC
     # :nodoc:
     class Builder < ::Array
 
-      attr_reader :length
+      attr_reader :complexity
 
       def initialize
-        @length = 0
+        @complexity = 0
         super
       end
 
       def <<(obj)
-        @length += (s = obj.to_s).size
+        @complexity += (s = obj.to_s).size
         super(s)
       end
 
@@ -65,14 +65,14 @@ module AutoC
       entities.each { |e| total_entities.merge(e.total_dependencies) }
       header.entities.merge(total_entities)
       if @source_count.nil?
-        if @source_size_threshold.nil?
+        if @source_complexity_threshold.nil?
           @source_count = 1
         else
-          @source_count = (total_entities.sum(&:length).to_f / @source_size_threshold).ceil
+          @source_count = (total_entities.sum(&:complexity).to_f / @source_complexity_threshold).ceil
         end
       end
       total_entities.each do |e|
-        sources.sort! { |lt, rt| lt.length <=> rt.length }
+        sources.sort! { |lt, rt| lt.complexity <=> rt.complexity }
         sources.first << e
       end
     end
@@ -134,13 +134,13 @@ module AutoC
 
     attr_reader :module
 
-    attr_reader :length
+    attr_reader :complexity
 
     def file_name = @file_name ||= self.module.source_count < 2 ? "#{self.module.name}_auto.c" : "#{self.module.name}_auto#{@index}.c"
 
     def initialize(m, index)
       @module = m
-      @length = 0
+      @complexity = 0
       @index = index
     end
 
@@ -157,7 +157,7 @@ module AutoC
     end
 
     def <<(entity)
-      @length += entity.length unless entities.include?(entity)
+      @complexity += entity.complexity unless entities.include?(entity)
       super
     end
 
@@ -228,7 +228,7 @@ module AutoC
         end
     end
 
-    def length = declarations.length + implementation.length
+    def complexity = declarations.complexity + implementation.complexity
 
     def interface_declarations(stream) = nil
 

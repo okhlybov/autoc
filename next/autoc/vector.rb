@@ -134,7 +134,7 @@ module AutoC
          */
         #{declare} void #{sort}(#{ptr_type} self, int direction);
       $ if element.orderable?
-      stream << %$/** @} */$
+      stream << '/** @} */'
     end
 
     def definitions(stream)
@@ -251,7 +251,7 @@ module AutoC
 
       def initialize(*args)
         super
-        [custom_create, @empty, @length, @view, @save, @pop_front, @front_view, @pop_back, @back_view].each(&:inline!)
+        [custom_create, @empty, @length, @view, @save, @pop_front, @front_view, @pop_back, @back_view, @front, @back, @get].each(&:inline!)
       end
 
       def composite_interface_declarations(stream)
@@ -326,11 +326,6 @@ module AutoC
             return &self->iterable->elements[self->front_position + position];
           }
         $
-        stream << %$/** @} */$
-      end
-
-      def definitions(stream)
-        super
         stream << %$
           #{define(@front)} {
             assert(self);
@@ -348,6 +343,7 @@ module AutoC
             return #{iterable.get}(self->iterable, self->front_position + position);
           }
         $ if iterable.element.copyable?
+        stream << '/** @} */'
       end
     end
 
