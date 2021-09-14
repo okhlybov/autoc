@@ -19,10 +19,12 @@ module AutoC
       @compare = nil # Don't know how to order the vectors
     end
 
+    def canonic_tag = "Vector<#{element.type}>"
+
     def composite_interface_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} Vector<#{element.type}> :: resizeable vector
+         * #{@defgroup} #{type} #{canonic_tag} :: resizeable vector of elements of type #{element.type}
          * @{
          */
         typedef struct {
@@ -257,7 +259,7 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-           * #{@defgroup} #{type} Range iterator for <#{iterable.type}> iterable container
+           * #{@defgroup} #{type} #{canonic_tag} :: range iterator for the iterable container #{iterable.canonic_tag}
            * @{
            */
           typedef struct {

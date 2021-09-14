@@ -22,6 +22,8 @@ module AutoC
       dependencies << iterable
     end
 
+    def canonic_tag = "#{iterable.canonic_tag}.Range"
+
     def composite_interface_definitions(stream)
       super
       stream << %$
