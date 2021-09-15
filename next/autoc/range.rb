@@ -22,6 +22,8 @@ module AutoC
       dependencies << iterable
     end
 
+    def <=>(other) = other.equal?(iterable) ? +1 : super # Force the range to follow its iterable container
+
     def canonic_tag = "#{iterable.canonic_tag}.Range"
 
     def composite_interface_definitions(stream)

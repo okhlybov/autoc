@@ -52,7 +52,7 @@ module AutoC
 
     def header = @header ||= Header.new(self)
 
-    def sources = @sources ||= (0...source_count).collect { |i| Source.new(self, i) }
+    def sources = @sources ||= (1..source_count).collect { |i| Source.new(self, i) }
 
     def render
       distribute_entities
@@ -60,7 +60,7 @@ module AutoC
       sources.each(&:render)
     end
 
-    def distribute_entities
+    private def distribute_entities
       total_entities = ::Set.new
       entities.each { |e| total_entities.merge(e.total_dependencies) }
       header.entities.merge(total_entities)
@@ -136,7 +136,9 @@ module AutoC
 
     attr_reader :complexity
 
-    def file_name = @file_name ||= self.module.source_count < 2 ? "#{self.module.name}_auto.c" : "#{self.module.name}_auto#{@index}.c"
+    attr_reader :index
+
+    def file_name = @file_name ||= self.module.source_count < 2 ? "#{self.module.name}_auto.c" : "#{self.module.name}_auto#{index}.c"
 
     def initialize(m, index)
       @module = m
@@ -191,7 +193,7 @@ module AutoC
       set
     end
 
-    def <=>(other) = if self == other then 0 else (dependencies.include?(other) ? +1 : -1) end
+    def <=>(other) = dependencies.include?(other) ? +1 : -1 # Dependencies should precede self
 
     def interface
       @interface ||=
