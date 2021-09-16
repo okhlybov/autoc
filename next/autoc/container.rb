@@ -43,7 +43,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    def <=>(other) = other.equal?(range) ? -1 : super # Force the container to precede its range
+    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> range cyclic dependency
 
     def composite_interface_definitions(stream)
       super

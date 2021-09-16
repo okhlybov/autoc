@@ -2,7 +2,6 @@
 
 
 require 'set'
-require 'sorted_set'
 require 'autoc'
 
 
@@ -101,7 +100,7 @@ module AutoC
     def render
       s = stream
       prologue(s)
-      ::SortedSet.new(entities).each { |e| e.interface.each { |x| s << x } }
+      entities.to_a.sort.each { |e| e.interface.each { |x| s << x } }
       epilogue(s)
     ensure
       s.close
@@ -151,8 +150,8 @@ module AutoC
       prologue(s)
       total_entities = ::Set.new
       entities.each { |e| total_entities.merge(e.total_dependencies) }
-      ::SortedSet.new(total_entities).each { |e| e.declarations.each { |x| s << x } }
-      ::SortedSet.new(entities).each { |e| e.implementation.each { |x| s << x } }
+      total_entities.to_a.sort.each { |e| e.declarations.each { |x| s << x } }
+      entities.to_a.sort.each { |e| e.implementation.each { |x| s << x } }
     ensure
       s.close
       @stream = nil
@@ -193,7 +192,21 @@ module AutoC
       set
     end
 
-    def <=>(other) = dependencies.include?(other) ? +1 : -1 # Dependencies should precede self
+    def position
+      @position ||=
+        begin
+          p = 0
+          total_dependencies.each do |d|
+            x = relative_position(d)
+            p = x if p < x
+          end
+          p
+        end
+    end
+
+    private def relative_position(other) = equal?(other) ? 0 : other.position + 1
+
+    def <=>(other) = position <=> other.position
 
     def interface
       @interface ||=
