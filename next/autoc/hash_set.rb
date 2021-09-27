@@ -11,6 +11,8 @@ module AutoC
 
   class HashSet < Set
 
+    attr_reader :bucket, :buckets
+
     def initialize(type, element, visibility = :public)
       super
       raise unless self.element.hashable? # TODO
@@ -28,7 +30,7 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} #{canonic_tag} :: hash-based unordered collection of elements of type #{element.type}
+         * #{@defgroup} #{type} #{canonic_tag} :: hash-based unordered collection of unique elements of type #{element.type}
          * @{
          */
         typedef struct {
@@ -107,6 +109,7 @@ module AutoC
           #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
           if(!#{@bucket.contains}(bucket, value)) {
             #{@bucket.push}((#{@bucket.ptr_type})bucket, value);
+            ++self->element_count;
             #{rehash}(self);
             return 1;
           } else return 0;
@@ -117,9 +120,9 @@ module AutoC
 
     class HashSet::Range < Range::Forward
 
-      def initialize(*args)
-        super
-      end
+      def bucket_range = iterable.bucket.range
+
+      def buckets_range = iterable.buckets.range
 
       def composite_interface_declarations(stream)
         stream << %$
@@ -128,7 +131,8 @@ module AutoC
            * @{
            */
           typedef struct {
-            int dummy; /**< @private */
+            #{bucket_range.type} bucket_range; /**< @private */
+            #{buckets_range.type} buckets_range; /**< @private */
           } #{type};
         $
         super
@@ -149,17 +153,34 @@ module AutoC
       def definitions(stream)
         super
         stream << %$
+          static void #{_next_bucket}(#{ptr_type} self) {
+            for(; !#{buckets_range.empty}(&self->buckets_range); #{buckets_range.pop_front}(&self->buckets_range)) {
+              #{bucket_range.custom_create}(&self->bucket_range, #{buckets_range.front_view}(&self->buckets_range));
+              if(!#{bucket_range.empty}(&self->bucket_range)) break;
+            }
+          }
           #{define(custom_create)} {
-            // TODO
+            assert(self);
+            assert(iterable);
+            #{buckets_range.custom_create}(&self->buckets_range, &iterable->buckets); 
+            #{_next_bucket}(self);
           }
           #{define(@empty)} {
-            return 1; // TODO
+            assert(self);
+            return #{buckets_range.empty}(&self->buckets_range) /*&& #{bucket_range.empty}(&self->bucket_range)*/;
           }
           #{define(@pop_front)} {
-            // TODO
+            assert(self);
+            if(#{bucket_range.empty}(&self->bucket_range)) {
+              #{_next_bucket}(self);
+            } else {
+              #{bucket_range.pop_front}(&self->bucket_range);
+            }
           }
           #{define(@front_view)} {
-            return NULL; // TODO
+            assert(self);
+            assert(!#{empty}(self));
+            return #{bucket_range.front_view}(&self->bucket_range);
           }
         $
       end

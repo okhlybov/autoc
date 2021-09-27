@@ -2,8 +2,6 @@
 
 
 require 'autoc/container'
-require 'autoc/vector'
-require 'autoc/list'
 
 
 module AutoC
@@ -16,7 +14,7 @@ module AutoC
       @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
     end
 
-    def composite_definitions(stream)
+    def composite_interface_definitions(stream)
       super
       stream << %$
         /**
