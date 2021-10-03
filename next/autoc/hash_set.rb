@@ -77,7 +77,7 @@ module AutoC
         static void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {
           #{@bucket._adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
         }
-        static void #{rehash}(#{ptr_type} self) {
+        static void #{_rehash}(#{ptr_type} self) {
           assert(self);
           if(#{size}(self) > self->capacity) {
             #{type} t;
@@ -110,7 +110,7 @@ module AutoC
           if(!#{@bucket.contains}(bucket, value)) {
             #{@bucket.push}((#{@bucket.ptr_type})bucket, value);
             ++self->element_count;
-            #{rehash}(self);
+            #{_rehash}(self);
             return 1;
           } else return 0;
         }
@@ -153,29 +153,28 @@ module AutoC
       def definitions(stream)
         super
         stream << %$
-          static void #{_next_bucket}(#{ptr_type} self) {
-            for(; !#{buckets_range.empty}(&self->buckets_range); #{buckets_range.pop_front}(&self->buckets_range)) {
-              #{bucket_range.custom_create}(&self->bucket_range, #{buckets_range.front_view}(&self->buckets_range));
-              if(!#{bucket_range.empty}(&self->bucket_range)) break;
-            }
+          static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
+            do {
+              if (new_bucket_range) #{bucket_range.custom_create}(&self->bucket_range, #{buckets_range.front_view}(&self->buckets_range));
+              else new_bucket_range = 1; /* Skip the first creation act only */
+              if (!#{bucket_range.empty}(&self->bucket_range)) break;
+              else #{buckets_range.pop_front}(&self->buckets_range);
+            } while(!#{buckets_range.empty}(&self->buckets_range));
           }
           #{define(custom_create)} {
             assert(self);
             assert(iterable);
             #{buckets_range.custom_create}(&self->buckets_range, &iterable->buckets); 
-            #{_next_bucket}(self);
+            #{_next_bucket}(self, 1);
           }
           #{define(@empty)} {
             assert(self);
-            return #{buckets_range.empty}(&self->buckets_range) /*&& #{bucket_range.empty}(&self->bucket_range)*/;
+            return #{bucket_range.empty}(&self->bucket_range);
           }
           #{define(@pop_front)} {
             assert(self);
-            if(#{bucket_range.empty}(&self->bucket_range)) {
-              #{_next_bucket}(self);
-            } else {
-              #{bucket_range.pop_front}(&self->bucket_range);
-            }
+            #{bucket_range.pop_front}(&self->bucket_range);
+            if(#{bucket_range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
           }
           #{define(@front_view)} {
             assert(self);
