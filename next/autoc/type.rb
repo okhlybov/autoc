@@ -210,14 +210,12 @@ module AutoC
   # Generator type for pure user-defined types.
   class Synthetic < Type
 
-    attr_reader :dependencies
-
     def initialize(type, dependencies: [], interface: nil, declarations: nil, definitions: nil, **calls)
       super(type)
       @specials = {}
-      @interface = interface
-      @declarations = declarations
-      @definitions = definitions
+      @interface_ = interface
+      @declarations_ = declarations
+      @definitions_ = definitions
       self.dependencies.merge(dependencies)
       setup_call(calls, :custom_create, nil, nil)
       setup_call(calls, :default_create, {self: type}, type)
@@ -245,17 +243,17 @@ module AutoC
 
     def interface_declarations(stream)
       super
-      (stream << NEW_LINE << @interface << NEW_LINE) unless @interface.nil?
+      stream << @interface_ unless @interface_.nil?
     end
 
     def forward_declarations(stream)
       super
-      (stream << NEW_LINE << @declarations << NEW_LINE) unless @declarations.nil?
+      stream << @declarations_ unless @declarations_.nil?
     end
 
     def definitions(stream)
       super
-      (stream << NEW_LINE << @definitions << NEW_LINE) unless @definitions.nil?
+      stream << @definitions_ unless @definitions_.nil?
     end
 
   end
