@@ -147,9 +147,8 @@ module AutoC
       $
       stream << %$
         #{define(copy)} {
-          #{range.type} r;
           #{create}(self);
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{push}(self, *#{range.front_view}(&r));
           }
         }
@@ -157,8 +156,7 @@ module AutoC
       stream << %$
         #{define(equal)} {
           if(#{size}(self) == #{size}(other)) {
-            #{range.type} ra, rb;
-            for(#{range.create}(&ra, self), #{range.create}(&rb, other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
+            for(#{range.type} ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
               const #{element.type}* a = #{range.front_view}(&ra);
               const #{element.type}* b = #{range.front_view}(&rb);
               if(!#{element.equal('*a', '*b')}) return 0;
@@ -169,8 +167,7 @@ module AutoC
       $ if comparable?
       stream << %$
         #{define} #{element.const_ptr_type} #{find_view}(#{const_ptr_type} self, #{element.const_type} value) {
-          #{range.type} r;
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} e = #{range.front_view}(&r);
             if(#{element.equal('*e', :value)}) return e;
           }

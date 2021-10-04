@@ -81,9 +81,8 @@ module AutoC
           assert(self);
           if(#{size}(self) > self->capacity) {
             #{type} t;
-            #{range.type} r;
             #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
-            for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
               #{_adopt}(&t, *#{range.front_view}(&r));
             }
             #{@buckets._dispose}(&self->buckets);
@@ -245,8 +244,7 @@ module AutoC
       stream << %$
         /* Free the storage disposing the elements in turn */
         #{define} void #{_dispose}(#{ptr_type} self) {
-          #{range.type} r;
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element._dispose}((#{element.ptr_type})#{range.front_view}(&r));
           }
           #{memory.free('self->elements')};
