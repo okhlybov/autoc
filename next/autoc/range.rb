@@ -82,8 +82,14 @@ module AutoC
         *
         * Range must not be empty (refer to @ref #{@empty}()).
         */
-        #{declare(@front)};
-      $ if iterable.element.copyable?
+        #{define(@front)} {
+          #{iterable.element.type} result;
+          assert(!#{empty}(self));
+          const #{iterable.element.type}* e = #{@front_view}(self);
+          #{iterable.element.copy(:result, '*e')};
+          return result;
+        }
+    $ if iterable.element.copyable?
     end
 
   end
@@ -142,7 +148,13 @@ module AutoC
          *
          * Range must not be empty (refer to @ref #{@empty}()).
          */
-        #{declare(@back)};
+         #{define(@back)} {
+          #{iterable.element.type} result;
+          assert(!#{empty}(self));
+          const #{iterable.element.type}* e = #{@back_view}(self);
+          #{iterable.element.copy(:result, '*e')};
+          return result;
+        }
       $ if iterable.element.copyable?
     end
 

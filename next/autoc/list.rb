@@ -257,14 +257,6 @@ module AutoC
             return &self->node->element;
           }
         $
-        stream << %$
-          #{define(@front)} {
-            #{iterable.element.type} result;
-            const #{iterable.element.type}* e = #{@front_view}(self);
-            #{iterable.element.copy(:result, '*e')};
-            return result;
-          }
-        $ if iterable.element.copyable?
         stream << '/** @} */'
       end
 

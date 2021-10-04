@@ -329,16 +329,6 @@ module AutoC
           }
         $
         stream << %$
-          #{define(@front)} {
-            assert(self);
-            assert(!#{@empty}(self));
-            return #{iterable.get}(self->iterable, self->front_position);
-          }
-          #{define(@back)} {
-            assert(self);
-            assert(!#{@empty}(self));
-            return #{iterable.get}(self->iterable, self->back_position);
-          }
           #{define(@get)} {
             assert(self);
             assert(position < #{length}(self));
