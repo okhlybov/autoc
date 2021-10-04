@@ -28,9 +28,18 @@ module AutoC
       super
       stream << %$
         /**
-        * @brief Create an new range iterator other the specified iterable
+        * @brief Create an new range iterator for the specified iterable
         */
-        #{declare(@custom_create)};
+        #{declare(custom_create)};
+        /**
+        * @brief Return new range iterator for the specified iterable
+        */
+        #{define} #{type} #{iterable.get_range}(#{iterable.const_ptr_type} iterable) {
+          #{type} r;
+          assert(iterable);
+          #{custom_create}(&r, iterable);
+          return r;
+        }
       $
     end
   end
