@@ -23,9 +23,7 @@ The compiled code should also pass the memory leakage tests
 
 =end
 
-
 require 'autoc/module'
-
 
 def type_test(cls, *opts, &code)
   t = Class.new(cls) do
@@ -54,8 +52,8 @@ def type_test(cls, *opts, &code)
     end
     def definitions(stream)
       super
-      @tests.each {|f| stream << f}
-      stream << %~static void #{runTests}(void) {~
+      @tests.each { |f| stream << f }
+      stream << %~static void #{run_tests}(void) {~
       stream << %~
           fprintf(stdout, "* %s\\n", "#{type}");
           fflush(stdout);
@@ -70,19 +68,19 @@ def type_test(cls, *opts, &code)
       ~
     end
     def write_test_calls(stream)
-      stream << "#{runTests}();"
+      stream << "#{run_tests}();"
     end
   end.new(*opts)
   $tests << t
   t.instance_eval(&code)
 end
 
-
 class TestSuite
 
-  include AutoC::Module::Entity
+  include AutoC::Entity
 
-  def declarations(stream)
+  def forward_declarations(stream)
+    super
     stream << %$
       #include <stdio.h>
       struct {
@@ -129,27 +127,25 @@ class TestSuite
   end
 
   def definitions(stream)
+    super
     total = 0
-    $tests.each {|t| total += t.tests.size}
+    $tests.each { |t| total += t.tests.size }
     stream << "int main(int argc, char** argv) {"
     stream << %$
       tests.total = #{total};
       tests.processed = tests.failed = 0;
     $
-    $tests.each {|t| t.write_test_calls(stream)}
+    $tests.each { |t| t.write_test_calls(stream) }
     stream << "print_summary();"
     stream << "return tests.failed > 0;}"
   end
 end
 
-
 $tests = []
 
+Dir['test_*.rb'].each { |t| load t }
 
-Dir['test_*.rb'].each {|t| load t}
-  
-  
-AutoC::Module.render!(:test) do |m|
-  m << TestSuite.new
-  $tests.each {|t| m << t}
+AutoC::Module.render(:test) do |m|
+  m << (s = TestSuite.new)
+  $tests.each { |t| s.dependencies << t }
 end

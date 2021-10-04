@@ -1,9 +1,10 @@
 require 'autoc/type'
 
-Value = AutoC::Synthetic.new :Value, interface: "
+Value = AutoC::Synthetic.new :Value, interface: %$
     #include <malloc.h>
     /**
-     * @brief A generic full fledged value type
+     * @public @defgroup Value Value :: a generic full fledged value type
+     * @{
      */
     typedef struct {
       int* value;
@@ -40,7 +41,8 @@ Value = AutoC::Synthetic.new :Value, interface: "
       else if(ValueGet(*lt) < ValueGet(*rt)) return -1;
       else return 0;
     }
-  ",
+    /** @} */
+  $,
   default_create: :ValueCreate_,
   custom_create: AutoC::Function.new(:ValueSetup_, [:Value, :int]),
   destroy: :ValueDestroy_,
