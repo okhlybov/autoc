@@ -101,6 +101,9 @@ module AutoC
           if(fixed_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
+        #{define(equal)} {
+          return #{@buckets.equal}(&self->buckets, &other->buckets);
+        }
         #{define(@contains)} {
           return #{@bucket.contains}(#{_locate}(self, value), value);
         }
@@ -163,7 +166,7 @@ module AutoC
           #{define(custom_create)} {
             assert(self);
             assert(iterable);
-            #{buckets_range.custom_create}(&self->buckets_range, &iterable->buckets); 
+            #{buckets_range.custom_create}(&self->buckets_range, &iterable->buckets);
             #{_next_bucket}(self, 1);
           }
           #{define(@empty)} {
