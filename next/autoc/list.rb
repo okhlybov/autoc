@@ -66,6 +66,13 @@ module AutoC
           assert(self);
           while(#{drop}(self));
         }
+        /**
+         * @brief Remove and destroy all contained elements
+         */
+        #{define} void #{purge}(#{ptr_type} self) {
+          #{destroy}(self);
+          #{default_create}(self);
+        }
         #{define(@size)} {
           assert(self);
           return self->node_count;
@@ -148,7 +155,7 @@ module AutoC
       stream << %$
         #{define(copy)} {
           #{create}(self);
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(#{range.type} r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{push}(self, *#{range.front_view}(&r));
           }
         }
