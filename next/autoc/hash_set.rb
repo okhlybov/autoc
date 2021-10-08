@@ -15,7 +15,7 @@ module AutoC
 
     def initialize(type, element, visibility = :public)
       super
-      raise unless self.element.hashable? # TODO
+      raise 'Hash-based set requires hashable element type' unless self.element.hashable?
       @range = Range.new(self, visibility)
       @bucket = Bucket.new(self, element)
       @buckets = Buckets.new(self, @bucket)
@@ -101,6 +101,15 @@ module AutoC
           if(fixed_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
+        #{define(@purge)} {
+          for(#{@buckets.range.type} r = #{@buckets.get_range}(&self->buckets); !#{@buckets.range.empty}(&r); #{@buckets.range.pop_front}(&r)) {
+            #{@bucket.purge}((#{@bucket.ptr_type})#{@buckets.range.front_view}(&r));
+          }
+        }
+        #{define(copy)} {
+          #{default_create}(self);
+          #{join}(self, source);
+        }
         #{define(equal)} {
           return #{@buckets.equal}(&self->buckets, &other->buckets);
         }
@@ -113,6 +122,13 @@ module AutoC
             #{@bucket.push}((#{@bucket.ptr_type})bucket, value);
             ++self->element_count;
             #{_rehash}(self);
+            return 1;
+          } else return 0;
+        }
+        #{define(@remove)} {
+          #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
+          if(#{@bucket.remove}((#{@bucket.ptr_type})bucket, value)) {
+            --self->element_count;
             return 1;
           } else return 0;
         }
