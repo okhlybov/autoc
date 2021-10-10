@@ -87,12 +87,6 @@ module AutoC
       $ if element.comparable?
       stream << %$
         /**
-          * @brief Return hash code for the container based on hash codes of contained elements
-          */
-        #{declare(code)};
-      $ if hashable?
-      stream << %$
-        /**
           * @brief Return less-equal-more value for two containers
           */
         #{declare(compare)};
@@ -109,7 +103,23 @@ module AutoC
       $
     end
 
+  end
+
+
+  # Provides the generic implementation of hashable container support code.
+  module Container::Hashable
+
     @@hashable_counter = 0 # Counter used to generate a hashable-unique type hash code
+
+    def composite_interface_definitions(stream)
+      super
+      stream << %$
+        /**
+          * @brief Return hash code for the container based on hash codes of contained elements
+          */
+        #{declare(code)};
+      $ if hashable?
+    end
 
     def definitions(stream)
       super
@@ -133,6 +143,37 @@ module AutoC
     end
 
   end
+
+
+  class AssociativeContainer < Container
+
+    attr_reader :key
+
+    def initialize(type, key, element, visibility)
+      super(type, element, visibility)
+      @key = Type.coerce(key)
+      dependencies << self.key
+    end
+
+    # Additional container-specific trait restrictions
+
+    # For container to be copyable both hashable element and key types are required
+    def copyable? = super && key.copyable?
+
+    # For container to be comparable both hashable element and key types are required
+    def comparable? = super && key.comparable?
+
+    # For container to be orderable both hashable element and key types are required
+    def orderable? = super && key.orderable?
+
+    # The destructible element and key types mandates creation of the container's destructor
+    def destructibe? = super || key.destructible?
+
+    # For container to be hashable both hashable element and key types are required
+    def hashable? = super && key.hashable?
+  
+  
+    end
 
 
 end

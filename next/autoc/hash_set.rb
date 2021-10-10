@@ -11,6 +11,8 @@ module AutoC
 
   class HashSet < Set
 
+    include Container::Hashable
+    
     attr_reader :bucket, :buckets
 
     def initialize(type, element, visibility = :public)

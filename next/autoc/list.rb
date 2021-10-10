@@ -10,6 +10,8 @@ module AutoC
 
   class List < Container
 
+    include Container::Hashable
+    
     def initialize(type, element, visibility = :public)
       super
       @range = Range.new(self, visibility)

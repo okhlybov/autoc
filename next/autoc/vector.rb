@@ -10,6 +10,8 @@ module AutoC
 
   class Vector < Container
 
+    include Container::Hashable
+    
     def initialize(type, element, visibility = :public)
       super
       @range = Range.new(self, visibility)
