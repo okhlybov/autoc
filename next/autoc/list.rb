@@ -164,8 +164,8 @@ module AutoC
         #{define(equal)} {
           if(#{size}(self) == #{size}(other)) {
             for(#{range.type} ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
-              const #{element.type}* a = #{range.front_view}(&ra);
-              const #{element.type}* b = #{range.front_view}(&rb);
+              #{element.const_ptr_type} a = #{range.front_view}(&ra);
+              #{element.const_ptr_type} b = #{range.front_view}(&rb);
               if(!#{element.equal('*a', '*b')}) return 0;
             }
             return 1;
