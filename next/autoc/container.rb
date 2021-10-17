@@ -109,8 +109,6 @@ module AutoC
   # Provides the generic implementation of hashable container support code.
   module Container::Hashable
 
-    @@hashable_counter = 0 # Counter used to generate a hashable-unique type hash code
-
     def composite_interface_definitions(stream)
       super
       stream << %$
@@ -126,11 +124,9 @@ module AutoC
       stream << %$
         #{define(code)} {
           size_t hash;
-          #{range.type} r;
           #{hasher.type} hasher;
           #{hasher.create(:hasher)};
-          #{hasher.update(:hasher, @@hashable_counter += 1)};
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} p = #{range.front_view}(&r);
             size_t h = #{element.code('*p')};
             #{hasher.update(:hasher, :h)};
@@ -148,6 +144,8 @@ module AutoC
   class AssociativeContainer < Container
 
     attr_reader :key
+
+    attr_reader :key_range
 
     def initialize(type, key, element, visibility)
       super(type, element, visibility)
@@ -173,7 +171,7 @@ module AutoC
     def hashable? = super && key.hashable?
   
   
-    end
+  end
 
 
 end
