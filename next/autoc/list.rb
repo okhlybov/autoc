@@ -11,9 +11,10 @@ module AutoC
   class List < Container
 
     include Container::Hashable
-    
+
     def initialize(type, element, visibility = :public)
       super
+      @node = decorate_identifier(:_node)
       @range = Range.new(self, visibility)
       dependencies << range
       [default_create, destroy, @size, @empty, @contains].each(&:inline!)
@@ -28,16 +29,16 @@ module AutoC
         * #{@defgroup} #{type} #{canonic_tag} :: singly linked list of elements of type #{element.type}
         * @{
         */
-        typedef struct #{node} #{node}; /**< @private */
+        typedef struct #{@node} #{@node}; /**< @private */
         typedef struct #{type} #{type}; /**< @private */
         struct #{type} {
-          #{node}* head_node; /**< @private */
+          #{@node}* head_node; /**< @private */
           size_t node_count; /**< @private */
         };
         /** @private */
-        struct #{node} {
+        struct #{@node} {
           #{element.type} element;
-          #{node}* next_node;
+          #{@node}* next_node;
         };
       $
       super
@@ -117,7 +118,7 @@ module AutoC
         * @brief Put a copy of the element to the list top
         */
         #{define} void #{push}(#{ptr_type} self, #{element.const_type} value) {
-          #{node}* new_node = #{memory.allocate(node)};
+          #{@node}* new_node = #{memory.allocate(@node)};
           #{element.copy('new_node->element', :value)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;
@@ -145,7 +146,7 @@ module AutoC
       stream << %$
         #{define} int #{drop}(#{ptr_type} self) {
           if(!#{empty}(self)) {
-            #{node}* this_node = self->head_node; assert(this_node);
+            #{@node}* this_node = self->head_node; assert(this_node);
             self->head_node = self->head_node->next_node;
             #{element.destroy('this_node->element') if element.destructible?};
             #{memory.free(:this_node)};
@@ -183,14 +184,14 @@ module AutoC
           return NULL;
         }
         #{define} int #{remove}(#{ptr_type} self, #{element.const_type} value) {
-          #{node} *node, *prev_node;
+          #{@node} *node, *prev_node;
           int removed = 0;
           assert(self);
           node = self->head_node;
           prev_node = NULL;
           while(node) {
             if(#{element.equal('node->element', :value)}) {
-              #{node}* this_node;
+              #{@node}* this_node;
               if(prev_node) {
                 this_node = prev_node->next_node = node->next_node;
               } else {
@@ -217,6 +218,7 @@ module AutoC
 
       def initialize(*args)
         super
+        @list_node = iterable.instance_variable_get(:@node)
         [custom_create, @empty, @save, @pop_front, @front_view, @front].each(&:inline!)
       end
 
@@ -227,7 +229,7 @@ module AutoC
            * @{
            */
           typedef struct {
-            #{iterable.node}* node; /**< @private */
+            #{@list_node}* node; /**< @private */
           } #{type};
         $
         super

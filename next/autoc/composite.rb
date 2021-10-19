@@ -111,20 +111,20 @@ module AutoC
     end
 
     #
-    def decorate_identifier(symbol)
-      method = symbol.to_s.sub(/[!?]$/, '') # Strip trailing ? or !
+    def decorate_identifier(id)
+      fn = id.to_s.sub(/[!?]$/, '') # Strip trailing !?
       # Check for leading underscore
       underscored =
-        if /^(_+)(.*)/ =~ method
-          method = $2
+        if /^(_+)(.*)/ =~ fn
+          fn = Regexp.last_match(2)
           true
         else
           false
         end
       # Convert _separated_names to the CamelCase
-      id = prefix + method.split('_').collect(&:capitalize).join
+      id = prefix + fn.split('_').collect(&:capitalize).join
       # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-      underscored && prefix[0] != '_' ? "#{$1}#{id}" : id
+      underscored && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     end
 
     def interface_declarations(stream)

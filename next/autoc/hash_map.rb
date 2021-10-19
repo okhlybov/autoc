@@ -36,14 +36,14 @@ module AutoC
 
 
   class HashMap::Set < HashSet
-    def initialize(map, element) = super(Once.new { "_#{map.type}Set" }, element, :internal)
+    def initialize(map, element) = super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
   end
 
 
   class HashMap::Node < Composite
 
     def initialize(map, key, element)
-      super(Once.new { "_#{map.type}Node" }, :internal)
+      super(Once.new { map.decorate_identifier(:_node) }, :internal)
       @key = key
       @element = element
       dependencies << @key << @element

@@ -12,10 +12,8 @@ module AutoC
 
     attr_reader :iterable
 
-    private def range_type = Once.new { "#{iterable.type}Range" }
-
     def initialize(iterable, visibility)
-      super(range_type, visibility)
+      super(Once.new { iterable.decorate_identifier(:range) }, visibility)
       @iterable = iterable
       @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
       @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil

@@ -12,15 +12,13 @@ module AutoC
   class HashSet < Set
 
     include Container::Hashable
-    
-    attr_reader :bucket, :buckets
 
     def initialize(type, element, visibility = :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
-      @range = Range.new(self, visibility)
       @bucket = Bucket.new(self, element)
       @buckets = Buckets.new(self, @bucket)
+      @range = Range.new(self, visibility)
       dependencies << range << @bucket << @buckets
       [@size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
@@ -140,9 +138,11 @@ module AutoC
 
     class HashSet::Range < Range::Forward
 
-      def bucket_range = iterable.bucket.range
-
-      def buckets_range = iterable.buckets.range
+      def initialize(*args)
+        super
+        @bucket_range = iterable.instance_variable_get(:@bucket).range
+        @buckets_range = iterable.instance_variable_get(:@buckets).range
+      end
 
       def composite_interface_declarations(stream)
         stream << %$
@@ -151,8 +151,8 @@ module AutoC
            * @{
            */
           typedef struct {
-            #{bucket_range.type} bucket_range; /**< @private */
-            #{buckets_range.type} buckets_range; /**< @private */
+            #{@bucket_range.type} bucket_range; /**< @private */
+            #{@buckets_range.type} buckets_range; /**< @private */
           } #{type};
         $
         super
@@ -175,31 +175,31 @@ module AutoC
         stream << %$
           static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
             do {
-              if (new_bucket_range) #{bucket_range.custom_create}(&self->bucket_range, #{buckets_range.front_view}(&self->buckets_range));
+              if (new_bucket_range) #{@bucket_range.custom_create}(&self->bucket_range, #{@buckets_range.front_view}(&self->buckets_range));
               else new_bucket_range = 1; /* Skip the first creation act only */
-              if (!#{bucket_range.empty}(&self->bucket_range)) break;
-              else #{buckets_range.pop_front}(&self->buckets_range);
-            } while(!#{buckets_range.empty}(&self->buckets_range));
+              if (!#{@bucket_range.empty}(&self->bucket_range)) break;
+              else #{@buckets_range.pop_front}(&self->buckets_range);
+            } while(!#{@buckets_range.empty}(&self->buckets_range));
           }
           #{define(custom_create)} {
             assert(self);
             assert(iterable);
-            #{buckets_range.custom_create}(&self->buckets_range, &iterable->buckets);
+            #{@buckets_range.custom_create}(&self->buckets_range, &iterable->buckets);
             #{_next_bucket}(self, 1);
           }
           #{define(@empty)} {
             assert(self);
-            return #{bucket_range.empty}(&self->bucket_range);
+            return #{@bucket_range.empty}(&self->bucket_range);
           }
           #{define(@pop_front)} {
             assert(self);
-            #{bucket_range.pop_front}(&self->bucket_range);
-            if(#{bucket_range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
+            #{@bucket_range.pop_front}(&self->bucket_range);
+            if(#{@bucket_range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
           }
           #{define(@front_view)} {
             assert(self);
             assert(!#{empty}(self));
-            return #{bucket_range.front_view}(&self->bucket_range);
+            return #{@bucket_range.front_view}(&self->bucket_range);
           }
         $
       end
@@ -211,7 +211,7 @@ module AutoC
 
   class HashSet::Bucket < AutoC::List
 
-    def initialize(set, element) = super(Once.new { "_#{set.type}Bucket" }, element, :internal)
+    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
 
     def forward_declarations(stream)
       super
@@ -251,7 +251,7 @@ module AutoC
 
   class HashSet::Buckets < AutoC::Vector
 
-    def initialize(set, bucket) = super(Once.new { "_#{set.type}Buckets" }, bucket, :internal)
+    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
 
     def forward_declarations(stream)
       super
