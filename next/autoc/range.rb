@@ -83,7 +83,7 @@ module AutoC
         #{define(@front)} {
           #{iterable.element.type} result;
           assert(!#{empty}(self));
-          const #{iterable.element.type}* e = #{@front_view}(self);
+          #{iterable.element.const_ptr_type} e = #{@front_view}(self);
           #{iterable.element.copy(:result, '*e')};
           return result;
         }
@@ -149,7 +149,7 @@ module AutoC
          #{define(@back)} {
           #{iterable.element.type} result;
           assert(!#{empty}(self));
-          const #{iterable.element.type}* e = #{@back_view}(self);
+          #{iterable.element.const_ptr_type} e = #{@back_view}(self);
           #{iterable.element.copy(:result, '*e')};
           return result;
         }
