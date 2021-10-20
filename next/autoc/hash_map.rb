@@ -44,10 +44,12 @@ module AutoC
 
     def initialize(map, key, element)
       super(Once.new { map.decorate_identifier(:_node) }, :internal)
-      @key = key
-      @element = element
-      dependencies << @key << @element
+      dependencies << (@key = key) << (@element = element)
     end
+
+    def destructible? = @key.destructible? || @element.destructible?
+
+    def copy(value, source) = "#{value} = #{source}"
 
     def composite_interface_declarations(stream)
       stream << %$
@@ -57,6 +59,33 @@ module AutoC
         } #{type};
       $
       super
+    end
+
+    def definitions(stream)
+      super
+      stream << %$
+        #{define(equal)} {
+          assert(self);
+          assert(other);
+          return #{@key.equal('self->key', 'other->key')} && #{@element.equal('self->element', 'other->element')};
+        }
+        #{define(code)} {
+          #{hasher.type} hasher;
+          size_t hash, key_hash = #{@key.code('self->key')}, element_hash = #{@element.code('self->element')};
+          #{hasher.create(:hasher)};
+          #{hasher.update(:hasher, :key_hash)};
+          #{hasher.update(:hasher, :element_hash)};
+          hash = #{hasher.result(:hasher)};
+          #{hasher.destroy(:hasher)};
+          return hash;
+        }
+      $
+      stream << %$
+        #{define(destroy)} {
+          #{@key.destroy('self->key') if @key.destructible?};
+          #{@element.destroy('self->element') if @element.destructible?};
+        }
+      $ if destructible?
     end
   end
 end
