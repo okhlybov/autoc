@@ -10,11 +10,14 @@ module AutoC
 
   class HashMap < AssociativeContainer
 
+    include Container::Hashable
+
     def initialize(type, key, element, visibility = :public)
       super
       @node = Node.new(self, self.key, self.element)
       @set = Set.new(self, @node)
-      dependencies << @node << @set
+      @range = Range.new(self, visibility)
+      dependencies << range << @node << @set
     end
 
     def canonic_tag = "HashMap<#{key.type} -> #{element.type}>"
@@ -32,10 +35,83 @@ module AutoC
       super
       stream << '/** @} */'
     end
+
+    def definitions(stream)
+      super
+      stream << %$
+        #{define(@size)} {
+          return #{@set.size}(&self->set);
+        }
+        #{define(@contains)} {
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element.const_ptr_type} v = #{range.front_view}(&r);
+            if(#{element.equal('*v', :value)}) return 1;
+          }
+          return 0;
+        }
+      $
+    end
   end
 
 
-  class HashMap::Set < HashSet
+  class HashMap::Range < Range::Forward
+
+    def initialize(*args)
+      super
+      @set = iterable.instance_variable_get(:@set)
+    end
+
+    def composite_interface_declarations(stream)
+      stream << %$
+        /**
+         * #{@defgroup} #{type} #{canonic_tag} :: range iterator for the iterable container #{iterable.canonic_tag}
+         * @{
+         */
+        typedef struct {
+          #{@set.range.type} set_range; /**< @private */
+        } #{type};
+      $
+      super
+      stream << '/** @} */'
+    end
+
+    def composite_interface_definitions(stream)
+      stream << %$
+        /**
+         * #{@addtogroup} #{type}
+         * @{
+         */
+      $
+      super
+      stream << '/** @} */'
+    end
+
+    def definitions(stream)
+      super
+      stream << %$
+        #{define(custom_create)} {
+          assert(self);
+          assert(iterable);
+          #{@set.range.custom_create}(&self->set_range, &iterable->set);
+        }
+        #{define(@empty)} {
+          assert(self);
+          return #{@set.range.empty}(&self->set_range);
+        }
+        #{define(@pop_front)} {
+          assert(self);
+          #{@set.range.pop_front}(&self->set_range);
+        }
+        #{define(@front_view)} {
+          assert(self);
+          assert(!#{empty}(self));
+          return &#{@set.range.front_view}(&self->set_range)->element;
+        }
+      $
+    end
+  end
+
+  class HashMap::Set < BasicHashSet
     def initialize(map, element) = super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
   end
 
