@@ -15,12 +15,6 @@ module AutoC
       @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
       @purge = function(self, :purge, 1, { self: type }, :void)
       @remove = function(self, :remove, 1, { self: type, value: element.const_type }, :int)
-      @disjoint = function(self, :disjoint, 2, { self: const_type, other: const_type }, :int)
-      @subset = function(self, :subset, 2, { self: const_type, other: const_type }, :int)
-      @join = function(self, :join, 2, { self: type, other: const_type }, :void)
-      @subtract = function(self, :subtract, 2, { self: type, other: const_type }, :void)
-      @intersect = function(self, :intersect, 2, { self: type, other: const_type }, :void)
-      @disjoin = function(self, :disjoin, 2, { self: type, other: const_type }, :void)
     end
 
     def composite_interface_definitions(stream)
