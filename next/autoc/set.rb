@@ -11,15 +11,16 @@ module AutoC
 
     def initialize(*args)
       super
-      @purge = function(self, :purge, 1, { self: type }, :void)
+      # Declare common set functions
       @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
+      @purge = function(self, :purge, 1, { self: type }, :void)
       @remove = function(self, :remove, 1, { self: type, value: element.const_type }, :int)
+      @disjoint = function(self, :disjoint, 2, { self: const_type, other: const_type }, :int)
+      @subset = function(self, :subset, 2, { self: const_type, other: const_type }, :int)
       @join = function(self, :join, 2, { self: type, other: const_type }, :void)
       @subtract = function(self, :subtract, 2, { self: type, other: const_type }, :void)
       @intersect = function(self, :intersect, 2, { self: type, other: const_type }, :void)
       @disjoin = function(self, :disjoin, 2, { self: type, other: const_type }, :void)
-      @subset = function(self, :subset, 2, { self: const_type, other: const_type }, :int)
-      @disjoint = function(self, :disjoint, 2, { self: const_type, other: const_type }, :int)
     end
 
     def composite_interface_definitions(stream)
@@ -30,21 +31,41 @@ module AutoC
          */
         #{declare(@put)};
         /**
-         * @brief Remove value from the set
-         */
-        #{declare(@remove)};
-        /**
          * @brief Remove and destroy all contained elements
          */
         #{declare(@purge)};
         /**
-         * @brief Return non-zero value if the set is a subset of the specified set
+         * @brief Remove value from the set
          */
-        #{declare(@subset)};
+        #{declare(@remove)};
+      $
+    end
+  end
+
+
+  module Set::Operations
+
+    def initialize(*args)
+      super
+      @disjoint = function(self, :disjoint, 2, { self: const_type, other: const_type }, :int)
+      @subset = function(self, :subset, 2, { self: const_type, other: const_type }, :int)
+      @join = function(self, :join, 2, { self: type, other: const_type }, :void)
+      @subtract = function(self, :subtract, 2, { self: type, other: const_type }, :void)
+      @intersect = function(self, :intersect, 2, { self: type, other: const_type }, :void)
+      @disjoin = function(self, :disjoin, 2, { self: type, other: const_type }, :void)
+    end
+
+    def composite_interface_definitions(stream)
+      super
+      stream << %$
         /**
          * @brief Return non-zero value if both specified sets share no common elements
          */
         #{declare(@disjoint)};
+        /**
+         * @brief Return non-zero value if the set is a subset of the specified set
+         */
+        #{declare(@subset)};
         /**
          * @brief Append contents of the specified set (set OR operation)
          */
@@ -123,6 +144,4 @@ module AutoC
       $
     end
   end
-
-
 end

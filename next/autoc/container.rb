@@ -20,7 +20,7 @@ module AutoC
       super(type, visibility)
       @element = Type.coerce(element)
       dependencies << self.element
-      # Declare the common container functions
+      # Declare common container functions
       @size = function(self, :size, 1, { self: const_type }, :size_t)
       @empty = function(self, :empty, 1, { self: const_type }, :int)
       @contains = function(self, :contains, 1, { self: const_type, value: self.element.const_type }, :int)
@@ -169,8 +169,6 @@ module AutoC
 
     # For container to be hashable both hashable element and key types are required
     def hashable? = super && key.hashable?
-  
-  
   end
 
 

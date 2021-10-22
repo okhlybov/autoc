@@ -9,7 +9,8 @@ require 'autoc/set'
 module AutoC
 
 
-  class HashSet < Set
+  # @private
+  class BasicHashSet < Set
 
     include Container::Hashable
 
@@ -64,7 +65,7 @@ module AutoC
           return #{size}(self) == 0;
         }
       $
-      stream << %$/** @} */$
+      stream << '/** @} */'
     end
 
     def definitions(stream)
@@ -107,8 +108,12 @@ module AutoC
           }
         }
         #{define(copy)} {
-          #{default_create}(self);
-          #{join}(self, source);
+          assert(self);
+          assert(source);
+          #{create_capacity}(self, #{size}(source), 0);
+          for(#{range.type} r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{put}(self, *#{range.front_view}(&r));
+          }
         }
         #{define(equal)} {
           return #{@buckets.equal}(&self->buckets, &other->buckets);
@@ -136,7 +141,7 @@ module AutoC
     end
 
 
-    class HashSet::Range < Range::Forward
+    class BasicHashSet::Range < Range::Forward
 
       def initialize(*args)
         super
@@ -209,7 +214,7 @@ module AutoC
   end
 
 
-  class HashSet::Bucket < AutoC::List
+  class BasicHashSet::Bucket < AutoC::List
 
     def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
 
@@ -249,16 +254,9 @@ module AutoC
   end
 
 
-  class HashSet::Buckets < AutoC::Vector
+  class BasicHashSet::Buckets < AutoC::Vector
 
     def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
-
-    def forward_declarations(stream)
-      super
-      stream << %$
-        #{declare} void #{_dispose}(#{ptr_type} self);
-      $
-    end
 
     def definitions(stream)
       super
@@ -275,5 +273,9 @@ module AutoC
 
   end
 
+
+  class HashSet < BasicHashSet
+    include Set::Operations
+  end
 
 end
