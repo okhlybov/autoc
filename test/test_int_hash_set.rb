@@ -24,20 +24,27 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 	$
 
 	test :put_uniques, %$
-		#{put}(&t, 0);
-		#{put}(&t, -1);
-		#{put}(&t, 1);
+		TEST_TRUE( #{put}(&t, 0) );
+		TEST_TRUE( #{put}(&t, -1) );
+		TEST_TRUE( #{put}(&t, 1) );
 		TEST_EQUAL( #{size}(&t), 3 );
 	$
 
 	test :put_duplicates, %$
-		#{put}(&t, 0);
-		#{put}(&t, -1);
-		#{put}(&t, 1);
-		#{put}(&t, 1);
-		#{put}(&t, 0);
-		#{put}(&t, -1);
+		TEST_TRUE( #{put}(&t, 0) );
+		TEST_TRUE( #{put}(&t, -1) );
+		TEST_TRUE( #{put}(&t, 1) );
+		TEST_FALSE( #{put}(&t, 1) );
+		TEST_FALSE( #{put}(&t, 0) );
+		TEST_FALSE( #{put}(&t, -1) );
 		TEST_EQUAL( #{size}(&t), 3 );
+	$
+
+	test :force, %$
+		TEST_FALSE( #{force}(&t, 1) );
+		TEST_FALSE( #{force}(&t, -1) );
+		TEST_TRUE( #{force}(&t, 1) );
+		TEST_EQUAL( #{size}(&t), 2 );
 	$
 
 	setup %$

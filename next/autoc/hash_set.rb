@@ -21,6 +21,7 @@ module AutoC
       @buckets = Buckets.new(self, @bucket)
       @range = Range.new(self, visibility)
       dependencies << range << @bucket << @buckets
+      @create_capacity = function(self, :create_capacity, 1, { self: type, capacity: :size_t, fixed_capacity: :int }, :void)
       [@size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
       @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
@@ -54,9 +55,9 @@ module AutoC
       super
       stream << %$
         /**
-         * @brief Create a container with specified initial capacity
+         * @brief Create a set with specified initial capacity
          */
-        #{declare} void #{create_capacity}(#{ptr_type} self, size_t capacity, int fixed_capacity);
+        #{declare(@create_capacity)};
         #{define(@size)} {
           assert(self);
           return self->element_count;
@@ -96,7 +97,7 @@ module AutoC
         #{define(destroy)} {
           #{@buckets.destroy('self->buckets')};
         }
-        void #{create_capacity}(#{ptr_type} self, size_t capacity, int fixed_capacity) {
+        #{define(@create_capacity)} {
           assert(self);
           #{@buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
           if(fixed_capacity) self->capacity = ~0;
@@ -121,6 +122,9 @@ module AutoC
         #{define(@contains)} {
           return #{@bucket.contains}(#{_locate}(self, value), value);
         }
+        #{define(@view)} {
+          return #{@bucket.find_view}(#{_locate}(self, value), value);
+        }
         #{define(@put)} {
           #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
           if(!#{@bucket.contains}(bucket, value)) {
@@ -129,6 +133,12 @@ module AutoC
             #{_rehash}(self);
             return 1;
           } else return 0;
+        }
+        #{define(@force)} {
+          /* FIXME get rid of code duplication */
+          int replace = #{remove}(self, value);
+          #{put}(self, value);
+          return replace;
         }
         #{define(@remove)} {
           #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);

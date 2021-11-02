@@ -13,6 +13,8 @@ module AutoC
       super
       # Declare common set functions
       @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
+      @force = function(self, :force, 1, { self: type, value: element.const_type }, :int)
+      @view = function(self, :view, 1, { self: type, value: element.const_type }, element.const_ptr_type)
       @purge = function(self, :purge, 1, { self: type }, :void)
       @remove = function(self, :remove, 1, { self: type, value: element.const_type }, :int)
     end
@@ -25,9 +27,17 @@ module AutoC
          */
         #{declare(@put)};
         /**
+         * @brief Force put a copy of the value into the set replacing existing value
+         */
+        #{declare(@force)};
+        /**
          * @brief Remove and destroy all contained elements
          */
         #{declare(@purge)};
+        /**
+         * @brief Return a view of contained element equal to the specified element or NULL if there is no such element
+         */
+        #{declare(@view)};
         /**
          * @brief Remove value from the set
          */
