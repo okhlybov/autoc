@@ -149,6 +149,9 @@ module AutoC
     # @abstract TODO
     abstract def code(value) = nil
 
+    # @abstract TODO replace value with a copy of source destroying prevous contents
+    # abstract def replace(value,  source) = nil
+
     # Test whether the type has a default (parameterless) constructor.
     # This implementation looks up the {#default_create} method.
     def default_constructible? = respond_to?(:default_create)

@@ -128,8 +128,7 @@ module AutoC
           #{hasher.create(:hasher)};
           for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} p = #{range.front_view}(&r);
-            size_t h = #{element.code('*p')};
-            #{hasher.update(:hasher, :h)};
+            #{hasher.update(:hasher, element.code('*p'))};
           }
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};

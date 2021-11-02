@@ -28,10 +28,10 @@ module AutoC
           else
             parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
           end
-          super(Once.new { self.type.decorate_identifier(name) }, parameters, result)
-          @inline = inline
-          @type = type
-          @refs = refs
+        super(Once.new { self.type.decorate_identifier(name) }, parameters, result)
+        @inline = inline
+        @type = type
+        @refs = refs
       end
 
       def inline? = @inline
