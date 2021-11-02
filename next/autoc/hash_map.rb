@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 
-require 'autoc/container'
 require 'autoc/hash_set'
+require 'autoc/map'
 
 
 module AutoC
 
 
-  class HashMap < AssociativeContainer
+  class HashMap < Map
 
     include Container::Hashable
 
@@ -17,6 +17,7 @@ module AutoC
       @node = Node.new(self, self.key, self.element)
       @set = Set.new(self, @node)
       @range = Range.new(self, visibility)
+      @create_capacity = function(self, :create_capacity, 1, { self: type, capacity: :size_t, fixed_capacity: :int }, :void)
       dependencies << range << @node << @set
     end
 
@@ -36,11 +37,45 @@ module AutoC
       stream << '/** @} */'
     end
 
+    def composite_interface_definitions(stream)
+      stream << %$
+        /**
+         * #{@addtogroup} #{type}
+         * @{
+         */
+      $
+      super
+      stream << %$
+        /**
+         * @brief Create a map with specified initial capacity
+         */
+        #{declare(@create_capacity)};
+      $
+      stream << '/** @} */'
+    end
+
     def definitions(stream)
       super
       stream << %$
+        #{define(@create_capacity)} {
+          #{@set.create_capacity}(&self->set, capacity, fixed_capacity);
+        }
+        #{define(default_create)} {
+          #{create_capacity}(self, 0, 0); /* Let the underlying set choose the defaults */
+        }
+        #{define(destroy)} {
+          #{@set.destroy}(&self->set);
+        }
         #{define(@size)} {
           return #{@set.size}(&self->set);
+        }
+        #{define(@empty)} {
+          return #{@set.empty}(&self->set);
+        }
+        #{define(@view)} {
+          #{@node.type} node;
+          node.key = key;
+          return &#{@set.view}(&self->set, node)->element;
         }
         #{define(@contains)} {
           for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
@@ -48,6 +83,27 @@ module AutoC
             if(#{element.equal('*v', :value)}) return 1;
           }
           return 0;
+        }
+        #{define(@put)} {
+          #{@node.type} node;
+          node.key = key;
+          if(!#{@set.contains}(&self->set, node)) {
+            #{@key.copy('node.key', :key)};
+            #{@element.copy('node.element', :value)};
+            #{@set.put}(&self->set, node);
+            return 1;
+          } else return 0;
+        }
+        #{define(@force)} {
+          /* FIXME get rid of code duplication */
+          int replace = #{remove}(self, key);
+          #{put}(self, key, value);
+          return replace;
+        }
+        #{define(@remove)} {
+          #{@node.type} node;
+          node.key = key;
+          return #{@set.remove}(&self->set, node);
         }
       $
     end
@@ -143,14 +199,14 @@ module AutoC
         #{define(equal)} {
           assert(self);
           assert(other);
-          return #{@key.equal('self->key', 'other->key')} && #{@element.equal('self->element', 'other->element')};
+          return #{@key.equal('self->key', 'other->key')};
         }
         #{define(code)} {
           #{hasher.type} hasher;
-          size_t hash, key_hash = #{@key.code('self->key')}, element_hash = #{@element.code('self->element')};
+          size_t hash;
           #{hasher.create(:hasher)};
-          #{hasher.update(:hasher, :key_hash)};
-          #{hasher.update(:hasher, :element_hash)};
+          #{hasher.update(:hasher, @key.code('self->key'))};
+          #{hasher.update(:hasher, @element.code('self->element'))};
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};
           return hash;

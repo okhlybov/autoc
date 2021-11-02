@@ -12,9 +12,10 @@ module AutoC
     def initialize(*args)
       super
       @purge = function(self, :purge, 1, { self: type }, :void)
-      @view = function(self, 1, { self: type, key: key.const_type }, element.const_ptr_type)
-      @get = function(self, 1, { self: type, key: key.const_type }, element.type)
+      @view = function(self, :view, 1, { self: type, key: key.const_type }, element.const_ptr_type)
+      @get = function(self, :get, 1, { self: type, key: key.const_type }, element.type)
       @put = function(self, :put, 1, { self: type, key: key.const_type, value: element.const_type }, :int)
+      @force = function(self, :force, 1, { self: type, key: key.const_type, value: element.const_type }, :int)
       @remove = function(self, :remove, 1, { self: type, key: key.const_type }, :int)
     end
 
@@ -25,22 +26,25 @@ module AutoC
         * @brief Remove and destroy all contained keys along with associated elements
         */
         #{declare(@purge)};
-        #{declare(@view)}; // TODO
-        #{declare(@get)}; // TODO
         /**
-         * @brief Put a copy of the value into the map
+         * @brief Associate a copy of the specified element with a copy of the specified key if there is no such key present
          */
         #{declare(@put)};
         /**
-         * @brief Remove value from the set
+         * @brief Associate a copy of the specified element with a copy of the specified key overriding existing key/value pair
+         */
+        #{declare(@force)};
+        /**
+         * @brief Remove and destroy key and element pair referenced by the specified key if it exists
          */
         #{declare(@remove)};
-      $
-    end
-
-    def composite_interface_declarations(stream)
-      super
-      stream << %$
+        /**
+        * @brief Return a view of the element associated with the specified key or NULL if there is no such element
+        */
+        #{declare(@view)};
+        /**
+        * @brief Return a copy of the element associated with the specified key
+        */
         #{define(@get)} {
           #{element.type} result;
           #{element.const_ptr_type} e = #{view}(self, key);
