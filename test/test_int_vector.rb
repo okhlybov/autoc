@@ -21,7 +21,6 @@ type_test(AutoC::Vector, :IntVector, :int) do
 
   setup %$
     #{type} t1, t2;
-    #{element.type} e;
     int i, c = 3;
     #{custom_create(:t1, :c)};
     #{custom_create(:t2, :c)};
