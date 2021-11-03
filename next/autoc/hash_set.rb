@@ -12,8 +12,6 @@ module AutoC
   # @private
   class BasicHashSet < Set
 
-    include Container::Hashable
-
     def initialize(type, element, visibility = :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
@@ -285,6 +283,7 @@ module AutoC
 
 
   class HashSet < BasicHashSet
+    include Container::Hashable
     include Set::Operations
   end
 

@@ -47,6 +47,12 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		TEST_EQUAL( #{size}(&t), 2 );
 	$
 
+	test :contains, %$
+		TEST_FALSE( #{contains}(&t, -1) );
+		TEST_TRUE( #{put}(&t, -1) );
+		TEST_TRUE( #{contains}(&t, -1) );
+	$
+
 	setup %$
 		#{type} t, r;
 		#{create}(&t);
@@ -84,7 +90,9 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		#{put}(&r, 1);
 		#{put}(&r, 3);
 		TEST_EQUAL( #{size}(&t), 3 );
+		TEST_TRUE( #{contains}(&t, 2) );
 		TEST_TRUE( #{remove}(&t, 2) );
+		TEST_FALSE( #{contains}(&t, 2) );
 		TEST_TRUE( #{equal}(&t, &r) );
 		TEST_TRUE( #{equal}(&r, &t) );
 	$
