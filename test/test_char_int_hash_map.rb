@@ -24,7 +24,9 @@ type_test(AutoC::HashMap, :Char2IntHashMap, :char, :int) do
 	$
 
   test :put, %$
-    TEST_TRUE( #{put}(&t, 'a', 1) );
+		TEST_EQUAL( #{size}(&t), 0 );
+		TEST_TRUE( #{put}(&t, 'a', 1) );
+		TEST_EQUAL( #{size}(&t), 1 );
     TEST_FALSE( #{put}(&t, 'a', 1) );
 		TEST_EQUAL( #{size}(&t), 1 );
   $

@@ -168,7 +168,29 @@ module AutoC
   end
 
   class HashMap::Set < BasicHashSet
+
     def initialize(map, element) = super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
+
+    def definitions(stream)
+      super
+      # Rolling out the custom set hasher to include both key and element into consideration
+      # instead of using node's version which is for key searching only
+      stream << %$
+        #{define(code)} {
+          size_t hash;
+          #{hasher.type} hasher;
+          #{hasher.create(:hasher)};
+          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element.const_ptr_type} node_ptr = #{range.front_view}(&r);
+            #{hasher.update(:hasher, element.instance_variable_get(:@key).code('node_ptr->key'))};
+            #{hasher.update(:hasher, element.instance_variable_get(:@element).code('node_ptr->element'))};
+          }
+          hash = #{hasher.result(:hasher)};
+          #{hasher.destroy(:hasher)};
+          return hash;
+        }
+      $
+    end
   end
 
 
@@ -195,6 +217,7 @@ module AutoC
 
     def definitions(stream)
       super
+      # Element is not considered upon hashing or equality comparison to facilitate the key search
       stream << %$
         #{define(equal)} {
           assert(self);
@@ -206,7 +229,6 @@ module AutoC
           size_t hash;
           #{hasher.create(:hasher)};
           #{hasher.update(:hasher, @key.code('self->key'))};
-          #{hasher.update(:hasher, @element.code('self->element'))};
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};
           return hash;
