@@ -18,6 +18,14 @@ cmake_minimum_required(VERSION 3.16) # Ninja Multi-Config requires 3.17+
 # Specify languages the program is written in
 project(test LANGUAGES C)
 
+include(cmake/CPM.cmake)
+
+CPMAddPackage(
+  NAME Ccache.cmake
+  GITHUB_REPOSITORY TheLartians/Ccache.cmake
+  VERSION 1.2
+)
+
 find_program(Ruby_EXECUTABLE ruby)
 
 add_custom_target(
@@ -74,7 +82,7 @@ set(GNU_RELEASE_FLAGS "-pipe -O3 -Wall -pedantic")
 # *
 # Specify GCC-specific debugging flags
 # Set it to empty string or comment it out to revert to default configuration behavior
-set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wall -pedantic -Wno-unused-variable -Wno-unused-value")
+set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wall -pedantic")
 
 # Slurp in the common logics code
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
