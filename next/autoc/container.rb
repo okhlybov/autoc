@@ -49,56 +49,122 @@ module AutoC
       super
       stream << %$
         /**
-          * @brief Create a new empty container
-          */
-      #{declare(default_create)};
+          @brief Create a new empty container
+
+          @param self [out] container to be initialized
+
+          The container constructed with this function contains no elements.
+
+          @note Previous contents of `self` is overwritten.
+
+          @since 2.0
+        */
+        #{declare(default_create)};
       $ if default_constructible?
       stream << %$
         /**
-          * @brief Destroy the container along with all contained elements
-          *
-          * The elements are destroyed with the element's respective destructor.
-          */
+          @brief Destroy the container along with all contained elements
+
+          @param self [in] container to be destructed
+
+          Upon destruction all contained elements get destroyed in turn with respective destructors and the allocated memory is reclaimed.
+
+          @since 2.0
+        */
         #{declare(destroy)};
       $ if destructible?
       stream << %$
         /**
-          * @brief Create a container with the copies of the source container's elements
-          */
+          @brief Create a new container with copies of the source container's elements
+
+          @param [out] self container to be initialized
+          @param [in] source container to obtain the elements from
+
+          The container constructed with this function contains *copies* of all elements from `source`.
+
+          This function requires the element type to be *copyable* (i.e. has a well-defined copy operation).
+
+          @note Previous contents of `self` is overwritten.
+
+          @since 2.0
+        */
         #{declare(copy)};
       $ if copyable?
       stream << %$
         /**
-          * @brief Move the container to a new location with all its elements
-          */
+          @private
+          @brief Move the container to a new location with all its elements
+        */
         #{declare(move)};
-      $ if movable?
+      $ if movable? # TODO
       stream << %$
         /**
-          * @brief Return non-zero if both containers are considered equal by contents
-          */
+          @brief Check whether two containers are equal by contents
+
+          @param [in] self a container to compare
+          @param [in] other a container to compare
+          @return non-zero if the containers are equal by contents and zero otherwise
+
+          The containers are considered equal if they contain the same number of the elements which in turn are pairwise equal.
+          The exact semantics is container-specific, e.g. sequence containers like vector of list mandate the equal elements
+          the elements are compared sequentially whereas unordered containers such as sets have no notion of the specific element position.
+
+          This function requires the element type to be *comparable* (i.e. have a well-defined comparison operation).
+
+          @since 2.0
+        */
         #{declare(equal)};
       $ if comparable?
       stream << %$
         /**
-         * @brief Return non-zero if there is at least one element in the container equal to the specified value
-         */
+          @brief Check whether container contains the specified element
+
+          @param [in] self container to search through
+          @param [in] value element to look for
+          @return non-zero if there is at least one element in `self` equal to the specified `value` and zero otherwise
+
+          This function requires the element type to be *comparable* (i.e. have a well-defined comparison operation).
+
+          @since 2.0
+        */
         #{declare(@contains)};
       $ if element.comparable?
       stream << %$
         /**
-          * @brief Return less-equal-more value for two containers
-          */
+          @brief Compute the ordering of two containers
+
+          @param [in] self a container to order
+          @param [in] other a container to order
+          @return zero if containers are considered equal, negative value if `self` < `other` and positive value if `self` > `other`
+
+          The function computes the ordering of two containers based on respective contents.
+
+          This function requires the element type to be *orderable* (i.e. have a well-defined less-equal-more relation operation).
+
+          @since 2.0
+        */
         #{declare(compare)};
       $ if orderable?
       stream << %$
         /**
-          * @brief Return number of contained elements in the container
-          */
+          @brief Get number of contained elements
+
+          @param [in] self container
+          @return number of elements contained in `self`
+
+          The function returns a size of container i.e. number of contained elements.
+
+          @since 2.0
+        */
         #{declare(@size)};
         /**
-          * @brief Return non-zero if there are no elements in the container and zero otherwise
-          */
+          @brief Check whether container is empty
+
+          @param [in] self container to test for emptiness
+          @return non-zero if `self` contains at least one element and zero otherwise
+
+          @since 2.0
+        */
         #{declare(@empty)};
       $
     end

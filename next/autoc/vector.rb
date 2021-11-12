@@ -8,10 +8,11 @@ require 'autoc/range'
 module AutoC
 
 
+  # Generator for the vector container type.
   class Vector < Container
 
     include Container::Hashable
-    
+
     def initialize(type, element, visibility = :public)
       super
       @range = Range.new(self, visibility)
@@ -26,9 +27,23 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} #{canonic_tag} :: resizeable vector of elements of type #{element.type}
-         * @{
-         */
+          #{@defgroup} #{type} #{canonic_tag}
+          @{
+
+            @brief Resizable vector of elements of type #{element.type}
+
+            #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
+
+            It is a contigious sequence direct access container where elements are referenced by an integer index within [0,size) range.
+
+            @see C++ [std::vector<E>](https://en.cppreference.com/w/cpp/container/vector)
+
+            @since 2.0
+        */
+        /**
+          @brief Opaque structure representing the state of the vector
+          @since 2.0
+        */
         typedef struct {
           #{element.ptr_type} elements; /**< @private */
           size_t element_count; /**< @private */
@@ -41,9 +56,9 @@ module AutoC
     def composite_interface_definitions(stream)
       stream << %$
         /**
-         * #{@addtogroup} #{type}
-         * @{
-         */
+          #{@addtogroup} #{type}
+          @{
+        */
       $
       super
       stream << %$
@@ -61,18 +76,37 @@ module AutoC
           return #{size}(self) == 0;
         }
         /**
-         * @brief Return non-zero if the specified position is valid and zero otherwise
-         *
-         * A valid position can be used to set or retreive the contained element.
-         */
+          @brief Check for position index validity
+
+          @param [in] self container
+          @param [in] position position index to test
+          @return non-zero if `position` is valid and zero otherwise
+
+          The function checks whether the `position` falls within [0,size) range.
+
+          @note This function should be used to do explicit bounds checking prior accessing/setting the vector's element
+            as the respective functions skip this test for performance reasons.
+
+          @since 2.0
+        */
         #{define} int #{within}(#{const_ptr_type} self, size_t position) {
           assert(self);
           return position < #{size}(self);
         }
         /**
-         * @brief Return a view of the element at specified position.
-         *
-         * Position must be valid (refer to @ref #{within}()).
+          @brief Get a view of the element at specified position
+
+          @param [in] self container
+          @param [in] position position to access element at
+          @return a view of element at `position`
+
+          This function is used to get a constant reference (in form the C pointer) to the value contained in `self` at specified position.
+
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+
+          @note `position` must be valid (refer to @ref #{within}).
+
+          @since 2.0
          */
         #{define} #{element.const_ptr_type} #{view}(#{const_ptr_type} self, size_t position) {
           assert(self);
