@@ -36,12 +36,12 @@ module AutoC
 
             It is a contigious sequence direct access container where elements are referenced by an integer index within [0,size) range.
 
-            @see C++ [std::vector<E>](https://en.cppreference.com/w/cpp/container/vector)
+            @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
 
             @since 2.0
         */
         /**
-          @brief Opaque structure representing the state of the vector
+          @brief Opaque structure holding state of the vector
           @since 2.0
         */
         typedef struct {
@@ -82,7 +82,7 @@ module AutoC
           @param [in] position position index to test
           @return non-zero if `position` is valid and zero otherwise
 
-          The function checks whether the `position` falls within [0,size) range.
+          The function checks whether `position` falls within [0,size) range.
 
           @note This function should be used to do explicit bounds checking prior accessing/setting the vector's element
             as the respective functions skip this test for performance reasons.
@@ -104,7 +104,7 @@ module AutoC
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
-          @note `position` must be valid (refer to @ref #{within}).
+          @note `position` must be valid (see @ref #{within}).
 
           @since 2.0
          */
@@ -142,9 +142,9 @@ module AutoC
       $ if element.default_constructible?
       stream << %$
         /**
-         * @brief Return a copy of the element at specified position
+         * @brief Get a copy of the element at specified position
          *
-         * Position must be valid (refer to @ref #{within}()).
+         * Position must be valid (see @ref #{within}).
          */
         #{define} #{element.type} #{get}(#{const_ptr_type} self, size_t position) {
           #{element.type} value;
@@ -155,7 +155,7 @@ module AutoC
         /**
          * @brief Replace the element in self at specified position with a copy of the specified value.
          *
-         * Position must be valid (refer to @ref #{within}()).
+         * Position must be valid (see @ref #{within}).
          *
          * Previous element is destroyed with the respective destructor.
          */
