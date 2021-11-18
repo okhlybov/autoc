@@ -34,7 +34,7 @@ module AutoC
 
             #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
 
-            It is a contigious sequence direct access container where elements are referenced by an integer index within [0,size) range.
+            It is a contiguous sequence direct access container where elements are referenced by an integer index within [0,size) range.
 
             @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
 
@@ -84,12 +84,13 @@ module AutoC
 
           The function checks whether `position` falls within [0,size) range.
 
-          @note This function should be used to do explicit bounds checking prior accessing/setting the vector's element
+          @note This function should be used to do explicit bounds checking prior accessing/setting
+            the vector's element (see @ref #{get}, @ref #{view}, @ref #{set})
             as the respective functions skip this test for performance reasons.
 
           @since 2.0
         */
-        #{define} int #{within}(#{const_ptr_type} self, size_t position) {
+        #{define} int #{valid_position}(#{const_ptr_type} self, size_t position) {
           assert(self);
           return position < #{size}(self);
         }
@@ -100,52 +101,92 @@ module AutoC
           @param [in] position position to access element at
           @return a view of element at `position`
 
-          This function is used to get a constant reference (in form the C pointer) to the value contained in `self` at specified position.
+          This function is used to get a constant reference (in form the C pointer) to the value contained in `self` at specified position (`return &self[position]`).
+          Refer to @ref #{get} to get an independent copy of the element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
-          @note `position` must be valid (see @ref #{within}).
+          @note `position` must be valid (see @ref #{valid_position}).
 
           @since 2.0
          */
         #{define} #{element.const_ptr_type} #{view}(#{const_ptr_type} self, size_t position) {
           assert(self);
-          assert(#{within}(self, position));
+          assert(#{valid_position}(self, position));
           return &(self->elements[position]);
         }
       $
       stream << %$
         /**
-         * @brief Create a new vector of specified size
-         *
-         * Each new vector's element is initialized with the respective default constructor.
-         */
+          @brief Create a new vector of specified size
+
+          @param self [out] vector to be initialized
+          @param size [in] size of new vector
+
+          Each new vector's element is initialized with the respective default constructor.
+
+          This function requires the element type to be *default constructible* (i.e. to have a well-defined parameterless constructor).
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        */
         #{declare(custom_create)};
       $ if custom_constructible?
       stream << %$
         /**
-         * @brief Create a new vector of specified size
-         *
-         * Each new vector's element is set to a copy of the specified value.
-         */
-        #{declare} void #{create_fill}(#{ptr_type} self, size_t size, #{element.const_type} value);
+          @brief Create and initialize a new vector of specified size
+
+          @param self [out] vector to be initialized
+          @param size [in] size of new vector
+          @param value [in] value to initialize the vector with
+
+          Each new vector's element is set to a *copy* of the specified value.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        */
+        #{declare} void #{create_set}(#{ptr_type} self, size_t size, #{element.const_type} value);
       $ if element.copyable?
       stream << %$
         /**
-         * @brief Resize the vector to contain the specified number of elements
-         *
-         * If the new size is smaller than current vector's size, the excessive elements are destroyed with the respective destructor.
-         *
-         * If the new size is greater that current vector's size, the extra elements are created with the respective default constructor.
-         */
+          @brief Resize vector
+
+          @param self [in,out] vector to be resized
+          @param new_size [in] new size for the vector
+
+          This function reallocates and transfers all elements from original storage to a new one without preforming a copy operation.
+
+          If new size is gerater than old one (the vector expansion operation), extra elements are initialized with the respective default constructor.
+
+          If new size is smaller the old one (the vector shrinking operation), excessive elements are destroyed with the respective destructor.
+
+          This function requires the element type to be *default constructible* (i.e. to have a well-defined parameterless constructor).
+
+          @since 2.0
+        */
         #{declare} void #{resize}(#{ptr_type} self, size_t new_size);
       $ if element.default_constructible?
       stream << %$
         /**
-         * @brief Get a copy of the element at specified position
-         *
-         * Position must be valid (see @ref #{within}).
-         */
+          @brief Get an element at specified position
+
+          @param [in] self container
+          @param [in] position position to access element at
+          @return a *copy* of element at `position`
+
+          This function is used to get a *copy* to the value contained in `self` at specified position (`return self[position]`).
+          Refer to @ref #{view} to get a view of the element without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `position` must be valid (see @ref #{valid_position}).
+
+          @since 2.0
+        */
         #{define} #{element.type} #{get}(#{const_ptr_type} self, size_t position) {
           #{element.type} value;
           #{element.const_ptr_type} p = #{view(:self, :position)};
@@ -153,15 +194,22 @@ module AutoC
           return value;
         }
         /**
-         * @brief Replace the element in self at specified position with a copy of the specified value.
-         *
-         * Position must be valid (see @ref #{within}).
-         *
-         * Previous element is destroyed with the respective destructor.
-         */
+          @brief Set an element at specified position
+
+          @param [in] self container
+          @param [in] position position to set element at
+
+          This function is used to set the value in `self` at specified position (`self[position] = value`) displacing previous element which is destroyed with the respective destructor.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `position` must be valid (see @ref #{valid_position}).
+
+          @since 2.0
+       */
         #{define} void #{set}(#{ptr_type} self, size_t position, #{element.const_type} value) {
           assert(self);
-          assert(#{within}(self, position));
+          assert(#{valid_position}(self, position));
           #{element.destroy('self->elements[position]') if element.destructible?};
           #{element.copy('self->elements[position]', :value)};
         }
@@ -199,6 +247,9 @@ module AutoC
         #{memory.free('self->elements')};
       }$
       stream << %$
+          /**
+            @brief Create a new vector of specified size
+          */
         #{define(custom_create)} {
           size_t index;
           assert(self);
@@ -233,7 +284,7 @@ module AutoC
         }
       $ if element.default_constructible?
       stream << %$
-        #{define} void #{create_fill}(#{type}* self, size_t size, #{element.const_type} value) {
+        #{define} void #{create_set}(#{type}* self, size_t size, #{element.const_type} value) {
           size_t index;
           assert(self);
           #{allocate}(self, size);

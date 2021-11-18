@@ -55,7 +55,7 @@ module AutoC
 
           The container constructed with this function contains no elements.
 
-          @note Previous contents of `self` is overwritten.
+          @note Previous contents of `*self` is overwritten.
 
           @since 2.0
         */
@@ -67,7 +67,7 @@ module AutoC
 
           @param self [in] container to be destructed
 
-          Upon destruction all contained elements get destroyed in turn with respective destructors and the allocated memory is reclaimed.
+          Upon destruction all contained elements get destroyed in turn with respective destructors and allocated memory is reclaimed.
 
           @since 2.0
         */
@@ -82,9 +82,9 @@ module AutoC
 
           The container constructed with this function contains *copies* of all elements from `source`.
 
-          This function requires the element type to be *copyable* (i.e. has a well-defined copy operation).
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note Previous contents of `self` is overwritten.
+          @note Previous contents of `*self` is overwritten.
 
           @since 2.0
         */
@@ -109,7 +109,7 @@ module AutoC
           The exact semantics is container-specific, e.g. sequence containers like vector of list mandate the equal elements
           the elements are compared sequentially whereas unordered containers such as sets have no notion of the specific element position.
 
-          This function requires the element type to be *comparable* (i.e. have a well-defined comparison operation).
+          This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
 
           @since 2.0
         */
@@ -123,7 +123,7 @@ module AutoC
           @param [in] value element to look for
           @return non-zero if there is at least one element in `self` equal to the specified `value` and zero otherwise
 
-          This function requires the element type to be *comparable* (i.e. have a well-defined comparison operation).
+          This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
 
           @since 2.0
         */
@@ -139,7 +139,7 @@ module AutoC
 
           The function computes the ordering of two containers based on respective contents.
 
-          This function requires the element type to be *orderable* (i.e. have a well-defined less-equal-more relation operation).
+          This function requires the element type to be *orderable* (i.e. to have a well-defined less-equal-more relation operation).
 
           @since 2.0
         */
@@ -152,7 +152,7 @@ module AutoC
           @param [in] self container
           @return number of elements contained in `self`
 
-          The function returns a size of container i.e. number of contained elements.
+          The function returns a size of container, i.e. a number of contained elements.
 
           @since 2.0
         */

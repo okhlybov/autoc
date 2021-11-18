@@ -51,10 +51,10 @@ type_test(AutoC::Vector, :ValueVector, Value) do
     #{element.destroy}(e2);
   ~
 
-  test :within, %~
-    TEST_TRUE( #{within}(&t, 0) );
-    TEST_TRUE( #{within}(&t, 2) );
-    TEST_FALSE( #{within}(&t, 3) );
+  test :valid_position, %~
+    TEST_TRUE( #{valid_position}(&t, 0) );
+    TEST_TRUE( #{valid_position}(&t, 2) );
+    TEST_FALSE( #{valid_position}(&t, 3) );
   ~
 
   test :iterate_forward, %~
