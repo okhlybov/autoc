@@ -6,8 +6,9 @@ def type(x, brief)
   AutoC::Synthetic.new(x,
     default_create: "#{x}Create",
     copy: "#{x}Copy",
-    code: "#{x}Code",
+    hash_code: "#{x}HashCode",
     equal: "#{x}Equal",
+    compare: "#{x}Compare",
     interface: %$
       /**
         @brief #{brief}
@@ -15,8 +16,9 @@ def type(x, brief)
       typedef struct {int _; /**< @private */} #{x};
       #define #{x}Create(self)
       #define #{x}Copy(self, source)
-      #define #{x}Code(self) 0
+      #define #{x}HashCode(self) 0
       #define #{x}Equal(lt, rt) 0
+      #define #{x}Compare(lt,rt) 0
     $
   )
 end

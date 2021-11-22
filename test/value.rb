@@ -1,6 +1,6 @@
 require 'autoc/type'
 
-Value = AutoC::Synthetic.new :Value, interface: %$
+Value = AutoC::Synthetic.new(:Value, interface: %$
     #include <malloc.h>
     /**
      * @public @defgroup Value Value :: a generic full fledged value type
@@ -31,8 +31,8 @@ Value = AutoC::Synthetic.new :Value, interface: %$
     static int ValueEqual(const Value* lt, const Value* rt) {
       return ValueGet(*lt) == ValueGet(*rt);
     }
-    #define ValueCode_(v) ValueCode(&v)
-    static size_t ValueCode(const Value* self) {
+    #define ValueHashCode_(v) ValueHashCode(&v)
+    static size_t ValueHashCode(const Value* self) {
       return ValueGet(*self);
     }
     #define ValueCompare_(lt, rt) ValueCompare(&lt, &rt);
@@ -49,4 +49,5 @@ Value = AutoC::Synthetic.new :Value, interface: %$
   copy: :ValueCopy_,
   equal: :ValueEqual_,
   compare: :ValueCompare_,
-  code: :ValueCode_
+  code: :ValueHashCode_
+)

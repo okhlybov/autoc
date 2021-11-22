@@ -53,7 +53,7 @@ module AutoC
   # Generator type base.
   class Type
 
-    SPECIAL_METHODS = %i[default_create custom_create destroy copy move equal compare code]
+    SPECIAL_METHODS = %i[default_create custom_create destroy copy move equal compare hash_code]
 
     include Entity
 
@@ -147,7 +147,7 @@ module AutoC
     abstract def compare(value, other) = nil
 
     # @abstract TODO
-    abstract def code(value) = nil
+    abstract def hash_code(value) = nil
 
     # @abstract TODO replace value with a copy of source destroying prevous contents
     # abstract def replace(value,  source) = nil
@@ -186,7 +186,7 @@ module AutoC
     def orderable? = respond_to?(:compare)
 
     # Test whether the type's values which can be the elements of hash-based containers.
-    def hashable? = comparable? && respond_to?(:code)
+    def hashable? = comparable? && respond_to?(:hash_code)
   end
 
 
@@ -205,7 +205,7 @@ module AutoC
 
     def compare(value, other) = "((#{value}) == (#{other}) ? 0 : ((#{value}) > (#{other}) ? +1 : -1))"
 
-    def code(value) = "((size_t)(#{value}))"
+    def hash_code(value) = "((size_t)(#{value}))"
 
   end
 
@@ -227,7 +227,7 @@ module AutoC
       setup_call(calls, :move, {self: type, source: type}, type)
       setup_call(calls, :equal, {self: const_type, other: const_type}, :int)
       setup_call(calls, :compare, {self: const_type, other: const_type}, :int)
-      setup_call(calls, :code, {self: const_type}, :size_t)
+      setup_call(calls, :hash_code, {self: const_type}, :size_t)
     end
 
     private def setup_call(calls, meth, args, result)

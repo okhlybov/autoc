@@ -71,7 +71,7 @@ module AutoC
       super
       stream << %$
         static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
-          return #{@buckets.view}(&self->buckets, #{element.code(:value)} % #{@buckets.size}(&self->buckets));
+          return #{@buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{@buckets.size}(&self->buckets));
         }
         /* Push value to the set bypassing the element's copy function */
         static void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {

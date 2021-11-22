@@ -40,12 +40,6 @@ add_custom_target(
 # Instruct to create a named executable from the space-separated list of source files which consitute the program
 add_executable(${PROJECT_NAME} test_auto.c)
 
-find_package(Doxygen)
-file(GLOB ALL_AUTO test_auto*.[h])
-doxygen_add_docs(${PROJECT_NAME}-doc ${ALL_AUTO} ALL)
-
-add_dependencies(${PROJECT_NAME} code)
-
 # ***
 # Set to the space-separated list of dependent PkgConfig modules
 set(PKG_CONFIG_MODULES)

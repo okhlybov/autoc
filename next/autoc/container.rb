@@ -51,7 +51,7 @@ module AutoC
         /**
           @brief Create a new empty container
 
-          @param self [out] container to be initialized
+          @param[out] self container to be initialized
 
           The container constructed with this function contains no elements.
 
@@ -65,7 +65,7 @@ module AutoC
         /**
           @brief Destroy the container along with all contained elements
 
-          @param self [in] container to be destructed
+          @param[in] self container to be destructed
 
           Upon destruction all contained elements get destroyed in turn with respective destructors and allocated memory is reclaimed.
 
@@ -77,8 +77,8 @@ module AutoC
         /**
           @brief Create a new container with copies of the source container's elements
 
-          @param [out] self container to be initialized
-          @param [in] source container to obtain the elements from
+          @param[out] self container to be initialized
+          @param[in] source container to obtain the elements from
 
           The container constructed with this function contains *copies* of all elements from `source`.
 
@@ -101,8 +101,8 @@ module AutoC
         /**
           @brief Check whether two containers are equal by contents
 
-          @param [in] self a container to compare
-          @param [in] other a container to compare
+          @param[in] self a container to compare
+          @param[in] other a container to compare
           @return non-zero if the containers are equal by contents and zero otherwise
 
           The containers are considered equal if they contain the same number of the elements which in turn are pairwise equal.
@@ -119,8 +119,8 @@ module AutoC
         /**
           @brief Check whether container contains the specified element
 
-          @param [in] self container to search through
-          @param [in] value element to look for
+          @param[in] self container to search through
+          @param[in] value element to look for
           @return non-zero if there is at least one element in `self` equal to the specified `value` and zero otherwise
 
           This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
@@ -133,8 +133,8 @@ module AutoC
         /**
           @brief Compute the ordering of two containers
 
-          @param [in] self a container to order
-          @param [in] other a container to order
+          @param[in] self a container to order
+          @param[in] other a container to order
           @return zero if containers are considered equal, negative value if `self` < `other` and positive value if `self` > `other`
 
           The function computes the ordering of two containers based on respective contents.
@@ -149,7 +149,7 @@ module AutoC
         /**
           @brief Get number of contained elements
 
-          @param [in] self container
+          @param[in] self container
           @return number of elements contained in `self`
 
           The function returns a size of container, i.e. a number of contained elements.
@@ -160,7 +160,7 @@ module AutoC
         /**
           @brief Check whether container is empty
 
-          @param [in] self container to test for emptiness
+          @param[in] self container to test for emptiness
           @return non-zero if `self` contains at least one element and zero otherwise
 
           @since 2.0
@@ -179,22 +179,32 @@ module AutoC
       super
       stream << %$
         /**
-          * @brief Return hash code for the container based on hash codes of contained elements
-          */
-        #{declare(code)};
+          @brief Return hash code for container
+
+          @param[in] self container to get hash code for
+          @return hash code
+
+          The function computes a hash code - an integer value that somehow reflects the container's contents.
+
+          This is done by employing the element's hash function, hence this function requires the container's
+          element type to be *hashable* (i.e. to have a well-defined hash function).
+
+          @since 2.0
+        */
+        #{declare(hash_code)};
       $ if hashable?
     end
 
     def definitions(stream)
       super
       stream << %$
-        #{define(code)} {
+        #{define(hash_code)} {
           size_t hash;
           #{hasher.type} hasher;
           #{hasher.create(:hasher)};
           for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_ptr_type} p = #{range.front_view}(&r);
-            #{hasher.update(:hasher, element.code('*p'))};
+            #{hasher.update(:hasher, element.hash_code('*p'))};
           }
           hash = #{hasher.result(:hasher)};
           #{hasher.destroy(:hasher)};

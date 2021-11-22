@@ -88,7 +88,7 @@ module AutoC
       @move = function(self, :move, 2, { self: type, source: type }, :void)
       @equal = function(self, :equal, 2, { self: const_type, other: const_type }, :int)
       @compare = function(self, :compare, 2, { self: const_type, other: const_type }, :int)
-      @code = function(self, :code, 1, { self: const_type }, :size_t)
+      @hash_code = function(self, :hash_code, 1, { self: const_type }, :size_t)
       @initial_prefix = nil
       @visibility = visibility
       dependencies.merge [CODE, memory, hasher]
