@@ -101,8 +101,8 @@ module AutoC
         /**
           @brief Check whether two containers are equal by contents
 
-          @param[in] self a container to compare
-          @param[in] other a container to compare
+          @param[in] self container to compare
+          @param[in] other container to compare
           @return non-zero if the containers are equal by contents and zero otherwise
 
           The containers are considered equal if they contain the same number of the elements which in turn are pairwise equal.
@@ -133,8 +133,8 @@ module AutoC
         /**
           @brief Compute the ordering of two containers
 
-          @param[in] self a container to order
-          @param[in] other a container to order
+          @param[in] self container to order
+          @param[in] other container to order
           @return zero if containers are considered equal, negative value if `self` < `other` and positive value if `self` > `other`
 
           The function computes the ordering of two containers based on respective contents.
@@ -184,14 +184,14 @@ module AutoC
           @param[in] self container to get hash code for
           @return hash code
 
-          The function computes a hash code - an integer value that somehow reflects the container's contents.
+          The function computes a hash code - an integer value that somehow identifies the container's contents.
 
           This is done by employing the element's hash function, hence this function requires the container's
           element type to be *hashable* (i.e. to have a well-defined hash function).
 
           @since 2.0
+          #{declare(hash_code)};
         */
-        #{declare(hash_code)};
       $ if hashable?
     end
 

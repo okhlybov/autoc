@@ -29,16 +29,17 @@ module AutoC
         /**
           #{@defgroup} #{type} #{canonic_tag}
           @{
+          @brief Resizable vector of elements of type #{element.type}
 
-            @brief Resizable vector of elements of type #{element.type}
+          #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
 
-            #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
+          It is a contiguous sequence direct access container where elements can be directly referenced by an integer index belonging to the [0, @ref #{@size}) range.
 
-            It is a contiguous sequence direct access container where elements are referenced by an integer index within [0,size) range.
+          For iteration over the vector elements refer to @ref #{range.type}.
 
-            @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
+          @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
 
-            @since 2.0
+          @since 2.0
         */
         /**
           @brief Opaque structure holding state of the vector
@@ -50,7 +51,7 @@ module AutoC
         } #{type};
       $
       super
-      stream << '/** @} */'
+      stream << '/**@}*/'
     end
 
     def composite_interface_definitions(stream)
@@ -78,7 +79,7 @@ module AutoC
         /**
           @brief Check for position index validity
 
-          @param[in] self container
+          @param[in] self vector to check position for
           @param[in] position position index to check for validity
           @return non-zero if `position` is valid (i.e. falls within [0,size) range) and zero otherwise
 
@@ -97,7 +98,7 @@ module AutoC
         /**
           @brief Get a view of the element at specified position
 
-          @param[in] self container
+          @param[in] self vector to access element from
           @param[in] position position to access element at
           @return a view of element at `position`
 
@@ -162,7 +163,7 @@ module AutoC
 
           If new size is gerater than old one (the vector expansion operation), extra elements are initialized with the respective default constructor.
 
-          If new size is smaller the old one (the vector shrinking operation), excessive elements are destroyed with the respective destructor.
+          If new size is smaller the old one (the vector shrinking operation), excessive elements are destroyed with respective destructor.
 
           This function requires the element type to be *default constructible* (i.e. to have a well-defined parameterless constructor).
 
@@ -174,11 +175,11 @@ module AutoC
         /**
           @brief Get an element at specified position
 
-          @param[in] self container
-          @param[in] position position to access element at
+          @param[in] self vector to get element from
+          @param[in] position position to get element at
           @return a *copy* of element at `position`
 
-          This function is used to get a *copy* to the value contained in `self` at specified position (`return self[position]`).
+          This function is used to get a *copy* of the value contained in `self` at specified position (`return self[position]`).
           Refer to @ref #{view} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
@@ -196,10 +197,12 @@ module AutoC
         /**
           @brief Set an element at specified position
 
-          @param[in] self container
-          @param[in] position position to set element at
+          @param[in] self vector to put element into
+          @param[in] position position to put element at
+          @param[in] value value to put
 
-          This function is used to set the value in `self` at specified position (`self[position] = value`) displacing previous element which is destroyed with the respective destructor.
+          This function is used to set the value in `self` at specified position (`self[position] = value`) to a *copy* of the specified value
+          displacing previous value which is destroyed with respective destructor.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
@@ -218,8 +221,8 @@ module AutoC
         /**
           @brief Perform an in-place sorting of the elements
 
-          @param[in] self container
-          @param[in] direction greater than zero for ascending sort otherwise descending sort
+          @param[in] self vector to sort the elements of
+          @param[in] direction greater than zero for ascending sort otherwise perform descending sort
 
           The function performs sorting of the array.
 
@@ -229,7 +232,7 @@ module AutoC
         */
         #{declare} void #{sort}(#{ptr_type} self, int direction);
       $ if element.orderable?
-      stream << '/** @} */'
+      stream << '/**@}*/'
     end
 
     def definitions(stream)
@@ -355,24 +358,37 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-           * #{@defgroup} #{type} #{canonic_tag} :: range iterator for the iterable container #{iterable.canonic_tag}
-           * @{
-           */
+            #{@defgroup} #{type} #{canonic_tag}
+            @ingroup #{iterable.type}
+            @{
+
+              @brief #{canonic_desc}
+
+              This range implements the @ref #{archetype} archetype.
+
+              @see @ref Range
+
+              @since 2.0
+          */
+          /**
+            @brief Opaque structure holding state of the vector's range
+            @since 2.0
+          */
           typedef struct {
             #{iterable.const_ptr_type} iterable; /**< @private */
             size_t front_position /**< @private */, back_position; /**< @private */
           } #{type};
         $
         super
-        stream << '/** @} */'
+        stream << '/**@}*/'
       end
 
       def composite_interface_definitions(stream)
         stream << %$
           /**
-           * #{@addtogroup} #{type}
-           * @{
-           */
+            #{@addtogroup} #{type}
+            @{
+          */
         $
         super
         stream << %$
@@ -381,7 +397,7 @@ module AutoC
             assert(iterable);
             self->iterable = iterable;
             self->front_position = 0;
-            self->back_position = self->iterable->element_count - 1; /* #{iterable.size(nil)} */
+            self->back_position = #{iterable.size}(iterable)-1;
           }
           #{define(@length)} {
             assert(self);
@@ -401,37 +417,33 @@ module AutoC
             *self = *origin;
           }
           #{define(@pop_front)} {
-            assert(self);
+            assert(!#{@empty}(self));
             ++self->front_position;
           }
           #{define(@pop_back)} {
-            assert(self);
-            --self->back_position; /* This assumes the wrapping of unsigned integer, e.g. 0-1 --> max(size_t) */
+            assert(!#{@empty}(self));
+            --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
           }
           #{define(@front_view)} {
-            assert(self);
             assert(!#{@empty}(self));
-            return &self->iterable->elements[self->front_position]; /* #{iterable.view(nil)} */
+            return #{iterable.view('self->iterable', 'self->front_position')};
           }
           #{define(@back_view)} {
-            assert(self);
             assert(!#{@empty}(self));
-            return &self->iterable->elements[self->back_position];
+            return #{iterable.view('self->iterable', 'self->back_position')};
           }
           #{define(@view)} {
             assert(self);
-            assert(position < #{length}(self));
-            return &self->iterable->elements[self->front_position + position];
+            return #{iterable.view('self->iterable', 'self->front_position + position')};
           }
         $
         stream << %$
           #{define(@get)} {
             assert(self);
-            assert(position < #{length}(self));
-            return #{iterable.get}(self->iterable, self->front_position + position);
+            return #{iterable.get('self->iterable', 'self->front_position + position')};
           }
         $ if iterable.element.copyable?
-        stream << '/** @} */'
+        stream << '/**@}*/'
       end
     end
 

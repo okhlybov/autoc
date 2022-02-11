@@ -8,6 +8,7 @@ require 'autoc/map'
 module AutoC
 
 
+  #
   class HashMap < Map
 
     include Container::Hashable
@@ -26,9 +27,20 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          * #{@defgroup} #{type} #{canonic_tag} :: hash-based unordered #{key.type} to #{element.type} mapping
-          * @{
-          */
+          #{@defgroup} #{type} #{canonic_tag}
+          @{
+            @brief Hash-based unordered collection of elements of type #{element.type} mapped to unique keys of type #{key.type}
+
+            For iteration over the map elements refer to @ref #{range.type}.
+
+            @see C++ [std::unordered_map<K,T>](https://en.cppreference.com/w/cpp/container/unordered_map)
+
+            @since 2.0
+        */
+        /**
+          @brief Opaque structure holding state of the hash map
+          @since 2.0
+        */
         typedef struct {
           #{@set.type} set;
         } #{type};
@@ -110,6 +122,7 @@ module AutoC
   end
 
 
+  #
   class HashMap::Range < Range::Forward
 
     def initialize(*args)
@@ -120,12 +133,25 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} #{canonic_tag} :: range iterator for the iterable container #{iterable.canonic_tag}
-         * @{
-         */
-        typedef struct {
-          #{@set.range.type} set_range; /**< @private */
-        } #{type};
+          #{@defgroup} #{type} #{canonic_tag}
+          @ingroup #{iterable.type}
+          @{
+
+            @brief #{canonic_desc}
+
+            This range implements the @ref #{archetype} archetype.
+
+            @see @ref Range
+
+            @since 2.0
+          */
+          /**
+            @brief Opaque structure holding state of the map's range
+            @since 2.0
+          */
+          typedef struct {
+            #{@set.range.type} set_range; /**< @private */
+          } #{type};
       $
       super
       stream << '/** @} */'

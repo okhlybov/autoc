@@ -30,9 +30,20 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-         * #{@defgroup} #{type} #{canonic_tag} :: hash-based unordered collection of unique elements of type #{element.type}
-         * @{
-         */
+          #{@defgroup} #{type} #{canonic_tag}
+          @{
+            @brief Hash-based unordered collection of unique elements of type #{element.type}
+
+            For iteration over the set elements refer to @ref #{range.type}.
+
+            @see C++ [std::unordered_set<T>](https://en.cppreference.com/w/cpp/container/unordered_set)
+
+            @since 2.0
+        */
+        /**
+          @brief Opaque structure holding state of the hash set
+          @since 2.0
+        */
         typedef struct {
           #{@buckets.type} buckets; /**< @private */
           size_t element_count; /**< @private */
@@ -149,6 +160,7 @@ module AutoC
     end
 
 
+    # @private
     class BasicHashSet::Range < Range::Forward
 
       def initialize(*args)
@@ -160,9 +172,22 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-           * #{@defgroup} #{type} #{canonic_tag} :: range iterator for the iterable container #{iterable.canonic_tag}
-           * @{
-           */
+            #{@defgroup} #{type} #{canonic_tag}
+            @ingroup #{iterable.type}
+            @{
+
+              @brief #{canonic_desc}
+
+              This range implements the @ref #{archetype} archetype.
+
+              @see @ref Range
+
+              @since 2.0
+          */
+          /**
+            @brief Opaque structure holding state of the set's range
+            @since 2.0
+          */
           typedef struct {
             #{@bucket_range.type} bucket_range; /**< @private */
             #{@buckets_range.type} buckets_range; /**< @private */
@@ -222,6 +247,7 @@ module AutoC
   end
 
 
+  # @private
   class BasicHashSet::Bucket < AutoC::List
 
     def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
@@ -239,7 +265,7 @@ module AutoC
       stream << %$
         /* Push value to the list bypassing the element's copy function */
         #{define} void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {
-          /* Derived from #{push}() */
+          /* Derived from #{push} */
           #{node}* new_node = #{memory.allocate(node)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;
@@ -262,6 +288,7 @@ module AutoC
   end
 
 
+  # @private
   class BasicHashSet::Buckets < AutoC::Vector
 
     def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
@@ -282,6 +309,7 @@ module AutoC
   end
 
 
+  #
   class HashSet < BasicHashSet
     include Container::Hashable
     include Set::Operations
