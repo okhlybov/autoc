@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.16) # Ninja Multi-Config requires 3.17+
 # Specify languages the program is written in
 project(doc LANGUAGES C)
 
-find_program(Ruby_EXECUTABLE ruby)
+find_package(Ruby 3.0 REQUIRED)
 
 add_custom_target(
     code
