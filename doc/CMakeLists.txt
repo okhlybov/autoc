@@ -33,10 +33,15 @@ add_custom_target(
 add_executable(${PROJECT_NAME} doc_auto.c)
 
 find_package(Doxygen)
-file(GLOB ALL_AUTO doc_auto*.[ch])
-doxygen_add_docs(${PROJECT_NAME}-doc ${ALL_AUTO} ALL)
 
-add_dependencies(${PROJECT_NAME} code)
+add_custom_target(
+    docs
+    DEPENDS code
+    COMMAND ${DOXYGEN_EXECUTABLE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+add_dependencies(${PROJECT_NAME} code docs)
 
 # ***
 # Set to the space-separated list of dependent PkgConfig modules
@@ -78,7 +83,7 @@ set(GNU_RELEASE_FLAGS "-pipe -O3 -Wall -pedantic")
 # *
 # Specify GCC-specific debugging flags
 # Set it to empty string or comment it out to revert to default configuration behavior
-set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wall -pedantic")
+set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wno-all -pedantic")
 
 # Slurp in the common logics code
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
