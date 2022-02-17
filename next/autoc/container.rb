@@ -190,9 +190,9 @@ module AutoC
           element type to be *hashable* (i.e. to have a well-defined hash function).
 
           @since 2.0
-          #{declare(hash_code)};
         */
-      $ if hashable?
+        #{declare(hash_code)};
+        $ if hashable?
     end
 
     def definitions(stream)

@@ -300,6 +300,7 @@ module AutoC
           @brief Get a view of the specific element
 
           @param[in] self range to retrieve element from
+          @param[in] position an element position
           @return a view of an element at the range's back position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the specific position.

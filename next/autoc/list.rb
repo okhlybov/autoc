@@ -54,7 +54,7 @@ module AutoC
         };
       $
       super
-      stream << '/** @} */'
+      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
@@ -230,7 +230,7 @@ module AutoC
         */
         #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} value);
       $ if element.comparable?
-      stream << '/** @} */'
+      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -338,7 +338,7 @@ module AutoC
           } #{type};
         $
         super
-        stream << '/** @} */'
+        stream << "/**@} #{type} */"
       end
 
       def composite_interface_definitions(stream)
@@ -373,7 +373,7 @@ module AutoC
             return &self->node->element;
           }
         $
-        stream << '/** @} */'
+        stream << "/**@} #{type} */"
       end
 
     end

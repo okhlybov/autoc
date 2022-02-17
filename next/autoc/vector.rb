@@ -51,7 +51,7 @@ module AutoC
         } #{type};
       $
       super
-      stream << '/**@}*/'
+      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
@@ -232,7 +232,7 @@ module AutoC
         */
         #{declare} void #{sort}(#{ptr_type} self, int direction);
       $ if element.orderable?
-      stream << '/**@}*/'
+      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -380,7 +380,7 @@ module AutoC
           } #{type};
         $
         super
-        stream << '/**@}*/'
+        stream << "/**@} #{type} */"
       end
 
       def composite_interface_definitions(stream)
@@ -443,7 +443,7 @@ module AutoC
             return #{iterable.get('self->iterable', 'self->front_position + position')};
           }
         $ if iterable.element.copyable?
-        stream << '/**@}*/'
+        stream << "/**@} #{type} */"
       end
     end
 
