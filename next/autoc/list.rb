@@ -26,20 +26,20 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          #{@defgroup} #{type} #{canonic_tag}
-          @{
+          #{defgroup}
 
-            @brief Singly linked list of elements of type #{element.type}
+          @brief Singly linked list of elements of type #{element.type}
 
-            For iteration over the list elements refer to @ref #{range.type}.
+          For iteration over the list elements refer to @ref #{range.type}.
 
-            @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
+          @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
 
-            @since 2.0
+          @since 2.0
           */
         typedef struct #{@node} #{@node}; /**< @private */
         typedef struct #{type} #{type}; /**< @private */
         /**
+          #{ingroup}
           @brief Opaque structure holding state of the list
           @since 2.0
         */
@@ -54,16 +54,9 @@ module AutoC
         };
       $
       super
-      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
-      stream << %$
-        /**
-         * #{@addtogroup} #{type}
-         * @{
-         */
-      $
       super
       stream << %$
         /* ^ */
@@ -74,18 +67,20 @@ module AutoC
         }
         /** @private */
         #{declare} int #{_drop}(#{ptr_type} self);
+        /* ^ */
         #{define(destroy)} {
           assert(self);
           while(#{_drop}(self));
         }
         /**
+          #{ingroup}
           @brief Remove and destroy all contained elements
 
           @param[in] self list to be purged
 
           The elements are destroyed with respective destructor.
 
-          After call to this function the list will contain 0 elements.
+          After call to this function the list will remain intact yet contain zero elements.
 
           @since 2.0
          */
@@ -104,13 +99,14 @@ module AutoC
           return #{size}(self) == 0;
         }
         /**
+          #{ingroup}
           @brief Get a view of the front element
 
           @param[in] self list to get element from
           @return a view of a front element
 
           This function is used to get a constant reference (in form of the C pointer) to the front value contained in `self`.
-          Refer to @ref #{peek} to get an independent copy of that element.
+          Refer to @ref #{front} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
@@ -122,16 +118,23 @@ module AutoC
           assert(self);
           return &(self->head_node->element);
         }
+        /**
+          #{ingroup}
+          @brief Alias to @ref #{front_view}
+          @since 2.0
+        */
+        #define #{look}(self) #{front_view}(self)
       $
       stream << %$
         /**
+          #{ingroup}
           @brief Get front element
 
           @param[in] self list to get element from
           @return a *copy* of a front element
 
           This function is used to get a *copy* of the front value contained in `self`.
-          Refer to @ref #{view} to get a view of that element without making an independent copy.
+          Refer to @ref #{front_view} to get a view of that element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
@@ -148,11 +151,13 @@ module AutoC
           return result;
         }
         /**
+          #{ingroup}
           @brief Alias to @ref #{front}
           @since 2.0
         */
         #define #{peek}(self) #{front}(self)
         /**
+          #{ingroup}
           @brief Extract front element
 
           @param[in] self list to extract element from
@@ -175,11 +180,13 @@ module AutoC
           return result;
         }
         /**
+          #{ingroup}
           @brief Alias to @ref #{pop_front}
           @since 2.0
         */
         #define #{pop}(self) #{pop_front}(self)
         /**
+          #{ingroup}
           @brief Put element
 
           @param[in] self vector to put element into
@@ -200,6 +207,7 @@ module AutoC
           ++self->node_count;
         }
         /**
+          #{ingroup}
           @brief Alias to @ref #{push_front}
           @since 2.0
         */
@@ -213,6 +221,7 @@ module AutoC
           return #{_find_view}(self, value) != NULL;
         }
         /**
+          #{ingroup}
           @brief Remove element
 
           @param[in] self list to remove element from
@@ -230,7 +239,6 @@ module AutoC
         */
         #{declare} int #{remove}(#{ptr_type} self, #{element.const_type} value);
       $ if element.comparable?
-      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -317,19 +325,19 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-            #{@defgroup} #{type} #{canonic_tag}
+            #{defgroup}
             @ingroup #{iterable.type}
-            @{
 
-              @brief #{canonic_desc}
+            @brief #{canonic_desc}
 
-              This range implements the @ref #{archetype} archetype.
+            This range implements the @ref #{archetype} archetype.
 
-              @see @ref Range
+            @see @ref Range
 
-              @since 2.0
+            @since 2.0
           */
           /**
+            #{ingroup}
             @brief Opaque structure holding state of the list's range
             @since 2.0
           */
@@ -338,16 +346,9 @@ module AutoC
           } #{type};
         $
         super
-        stream << "/**@} #{type} */"
       end
 
       def composite_interface_definitions(stream)
-        stream << %$
-          /**
-            #{@addtogroup} #{type}
-            @{
-          */
-        $
         super
         stream << %$
           #{define(custom_create)} {
@@ -373,7 +374,6 @@ module AutoC
             return &self->node->element;
           }
         $
-        stream << "/**@} #{type} */"
       end
 
     end

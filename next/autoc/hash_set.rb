@@ -30,17 +30,17 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          #{@defgroup} #{type} #{canonic_tag}
-          @{
-            @brief Hash-based unordered collection of unique elements of type #{element.type}
+          #{defgroup}
+          @brief Hash-based unordered collection of unique elements of type #{element.type}
 
-            For iteration over the set elements refer to @ref #{range.type}.
+          For iteration over the set elements refer to @ref #{range.type}.
 
-            @see C++ [std::unordered_set<T>](https://en.cppreference.com/w/cpp/container/unordered_set)
+          @see C++ [std::unordered_set<T>](https://en.cppreference.com/w/cpp/container/unordered_set)
 
-            @since 2.0
+          @since 2.0
         */
         /**
+          #{ingroup}
           @brief Opaque structure holding state of the hash set
           @since 2.0
         */
@@ -51,19 +51,13 @@ module AutoC
         } #{type};
       $
       super
-      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
-      stream << %$
-        /**
-         * #{@addtogroup} #{type}
-         * @{
-         */
-      $
       super
       stream << %$
         /**
+         *   #{ingroup}
          * @brief Create a set with specified initial capacity
          */
         #{declare(@create_capacity)};
@@ -75,7 +69,6 @@ module AutoC
           return #{size}(self) == 0;
         }
       $
-      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -88,6 +81,7 @@ module AutoC
         static void #{_adopt}(#{ptr_type} self, #{element.const_type} value) {
           #{@bucket._adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
         }
+        /* Perform a rehash accomodating new actual size */
         static void #{_rehash}(#{ptr_type} self) {
           assert(self);
           if(#{size}(self) > self->capacity) {
@@ -172,9 +166,8 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-            #{@defgroup} #{type} #{canonic_tag}
+            #{defgroup}
             @ingroup #{iterable.type}
-            @{
 
               @brief #{canonic_desc}
 
@@ -194,18 +187,6 @@ module AutoC
           } #{type};
         $
         super
-        stream << "/**@} #{type} */"
-      end
-
-      def composite_interface_definitions(stream)
-        stream << %$
-          /**
-           * #{@addtogroup} #{type}
-           * @{
-           */
-        $
-        super
-        stream << "/**@} #{type} */"
       end
 
       def definitions(stream)

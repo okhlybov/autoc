@@ -27,8 +27,7 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          #{@defgroup} #{type} #{canonic_tag}
-          @{
+          #{defgroup}
           @brief Resizable vector of elements of type #{element.type}
 
           #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
@@ -42,6 +41,7 @@ module AutoC
           @since 2.0
         */
         /**
+          #{ingroup}
           @brief Opaque structure holding state of the vector
           @since 2.0
         */
@@ -51,16 +51,9 @@ module AutoC
         } #{type};
       $
       super
-      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
-      stream << %$
-        /**
-          #{@addtogroup} #{type}
-          @{
-        */
-      $
       super
       stream << %$
         #{define(default_create)} {
@@ -77,6 +70,7 @@ module AutoC
           return #{size}(self) == 0;
         }
         /**
+          #{ingroup}
           @brief Check for position index validity
 
           @param[in] self vector to check position for
@@ -96,6 +90,7 @@ module AutoC
           return position < #{size}(self);
         }
         /**
+          #{ingroup}
           @brief Get a view of the element at specified position
 
           @param[in] self vector to access element from
@@ -119,6 +114,7 @@ module AutoC
       $
       stream << %$
         /**
+          #{ingroup}
           @brief Create a new vector of specified size
 
           @param[out] self vector to be initialized
@@ -136,6 +132,7 @@ module AutoC
       $ if custom_constructible?
       stream << %$
         /**
+          #{ingroup}
           @brief Create and initialize a new vector of specified size
 
           @param[out] self vector to be initialized
@@ -154,6 +151,7 @@ module AutoC
       $ if element.copyable?
       stream << %$
         /**
+          #{ingroup}
           @brief Resize vector
 
           @param[in,out] self vector to be resized
@@ -173,6 +171,7 @@ module AutoC
       $ if element.default_constructible?
       stream << %$
         /**
+          #{ingroup}
           @brief Get an element at specified position
 
           @param[in] self vector to get element from
@@ -195,6 +194,7 @@ module AutoC
           return value;
         }
         /**
+          #{ingroup}
           @brief Set an element at specified position
 
           @param[in] self vector to put element into
@@ -219,6 +219,7 @@ module AutoC
       $ if element.copyable?
       stream << %$
         /**
+          #{ingroup}
           @brief Perform an in-place sorting of the elements
 
           @param[in] self vector to sort the elements of
@@ -232,7 +233,6 @@ module AutoC
         */
         #{declare} void #{sort}(#{ptr_type} self, int direction);
       $ if element.orderable?
-      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -259,9 +259,6 @@ module AutoC
         #{memory.free('self->elements')};
       }$
       stream << %$
-          /**
-            @brief Create a new vector of specified size
-          */
         #{define(custom_create)} {
           size_t index;
           assert(self);
@@ -358,19 +355,19 @@ module AutoC
       def composite_interface_declarations(stream)
         stream << %$
           /**
-            #{@defgroup} #{type} #{canonic_tag}
+            #{defgroup}
             @ingroup #{iterable.type}
-            @{
 
-              @brief #{canonic_desc}
+            @brief #{canonic_desc}
 
-              This range implements the @ref #{archetype} archetype.
+            This range implements the @ref #{archetype} archetype.
 
-              @see @ref Range
+            @see @ref Range
 
-              @since 2.0
+            @since 2.0
           */
           /**
+            #{ingroup}
             @brief Opaque structure holding state of the vector's range
             @since 2.0
           */
@@ -380,16 +377,9 @@ module AutoC
           } #{type};
         $
         super
-        stream << "/**@} #{type} */"
       end
 
       def composite_interface_definitions(stream)
-        stream << %$
-          /**
-            #{@addtogroup} #{type}
-            @{
-          */
-        $
         super
         stream << %$
           #{define(custom_create)} {
@@ -443,7 +433,6 @@ module AutoC
             return #{iterable.get('self->iterable', 'self->front_position + position')};
           }
         $ if iterable.element.copyable?
-        stream << "/**@} #{type} */"
       end
     end
 

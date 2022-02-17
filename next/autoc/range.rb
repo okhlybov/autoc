@@ -28,6 +28,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Create a new range for the specified iterable
 
           @param[out] self range to be initialized
@@ -43,6 +44,7 @@ module AutoC
         */
         #{declare(custom_create)};
         /**
+          #{@ingroup} #{iterable.type}
           @brief Return new range iterator for the specified iterable
 
           @param[in] iterable container to iterate over
@@ -87,6 +89,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Check for range emptiness
 
           @param[in] self range to check
@@ -100,6 +103,7 @@ module AutoC
         */
         #{declare(@empty)};
         /**
+          #{ingroup}
           @brief Advance front position to the next existing element
 
           @param[in] self range to advance front position for
@@ -113,6 +117,13 @@ module AutoC
         */
         #{declare(@pop_front)};
         /**
+          #{ingroup}
+          @brief Alias to @ref #{pop_front}
+          @since 2.0
+        */
+        #define #{pop}(self) #{pop_front}(self)
+        /**
+          #{ingroup}
           @brief Get a view of the front element
 
           @param[in] self range to retrieve element from
@@ -128,9 +139,16 @@ module AutoC
           @since 2.0
         */
         #{declare(@front_view)};
+        /**
+          #{ingroup}
+          @brief Alias to @ref #{front_view}
+          @since 2.0
+        */
+        #define #{look}(self) #{front_view}(self)
       $
       stream << %$
         /**
+          #{ingroup}
           @brief Get a copy of the front element
 
           @param[in] self range to retrieve element from
@@ -152,6 +170,12 @@ module AutoC
           #{iterable.element.copy(:result, '*e')};
           return result;
         }
+        /**
+          #{ingroup}
+          @brief Alias to @ref #{front}
+          @since 2.0
+        */
+        #define #{peek}(self) #{front}(self)
       $ if iterable.element.copyable?
     end
 
@@ -172,6 +196,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Capture a snapshot of the range's state
 
           @param[out] self new range
@@ -208,6 +233,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Rewind back position to the previous existing element
 
           @param[in] self range to rewind back position for
@@ -221,6 +247,7 @@ module AutoC
         */
         #{declare(@pop_back)};
         /**
+          #{ingroup}
           @brief Get a view of the back element
 
           @param[in] self range to retrieve element from
@@ -238,7 +265,8 @@ module AutoC
         #{declare(@back_view)};
       $
       stream << %$
-          /**
+        /**
+          #{ingroup}
           @brief Get a copy of the back element
 
           @param[in] self range to retrieve element from
@@ -282,6 +310,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Get a number of elements in the range
 
           @param[in] self range to query
@@ -297,6 +326,7 @@ module AutoC
         */
         #{declare(@length)};
         /**
+          #{ingroup}
           @brief Get a view of the specific element
 
           @param[in] self range to retrieve element from
@@ -318,6 +348,7 @@ module AutoC
       $
       stream << %$
         /**
+          #{ingroup}
           @brief Get a copy of the specific element
 
           @param[in] self range to retrieve element from

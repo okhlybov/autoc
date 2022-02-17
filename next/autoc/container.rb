@@ -49,6 +49,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Create a new empty container
 
           @param[out] self container to be initialized
@@ -63,11 +64,13 @@ module AutoC
       $ if default_constructible?
       stream << %$
         /**
+          #{ingroup}
           @brief Destroy the container along with all contained elements
 
           @param[in] self container to be destructed
 
           Upon destruction all contained elements get destroyed in turn with respective destructors and allocated memory is reclaimed.
+          After call to this function the `*self` storage can be disposed.
 
           @since 2.0
         */
@@ -75,6 +78,7 @@ module AutoC
       $ if destructible?
       stream << %$
         /**
+          #{ingroup}
           @brief Create a new container with copies of the source container's elements
 
           @param[out] self container to be initialized
@@ -91,14 +95,11 @@ module AutoC
         #{declare(copy)};
       $ if copyable?
       stream << %$
-        /**
-          @private
-          @brief Move the container to a new location with all its elements
-        */
         #{declare(move)};
       $ if movable? # TODO
       stream << %$
         /**
+          #{ingroup}
           @brief Check whether two containers are equal by contents
 
           @param[in] self container to compare
@@ -117,6 +118,7 @@ module AutoC
       $ if comparable?
       stream << %$
         /**
+          #{ingroup}
           @brief Check whether container contains the specified element
 
           @param[in] self container to search through
@@ -131,6 +133,7 @@ module AutoC
       $ if element.comparable?
       stream << %$
         /**
+          #{ingroup}
           @brief Compute the ordering of two containers
 
           @param[in] self container to order
@@ -147,6 +150,7 @@ module AutoC
       $ if orderable?
       stream << %$
         /**
+          #{ingroup}
           @brief Get number of contained elements
 
           @param[in] self container
@@ -158,6 +162,7 @@ module AutoC
         */
         #{declare(@size)};
         /**
+          #{ingroup}
           @brief Check whether container is empty
 
           @param[in] self container to test for emptiness
@@ -179,6 +184,7 @@ module AutoC
       super
       stream << %$
         /**
+          #{ingroup}
           @brief Return hash code for container
 
           @param[in] self container to get hash code for

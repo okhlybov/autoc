@@ -27,17 +27,18 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          #{@defgroup} #{type} #{canonic_tag}
-          @{
-            @brief Hash-based unordered collection of elements of type #{element.type} mapped to unique keys of type #{key.type}
+          #{defgroup}
 
-            For iteration over the map elements refer to @ref #{range.type}.
+          @brief Hash-based unordered collection of elements of type #{element.type} mapped to unique keys of type #{key.type}
 
-            @see C++ [std::unordered_map<K,T>](https://en.cppreference.com/w/cpp/container/unordered_map)
+          For iteration over the map elements refer to @ref #{range.type}.
 
-            @since 2.0
+          @see C++ [std::unordered_map<K,T>](https://en.cppreference.com/w/cpp/container/unordered_map)
+
+          @since 2.0
         */
         /**
+          #{ingroup}
           @brief Opaque structure holding state of the hash map
           @since 2.0
         */
@@ -46,16 +47,9 @@ module AutoC
         } #{type};
       $
       super
-      stream << "/**@} #{type} */"
     end
 
     def composite_interface_definitions(stream)
-      stream << %$
-        /**
-         * #{@addtogroup} #{type}
-         * @{
-         */
-      $
       super
       stream << %$
         /**
@@ -63,7 +57,6 @@ module AutoC
          */
         #{declare(@create_capacity)};
       $
-      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)
@@ -133,39 +126,27 @@ module AutoC
     def composite_interface_declarations(stream)
       stream << %$
         /**
-          #{@defgroup} #{type} #{canonic_tag}
+          #{defgroup}
           @ingroup #{iterable.type}
-          @{
 
-            @brief #{canonic_desc}
+          @brief #{canonic_desc}
 
-            This range implements the @ref #{archetype} archetype.
+          This range implements the @ref #{archetype} archetype.
 
-            @see @ref Range
+          @see @ref Range
 
-            @since 2.0
-          */
-          /**
-            @brief Opaque structure holding state of the map's range
-            @since 2.0
-          */
-          typedef struct {
-            #{@set.range.type} set_range; /**< @private */
-          } #{type};
-      $
-      super
-      stream << "/**@} #{type} */"
-    end
-
-    def composite_interface_definitions(stream)
-      stream << %$
+          @since 2.0
+        */
         /**
-         * #{@addtogroup} #{type}
-         * @{
-         */
+          #{ingroup}
+          @brief Opaque structure holding state of the map's range
+          @since 2.0
+        */
+        typedef struct {
+          #{@set.range.type} set_range; /**< @private */
+        } #{type};
       $
       super
-      stream << "/**@} #{type} */"
     end
 
     def definitions(stream)

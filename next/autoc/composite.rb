@@ -127,6 +127,9 @@ module AutoC
       underscored && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     end
 
+    private def defgroup = "#{@defgroup} #{type} #{canonic_tag}"
+    private def ingroup = "#{@ingroup} #{type}"
+
     def interface_declarations(stream)
       super
       @declare = :AUTOC_EXTERN
@@ -134,10 +137,10 @@ module AutoC
       case visibility
       when :public
         @defgroup = '@public @defgroup'
-        @addtogroup = '@public @addtogroup'
+        @ingroup = '@public @ingroup'
       else
         @defgroup = '@internal @defgroup'
-        @addtogroup = '@internal @addtogroup'
+        @ingroup = '@internal @ingroup'
       end
       composite_interface_declarations(stream)
     end
@@ -149,10 +152,10 @@ module AutoC
       case visibility
       when :public
         @defgroup = '@public @defgroup'
-        @addtogroup = '@public @addtogroup'
+        @ingroup = '@public @ingroup'
       else
         @defgroup = '@internal @defgroup'
-        @addtogroup = '@internal @addtogroup'
+        @ingroup = '@internal @ingroup'
       end
       composite_interface_definitions(stream)
     end
