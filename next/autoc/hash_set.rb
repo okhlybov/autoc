@@ -10,7 +10,9 @@ module AutoC
 
 
   # @private
-  class BasicHashSet < Set
+  class HashSet < Set
+
+    include Container::Hashable
 
     def initialize(type, element, visibility = :public)
       super
@@ -19,7 +21,7 @@ module AutoC
       @buckets = Buckets.new(self, @bucket)
       @range = Range.new(self, visibility)
       dependencies << range << @bucket << @buckets
-      @create_capacity = function(self, :create_capacity, 1, { self: type, capacity: :size_t, fixed_capacity: :int }, :void)
+      @create_capacity = function(self, :create_capacity, 1, { self: type, capacity: :size_t, manage_capacity: :int }, :void)
       [@size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
       @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
@@ -57,15 +59,33 @@ module AutoC
       super
       stream << %$
         /**
-         *   #{ingroup}
-         * @brief Create a set with specified initial capacity
+          #{ingroup}
+          @brief Create a set with specified initial capacity
+
+          @param[out] self container to be initialized
+          @param[in] capacity desired capacity
+          @param[in] manage_capacity permit expanding the storage if non-zero
+
+          This function creates an empty hash set configured for accomodating `capacity` elements.
+
+          The `manage_capacity` flag determines whether the set is allowed to grow when the capacity is exceeded.
+          Non-zero value allows the expanding the storage (which incurs implicit rehashing) if needed.
+          Non-zero value fixes the capacity to initial value despite the demand for expanding.
+          The set created with @ref #{default_create} sets this value to non-zero.
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
          */
         #{declare(@create_capacity)};
+        /* ^ */
         #{define(@size)} {
           assert(self);
           return self->element_count;
         }
+        /* ^ */
         #{define(@empty)} {
+          assert(self);
           return #{size}(self) == 0;
         }
       $
@@ -86,16 +106,17 @@ module AutoC
           assert(self);
           if(#{size}(self) > self->capacity) {
             #{type} t;
+            #{range.type} r;
             #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
-            for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-              #{_adopt}(&t, *#{range.front_view}(&r));
+            for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+              #{_adopt}(&t, *#{range.view}(&r));
             }
             #{@buckets._dispose}(&self->buckets);
             *self = t;
           }
         }
         #{define(default_create)} {
-          #{create_capacity}(self, #{@manager[:minimum_capacity]}, 0);
+          #{create_capacity}(self, #{@manager[:minimum_capacity]}, 1);
         }
         #{define(destroy)} {
           #{@buckets.destroy('self->buckets')};
@@ -103,20 +124,22 @@ module AutoC
         #{define(@create_capacity)} {
           assert(self);
           #{@buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
-          if(fixed_capacity) self->capacity = ~0;
+          if(!manage_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
         #{define(@purge)} {
-          for(#{@buckets.range.type} r = #{@buckets.get_range}(&self->buckets); !#{@buckets.range.empty}(&r); #{@buckets.range.pop_front}(&r)) {
-            #{@bucket.purge}((#{@bucket.ptr_type})#{@buckets.range.front_view}(&r));
+          #{@buckets.range.type} r;
+          for(r = #{@buckets.get_range}(&self->buckets); !#{@buckets.range.empty}(&r); #{@buckets.range.pop}(&r)) {
+            #{@bucket.purge}((#{@bucket.ptr_type})#{@buckets.range.view}(&r));
           }
         }
         #{define(copy)} {
+          #{range.type} r;
           assert(self);
           assert(source);
           #{create_capacity}(self, #{size}(source), 0);
-          for(#{range.type} r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{put}(self, *#{range.front_view}(&r));
+          for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{put}(self, *#{range.view}(&r));
           }
         }
         #{define(equal)} {
@@ -155,7 +178,7 @@ module AutoC
 
 
     # @private
-    class BasicHashSet::Range < Range::Forward
+    class HashSet::Range < Range::Forward
 
       def initialize(*args)
         super
@@ -194,10 +217,10 @@ module AutoC
         stream << %$
           static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
             do {
-              if (new_bucket_range) #{@bucket_range.custom_create}(&self->bucket_range, #{@buckets_range.front_view}(&self->buckets_range));
+              if (new_bucket_range) #{@bucket_range.custom_create}(&self->bucket_range, #{@buckets_range.view}(&self->buckets_range));
               else new_bucket_range = 1; /* Skip the first creation act only */
               if (!#{@bucket_range.empty}(&self->bucket_range)) break;
-              else #{@buckets_range.pop_front}(&self->buckets_range);
+              else #{@buckets_range.pop}(&self->buckets_range);
             } while(!#{@buckets_range.empty}(&self->buckets_range));
           }
           #{define(custom_create)} {
@@ -215,10 +238,10 @@ module AutoC
             #{@bucket_range.pop_front}(&self->bucket_range);
             if(#{@bucket_range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
           }
-          #{define(@front_view)} {
+          #{define(@view_front)} {
             assert(self);
             assert(!#{empty}(self));
-            return #{@bucket_range.front_view}(&self->bucket_range);
+            return #{@bucket_range.view_front}(&self->bucket_range);
           }
         $
       end
@@ -229,7 +252,7 @@ module AutoC
 
 
   # @private
-  class BasicHashSet::Bucket < AutoC::List
+  class HashSet::Bucket < AutoC::List
 
     def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
 
@@ -270,7 +293,7 @@ module AutoC
 
 
   # @private
-  class BasicHashSet::Buckets < AutoC::Vector
+  class HashSet::Buckets < AutoC::Vector
 
     def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
 
@@ -279,8 +302,9 @@ module AutoC
       stream << %$
         /* Free the storage disposing the elements in turn */
         #{define} void #{_dispose}(#{ptr_type} self) {
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element._dispose}((#{element.ptr_type})#{range.front_view}(&r));
+          #{range.type} r;
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{element._dispose}((#{element.ptr_type})#{range.view}(&r));
           }
           #{memory.free('self->elements')};
         }
@@ -289,11 +313,5 @@ module AutoC
 
   end
 
-
-  #
-  class HashSet < BasicHashSet
-    include Container::Hashable
-    include Set::Operations
-  end
 
 end
