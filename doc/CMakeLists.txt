@@ -83,7 +83,7 @@ set(GNU_RELEASE_FLAGS "-pipe -O3 -Wall -pedantic")
 # *
 # Specify GCC-specific debugging flags
 # Set it to empty string or comment it out to revert to default configuration behavior
-set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wno-all -pedantic")
+set(GNU_DEBUG_FLAGS "-pipe -g -Og -Wall -pedantic -ansi")
 
 # Slurp in the common logics code
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)

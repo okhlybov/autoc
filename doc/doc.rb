@@ -73,15 +73,16 @@ def type(x, brief)
     equal: "#{x}Equal",
     compare: "#{x}Compare",
     interface: %$
+      #include <string.h>
       /**
         @brief #{brief}
       */
       typedef struct {int _; /**< @private */} #{x};
       #define #{x}Create(self)
-      #define #{x}Copy(self, source)
-      #define #{x}HashCode(self) 0
-      #define #{x}Equal(lt, rt) 0
-      #define #{x}Compare(lt,rt) 0
+      #define #{x}Copy(self, source) self = source
+      #define #{x}HashCode(self) (size_t)&self
+      #define #{x}Equal(lt, rt) memcmp(&lt, &rt, 0)
+      #define #{x}Compare(lt,rt) memcmp(&lt, &rt, 0)
     $
   )
 end
@@ -93,7 +94,7 @@ AutoC::Module.render(:doc) do |m|
   m << main
   m << AutoC::Vector.new(:Vector, T)
   m << AutoC::List.new(:List, T)
-  m << AutoC::HashMap.new(:HashMap, K, T)
-  m << AutoC::HashSet.new(:HashSet, T)
-  m << AutoC::Code.new(definitions: 'int main(int a, char**b) {}')
+  #m << AutoC::HashMap.new(:HashMap, K, T)
+  #m << AutoC::HashSet.new(:HashSet, T)
+  m << AutoC::Code.new(definitions: 'int main(int a, char**b) {return 0;}')
 end
