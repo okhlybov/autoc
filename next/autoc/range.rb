@@ -394,7 +394,7 @@ module AutoC
       List list;
       ...
       for(ListRange r = ListGetRange(&list); !ListRangeEmpty(&r); ListRangePopFront(&r)) {
-        ... = ListRangeFront(&r);
+        ... = ListRangeTakeFront(&r);
       }
       @endcode
 

@@ -174,9 +174,12 @@ module AutoC
     end
   end
 
-  class HashMap::Set < BasicHashSet
+  class HashMap::Set < HashSet
 
-    def initialize(map, element) = super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
+    def initialize(map, element)
+      @omit_set_operations = true
+      super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
+    end
 
     def definitions(stream)
       super
