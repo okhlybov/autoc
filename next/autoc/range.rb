@@ -81,8 +81,8 @@ module AutoC
       super
       @empty = function(self, :empty, 1, { self: const_type }, :int)
       @pop_front = function(self, :pop_front, 1, { self: type }, :void)
-      @front_view = function(self, :front_view, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @front = function(self, :front, 1, { self: const_type }, iterable.element.type)
+      @view_front = function(self, :view_front, 1, { self: const_type }, iterable.element.const_ptr_type)
+      @take_front = function(self, :take_front, 1, { self: const_type }, iterable.element.type)
     end
 
     def composite_interface_definitions(stream)
@@ -97,7 +97,7 @@ module AutoC
 
           An empty range is the range for which there are to accessible elements left.
           This specifically means that any calls to the element retrieval and position change functions
-          (@ref #{@front}, @ref #{@front_view}, @ref #{@pop_front} et al.) are invalid for empty ranges.
+          (@ref #{@take_front}, @ref #{@view_front}, @ref #{@pop_front} et al.) are invalid for empty ranges.
 
           @since 2.0
         */
@@ -130,7 +130,7 @@ module AutoC
           @return a view of an element at the range's front position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's front position.
-          Refer to @ref #{@front} to get an independent copy of that element.
+          Refer to @ref #{@take_front} to get an independent copy of that element.
   
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
   
@@ -138,13 +138,13 @@ module AutoC
 
           @since 2.0
         */
-        #{declare(@front_view)};
+        #{declare(@view_front)};
         /**
           #{ingroup}
-          @brief Alias to @ref #{front_view}
+          @brief Alias to @ref #{view_front}
           @since 2.0
         */
-        #define #{look}(self) #{front_view}(self)
+        #define #{view}(self) #{view_front}(self)
       $
       stream << %$
         /**
@@ -155,7 +155,7 @@ module AutoC
           @return a *copy* of element at the range's front position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
-          Refer to @ref #{@front_view} to get a view of the element without making an independent copy.
+          Refer to @ref #{@view_front} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
@@ -163,19 +163,20 @@ module AutoC
 
           @since 2.0
         */
-        #{define(@front)} {
+        #{define(@take_front)} {
           #{iterable.element.type} result;
+          #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
-          #{iterable.element.const_ptr_type} e = #{@front_view}(self);
+          e = #{@view_front}(self);
           #{iterable.element.copy(:result, '*e')};
           return result;
         }
         /**
           #{ingroup}
-          @brief Alias to @ref #{front}
+          @brief Alias to @ref #{take_front}
           @since 2.0
         */
-        #define #{peek}(self) #{front}(self)
+        #define #{take}(self) #{take_front}(self)
       $ if iterable.element.copyable?
     end
 
@@ -225,8 +226,8 @@ module AutoC
     def initialize(iterable, visibility)
       super
       @pop_back = function(self, :pop_back, 1, { self: type }, :void)
-      @back_view = function(self, :back_view, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @back = function(self, :back, 1, { self: const_type }, iterable.element.type)
+      @view_back = function(self, :view_back, 1, { self: const_type }, iterable.element.const_ptr_type)
+      @take_back = function(self, :take_back, 1, { self: const_type }, iterable.element.type)
     end
 
     def composite_interface_definitions(stream)
@@ -254,7 +255,7 @@ module AutoC
           @return a view of an element at the range's back position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's back position.
-          Refer to @ref #{@back} to get an independent copy of that element.
+          Refer to @ref #{@take_back} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
@@ -262,7 +263,7 @@ module AutoC
 
           @since 2.0
         */
-        #{declare(@back_view)};
+        #{declare(@view_back)};
       $
       stream << %$
         /**
@@ -273,7 +274,7 @@ module AutoC
           @return a *copy* of element at the range's back position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's back position.
-          Refer to @ref #{@back_view} to get a view of the element without making an independent copy.
+          Refer to @ref #{@view_back} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
@@ -281,10 +282,11 @@ module AutoC
 
           @since 2.0
         */
-         #{define(@back)} {
+         #{define(@take_back)} {
           #{iterable.element.type} result;
+          #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
-          #{iterable.element.const_ptr_type} e = #{@back_view}(self);
+          e = #{@view_back}(self);
           #{iterable.element.copy(:result, '*e')};
           return result;
         }
@@ -302,8 +304,8 @@ module AutoC
     def initialize(iterable, visibility)
       super
       @length = function(self, :length, 1, { self: const_type }, :size_t)
-      @view = function(self, :view, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
       @get = function(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
+      @peek = function(self, :peek, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
     end
 
     def composite_interface_definitions(stream)
@@ -327,24 +329,22 @@ module AutoC
         #{declare(@length)};
         /**
           #{ingroup}
-          @brief Get a view of the specific element
+          @brief Get view of the specific element
 
-          @param[in] self range to retrieve element from
-          @param[in] position an element position
-          @return a view of an element at the range's back position
+          @param[in] self range to view element from
+          @param[in] position position to access element at
+          @return a view of element at `position`
 
-          This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the specific position.
-          Refer to @ref #{@get} to get an independent copy of that element.
-
-          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+          This function is used to get a constant reference (in form the C pointer) to the value contained in the range at the specific position.
+          Refer to @ref #{@get} to get a copy of the element.
 
           @note The specified `position` is required to be within the [0, @ref #{@length}) range.
 
           @see @ref #{@length}
-  
+
           @since 2.0
         */
-        #{declare(@view)};
+        #{declare(@peek)};
       $
       stream << %$
         /**
@@ -355,8 +355,8 @@ module AutoC
           @param[in] position an element position
           @return a *copy* of element at the range `position`
 
-          This function is used to get a *copy* of the value contained in the iterable container at the specific position.
-          Refer to @ref #{@view} to get a view of the element without making an independent copy.
+          This function is used to get a *copy* of the value contained in the range at the specific position.
+          Refer to @ref #{@peek} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 

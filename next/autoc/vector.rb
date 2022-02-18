@@ -56,15 +56,18 @@ module AutoC
     def composite_interface_definitions(stream)
       super
       stream << %$
+        /* ^ */
         #{define(default_create)} {
           assert(self);
           self->element_count = 0;
           self->elements = NULL;
         }
+        /* ^ */
         #{define(@size)} {
           assert(self);
           return self->element_count;
         }
+        /* ^ */
         #{define(@empty)} {
           assert(self);
           return #{size}(self) == 0;
@@ -349,7 +352,7 @@ module AutoC
 
       def initialize(*args)
         super
-        [custom_create, @empty, @length, @view, @save, @pop_front, @front_view, @pop_back, @back_view, @front, @back, @get].each(&:inline!)
+        [custom_create, @empty, @length, @save, @pop_front, @view_front, @pop_back, @view_back, @take_front, @take_back, @get, @peek].each(&:inline!)
       end
 
       def composite_interface_declarations(stream)
@@ -382,6 +385,7 @@ module AutoC
       def composite_interface_definitions(stream)
         super
         stream << %$
+          /* ^ */
           #{define(custom_create)} {
             assert(self);
             assert(iterable);
@@ -389,10 +393,12 @@ module AutoC
             self->front_position = 0;
             self->back_position = #{iterable.size}(iterable)-1;
           }
+          /* ^ */
           #{define(@length)} {
             assert(self);
             return #{@empty}(self) ? 0 : self->back_position - self->front_position + 1;
           }
+          /* ^ */
           #{define(@empty)} {
             assert(self);
             return !(
@@ -401,33 +407,40 @@ module AutoC
               self->back_position  <  self->iterable->element_count
             );
           }
+          /* ^ */
           #{define(@save)} {
             assert(self);
             assert(origin);
             *self = *origin;
           }
+          /* ^ */
           #{define(@pop_front)} {
             assert(!#{@empty}(self));
             ++self->front_position;
           }
+          /* ^ */
           #{define(@pop_back)} {
             assert(!#{@empty}(self));
             --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
           }
-          #{define(@front_view)} {
+          /* ^ */
+          #{define(@view_front)} {
             assert(!#{@empty}(self));
             return #{iterable.view('self->iterable', 'self->front_position')};
           }
-          #{define(@back_view)} {
+          /* ^ */
+          #{define(@view_back)} {
             assert(!#{@empty}(self));
             return #{iterable.view('self->iterable', 'self->back_position')};
           }
-          #{define(@view)} {
+          /* ^ */
+          #{define(@peek)} {
             assert(self);
             return #{iterable.view('self->iterable', 'self->front_position + position')};
           }
         $
         stream << %$
+          /* ^ */
           #{define(@get)} {
             assert(self);
             return #{iterable.get('self->iterable', 'self->front_position + position')};

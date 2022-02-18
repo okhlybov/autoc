@@ -59,19 +59,8 @@ module AutoC
     def composite_interface_definitions(stream)
       super
       stream << %$
-        /* ^ */
-        #{define(default_create)} {
-          assert(self);
-          self->head_node = NULL;
-          self->node_count = 0;
-        }
         /** @private */
-        #{declare} int #{_drop}(#{ptr_type} self);
-        /* ^ */
-        #{define(destroy)} {
-          assert(self);
-          while(#{_drop}(self));
-        }
+        #{declare} void #{_drop_front}(#{ptr_type} self);
         /**
           #{ingroup}
           @brief Remove and destroy all contained elements
@@ -85,6 +74,7 @@ module AutoC
           @since 2.0
          */
         #{define} void #{purge}(#{ptr_type} self) {
+          assert(self);
           #{destroy}(self);
           #{default_create}(self);
         }
@@ -95,6 +85,7 @@ module AutoC
         }
         /* ^ */
         #{define(@empty)} {
+          assert(self);
           assert((self->node_count == 0) == (self->head_node == NULL));
           return #{size}(self) == 0;
         }
@@ -106,7 +97,7 @@ module AutoC
           @return a view of a front element
 
           This function is used to get a constant reference (in form of the C pointer) to the front value contained in `self`.
-          Refer to @ref #{front} to get an independent copy of that element.
+          Refer to @ref #{take_front} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
@@ -114,16 +105,81 @@ module AutoC
 
           @since 2.0
         */
-        #{define} #{element.const_ptr_type} #{front_view}(#{const_ptr_type} self) {
+        #{define} #{element.const_ptr_type} #{view_front}(#{const_ptr_type} self) {
           assert(self);
           return &(self->head_node->element);
         }
         /**
           #{ingroup}
-          @brief Alias to @ref #{front_view}
+          @brief Alias to @ref #{view_front}
           @since 2.0
         */
-        #define #{look}(self) #{front_view}(self)
+        #define #{view}(self) #{view_front}(self)
+        /**
+          #{ingroup}
+          @brief Extract front element
+
+          @param[in] self list to extract element from
+          @return front element
+
+          This function returns and removes front element from the list.
+          Note that contrary to @ref #{take_front} no copy operation is performed - it is the contained value itself that is returned.
+
+          @note List must not be empty (see @ref #{@empty}).
+
+          @since 2.0
+        */
+        #{define} #{element.type} #{pull_front}(#{ptr_type} self) {
+          #{element.type} value;
+          assert(self);
+          assert(!#{empty}(self));
+          value = *#{view}(self);
+          #{_drop_front}(self);
+          return value;
+        }
+        /**
+          #{ingroup}
+          @brief Alias to @ref #{pull_front}
+          @since 2.0
+        */
+        #define #{pull}(self) #{pull_front}(self)
+        /**
+          #{ingroup}
+          @brief Drop front element
+
+          @param[in] self list to drop element from
+
+          This function removes front element from the list and destroys it with the respective destructor.
+
+          @note List must not be empty (see @ref #{@empty}).
+
+          @since 2.0
+        */
+        #{define} void #{pop_front}(#{ptr_type} self) {
+          #{element.type} value;
+          assert(self);
+          assert(!#{empty}(self));
+          value = *#{view}(self);
+          #{element.destroy(:value) if element.destructible?};
+          #{_drop_front}(self);
+        }
+        /**
+          #{ingroup}
+          @brief Alias to @ref #{pop_front}
+          @since 2.0
+        */
+        #define #{pop}(self) #{pop_front}(self)
+        /* ^ */
+        #{define(default_create)} {
+          assert(self);
+          self->head_node = NULL;
+          self->node_count = 0;
+        }
+        /* ^ */
+        #{define(destroy)} {
+          assert(self);
+          while(!#{empty}(self)) #{pop}(self);
+        }
       $
       stream << %$
         /**
@@ -134,7 +190,7 @@ module AutoC
           @return a *copy* of a front element
 
           This function is used to get a *copy* of the front value contained in `self`.
-          Refer to @ref #{front_view} to get a view of that element without making an independent copy.
+          Refer to @ref #{view_front} to get a view of that element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
@@ -142,49 +198,21 @@ module AutoC
 
           @since 2.0
         */
-        #{define} #{element.type} #{front}(#{const_ptr_type} self) {
+        #{define} #{element.type} #{take_front}(#{const_ptr_type} self) {
           #{element.type} result;
           #{element.const_ptr_type} e;
+          assert(self);
           assert(!#{empty}(self));
-          e = #{front_view}(self);
+          e = #{view_front}(self);
           #{element.copy(:result, '*e')};
           return result;
         }
         /**
           #{ingroup}
-          @brief Alias to @ref #{front}
+          @brief Alias to @ref #{take_front}
           @since 2.0
         */
-        #define #{peek}(self) #{front}(self)
-        /**
-          #{ingroup}
-          @brief Extract front element
-
-          @param[in] self list to extract element from
-          @return a *copy* of a front element
-
-          This function is used to get a *copy* of the front value contained in `self` and removes original value from the list.
-          The removed value is destroyed with respective destructor.
-
-          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
-
-          @note List must not be empty (see @ref #{@empty}).
-
-          @since 2.0
-        */
-        #{define} #{element.type} #{pop_front}(#{ptr_type} self) {
-          #{element.type} result;
-          assert(!#{empty}(self));
-          result = #{front}(self);
-          #{_drop}(self);
-          return result;
-        }
-        /**
-          #{ingroup}
-          @brief Alias to @ref #{pop_front}
-          @since 2.0
-        */
-        #define #{pop}(self) #{pop_front}(self)
+        #define #{take}(self) #{take_front}(self)
         /**
           #{ingroup}
           @brief Put element
@@ -192,7 +220,7 @@ module AutoC
           @param[in] self vector to put element into
           @param[in] value value to put
 
-          This function pushes a *copy* of the specified value to `self`.
+          This function pushes a *copy* of the specified value to the front position of `self`.
           It becomes a new front element.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
@@ -200,7 +228,9 @@ module AutoC
           @since 2.0
         */
         #{define} void #{push_front}(#{ptr_type} self, #{element.const_type} value) {
-          #{@node}* new_node = #{memory.allocate(@node)};
+          #{@node}* new_node;
+          assert(self);
+          new_node = #{memory.allocate(@node)};
           #{element.copy('new_node->element', :value)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;
@@ -218,6 +248,7 @@ module AutoC
         #{declare} #{element.const_ptr_type} #{_find_view}(#{const_ptr_type} self, #{element.const_type} value);
         /* ^ */
         #{define(@contains)} {
+          assert(self);
           return #{_find_view}(self, value) != NULL;
         }
         /**
@@ -244,31 +275,36 @@ module AutoC
     def definitions(stream)
       super
       stream << %$
-        #{define} int #{_drop}(#{ptr_type} self) {
-          if(!#{empty}(self)) {
-            #{@node}* this_node = self->head_node; assert(this_node);
-            self->head_node = self->head_node->next_node;
-            #{element.destroy('this_node->element') if element.destructible?};
-            #{memory.free(:this_node)};
-            --self->node_count;
-            return 1;
-          } else return 0;
+        /* Remove but do not destroy front element */
+        #{define} void #{_drop_front}(#{ptr_type} self) {
+          #{@node}* this_node;
+          assert(!#{empty}(self));
+          this_node = self->head_node; assert(this_node);
+          self->head_node = self->head_node->next_node;
+          #{memory.free(:this_node)};
+          --self->node_count;
         }
       $
       stream << %$
         #{define(copy)} {
+          #{range.type} r;
+          assert(self);
+          assert(source);
           #{create}(self);
-          for(#{range.type} r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{push}(self, *#{range.front_view}(&r));
+          for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{push}(self, *#{range.view}(&r));
           }
         }
       $ if copyable?
       stream << %$
         #{define(equal)} {
+          #{range.type} ra, rb;
+          assert(self);
+          assert(other);
           if(#{size}(self) == #{size}(other)) {
-            for(#{range.type} ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
-              #{element.const_ptr_type} a = #{range.front_view}(&ra);
-              #{element.const_ptr_type} b = #{range.front_view}(&rb);
+            for(ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop}(&ra), #{range.pop}(&rb)) {
+              #{element.const_ptr_type} a = #{range.view}(&ra);
+              #{element.const_ptr_type} b = #{range.view}(&rb);
               if(!#{element.equal('*a', '*b')}) return 0;
             }
             return 1;
@@ -277,8 +313,10 @@ module AutoC
       $ if comparable?
       stream << %$
         #{define} #{element.const_ptr_type} #{_find_view}(#{const_ptr_type} self, #{element.const_type} value) {
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_ptr_type} e = #{range.front_view}(&r);
+          #{range.type} r;
+          assert(self);
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{element.const_ptr_type} e = #{range.view}(&r);
             if(#{element.equal('*e', :value)}) return e;
           }
           return NULL;
@@ -319,7 +357,7 @@ module AutoC
       def initialize(*args)
         super
         @list_node = iterable.instance_variable_get(:@node)
-        [custom_create, @empty, @save, @pop_front, @front_view, @front].each(&:inline!)
+        [custom_create, @empty, @save, @pop_front, @view_front, @take_front].each(&:inline!)
       end
 
       def composite_interface_declarations(stream)
@@ -351,25 +389,32 @@ module AutoC
       def composite_interface_definitions(stream)
         super
         stream << %$
+          /* ^ */
           #{define(custom_create)} {
             assert(self);
             assert(iterable);
             self->node = iterable->head_node;
           }
+          /* ^ */
           #{define(@empty)} {
             assert(self);
             return self->node == NULL;
           }
+          /* ^ */
           #{define(@save)} {
             assert(self);
             assert(origin);
             *self = *origin;
           }
+          /* ^ */
           #{define(@pop_front)} {
+            assert(self);
             assert(!#{empty}(self));
             self->node = self->node->next_node;
           }
-          #{define(@front_view)} {
+          /* ^ */
+          #{define(@view_front)} {
+            assert(self);
             assert(!#{empty}(self));
             return &self->node->element;
           }

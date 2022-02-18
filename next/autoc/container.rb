@@ -206,10 +206,11 @@ module AutoC
       stream << %$
         #{define(hash_code)} {
           size_t hash;
+          #{range.type} r;
           #{hasher.type} hasher;
           #{hasher.create(:hasher)};
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_ptr_type} p = #{range.front_view}(&r);
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{element.const_ptr_type} p = #{range.view}(&r);
             #{hasher.update(:hasher, element.hash_code('*p'))};
           }
           hash = #{hasher.result(:hasher)};
