@@ -68,21 +68,24 @@ $
 def type(x, brief)
   AutoC::Synthetic.new(x,
     default_create: "#{x}Create",
+    destroy: "#{x}Destroy",
     copy: "#{x}Copy",
     hash_code: "#{x}HashCode",
     equal: "#{x}Equal",
     compare: "#{x}Compare",
     interface: %$
+      #include<stdio.h>
       #include <string.h>
       /**
         @brief #{brief}
       */
       typedef struct {int _; /**< @private */} #{x};
-      #define #{x}Create(self)
+      #define #{x}Create(self) (self)._ = 1
+      #define #{x}Destroy(self) printf("%i", (self)._)
       #define #{x}Copy(self, source) self = source
-      #define #{x}HashCode(self) (size_t)&self
-      #define #{x}Equal(lt, rt) memcmp(&lt, &rt, 0)
-      #define #{x}Compare(lt,rt) memcmp(&lt, &rt, 0)
+      #define #{x}HashCode(self) (self)._
+      #define #{x}Equal(lt, rt) ((lt)._ == (rt)._)
+      #define #{x}Compare(lt,rt) ((lt)._ == (rt)._)
     $
   )
 end
@@ -95,6 +98,6 @@ AutoC::Module.render(:doc) do |m|
   m << AutoC::Vector.new(:Vector, T)
   m << AutoC::List.new(:List, T)
   #m << AutoC::HashMap.new(:HashMap, K, T)
-  #m << AutoC::HashSet.new(:HashSet, T)
+  m << AutoC::HashSet.new(:HashSet, T)
   m << AutoC::Code.new(definitions: 'int main(int a, char**b) {return 0;}')
 end
