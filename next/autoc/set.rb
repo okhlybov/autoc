@@ -13,8 +13,8 @@ module AutoC
       super
       # Declare common set functions
       @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
-      @force = function(self, :force, 1, { self: type, value: element.const_type }, :int)
-      @view = function(self, :view, 1, { self: type, value: element.const_type }, element.const_ptr_type)
+      @push = function(self, :push, 1, { self: type, value: element.const_type }, :int)
+      @look = function(self, :look, 1, { self: type, value: element.const_type }, element.const_ptr_type)
       @purge = function(self, :purge, 1, { self: type }, :void)
       @remove = function(self, :remove, 1, { self: type, value: element.const_type }, :int)
       unless @omit_set_operations
@@ -32,25 +32,68 @@ module AutoC
       stream << %$
         /**
           #{ingroup}
-          @brief Put a copy of the value
+          @brief Put a value
 
           @param[in] self set to put into
           @param[in] value value to put
+          @return non-zero value on successful put and zero value and zero value otherwise
           
-         */
+          This function puts a *copy* of the specified `value` to the set only if there is no equavalent element in the set.
+          The returned value indicates whether a new value in put or the set already contains an equivalent element.
+
+          After call to this function the set will contain an element equivalent to the `value` which is either the already contained element or a copy of the specified `value`.
+          
+          The function requires the element's type to be both *comparable* and *copyable*.
+
+          @since 2.0
+        */
         #{declare(@put)};
         /**
-         * @brief Force put a copy of the value into the set replacing existing value
-         */
-        #{declare(@force)};
+          #{ingroup}
+          @brief Force put a value
+
+          @param[in] self set to put into
+          @param[in] value value to put
+          @return non-zero value on successful replacement and zero value and zero value otherwise
+
+          This function puts a *copy* of the specified `value` to the set replacing already contained element if the is one.
+          The return value indicates whether this is a replacement of an already contained element or a put of a new element.
+
+          After call to this function the set will contain an element equivalent to the `value`.
+
+          The function requires the element's type to be both *comparable* and *copyable*.
+
+          @since 2.0
+        */
+        #{declare(@push)};
         /**
-         * @brief Remove and destroy all contained elements
-         */
+          #{ingroup}
+          @brief Remove and destroy all contained elements
+
+          @param[in] self list to be purged
+
+          The elements are destroyed with respective destructor.
+
+          After call to this function the set will remain intact yet contain zero elements.
+
+          @since 2.0
+        */
         #{declare(@purge)};
         /**
-         * @brief Return a view of contained element equal to the specified element or NULL if there is no such element
+          #{ingroup}
+          @brief Get a view of contained element
+
+          @param[in] self set to put into
+          @param[in] value value to put
+          @return a view of an element equivalent to the `value`
+
+          This function is used to get a constant reference (in form of the C pointer) to an element contained in `self` equavalent to the specified `value`.
+
+          @note Equivalent element must exist (see @ref #{contains}).
+
+          @since 2.0
          */
-        #{declare(@view)};
+        #{declare(@look)};
         /**
          * @brief Remove value from the set
          */

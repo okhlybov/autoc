@@ -11,13 +11,14 @@ module AutoC
   class List < Container
 
     include Container::Hashable
+    include Container::Sequential
 
     def initialize(type, element, visibility = :public)
       super
       @node = decorate_identifier(:_node)
       @range = Range.new(self, visibility)
       dependencies << range
-      [default_create, destroy, @size, @empty, @contains].each(&:inline!)
+      [default_create, destroy, @size, @empty].each(&:inline!)
       @compare = nil # Don't know how to order the vectors
     end
 
@@ -106,7 +107,7 @@ module AutoC
           @since 2.0
         */
         #{define} #{element.const_ptr_type} #{view_front}(#{const_ptr_type} self) {
-          assert(self);
+          assert(!#{@empty}(self));
           return &(self->head_node->element);
         }
         /**
@@ -244,13 +245,6 @@ module AutoC
         #define #{push}(self, value) #{push_front}(self, value)
       $ if element.copyable?
       stream << %$
-        /** @private */
-        #{declare} #{element.const_ptr_type} #{_find_view}(#{const_ptr_type} self, #{element.const_type} value);
-        /* ^ */
-        #{define(@contains)} {
-          assert(self);
-          return #{_find_view}(self, value) != NULL;
-        }
         /**
           #{ingroup}
           @brief Remove element
@@ -312,15 +306,6 @@ module AutoC
         }
       $ if comparable?
       stream << %$
-        #{define} #{element.const_ptr_type} #{_find_view}(#{const_ptr_type} self, #{element.const_type} value) {
-          #{range.type} r;
-          assert(self);
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
-            #{element.const_ptr_type} e = #{range.view}(&r);
-            if(#{element.equal('*e', :value)}) return e;
-          }
-          return NULL;
-        }
         #{define} int #{remove}(#{ptr_type} self, #{element.const_type} value) {
           #{@node} *node, *prev_node;
           int removed = 0;

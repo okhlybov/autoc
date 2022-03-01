@@ -69,8 +69,8 @@ module AutoC
           This function creates an empty hash set configured for accomodating `capacity` elements.
 
           The `manage_capacity` flag determines whether the set is allowed to grow when the capacity is exceeded.
-          Non-zero value allows the expanding the storage (which incurs implicit rehashing) if needed.
-          Non-zero value fixes the capacity to initial value despite the demand for expanding.
+          Non-zero value allows expanding the storage (which incurs implicit rehashing) if needed.
+          Zero value, on the contrary, fixes the capacity to initial value despite the demand for expanding.
           The set created with @ref #{default_create} sets this value to non-zero.
 
           @note Previous contents of `*self` is overwritten.
@@ -145,11 +145,8 @@ module AutoC
         #{define(equal)} {
           return #{@buckets.equal}(&self->buckets, &other->buckets);
         }
-        #{define(@contains)} {
-          return #{@bucket.contains}(#{_locate}(self, value), value);
-        }
-        #{define(@view)} {
-          return #{@bucket.find_view}(#{_locate}(self, value), value);
+        #{define(@lookup)} {
+          return #{@bucket.lookup}(#{_locate}(self, value), value);
         }
         #{define(@put)} {
           #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
@@ -160,7 +157,7 @@ module AutoC
             return 1;
           } else return 0;
         }
-        #{define(@force)} {
+        #{define(@push)} {
           /* FIXME get rid of code duplication */
           int replace = #{remove}(self, value);
           #{put}(self, value);

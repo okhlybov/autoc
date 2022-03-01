@@ -24,6 +24,7 @@ module AutoC
       @size = function(self, :size, 1, { self: const_type }, :size_t)
       @empty = function(self, :empty, 1, { self: const_type }, :int)
       @contains = function(self, :contains, 1, { self: const_type, value: self.element.const_type }, :int)
+      @lookup = function(self, :lookup, 1, { self: const_type, value: self.element.const_type }, element.const_ptr_type)
     end
 
     # Additional container-specific trait restrictions
@@ -119,17 +120,38 @@ module AutoC
       stream << %$
         /**
           #{ingroup}
-          @brief Check whether container contains the specified element
+          @brief Search for specific element
 
           @param[in] self container to search through
-          @param[in] value element to look for
-          @return non-zero if there is at least one element in `self` equal to the specified `value` and zero otherwise
+          @param[in] value value to look for
+          @return a view of element equavalent to specified value or NULL value
+
+          This function scans through `self` and returns a constant reference (in form of the C pointer)
+          to the first contained element equivalent to the specified `value` or NULL value is there is no such element.
 
           This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
 
           @since 2.0
         */
-        #{declare(@contains)};
+        #{declare(@lookup)};
+        /**
+          #{ingroup}
+          @brief Check for element existence
+
+          @param[in] self container to search through
+          @param[in] value element to look for
+          @return non-zero if there is at least one element in `self` equal to the specified `value` and zero otherwise
+
+          This functions scans through the container and returns non-zero value if `self` contains at least one element
+          equivalent to the specified `value` and zero value otherwise.
+
+          This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
+
+          @since 2.0
+        */
+        #{declare(@contains)} {
+          return #{@lookup}(self, value) != NULL;
+        }
       $ if element.comparable?
       stream << %$
         /**
@@ -220,6 +242,25 @@ module AutoC
       $ if hashable?
     end
 
+  end
+
+
+  TODO # Provides implementations for functions
+  module Container::Sequential
+    def definitions(stream)
+      super
+      stream << %$
+        #{define(@lookup)} {
+          #{range.type} r;
+          assert(self);
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+            #{element.const_ptr_type} e = #{range.view}(&r);
+            if(#{element.equal(:value, '*e')}) return e;
+          }
+          return NULL;
+        }
+      $ if element.comparable?
+    end
   end
 
 
