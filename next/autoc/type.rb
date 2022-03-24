@@ -53,8 +53,6 @@ module AutoC
   # Generator type base.
   class Type
 
-    SPECIAL_METHODS = %i[default_create custom_create destroy copy move equal compare hash_code]
-
     include Entity
 
     def self.abstract(meth) = remove_method(meth)
@@ -76,7 +74,7 @@ module AutoC
     attr_reader :const_ptr_type
 
     #
-    def to_s = type
+    def to_s = type.to_s
 
     def initialize(type)
       @type = type
@@ -213,36 +211,36 @@ module AutoC
   # Generator type for pure user-defined types.
   class Synthetic < Type
 
-    def initialize(type, dependencies: [], interface: nil, declarations: nil, definitions: nil, **calls)
+    def initialize(type, dependencies: [], interface: nil, declarations: nil, definitions: nil, **call)
       super(type)
-      @specials = {}
+      @call = {}
       @interface_ = interface
       @declarations_ = declarations
       @definitions_ = definitions
       self.dependencies.merge(dependencies)
-      setup_call(calls, :custom_create, nil, nil)
-      setup_call(calls, :default_create, {self: type}, type)
-      setup_call(calls, :destroy, {self: type}, :void)
-      setup_call(calls, :copy, {self: type, source: const_type}, type)
-      setup_call(calls, :move, {self: type, source: type}, type)
-      setup_call(calls, :equal, {self: const_type, other: const_type}, :int)
-      setup_call(calls, :compare, {self: const_type, other: const_type}, :int)
-      setup_call(calls, :hash_code, {self: const_type}, :size_t)
+      def_call(call, :custom_create, nil, nil)
+      def_call(call, :default_create, { self: type} , type)
+      def_call(call, :destroy, { self: type }, :void)
+      def_call(call, :copy, { self: type, source: const_type }, type)
+      def_call(call, :move, { self: type, source: type }, type)
+      def_call(call, :equal, { self: const_type, other: const_type }, :int)
+      def_call(call, :compare, { self: const_type, other: const_type }, :int)
+      def_call(call, :hash_code, { self: const_type }, :size_t)
     end
 
-    private def setup_call(calls, meth, args, result)
-      unless calls[meth].nil?
-        @specials[meth] =
-          case calls[meth]
-          when AutoC::Function then calls[meth] # Function instance is used as is. Beware of incompatible signatures!
-          else args.nil? ? raise('AutoC::Function instance is expected') : AutoC::Function.new(calls[meth], args, result) # A new function with specific signature is created
+    private def def_call(call, meth, args, result)
+      unless call[meth].nil?
+        @call[meth] =
+          case call[meth]
+          when AutoC::Function then call[meth] # Function instance is used as is. Beware of incompatible signatures!
+          else args.nil? ? raise('AutoC::Function instance is expected') : AutoC::Function.new(call[meth], args, result) # A new function with specific signature is created
           end
       end
     end
 
-    def respond_to_missing?(*args) = SPECIAL_METHODS.include?(args.first) ? !@specials[args.first].nil? : super
+    def respond_to_missing?(*args) = @call.include?(args.first) ? !@call[args.first].nil? : super
 
-    def method_missing(symbol, *args) = SPECIAL_METHODS.include?(symbol) && !@specials[symbol].nil? ? @specials[symbol][*args] : super
+    def method_missing(symbol, *args) = @call.include?(symbol) && !@call[symbol].nil? ? @call[symbol][*args] : super
 
     def interface_declarations(stream)
       super

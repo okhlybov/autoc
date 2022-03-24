@@ -12,23 +12,27 @@ module AutoC
 
     attr_reader :iterable
 
+    # Disable processing the traits the ranges do not normally have
+
+    def default_constructible? = false
+    def destructible? = false
+    def comparable? = false
+    def orderable? = false
+    def hashable? = false
+    def copyable? = false
+  
+    def canonic_tag = "#{iterable.canonic_tag}::Range"
+    def canonic_desc = "Range (iterator) for the iterable container @ref #{iterable.canonic_tag}"
+
     def initialize(iterable, visibility)
       super(Once.new { iterable.decorate_identifier(:range) }, visibility)
-      @iterable = iterable
-      @custom_create = function(self, :create, 2, { self: type, iterable: iterable.const_type }, :void)
-      @default_create = @destroy = @copy = @move = @equal = @compare = @code = nil
-      dependencies << iterable << Doc
+      dependencies << (@iterable = iterable) << Doc
     end
 
-    def canonic_tag = "#{iterable.canonic_tag}::Range"
-
-    def canonic_desc = "Range (iterator) for the iterable container #{iterable.canonic_tag}"
-
-    def composite_interface_definitions(stream)
+    private def configure
       super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :void, :create, { self: type, iterable: iterable.const_type }, refs: 2, instance: :custom_create do
+        header %{
           @brief Create a new range for the specified iterable
 
           @param[out] self range to be initialized
@@ -38,14 +42,14 @@ module AutoC
 
           @note Previous contents of `*self` is overwritten.
 
-          @see #{iterable.get_range}
+          @see #{get_range}
 
           @since 2.0
-        */
-        #{declare(custom_create)};
-        /**
-          #{@ingroup} #{iterable.type}
-          @brief Return new range iterator for the specified iterable
+        }
+      end
+      def_method type, Once.new { iterable.get_range }, { iterable: iterable.const_type } do
+        header %{
+          @brief Return new range iterator for the specified container
 
           @param[in] iterable container to iterate over
           @return new initialized range
@@ -60,36 +64,27 @@ module AutoC
           where `it` is the iterable to iterate over and `r` is a locally-scoped range bound to it.
 
           @since 2.0
-        */
-        #{define} #{type} #{iterable.get_range}(#{iterable.const_ptr_type} iterable) {
+        }
+        inline_code %{
           #{type} r;
           assert(iterable);
           #{custom_create}(&r, iterable);
           return r;
         }
-      $
+      end
     end
-  end
 
+  end
 
   #
   class Range::Input < Range
 
     private def archetype = :InputRange
 
-    def initialize(iterable, visibility)
+    private def configure
       super
-      @empty = function(self, :empty, 1, { self: const_type }, :int)
-      @pop_front = function(self, :pop_front, 1, { self: type }, :void)
-      @view_front = function(self, :view_front, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @take_front = function(self, :take_front, 1, { self: const_type }, iterable.element.type)
-    end
-
-    def composite_interface_definitions(stream)
-      super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :int, :empty, { self: const_type } do
+        header %{
           @brief Check for range emptiness
 
           @param[in] self range to check
@@ -97,13 +92,13 @@ module AutoC
 
           An empty range is the range for which there are to accessible elements left.
           This specifically means that any calls to the element retrieval and position change functions
-          (@ref #{@take_front}, @ref #{@view_front}, @ref #{@pop_front} et al.) are invalid for empty ranges.
+          (@ref #{take_front}, @ref #{view_front}, @ref #{pop_front} et al.) are invalid for empty ranges.
 
           @since 2.0
-        */
-        #{declare(@empty)};
-        /**
-          #{ingroup}
+        }
+      end
+      def_method :void, :pop_front, { self: type } do
+        header %{
           @brief Advance front position to the next existing element
 
           @param[in] self range to advance front position for
@@ -114,70 +109,50 @@ module AutoC
           Advancing position of a range that is already empty results in undefined behaviour.
 
           @since 2.0
-        */
-        #{declare(@pop_front)};
-        /**
-          #{ingroup}
-          @brief Alias to @ref #{pop_front}
-          @since 2.0
-        */
-        #define #{pop}(self) #{pop_front}(self)
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.const_ptr_type, :view_front, { self: const_type } do
+        header %{
           @brief Get a view of the front element
 
           @param[in] self range to retrieve element from
           @return a view of an element at the range's front position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's front position.
-          Refer to @ref #{@take_front} to get an independent copy of that element.
+          Refer to @ref #{take_front} to get an independent copy of that element.
   
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
   
-          @note Range must not be empty (see @ref #{@empty}).
+          @note Range must not be empty (see @ref #{empty}).
 
           @since 2.0
-        */
-        #{declare(@view_front)};
-        /**
-          #{ingroup}
-          @brief Alias to @ref #{view_front}
-          @since 2.0
-        */
-        #define #{view}(self) #{view_front}(self)
-      $
-      stream << %$
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.type, :take_front, { self: const_type }, require:-> { iterable.element.copyable? } do
+        code %{
+          #{iterable.element.type} result;
+          #{iterable.element.const_ptr_type} e;
+          assert(!#{empty}(self));
+          e = #{view_front}(self);
+          #{iterable.element.copy(:result, '*e')};
+          return result;
+        }
+        header %{
           @brief Get a copy of the front element
 
           @param[in] self range to retrieve element from
           @return a *copy* of element at the range's front position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
-          Refer to @ref #{@view_front} to get a view of the element without making an independent copy.
+          Refer to @ref #{view_front} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note Range must not be empty (see @ref #{@empty}).
+          @note Range must not be empty (see @ref #{empty}).
 
           @since 2.0
-        */
-        #{define(@take_front)} {
-          #{iterable.element.type} result;
-          #{iterable.element.const_ptr_type} e;
-          assert(!#{empty}(self));
-          e = #{@view_front}(self);
-          #{iterable.element.copy(:result, '*e')};
-          return result;
         }
-        /**
-          #{ingroup}
-          @brief Alias to @ref #{take_front}
-          @since 2.0
-        */
-        #define #{take}(self) #{take_front}(self)
-      $ if iterable.element.copyable?
+      end
     end
 
   end
@@ -188,16 +163,10 @@ module AutoC
 
     private def archetype = :ForwardRange
 
-    def initialize(iterable, visibility)
+    private def configure
       super
-      @save = function(self, :save, 2, { self: type, origin: const_type }, :void)
-    end
-
-    def composite_interface_definitions(stream)
-      super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :void, :save, { self: type, origin: const_type }, refs: 2 do
+        header %{
           @brief Capture a snapshot of the range's state
 
           @param[out] self new range
@@ -210,9 +179,8 @@ module AutoC
           @note Previous contents of `*self` is overwritten.
 
           @since 2.0
-        */
-        #{declare(@save)};
-      $
+        }
+      end
     end
 
   end
@@ -223,74 +191,64 @@ module AutoC
 
     private def archetype = :BidirectionalRange
 
-    def initialize(iterable, visibility)
+    private def configure
       super
-      @pop_back = function(self, :pop_back, 1, { self: type }, :void)
-      @view_back = function(self, :view_back, 1, { self: const_type }, iterable.element.const_ptr_type)
-      @take_back = function(self, :take_back, 1, { self: const_type }, iterable.element.type)
-    end
-
-    def composite_interface_definitions(stream)
-      super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :void, :pop_back, { self: type } do
+        header %{
           @brief Rewind back position to the previous existing element
 
           @param[in] self range to rewind back position for
 
           This function is used to get to the previous element in the range.
 
-          @note Prior calling this function one must ensure that the range is not empty (see @ref #{@empty}).
+          @note Prior calling this function one must ensure that the range is not empty (see @ref #{empty}).
           Advancing position of a range that is already empty results in undefined behaviour.
 
           @since 2.0
-        */
-        #{declare(@pop_back)};
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.const_ptr_type, :view_back, { self: const_type } do
+        header %{
           @brief Get a view of the back element
 
           @param[in] self range to retrieve element from
           @return a view of an element at the range's back position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's back position.
-          Refer to @ref #{@take_back} to get an independent copy of that element.
+          Refer to @ref #{take_back} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
 
-          @note Range must not be empty (see @ref #{@empty}).
+          @note Range must not be empty (see @ref #{empty}).
 
           @since 2.0
-        */
-        #{declare(@view_back)};
-      $
-      stream << %$
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.type, :take_back, { self: const_type }, require:-> { iterable.element.copyable? } do
+        code %{
+          #{iterable.element.type} result;
+          #{iterable.element.const_ptr_type} e;
+          assert(!#{empty}(self));
+          e = #{view_back}(self);
+          #{iterable.element.copy(:result, '*e')};
+          return result;
+        }
+        header %{
           @brief Get a copy of the back element
 
           @param[in] self range to retrieve element from
           @return a *copy* of element at the range's back position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's back position.
-          Refer to @ref #{@view_back} to get a view of the element without making an independent copy.
+          Refer to @ref #{view_back} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note Range must not be empty (see @ref #{@empty}).
+          @note Range must not be empty (see @ref #{empty}).
 
           @since 2.0
-        */
-         #{define(@take_back)} {
-          #{iterable.element.type} result;
-          #{iterable.element.const_ptr_type} e;
-          assert(!#{empty}(self));
-          e = #{@view_back}(self);
-          #{iterable.element.copy(:result, '*e')};
-          return result;
         }
-      $ if iterable.element.copyable?
+      end
     end
 
   end
@@ -301,34 +259,26 @@ module AutoC
 
     private def archetype = :RandomAccessRange
 
-    def initialize(iterable, visibility)
+    private def configure
       super
-      @length = function(self, :length, 1, { self: const_type }, :size_t)
-      @get = function(self, :get, 1, { self: const_type, position: :size_t }, iterable.element.type)
-      @peek = function(self, :peek, 1, { self: const_type, position: :size_t }, iterable.element.const_ptr_type)
-    end
-
-    def composite_interface_definitions(stream)
-      super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :size_t, :length, { self: const_type } do
+        header %{
           @brief Get a number of elements in the range
 
           @param[in] self range to query
           @return a number of elements
 
           This function returns a number of elements between the range's front and back positions inclusively.
-          As a consequence, the result changes with every invocation of position change functions (@ref #{@pop_front}, @ref #{@pop_back}),
+          As a consequence, the result changes with every invocation of position change functions (@ref #{pop_front}, @ref #{pop_back}),
           so be careful not to cache this value.
 
           For empty range this function returns 0.
 
           @since 2.0
-        */
-        #{declare(@length)};
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.const_ptr_type, :peek, { self: const_type, position: :size_t } do
+        header %{
           @brief Get view of the specific element
 
           @param[in] self range to view element from
@@ -336,19 +286,23 @@ module AutoC
           @return a view of element at `position`
 
           This function is used to get a constant reference (in form the C pointer) to the value contained in the range at the specific position.
-          Refer to @ref #{@get} to get a copy of the element.
+          Refer to @ref #{get} to get a copy of the element.
 
-          @note The specified `position` is required to be within the [0, @ref #{@length}) range.
-
-          @see @ref #{@length}
+          @note The specified `position` is required to be within the [0, @ref #{length}) range.
 
           @since 2.0
-        */
-        #{declare(@peek)};
-      $
-      stream << %$
-        /**
-          #{ingroup}
+        }
+      end
+      def_method iterable.element.type, :get, { self: const_type, position: :size_t }, require:-> { iterable.element.copyable? } do
+        code %{
+          #{iterable.element.type} result;
+          #{iterable.element.const_ptr_type} e;
+          assert(!#{empty}(self));
+          e = #{peek}(self, position);
+          #{iterable.element.copy(:result, '*e')};
+          return result;
+        }
+        header %{
           @brief Get a copy of the specific element
 
           @param[in] self range to retrieve element from
@@ -356,19 +310,17 @@ module AutoC
           @return a *copy* of element at the range `position`
 
           This function is used to get a *copy* of the value contained in the range at the specific position.
-          Refer to @ref #{@peek} to get a view of the element without making an independent copy.
+          Refer to @ref #{peek} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note The specified `position` is required to be within the [0, @ref #{@length}) range.
-
-          @see @ref #{@length}
+          @note The specified `position` is required to be within the [0, @ref #{length}) range.
 
           @since 2.0
-        */
-        #{declare(@get)};
-      $ if iterable.element.copyable?
+        }
+      end
     end
+
   end
 
 

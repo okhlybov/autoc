@@ -14,13 +14,20 @@ module AutoC
   # or elaborate data containers.
   class Composite < Type
 
-    # Type-bound function with first refs parameters converted to references (mapped to C pointers).
-    class Function < AutoC::Function
+    #
+    private def def_method(result, name, parameters, refs: 1, inline: false, visibility: nil, require: true, instance: name, &code)
+      meth = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
+      meth.instance_eval(&code) if block_given?
+      instance_variable_set("@#{instance}", meth)
+      @methods << meth
+    end
 
-      #
+    #
+    class Method < AutoC::Function
+
       attr_reader :type
 
-      def initialize(type, name, refs, parameters, result, inline = false)
+      def initialize(type, name, parameters, result, refs, inline, visibility, guard)
         i = 0
         parameters =
           if parameters.is_a?(Array)
@@ -28,22 +35,17 @@ module AutoC
           else
             parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
           end
-        super(Once.new { self.type.decorate_identifier(name) }, parameters, result)
-        @inline = inline
+        # Use Once object to override default identifier decoration scheme
+        super(name.is_a?(Once) ? name : Once.new { self.type.decorate_identifier(name) }, parameters, result)
         @type = type
         @refs = refs
-      end
-
-      def inline? = @inline
-
-      # Account for definition of an inline function.
-      def inline!(inline = true)
+        @guard = guard
         @inline = inline
-        self
+        @visibility = visibility
       end
 
       def call(*args)
-        if args.empty? then name # Emit bare function name
+        if args.empty? then name # Emit bare function name, fn
         elsif args.first.nil? then super() # Emit function call without parameters, fn()
         else
           i = 0
@@ -51,13 +53,62 @@ module AutoC
         end
       end
 
+      def code(code) = @code = code
+
+      def inline_code(code)
+        @inline = true
+        @code = code
+      end
+
+      def header(info) = @info = info
+
+      def method_missing(meth, *args) = type.send(meth, *args)
+
+      attr_writer :inline
+
+      def inline? = @inline == true
+
+      def public? = @visibility == :public
+
+      def live? = @live ||= (@guard.is_a?(Proc) ? @guard.() : @guard) == true
+
+      attr_writer :visibility
+
+      def interface_declaration(stream)
+        if live?
+          raise "method body for #{self} is required but not defined" if @code.nil?
+          stream << if public?
+            %{
+              /**
+                #{ingroup}
+                #{@info}
+              */
+            }
+          else
+            %{
+              /** @private */
+            }
+          end
+          stream << "#{declare(self)};"
+        end
+      end
+
+      def interface_definition(stream)
+        stream << "#{define(self)} {#{@code}}" if live? && inline?
+      end
+
+      def implementation(stream)
+        stream << "#{define(self)} {#{@code}}" if live? && !inline?
+      end
+
       private
 
-      # Convert C value type to a pointer type
       def ref_value_type(type) = Once.new { "#{type}*" }
 
       def ref_value_call(arg) = Once.new { "&(#{arg})" }
+
     end
+
 
     # Prefix used to generate fully qualified type-specific identifiers.
     def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
@@ -79,34 +130,123 @@ module AutoC
 
     attr_reader :visibility
 
+    # Perform additional configuration step following convetional initializition
+    def self.new(*args, &code)
+      obj = super
+      obj.send(:configure)
+      obj
+    end
+
     def initialize(type, visibility)
       super(type)
-      # @custom_create
-      @default_create = function(self, :create, 1, { self: type }, :void)
-      @destroy = function(self, :destroy, 1, { self: type }, :void)
-      @copy = function(self, :copy, 2, { self: type, source: const_type }, :void)
-      @move = function(self, :move, 2, { self: type, source: type }, :void)
-      @equal = function(self, :equal, 2, { self: const_type, other: const_type }, :int)
-      @compare = function(self, :compare, 2, { self: const_type, other: const_type }, :int)
-      @hash_code = function(self, :hash_code, 1, { self: const_type }, :size_t)
+      @methods = []
       @initial_prefix = nil
       @visibility = visibility
       dependencies.merge [CODE, memory, hasher]
     end
 
-    private def function(*args) = Function.new(*args)
+    private def configure
+      def_method :void, :create, { self: type }, instance: :default_create, require:-> { default_constructible? } do
+        header %{
+          @brief Create a new instance
 
-    def respond_to_missing?(*args) = SPECIAL_METHODS.include?(args.first) ? !instance_variable_get("@#{args.first}").nil? : super
+          @param[out] self object to be created
+
+          The instance is constructed with default constructor.
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        }
+      end
+      def_method :void, :destroy, { self: type }, require:-> { destructible? } do
+        header %{
+          @brief Destroy the composite object along with all constituent parts
+
+          @param[in] self object to be destructed
+
+          Upon destruction all contained elements get destroyed in turn with respective destructors and allocated memory is reclaimed.
+          After call to this function the `*self` storage can be disposed.
+
+          @since 2.0
+        }
+      end
+      def_method :void, :copy, { self: type, source: const_type }, refs: 2, require:-> { copyable? } do
+        header %{
+          @brief Create a new container with copies of the source container's elements
+
+          @param[out] self container to be initialized
+          @param[in] source container to obtain the elements from
+
+          The container constructed with this function contains *copies* of all elements from `source`.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        }
+      end
+      def_method :int, :equal, { self: const_type, other: const_type }, refs: 2, require:-> { comparable? } do
+        header %{
+          @brief Check whether two containers are equal by contents
+
+          @param[in] self container to compare
+          @param[in] other container to compare
+          @return non-zero if the containers are equal by contents and zero otherwise
+
+          The containers are considered equal if they contain the same number of the elements which in turn are pairwise equal.
+          The exact semantics is container-specific, e.g. sequence containers like vector of list mandate the equal elements
+          the elements are compared sequentially whereas unordered containers such as sets have no notion of the specific element position.
+
+          This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
+
+          @since 2.0
+        }
+      end
+      def_method :int, :compare, { self: const_type, source: const_type }, refs: 2, require:-> { orderable? } do
+        header %{
+          @brief Compute the ordering of two containers
+
+          @param[in] self container to order
+          @param[in] other container to order
+          @return zero if containers are considered equal, negative value if `self` < `other` and positive value if `self` > `other`
+
+          The function computes the ordering of two containers based on respective contents.
+
+          This function requires the element type to be *orderable* (i.e. to have a well-defined less-equal-more relation operation).
+
+          @since 2.0
+        }
+      end
+      def_method :size_t, :hash_code, { self: type }, require:-> { hashable? } do
+        header %{
+          @brief Return hash code for container
+
+          @param[in] self container to get hash code for
+          @return hash code
+
+          The function computes a hash code - an integer value that somehow identifies the container's contents.
+
+          This is done by employing the element's hash function, hence this function requires the container's
+          element type to be *hashable* (i.e. to have a well-defined hash function).
+
+          @since 2.0
+        }
+      end
+    end
+
+    def respond_to_missing?(*args) = instance_variable_get("@#{args.first}").nil? ? super : true
 
     def method_missing(symbol, *args)
-      if SPECIAL_METHODS.include?(symbol) && !(special = instance_variable_get("@#{symbol}")).nil?
-        args.empty? ? special : special[*args]
-      else
+      if (meth = instance_variable_get("@#{symbol}")).nil?
         function = decorate_identifier(symbol) # Construct C function name for the method
         if args.empty? then function # Emit bare function name
         elsif args.first.nil? then "#{function}()" # Use first nil argument to emit function call with no parameters
         else "#{function}(#{args.join(', ')})" # Emit normal function call with specified parameters
         end
+      else
+        meth[*args] # Delegate actual rendering to the function object
       end
     end
 
@@ -162,7 +302,10 @@ module AutoC
 
     def composite_interface_declarations(stream) = nil
 
-    def composite_interface_definitions(stream) = nil
+    def composite_interface_definitions(stream)
+      @methods.each { |meth| meth.interface_declaration(stream) }
+      @methods.each { |meth| meth.interface_definition(stream) }
+    end
 
     def forward_declarations(stream)
       super
@@ -178,6 +321,7 @@ module AutoC
       @define = nil
       @defgroup = '@internal @defgroup'
       @addtogroup = '@internal @addtogroup'
+      @methods.each { |meth| meth.implementation(stream) }
     end
 
     CODE = Code.interface %$
