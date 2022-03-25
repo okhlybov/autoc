@@ -105,7 +105,7 @@ module AutoC
 
           This function is used to get to the next element in the range.
 
-          @note Prior calling this function one must ensure that the range is not empty (see @ref #{@empty}).
+          @note Prior calling this function one must ensure that the range is not empty (see @ref #{empty}).
           Advancing position of a range that is already empty results in undefined behaviour.
 
           @since 2.0

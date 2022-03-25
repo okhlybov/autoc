@@ -113,7 +113,7 @@ module AutoC
 
           This function removes front element from the list and destroys it with the respective destructor.
 
-          @note List must not be empty (see @ref #{@empty}).
+          @note List must not be empty (see @ref #{empty}).
 
           @since 2.0
         }
@@ -139,7 +139,7 @@ module AutoC
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note List must not be empty (see @ref #{@empty}).
+          @note List must not be empty (see @ref #{empty}).
 
           @since 2.0
         }
