@@ -20,28 +20,35 @@ project(doc LANGUAGES C)
 
 find_package(Ruby 3.0 REQUIRED)
 
-add_custom_target(
-    code
-    BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.h
-    COMMAND ${Ruby_EXECUTABLE} -I. -I../next doc.rb
+find_program(AStyle NAMES astyle REQUIRED)
+
+# Source code formatting with AStyle is mandatory for proper Doxygen operation
+add_custom_command(
+    OUTPUT fake ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc.rb
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${Ruby_EXECUTABLE} -I. -I../next ${CMAKE_CURRENT_SOURCE_DIR}/doc.rb
+    COMMAND ${AStyle} -n doc_auto.h
     VERBATIM
 )
 
+# Use fake dependency to force code rebuild on every CMake invokation
+add_custom_target(auto DEPENDS fake)
+
 # ****
 # Instruct to create a named executable from the space-separated list of source files which consitute the program
-add_executable(${PROJECT_NAME} doc_auto.c)
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.c)
 
 find_package(Doxygen)
 
 add_custom_target(
     docs
-    DEPENDS code
-    COMMAND ${DOXYGEN_EXECUTABLE}
+    DEPENDS auto
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${DOXYGEN_EXECUTABLE}
 )
 
-add_dependencies(${PROJECT_NAME} code docs)
+add_dependencies(${PROJECT_NAME} docs)
 
 # ***
 # Set to the space-separated list of dependent PkgConfig modules
