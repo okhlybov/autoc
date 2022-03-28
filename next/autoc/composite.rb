@@ -358,6 +358,7 @@ module AutoC
       #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
     $
 
+    # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
   end
 
 

@@ -20,7 +20,7 @@ module AutoC
     def orderable? = false
     def hashable? = false
     def copyable? = false
-  
+
     def canonic_tag = "#{iterable.canonic_tag}::Range"
     def canonic_desc = "Range (iterator) for the iterable container @ref #{iterable.canonic_tag}"
 
@@ -129,7 +129,7 @@ module AutoC
         }
       end
       def_method iterable.element.type, :take_front, { self: const_type }, require:-> { iterable.element.copyable? } do
-        code %{
+        inline_code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
@@ -225,7 +225,7 @@ module AutoC
         }
       end
       def_method iterable.element.type, :take_back, { self: const_type }, require:-> { iterable.element.copyable? } do
-        code %{
+        inline_code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
@@ -294,7 +294,7 @@ module AutoC
         }
       end
       def_method iterable.element.type, :get, { self: const_type, position: :size_t }, require:-> { iterable.element.copyable? } do
-        code %{
+        inline_code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));

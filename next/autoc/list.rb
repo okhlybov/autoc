@@ -8,6 +8,7 @@ require 'autoc/range'
 module AutoC
 
 
+  # Generator for the linked list container type.
   class List < Container
 
     prepend Container::Hashable
@@ -21,8 +22,43 @@ module AutoC
       dependencies << (@range = Range.new(self, visibility))
     end
 
-    def orderable? = false
+    def orderable? = false # No idea how to compute the ordering of this container
 
+    def canonic_tag = "List<#{element.type}>"
+
+    def composite_interface_declarations(stream)
+      stream << %$
+        /**
+          #{defgroup}
+
+          @brief Singly linked list of elements of type #{element.type}
+
+          For iteration over the list elements refer to @ref #{range.type}.
+
+          @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
+
+          @since 2.0
+        */
+        typedef struct #{_node} #{_node}; /**< @private */
+        typedef struct #{type} #{type}; /**< @private */
+        /**
+          #{ingroup}
+          @brief Opaque structure holding state of the list
+          @since 2.0
+        */
+        struct #{type} {
+          #{_node}* head_node; /**< @private */
+          size_t node_count; /**< @private */
+        };
+        /** @private */
+        struct #{_node} {
+          #{element.type} element;
+          #{_node}* next_node;
+        };
+      $
+      super
+    end
+    
     private def configure
       super
       def_method :void, :_drop_front, { self: type }, visibility: :private do
@@ -255,46 +291,35 @@ module AutoC
       }
     end
 
-    def canonic_tag = "List<#{element.type}>"
-
-    def composite_interface_declarations(stream)
-      stream << %$
-        /**
-          #{defgroup}
-
-          @brief Singly linked list of elements of type #{element.type}
-
-          For iteration over the list elements refer to @ref #{range.type}.
-
-          @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
-
-          @since 2.0
-        */
-        typedef struct #{_node} #{_node}; /**< @private */
-        typedef struct #{type} #{type}; /**< @private */
-        /**
-          #{ingroup}
-          @brief Opaque structure holding state of the list
-          @since 2.0
-        */
-        struct #{type} {
-          #{_node}* head_node; /**< @private */
-          size_t node_count; /**< @private */
-        };
-        /** @private */
-        struct #{_node} {
-          #{element.type} element;
-          #{_node}* next_node;
-        };
-      $
-      super
-    end
-
     class List::Range < Range::Forward
 
       def _node = iterable._node
 
-      def canonic_tag = "#{iterable.canonic_tag}::Range"
+      def composite_interface_declarations(stream)
+        stream << %$
+          /**
+            #{defgroup}
+            @ingroup #{iterable.type}
+
+            @brief #{canonic_desc}
+
+            This range implements the @ref #{archetype} archetype.
+
+            @see @ref Range
+
+            @since 2.0
+          */
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the list's range
+            @since 2.0
+          */
+          typedef struct {
+            #{_node}* node; /**< @private */
+          } #{type};
+        $
+        super
+      end
 
       private def configure
         super
@@ -323,37 +348,10 @@ module AutoC
           return &self->node->element;
         }
       end
-
-      def composite_interface_declarations(stream)
-        stream << %$
-          /**
-            #{defgroup}
-            @ingroup #{iterable.type}
-
-            @brief #{canonic_desc}
-
-            This range implements the @ref #{archetype} archetype.
-
-            @see @ref Range
-
-            @since 2.0
-          */
-          /**
-            #{ingroup}
-            @brief Opaque structure holding state of the list's range
-            @since 2.0
-          */
-          typedef struct {
-            #{_node}* node; /**< @private */
-          } #{type};
-        $
-        super
-      end
-
-    end
+    end # Range
 
 
-  end
+  end # List
 
 
 end
