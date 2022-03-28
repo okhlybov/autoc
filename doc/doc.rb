@@ -95,7 +95,7 @@ K = type(:K, 'A generic hashable value type')
 
 AutoC::Module.render(:doc) do |m|
   m << main
-  #m << AutoC::Vector.new(:Vector, T)
+  m << AutoC::Vector.new(:Vector, T)
   m << AutoC::List.new(:List, T)
   #m << AutoC::HashMap.new(:HashMap, K, T)
   #m << AutoC::HashSet.new(:HashSet, T)
