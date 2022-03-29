@@ -16,8 +16,6 @@ module AutoC
 
     attr_reader :range
 
-    attr_reader :destroy
-
     def initialize(type, element, visibility)
       super(type, visibility)
       @element = Type.coerce(element)
