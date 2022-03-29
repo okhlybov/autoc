@@ -109,7 +109,6 @@ module AutoC
 
   # Provides the generic implementation of hashable container support code.
   module Container::Hashable
-    attr_reader :hash_code
     def configure
       super
       @hash_code.code %{

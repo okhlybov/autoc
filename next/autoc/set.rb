@@ -27,11 +27,10 @@ module AutoC
         end
     end
 
-    def composite_interface_definitions(stream)
+    private def configure
       super
-      stream << %$
-        /**
-          #{ingroup}
+      def_method :int, :put, { self: type, value: element.const_type } do
+        header %{
           @brief Put a value
 
           @param[in] self set to put into
@@ -46,10 +45,10 @@ module AutoC
           The function requires the element's type to be both *comparable* and *copyable*.
 
           @since 2.0
-        */
-        #{declare(@put)};
-        /**
-          #{ingroup}
+        }
+      end
+      def_method :int, :push, { self: type, value: element.const_type } do
+        header %{
           @brief Force put a value
 
           @param[in] self set to put into
@@ -64,23 +63,10 @@ module AutoC
           The function requires the element's type to be both *comparable* and *copyable*.
 
           @since 2.0
-        */
-        #{declare(@push)};
-        /**
-          #{ingroup}
-          @brief Remove and destroy all contained elements
-
-          @param[in] self list to be purged
-
-          The elements are destroyed with respective destructor.
-
-          After call to this function the set will remain intact yet contain zero elements.
-
-          @since 2.0
-        */
-        #{declare(@purge)};
-        /**
-          #{ingroup}
+        }
+      end
+      def_method element.const_ptr_type, :lookup, { self: type, value: element.const_type } do
+        header %{
           @brief Get a view of contained element
 
           @param[in] self set to put into
@@ -92,16 +78,41 @@ module AutoC
           @note Equivalent element must exist (see @ref #{contains}).
 
           @since 2.0
-         */
-        #{declare(@look)};
-        /**
-         * @brief Remove value from the set
-         */
-        #{declare(@remove)};
-      $
-      stream << %$
-        /**
-          #{ingroup}
+        }
+      end
+      def_method :void, :purge, { self: type } do
+        header %{
+          @brief Remove and destroy all contained elements
+
+          @param[in] self list to be purged
+
+          The elements are destroyed with respective destructor.
+
+          After call to this function the set will remain intact yet contain zero elements.
+
+          @since 2.0
+        }
+      end
+      def_method :int, :remove, { self: type, value: element.const_type } do
+        header %{
+          @brief Remove value from the set
+          TODO
+        }
+      end
+      def_method int, :disjoint, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
+          #{range.type} r;
+          assert(self);
+          assert(other);
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            if(#{contains}(other, *#{range.view}(&r))) return 0;
+          }
+          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            if(#{contains}(self, *#{range.view}(&r))) return 0;
+          }
+          return 1;
+        }
+        header %{
           @brief Check two sets for common elements
 
           @param[in] self set to check
@@ -111,73 +122,53 @@ module AutoC
           This function returns non-zero value if the specified sets are disjoint (mutually exclusive) that is they share no common elements and zero value otherwise.
 
           @since 2.0
-        */
-        #{declare(@disjoint)};
-        /**
-        * @brief Return non-zero value if the set is a subset of the specified set
-        */
-        #{declare(@subset)};
-        /**
-        * @brief Append contents of the specified set (set OR operation)
-        */
-        #{declare(@join)};
-        /**
-        * @brief Exclude contents of the specified set (set SUBTRACT operation)
-        */
-        #{declare(@subtract)};
-        /**
-        * @brief Retain elements shared by both specified sets (set AND operation)
-        */
-        #{declare(@intersect)};
-        /**
-        * @brief Make the set to contain the elements not shared by both specified sets (set XOR operation)
-        */
-        #{declare(@disjoin)};
-      $ unless @omit_set_operations
-    end
-
-    def definitions(stream)
-      super
-      stream << %$
-        #{define(@subset)} {
+        }
+      end
+      def_method int, :subset, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             if(!#{contains}(other, *#{range.view}(&r))) return 0;
           }
           return 1;
         }
-        #{define(@disjoint)} {
-          #{range.type} r;
-          assert(self);
-          assert(other);
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop}(&r)) {
-            if(#{contains}(other, *#{range.view}(&r))) return 0;
-          }
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop}(&r)) {
-            if(#{contains}(self, *#{range.view}(&r))) return 0;
-          }
-          return 1;
+        header %{
+          @brief Return non-zero value if the set is a subset of the specified set
+          TODO
         }
-        #{define(@join)} {
+      end
+      def_method void, :join, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop}(&r)) {
+          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{put}(self, *#{range.view}(&r));
           }
         }
-        #{define(@subtract)} {
+        header %{
+          @brief Append contents of the specified set (set OR operation)
+          TODO
+        }
+      end
+      def_method void, :subtract, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop}(&r)) {
+          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{remove}(self, *#{range.view}(&r));
           }
         }
-        /* FIXME avoid creating temporary copy(s) of the sets */
-        #{define(@intersect)} {
+        header %{
+          @brief Exclude contents of the specified set (set SUBTRACT operation)
+          TODO
+        }
+      end
+      def_method void, :intersect, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
           #{type} t;
           assert(self);
           assert(other);
@@ -186,7 +177,13 @@ module AutoC
           #{subtract}(self, &t);
           #{destroy}(&t);
         }
-        #{define(@disjoin)} {
+        header %{
+          @brief Retain elements shared by both specified sets (set AND operation)
+          TODO
+        }
+      end
+      def_method void, :disjoin, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+        code %{
           #{type} t;
           assert(self);
           assert(other);
@@ -196,7 +193,11 @@ module AutoC
           #{subtract}(self, &t);
           #{destroy}(&t);
         }
-      $ unless @omit_set_operations
+        header %{
+          @brief Make the set to contain the elements not shared by both specified sets (set XOR operation)
+          TODO
+        }
+      end
     end
   end
 
