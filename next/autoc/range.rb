@@ -166,6 +166,11 @@ module AutoC
     private def configure
       super
       def_method :void, :save, { self: type, origin: const_type }, refs: 2 do
+        inline_code %{
+          assert(self);
+          assert(origin);
+          *self = *origin;
+        }
         header %{
           @brief Capture a snapshot of the range's state
 

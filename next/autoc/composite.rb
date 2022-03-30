@@ -18,9 +18,16 @@ module AutoC
     private def def_method(result, name, parameters, refs: 1, inline: false, visibility: nil, require: true, instance: name, &code)
       meth = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
       meth.instance_eval(&code) if block_given?
-      instance_variable_set("@#{instance}", meth)
-      @methods << meth
+      x = instance.to_sym
+      raise "Method definition for #{meth} is already registered" if @methods.key?(x)
+      @methods[x] = meth
     end
+
+    #
+    private def code(instance, code) = @methods[instance.to_sym].code(code)
+    
+    #
+    private def inline_code(instance, code) = @methods[instance.to_sym].inline_code(code)
 
     #
     class Method < AutoC::Function
@@ -76,7 +83,7 @@ module AutoC
 
       def interface_declaration(stream)
         if live?
-          raise "method body for #{self} is required but not defined" if @code.nil?
+          raise "Method body for #{self} is absent" if @code.nil?
           stream << if public?
             %{
               /**
@@ -139,7 +146,7 @@ module AutoC
 
     def initialize(type, visibility)
       super(type)
-      @methods = []
+      @methods = {}
       @initial_prefix = nil
       @visibility = visibility
       dependencies.merge [CODE, memory, hasher]
@@ -219,7 +226,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :size_t, :hash_code, { self: type }, require:-> { hashable? } do
+      def_method :size_t, :hash_code, { self: const_type }, require:-> { hashable? } do
         header %{
           @brief Return hash code for container
 
@@ -236,10 +243,10 @@ module AutoC
       end
     end
 
-    def respond_to_missing?(*args) = instance_variable_get("@#{args.first}").nil? ? super : true
+    def respond_to_missing?(*args) = @methods.key?(args.first.to_sym) ? true : super
 
     def method_missing(symbol, *args)
-      if (meth = instance_variable_get("@#{symbol}")).nil?
+      if (meth = @methods[symbol]).nil?
         function = decorate_identifier(symbol) # Construct C function name for the method
         if args.empty? then function # Emit bare function name
         elsif args.first.nil? then "#{function}()" # Use first nil argument to emit function call with no parameters
@@ -303,8 +310,8 @@ module AutoC
     def composite_interface_declarations(stream) = nil
 
     def composite_interface_definitions(stream)
-      @methods.each { |meth| meth.interface_declaration(stream) }
-      @methods.each { |meth| meth.interface_definition(stream) }
+      @methods.each_value { |meth| meth.interface_declaration(stream) }
+      @methods.each_value { |meth| meth.interface_definition(stream) }
     end
 
     def forward_declarations(stream)
@@ -321,7 +328,7 @@ module AutoC
       @define = nil
       @defgroup = '@internal @defgroup'
       @addtogroup = '@internal @addtogroup'
-      @methods.each { |meth| meth.implementation(stream) }
+      @methods.each_value { |meth| meth.implementation(stream) }
     end
 
     CODE = Code.interface %$

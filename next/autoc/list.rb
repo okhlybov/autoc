@@ -249,25 +249,25 @@ module AutoC
           @since 2.0
         }
       end
-      @default_create.inline_code %{
+      inline_code :default_create, %{
         assert(self);
         self->head_node = NULL;
         self->node_count = 0;
       }
-      @destroy.inline_code %{
+      inline_code :destroy, %{
         assert(self);
         while(!#{empty}(self)) #{pop_front}(self);
       }
-      @size.inline_code %{
+      inline_code :size, %{
         assert(self);
         return self->node_count;
       }
-      @empty.inline_code %{
+      inline_code :empty, %{
         assert(self);
         assert((self->node_count == 0) == (self->head_node == NULL));
         return #{size}(self) == 0;
       }
-      @copy.code %{
+      code :copy, %{
         #{range.type} r;
         assert(self);
         assert(source);
@@ -276,7 +276,7 @@ module AutoC
           #{push_front}(self, *#{range.view_front}(&r));
         }
       }
-      @equal.code %{
+      code :equal, %{
         #{range.type} ra, rb;
         assert(self);
         assert(other);
@@ -323,26 +323,21 @@ module AutoC
 
       private def configure
         super
-        @custom_create.inline_code %{
+        inline_code :custom_create, %{
           assert(self);
           assert(iterable);
           self->node = iterable->head_node;
         }
-        @empty.inline_code %{
+        inline_code :empty, %{
           assert(self);
           return self->node == NULL;
         }
-        @save.inline_code %{
-          assert(self);
-          assert(origin);
-          *self = *origin;
-        }
-        @pop_front.inline_code %{
+        inline_code :pop_front, %{
           assert(self);
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        @view_front.inline_code %{
+        inline_code :view_front, %{
           assert(self);
           assert(!#{empty}(self));
           return &self->node->element;

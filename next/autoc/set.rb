@@ -9,23 +9,7 @@ module AutoC
 
   class Set < Container
 
-    def initialize(*args)
-      super
-      # Declare common set functions
-      @put = function(self, :put, 1, { self: type, value: element.const_type }, :int)
-      @push = function(self, :push, 1, { self: type, value: element.const_type }, :int)
-      @look = function(self, :look, 1, { self: type, value: element.const_type }, element.const_ptr_type)
-      @purge = function(self, :purge, 1, { self: type }, :void)
-      @remove = function(self, :remove, 1, { self: type, value: element.const_type }, :int)
-      unless @omit_set_operations
-        @disjoint = function(self, :disjoint, 2, { self: const_type, other: const_type }, :int)
-        @subset = function(self, :subset, 2, { self: const_type, other: const_type }, :int)
-        @join = function(self, :join, 2, { self: type, other: const_type }, :void)
-        @subtract = function(self, :subtract, 2, { self: type, other: const_type }, :void)
-        @intersect = function(self, :intersect, 2, { self: type, other: const_type }, :void)
-        @disjoin = function(self, :disjoin, 2, { self: type, other: const_type }, :void)
-        end
-    end
+    def orderable? = false # No idea how to compute the ordering of this container
 
     private def configure
       super
@@ -65,21 +49,6 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.const_ptr_type, :lookup, { self: type, value: element.const_type } do
-        header %{
-          @brief Get a view of contained element
-
-          @param[in] self set to put into
-          @param[in] value value to put
-          @return a view of an element equivalent to the `value`
-
-          This function is used to get a constant reference (in form of the C pointer) to an element contained in `self` equavalent to the specified `value`.
-
-          @note Equivalent element must exist (see @ref #{contains}).
-
-          @since 2.0
-        }
-      end
       def_method :void, :purge, { self: type } do
         header %{
           @brief Remove and destroy all contained elements
@@ -99,16 +68,16 @@ module AutoC
           TODO
         }
       end
-      def_method int, :disjoint, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :int, :disjoint, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{range.type} r;
           assert(self);
           assert(other);
           for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            if(#{contains}(other, *#{range.view}(&r))) return 0;
+            if(#{contains}(other, *#{range.view_front}(&r))) return 0;
           }
           for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            if(#{contains}(self, *#{range.view}(&r))) return 0;
+            if(#{contains}(self, *#{range.view_front}(&r))) return 0;
           }
           return 1;
         }
@@ -124,13 +93,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method int, :subset, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :int, :subset, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{range.type} r;
           assert(self);
           assert(other);
           for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            if(!#{contains}(other, *#{range.view}(&r))) return 0;
+            if(!#{contains}(other, *#{range.view_front}(&r))) return 0;
           }
           return 1;
         }
@@ -139,13 +108,13 @@ module AutoC
           TODO
         }
       end
-      def_method void, :join, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :void, :join, { self: type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{range.type} r;
           assert(self);
           assert(other);
           for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{put}(self, *#{range.view}(&r));
+            #{put}(self, *#{range.view_front}(&r));
           }
         }
         header %{
@@ -153,13 +122,13 @@ module AutoC
           TODO
         }
       end
-      def_method void, :subtract, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :void, :subtract, { self: type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{range.type} r;
           assert(self);
           assert(other);
           for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{remove}(self, *#{range.view}(&r));
+            #{remove}(self, *#{range.view_front}(&r));
           }
         }
         header %{
@@ -167,7 +136,7 @@ module AutoC
           TODO
         }
       end
-      def_method void, :intersect, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :void, :intersect, { self: type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{type} t;
           assert(self);
@@ -182,7 +151,7 @@ module AutoC
           TODO
         }
       end
-      def_method void, :disjoin, { self: const_type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
+      def_method :void, :disjoin, { self: type, other: const_type }, refs: 2, require:-> { !@omit_set_operations } do
         code %{
           #{type} t;
           assert(self);

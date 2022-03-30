@@ -9,6 +9,7 @@ module AutoC
 
   class Once < ::Proc
     def to_s = @value ||= call
+    def to_sym = to_s.to_sym
   end
 
 

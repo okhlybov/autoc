@@ -46,13 +46,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.const_ptr_type, :lookup, { self: type, value: self.element.const_type }, require:-> { element.comparable? } do
+      def_method element.const_ptr_type, :lookup, { self: const_type, value: self.element.const_type }, require:-> { element.comparable? } do
         header %{
           @brief Search for specific element
 
           @param[in] self container to search through
           @param[in] value value to look for
-          @return a view of element equavalent to specified value or NULL value
+          @return a view of element equivalent to specified value or NULL value
 
           This function scans through `self` and returns a constant reference (in form of the C pointer)
           to the first contained element equivalent to the specified `value` or NULL value is there is no such element.
@@ -62,7 +62,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :contains, { self: type, value: self.element.const_type }, require:-> { element.comparable? } do
+      def_method :int, :contains, { self: const_type, value: self.element.const_type }, require:-> { element.comparable? } do
         inline_code %{
           return #{lookup}(self, value) != NULL;
         }
@@ -100,7 +100,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> range cyclic dependency
+    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> iterable.range cyclic dependency
 
   end
 
@@ -109,7 +109,7 @@ module AutoC
   module Container::Hashable
     def configure
       super
-      @hash_code.code %{
+      code :hash_code, %{
         size_t hash;
         #{range.type} r;
         #{hasher.type} hasher;
@@ -129,7 +129,7 @@ module AutoC
   module Container::Sequential
     def configure
       super
-      @lookup.code %{
+      code :lookup, %{
         #{range.type} r;
         assert(self);
         for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {

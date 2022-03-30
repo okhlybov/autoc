@@ -31,7 +31,7 @@ module AutoC
 
           #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
 
-          It is a contiguous sequence direct access container where elements can be directly referenced by an integer index belonging to the [0, @ref #{@size}) range.
+          It is a contiguous sequence direct access container where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
 
           For iteration over the vector elements refer to @ref #{range.type}.
 
@@ -254,20 +254,20 @@ module AutoC
           @since 2.0
         }
       end
-      @default_create.inline_code %{
+      inline_code :default_create, %{
         assert(self);
         self->element_count = 0;
         self->elements = NULL;
       }
-      @size.inline_code %{
+      inline_code :size, %{
         assert(self);
         return self->element_count;
       }
-      @empty.inline_code %{
+      inline_code :empty, %{
         assert(self);
         return #{size}(self) == 0;
       }
-      @copy.code %{
+      code :copy, %{
         size_t index, size;
         assert(self);
         assert(source);
@@ -276,7 +276,7 @@ module AutoC
           #{element.copy('self->elements[index]', 'source->elements[index]')};
         }
       }
-      @equal.code %{
+      code :equal, %{
         size_t index, size;
         assert(self);
         assert(other);
@@ -288,13 +288,13 @@ module AutoC
         } else return 0;
       }
       # destroy
-      s = 'assert(self);'
-      s += %{{
+      x = 'assert(self);'
+      x += %{{
         size_t index, size = #{size}(self);
         for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
       }} if element.destructible?
-      s += "#{memory.free('self->elements')};"
-      @destroy.code(s)
+      x += "#{memory.free('self->elements')};"
+      code :destroy, x
     end
 
     def definitions(stream)
@@ -355,18 +355,18 @@ module AutoC
       
       private def configure
         super
-        @custom_create.inline_code %{
+        inline_code :custom_create, %{
           assert(self);
           assert(iterable);
           self->iterable = iterable;
           self->front_position = 0;
           self->back_position = #{iterable.size}(iterable)-1;
         }
-        @length.inline_code %{
+        inline_code :length, %{
           assert(self);
           return #{empty}(self) ? 0 : self->back_position - self->front_position + 1;
         }
-        @empty.inline_code %{
+        inline_code :empty, %{
           assert(self);
           return !(
             self->front_position <= self->back_position &&
@@ -374,32 +374,27 @@ module AutoC
             self->back_position  <  self->iterable->element_count
           );
         }
-        @save.inline_code %{
-          assert(self);
-          assert(origin);
-          *self = *origin;
-        }
-        @pop_front.inline_code %{
+        inline_code :pop_front, %{
           assert(!#{@empty}(self));
           ++self->front_position;
         }
-        @pop_back.inline_code %{
+        inline_code :pop_back, %{
           assert(!#{empty}(self));
           --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
         }
-        @view_front.inline_code %{
+        inline_code :view_front, %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->front_position')};
         }
-        @view_back.inline_code %{
+        inline_code :view_back, %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->back_position')};
         }
-        @peek.inline_code %{
+        inline_code :peek, %{
           assert(self);
           return #{iterable.view('self->iterable', 'self->front_position + position')};
         }
-        @get.inline_code %{
+        inline_code :get, %{
           assert(self);
           return #{iterable.get('self->iterable', 'self->front_position + position')};
         }
