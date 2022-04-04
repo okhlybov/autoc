@@ -11,16 +11,20 @@ module AutoC
   #
   class HashMap < Map
 
-    include Container::Hashable
+    prepend Container::Hashable
+    prepend Container::Sequential
+
+    attr_reader :_node, :_set
 
     def initialize(type, key, element, visibility = :public)
       super
-      @node = Node.new(self, self.key, self.element)
-      @set = Set.new(self, @node)
+      @_node = Node.new(self, self.key, self.element)
+      @_set = Set.new(self, _node)
       @range = Range.new(self, visibility)
-      @create_capacity = function(self, :create_capacity, 1, { self: type, capacity: :size_t, fixed_capacity: :int }, :void)
-      dependencies << range << @node << @set
+      dependencies << range << _node << _set
     end
+
+    def orderable? = false
 
     def canonic_tag = "HashMap<#{key.type} -> #{element.type}>"
 
@@ -43,84 +47,84 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{@set.type} set;
+          #{_set.type} set;
         } #{type};
       $
       super
     end
 
-    def composite_interface_definitions(stream)
+    private def configure
       super
-      stream << %$
-        /**
-         * @brief Create a map with specified initial capacity
-         */
-        #{declare(@create_capacity)};
-      $
+      def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
+        code %{
+          assert(self);
+          #{_set.create_capacity}(&self->set, capacity, manage_capacity);
+        }
+        header %{
+          @brief Create a map with specified initial capacity
+          TODO
+        }
+      end
+      code :default_create, %{
+        assert(self);
+        #{create_capacity}(self, 0, 1);
+      }
+      code :destroy, %{
+        #{_set.destroy}(&self->set);
+      }
+      code :size, %{
+        return #{_set.size}(&self->set);
+      }
+      code :empty, %{
+        return #{_set.empty}(&self->set);
+      }
+      code :copy, %{
+        #{_set.copy}(&self->set, &source->set);
+      }
+      code :equal, %{
+        return #{_set.equal}(&self->set, &other->set);
+      }
+      code :purge, %{
+        #{_set.purge}(&self->set);
+      }
+      code :view, %{
+        #{_node.type} node;
+        node.key = key;
+        return &#{_set.view}(&self->set, node)->element;
+      }
+      code :put, %{
+        #{_node.type} node;
+        node.key = key;
+        if(!#{_set.contains}(&self->set, node)) {
+          #{key.copy('node.key', :key)};
+          #{element.copy('node.element', :value)};
+          #{_set.put}(&self->set, node);
+          return 1;
+        } else return 0;
+      }
+      code :set, %{
+        int replace = #{remove}(self, key);
+        #{put}(self, key, value);
+        return replace;
+      }
+      code :remove, %{
+        #{_node.type} node;
+        node.key = key;
+        return #{_set.remove}(&self->set, node);
+      }
     end
 
-    def definitions(stream)
-      super
-      stream << %$
-        #{define(@create_capacity)} {
-          #{@set.create_capacity}(&self->set, capacity, fixed_capacity);
-        }
-        #{define(default_create)} {
-          #{create_capacity}(self, 0, 0); /* Let the underlying set choose the defaults */
-        }
-        #{define(destroy)} {
-          #{@set.destroy}(&self->set);
-        }
-        #{define(@size)} {
-          return #{@set.size}(&self->set);
-        }
-        #{define(@empty)} {
-          return #{@set.empty}(&self->set);
-        }
-        #{define(@view)} {
-          #{@node.type} node;
-          node.key = key;
-          return &#{@set.view}(&self->set, node)->element;
-        }
-        #{define(@contains)} {
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_ptr_type} v = #{range.front_view}(&r);
-            if(#{element.equal('*v', :value)}) return 1;
-          }
-          return 0;
-        }
-        #{define(@put)} {
-          #{@node.type} node;
-          node.key = key;
-          if(!#{@set.contains}(&self->set, node)) {
-            #{@key.copy('node.key', :key)};
-            #{@element.copy('node.element', :value)};
-            #{@set.put}(&self->set, node);
-            return 1;
-          } else return 0;
-        }
-        #{define(@force)} {
-          /* FIXME get rid of code duplication */
-          int replace = #{remove}(self, key);
-          #{put}(self, key, value);
-          return replace;
-        }
-        #{define(@remove)} {
-          #{@node.type} node;
-          node.key = key;
-          return #{@set.remove}(&self->set, node);
-        }
-      $
-    end
   end
 
 
   #
   class HashMap::Range < Range::Forward
 
+    attr_reader :_set_range
+
     def initialize(*args)
       super
-      @set = iterable.instance_variable_get(:@set)
+      @_set_range = iterable._set.range
     end
 
     def composite_interface_declarations(stream)
@@ -143,113 +147,123 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{@set.range.type} set_range; /**< @private */
+          #{_set_range.type} set_range; /**< @private */
         } #{type};
       $
       super
     end
 
-    def definitions(stream)
+    private def configure
       super
-      stream << %$
-        #{define(custom_create)} {
-          assert(self);
-          assert(iterable);
-          #{@set.range.custom_create}(&self->set_range, &iterable->set);
-        }
-        #{define(@empty)} {
-          assert(self);
-          return #{@set.range.empty}(&self->set_range);
-        }
-        #{define(@pop_front)} {
-          assert(self);
-          #{@set.range.pop_front}(&self->set_range);
-        }
-        #{define(@front_view)} {
-          assert(self);
-          assert(!#{empty}(self));
-          return &#{@set.range.front_view}(&self->set_range)->element;
-        }
-      $
+      code :custom_create, %{
+        assert(self);
+        assert(iterable);
+        #{_set_range.custom_create}(&self->set_range, &iterable->set);
+      }
+      code :empty, %{
+        assert(self);
+        return #{_set_range.empty}(&self->set_range);
+      }
+      code :pop_front, %{
+        assert(self);
+        #{_set_range.pop_front}(&self->set_range);
+      }
+      code :view_front, %{
+        assert(self);
+        assert(!#{empty}(self));
+        return &#{_set_range.view_front}(&self->set_range)->element;
+      }
     end
+
   end
 
   class HashMap::Set < HashSet
+
+    def _node = element
 
     def initialize(map, element)
       @omit_set_operations = true
       super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
     end
 
-    def definitions(stream)
+    private def configure
       super
       # Rolling out the custom set hasher to include both key and element into consideration
       # instead of using node's version which is for key searching only
-      stream << %$
-        #{define(hash_code)} {
-          size_t hash;
-          #{hasher.type} hasher;
-          #{hasher.create(:hasher)};
-          for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_ptr_type} node_ptr = #{range.front_view}(&r);
-            #{hasher.update(:hasher, element.instance_variable_get(:@key).hash_code('node_ptr->key'))};
-            #{hasher.update(:hasher, element.instance_variable_get(:@element).hash_code('node_ptr->element'))};
-          }
-          hash = #{hasher.result(:hasher)};
-          #{hasher.destroy(:hasher)};
-          return hash;
+      code :hash_code, %{
+        size_t hash;
+        #{hasher.type} hasher;
+        #{hasher.create(:hasher)};
+        for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          #{_node.const_ptr_type} node_ptr = #{range.view_front}(&r);
+          #{hasher.update(:hasher, _node._key.hash_code('node_ptr->key'))};
+          #{hasher.update(:hasher, _node._element.hash_code('node_ptr->element'))};
         }
-      $
+        hash = #{hasher.result(:hasher)};
+        #{hasher.destroy(:hasher)};
+        return hash;
+      }
     end
+
   end
 
 
   class HashMap::Node < Composite
 
+    attr_reader :_key, :_element
+
     def initialize(map, key, element)
       super(Once.new { map.decorate_identifier(:_node) }, :internal)
-      dependencies << (@key = key) << (@element = element)
+      dependencies << (@_key = key) << (@_element = element)
     end
 
-    def destructible? = @key.destructible? || @element.destructible?
+    def default_constructible? = false
+    def orderable? = false
+    def destructible? = _key.destructible? || _element.destructible?
 
     def copy(value, source) = "#{value} = #{source}"
 
     def composite_interface_declarations(stream)
       stream << %$
         typedef struct {
-          #{@key.type} key;
-          #{@element.type} element;
+          #{_key.type} key;
+          #{_element.type} element;
         } #{type};
       $
       super
     end
 
-    def definitions(stream)
+    private def configure
       super
-      # Element is not considered upon hashing or equality comparison to facilitate the key search
-      stream << %$
-        #{define(equal)} {
-          assert(self);
-          assert(other);
-          return #{@key.equal('self->key', 'other->key')};
+      def_method :void, :create, { self: type, key: _key.type, element: _element.type }, instance: :custom_create do
+        inline_code %{
+          #{_key.copy('self->key', :key)};
+          #{_element.copy('self->element', :element)};
         }
-        #{define(hash_code)} {
-          #{hasher.type} hasher;
-          size_t hash;
-          #{hasher.create(:hasher)};
-          #{hasher.update(:hasher, @key.hash_code('self->key'))};
-          hash = #{hasher.result(:hasher)};
-          #{hasher.destroy(:hasher)};
-          return hash;
-        }
-      $
-      stream << %$
-        #{define(destroy)} {
-          #{@key.destroy('self->key') if @key.destructible?};
-          #{@element.destroy('self->element') if @element.destructible?};
-        }
-      $ if destructible?
+      end
+      inline_code :equal, %{
+        assert(self);
+        assert(other);
+        return #{_key.equal('self->key', 'other->key')};
+      }
+      inline_code :copy, %{
+        #{destroy}(self);
+        #{create}(self, source->key, source->element);
+      }
+      inline_code :destroy, %{
+        #{_key.destroy('self->key') if _key.destructible?};
+        #{_element.destroy('self->element') if _element.destructible?};
+      }
+      code :hash_code, %{
+        size_t hash;
+        #{hasher.type} hasher;
+        #{hasher.create(:hasher)};
+        #{hasher.update(:hasher, _key.hash_code('self->key'))};
+        hash = #{hasher.result(:hasher)};
+        #{hasher.destroy(:hasher)};
+        return hash;
+      }
     end
+
   end
 end
