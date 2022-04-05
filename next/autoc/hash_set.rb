@@ -14,16 +14,16 @@ module AutoC
 
     prepend Container::Hashable
 
-    attr_reader :_bucket, :_buckets, :_manager
+    private attr_reader :_bucket, :_buckets, :_manager
 
     def initialize(type, element, visibility = :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
       @_bucket = Bucket.new(self, self.element)
       @_buckets = Buckets.new(self, _bucket)
-      @range = Range.new(self, visibility)
-      dependencies << range << _bucket << _buckets
+      @range = Range.new(self, visibility, _bucket, _buckets)
       @_manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
+      dependencies << range << _bucket << _buckets
     end
 
     def canonic_tag = "HashSet<#{element.type}>"
@@ -174,10 +174,10 @@ module AutoC
 
       private attr_reader :_bucket_range, :_buckets_range
 
-      def initialize(*args)
-        super
-        @_bucket_range = iterable._bucket.range
-        @_buckets_range = iterable._buckets.range
+      def initialize(iterable, visibility, _bucket, _buckets)
+        super(iterable, visibility)
+        @_bucket_range = _bucket.range
+        @_buckets_range = _buckets.range
       end
 
       def composite_interface_declarations(stream)

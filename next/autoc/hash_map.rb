@@ -130,7 +130,7 @@ module AutoC
   # @private
   class HashMap::Range < AssociativeContainer::Range
 
-    attr_reader :_set_range
+    private attr_reader :_set_range
 
     def initialize(iterable, visibility, _set)
       super(iterable, visibility)
