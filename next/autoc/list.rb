@@ -14,7 +14,7 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    attr_reader :_node
+    private attr_reader :_node
 
     def initialize(type, element, visibility = :public)
       super
@@ -293,7 +293,7 @@ module AutoC
 
     class List::Range < Range::Forward
 
-      def _node = iterable._node
+      private def _node = iterable._node
 
       def composite_interface_declarations(stream)
         stream << %$

@@ -1,26 +1,26 @@
 # frozen_string_literal: true
 
 
+require 'autoc/container'
 require 'autoc/hash_set'
-require 'autoc/map'
 
 
 module AutoC
 
 
   #
-  class HashMap < Map
+  class HashMap < AssociativeContainer
 
     prepend Container::Hashable
     prepend Container::Sequential
 
-    attr_reader :_node, :_set
+    private attr_reader :_node, :_set
 
     def initialize(type, key, element, visibility = :public)
       super
       @_node = Node.new(self, self.key, self.element)
-      @_set = Set.new(self, _node)
-      @range = Range.new(self, visibility)
+      @_set = Set.new(self, _node, self.key, self.element)
+      @range = Range.new(self, visibility, _set)
       dependencies << range << _node << _set
     end
 
@@ -65,7 +65,14 @@ module AutoC
           TODO
         }
       end
-      code :default_create, %{
+      def_method _node.const_ptr_type, :_lookup_node, { self: const_type, key: key.const_type }, visibility: :private do
+        code %{
+          #{_node.type} node;
+          node.key = key; /* .element remains uninitialized as it's not considered by the comparison code */
+          return #{_set.lookup}(&self->set, node);
+        }
+      end
+      inline_code :default_create, %{
         assert(self);
         #{create_capacity}(self, 0, 1);
       }
@@ -87,10 +94,13 @@ module AutoC
       code :purge, %{
         #{_set.purge}(&self->set);
       }
-      code :view, %{
-        #{_node.type} node;
-        node.key = key;
-        return &#{_set.view}(&self->set, node)->element;
+      inline_code :view, %{
+        #{_node.const_ptr_type} node = #{_lookup_node}(self, key);
+        return node ? &node->element : NULL;
+      }
+      inline_code :lookup_key, %{
+        #{_node.const_ptr_type} node = #{_lookup_node}(self, key);
+        return node ? &node->key : NULL;
       }
       code :put, %{
         #{_node.type} node;
@@ -117,14 +127,14 @@ module AutoC
   end
 
 
-  #
-  class HashMap::Range < Range::Forward
+  # @private
+  class HashMap::Range < AssociativeContainer::Range
 
     attr_reader :_set_range
 
-    def initialize(*args)
-      super
-      @_set_range = iterable._set.range
+    def initialize(iterable, visibility, _set)
+      super(iterable, visibility)
+      @_set_range = _set.range
     end
 
     def composite_interface_declarations(stream)
@@ -173,15 +183,24 @@ module AutoC
         assert(!#{empty}(self));
         return &#{_set_range.view_front}(&self->set_range)->element;
       }
+      code :view_key_front, %{
+        assert(self);
+        assert(!#{empty}(self));
+        return &#{_set_range.view_front}(&self->set_range)->key;
+      }
     end
 
   end
 
+  # @private
   class HashMap::Set < HashSet
 
-    def _node = element
+    private attr_reader :_node, :_node_key, :_node_element
 
-    def initialize(map, element)
+    def initialize(map, element, _node_key, _node_element)
+      @_node = element
+      @_node_key = _node_key
+      @_node_element = _node_element
       @omit_set_operations = true
       super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
     end
@@ -192,12 +211,13 @@ module AutoC
       # instead of using node's version which is for key searching only
       code :hash_code, %{
         size_t hash;
+        #{range.type} r;
         #{hasher.type} hasher;
         #{hasher.create(:hasher)};
-        for(#{range.type} r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-          #{_node.const_ptr_type} node_ptr = #{range.view_front}(&r);
-          #{hasher.update(:hasher, _node._key.hash_code('node_ptr->key'))};
-          #{hasher.update(:hasher, _node._element.hash_code('node_ptr->element'))};
+        for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          #{_node.const_ptr_type} node = #{range.view_front}(&r);
+          #{hasher.update(:hasher, _node_key.hash_code('node->key'))};
+          #{hasher.update(:hasher, _node_element.hash_code('node->element'))};
         }
         hash = #{hasher.result(:hasher)};
         #{hasher.destroy(:hasher)};
@@ -208,9 +228,10 @@ module AutoC
   end
 
 
+  # @private
   class HashMap::Node < Composite
 
-    attr_reader :_key, :_element
+    private attr_reader :_key, :_element
 
     def initialize(map, key, element)
       super(Once.new { map.decorate_identifier(:_node) }, :internal)

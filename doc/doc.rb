@@ -97,7 +97,7 @@ AutoC::Module.render(:doc) do |m|
   m << main
   m << AutoC::Vector.new(:Vector, T)
   m << AutoC::List.new(:List, T)
-  #m << AutoC::HashMap.new(:HashMap, K, T)
+  m << AutoC::HashMap.new(:HashMap, K, T)
   m << AutoC::HashSet.new(:HashSet, T)
   m << AutoC::Code.new(definitions: 'int main(int a, char**b) {return 0;}')
 end

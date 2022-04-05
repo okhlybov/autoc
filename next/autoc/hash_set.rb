@@ -172,7 +172,7 @@ module AutoC
     # @private
     class HashSet::Range < Range::Forward
 
-      attr_reader :_bucket_range, :_buckets_range
+      private attr_reader :_bucket_range, :_buckets_range
 
       def initialize(*args)
         super
