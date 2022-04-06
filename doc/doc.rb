@@ -64,34 +64,18 @@ main = AutoC::Code.new interface: %$
   */
 $
 
+require_relative '../test/generic_value'
 
-def type(x, brief)
-  AutoC::Synthetic.new(x,
-    default_create: "#{x}Create",
-    destroy: "#{x}Destroy",
-    copy: "#{x}Copy",
-    hash_code: "#{x}HashCode",
-    equal: "#{x}Equal",
-    compare: "#{x}Compare",
-    interface: %$
-      #include<stdio.h>
-      #include <string.h>
-      /**
-        @brief #{brief}
-      */
-      typedef struct {int _; /**< @private */} #{x};
-      #define #{x}Create(self) (self)._ = 1
-      #define #{x}Destroy(self) printf("%i", (self)._)
-      #define #{x}Copy(self, source) self = source
-      #define #{x}HashCode(self) (self)._
-      #define #{x}Equal(lt, rt) ((lt)._ == (rt)._)
-      #define #{x}Compare(lt,rt) ((lt)._ == (rt)._)
-    $
-  )
+class Value < GenericValue
+  attr_reader :description
+  def initialize(type, desc)
+    super(type, :public)
+    @description = desc
+  end
 end
 
-T = type(:T, 'A generic value type')
-K = type(:K, 'A generic hashable value type')
+T = Value.new(:T, 'A generic value type')
+K = Value.new(:K, 'A generic hashable value type')
 
 AutoC::Module.render(:doc) do |m|
   m << main

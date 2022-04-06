@@ -218,7 +218,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :compare, { self: const_type, source: const_type }, refs: 2, require:-> { orderable? } do
+      def_method :int, :compare, { self: const_type, other: const_type }, refs: 2, require:-> { orderable? } do
         header %{
           @brief Compute the ordering of two containers
 
