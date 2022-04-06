@@ -112,7 +112,7 @@ module AutoC
   module Container::Hashable
     def configure
       super
-      code :hash_code, %{
+      hash_code.code %{
         size_t hash;
         #{range.type} r;
         #{hasher.type} hasher;
@@ -133,7 +133,7 @@ module AutoC
   module Container::Sequential
     def configure
       super
-      code :lookup, %{
+      lookup.code %{
         #{range.type} r;
         assert(self);
         for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {

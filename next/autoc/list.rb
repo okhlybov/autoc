@@ -14,11 +14,9 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    private attr_reader :_node
-
     def initialize(type, element, visibility = :public)
       super
-      @_node = decorate_identifier(:_node)
+      @node = decorate_identifier(:_node)
       dependencies << (@range = Range.new(self, visibility))
     end
 
@@ -39,7 +37,7 @@ module AutoC
 
           @since 2.0
         */
-        typedef struct #{_node} #{_node}; /**< @private */
+        typedef struct #{@node} #{@node}; /**< @private */
         typedef struct #{type} #{type}; /**< @private */
         /**
           #{ingroup}
@@ -47,13 +45,13 @@ module AutoC
           @since 2.0
         */
         struct #{type} {
-          #{_node}* head_node; /**< @private */
+          #{@node}* head_node; /**< @private */
           size_t node_count; /**< @private */
         };
         /** @private */
-        struct #{_node} {
+        struct #{@node} {
           #{element.type} element;
-          #{_node}* next_node;
+          #{@node}* next_node;
         };
       $
       super
@@ -63,7 +61,7 @@ module AutoC
       super
       def_method :void, :_drop_front, { self: type }, visibility: :private do
         code %{
-          #{_node}* this_node;
+          #{@node}* this_node;
           assert(!#{empty}(self));
           this_node = self->head_node; assert(this_node);
           self->head_node = self->head_node->next_node;
@@ -182,7 +180,7 @@ module AutoC
       end
       def_method :void, :push_front, { self: type, value: element.const_type }, require:-> { element.copyable? } do
         code %{
-          #{_node}* new_node;
+          #{@node}* new_node;
           assert(self);
           new_node = #{memory.allocate(_node)};
           #{element.copy('new_node->element', :value)};
@@ -206,14 +204,14 @@ module AutoC
       end
       def_method :int, :remove, { self: type, value: element.const_type }, require:-> { element.comparable? } do
         code %{
-          #{_node} *node, *prev_node;
+          #{@node} *node, *prev_node;
           int removed = 0;
           assert(self);
           node = self->head_node;
           prev_node = NULL;
           while(node) {
             if(#{element.equal('node->element', :value)}) {
-              #{_node}* this_node;
+              #{@node}* this_node;
               if(prev_node) {
                 this_node = prev_node->next_node = node->next_node;
               } else {
@@ -249,25 +247,25 @@ module AutoC
           @since 2.0
         }
       end
-      inline_code :default_create, %{
+      default_create.inline_code %{
         assert(self);
         self->head_node = NULL;
         self->node_count = 0;
       }
-      inline_code :destroy, %{
+      destroy.inline_code %{
         assert(self);
         while(!#{empty}(self)) #{pop_front}(self);
       }
-      inline_code :size, %{
+      size.inline_code %{
         assert(self);
         return self->node_count;
       }
-      inline_code :empty, %{
+      empty.inline_code %{
         assert(self);
         assert((self->node_count == 0) == (self->head_node == NULL));
         return #{size}(self) == 0;
       }
-      code :copy, %{
+      copy.code %{
         #{range.type} r;
         assert(self);
         assert(source);
@@ -276,7 +274,7 @@ module AutoC
           #{push_front}(self, *#{range.view_front}(&r));
         }
       }
-      code :equal, %{
+      equal.code %{
         #{range.type} ra, rb;
         assert(self);
         assert(other);
@@ -293,7 +291,10 @@ module AutoC
 
     class List::Range < Range::Forward
 
-      private def _node = iterable._node
+      def initialize(*args)
+        super
+        @list_node = iterable.instance_variable_get(:@node)
+      end
 
       def composite_interface_declarations(stream)
         stream << %$
@@ -315,7 +316,7 @@ module AutoC
             @since 2.0
           */
           typedef struct {
-            #{_node}* node; /**< @private */
+            #{@list_node}* node; /**< @private */
           } #{type};
         $
         super
@@ -323,21 +324,21 @@ module AutoC
 
       private def configure
         super
-        inline_code :custom_create, %{
+        custom_create.inline_code %{
           assert(self);
           assert(iterable);
           self->node = iterable->head_node;
         }
-        inline_code :empty, %{
+        empty.inline_code %{
           assert(self);
           return self->node == NULL;
         }
-        inline_code :pop_front, %{
+        pop_front.inline_code %{
           assert(self);
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        inline_code :view_front, %{
+        view_front.inline_code %{
           assert(self);
           assert(!#{empty}(self));
           return &self->node->element;

@@ -14,16 +14,14 @@ module AutoC
 
     prepend Container::Hashable
 
-    private attr_reader :_bucket, :_buckets, :_manager
-
     def initialize(type, element, visibility = :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
-      @_bucket = Bucket.new(self, self.element)
-      @_buckets = Buckets.new(self, _bucket)
-      @range = Range.new(self, visibility, _bucket, _buckets)
-      @_manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
-      dependencies << range << _bucket << _buckets
+      @bucket = Bucket.new(self, self.element)
+      @buckets = Buckets.new(self, @bucket)
+      @range = Range.new(self, visibility)
+      @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
+      dependencies << range << @bucket << @buckets
     end
 
     def canonic_tag = "HashSet<#{element.type}>"
@@ -46,7 +44,7 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{_buckets.type} buckets; /**< @private */
+          #{@buckets.type} buckets; /**< @private */
           size_t element_count; /**< @private */
           size_t capacity; /**< @private */
         } #{type};
@@ -59,7 +57,7 @@ module AutoC
       def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
         code %{
           assert(self);
-          #{_buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{_manager[:minimum_capacity]})*#{_manager[:load_factor]});
+          #{@buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
           if(!manage_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
@@ -82,27 +80,27 @@ module AutoC
           @since 2.0
         }
       end
-      inline_code :size, %{
+      size.inline_code %{
         assert(self);
         return self->element_count;
       }
-      inline_code :empty, %{
+      empty.inline_code %{
         assert(self);
         return #{size}(self) == 0;
       }
-      code :default_create, %{
-        #{create_capacity}(self, #{_manager[:minimum_capacity]}, 1);
+      default_create.code %{
+        #{create_capacity}(self, #{@manager[:minimum_capacity]}, 1);
       }
-      code :destroy, %{
-        #{_buckets.destroy('self->buckets')};
+      destroy.code %{
+        #{@buckets.destroy('self->buckets')};
       }
-      code :purge, %{
-        #{_buckets.range.type} r;
-        for(r = #{_buckets.get_range}(&self->buckets); !#{_buckets.range.empty}(&r); #{_buckets.range.pop_front}(&r)) {
-          #{_bucket.purge}((#{_bucket.ptr_type})#{_buckets.range.view_front}(&r));
+      purge.code %{
+        #{@buckets.range.type} r;
+        for(r = #{@buckets.get_range}(&self->buckets); !#{@buckets.range.empty}(&r); #{@buckets.range.pop_front}(&r)) {
+          #{@bucket.purge}((#{@bucket.ptr_type})#{@buckets.range.view_front}(&r));
         }
       }
-      code :copy, %{
+      copy.code %{
         #{range.type} r;
         assert(self);
         assert(source);
@@ -111,30 +109,30 @@ module AutoC
           #{put}(self, *#{range.view_front}(&r));
         }
       }
-      code :equal, %{
-        return #{_buckets.equal}(&self->buckets, &other->buckets);
+      equal.code %{
+        return #{@buckets.equal}(&self->buckets, &other->buckets);
       }
-      code :lookup, %{
-        return #{_bucket.lookup}(#{_locate}(self, value), value);
+      lookup.code %{
+        return #{@bucket.lookup}(#{_locate}(self, value), value);
       }
-     code :put, %{
-        #{_bucket.const_ptr_type} bucket = #{_locate}(self, value);
-        if(!#{_bucket.contains}(bucket, value)) {
-          #{_bucket.push_front}((#{_bucket.ptr_type})bucket, value);
+      put.code %{
+        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(!#{@bucket.contains}(bucket, value)) {
+          #{@bucket.push_front}((#{@bucket.ptr_type})bucket, value);
           ++self->element_count;
           #{_rehash}(self);
           return 1;
         } else return 0;
       }
-      code :push, %{
+      push.code %{
         /* FIXME get rid of code duplication */
         int replace = #{remove}(self, value);
         #{put}(self, value);
         return replace;
       }
-      code :remove, %{
-        #{_bucket.const_ptr_type} bucket = #{_locate}(self, value);
-        if(#{_bucket.remove}((#{_bucket.ptr_type})bucket, value)) {
+      remove.code %{
+        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(#{@bucket.remove}((#{@bucket.ptr_type})bucket, value)) {
           --self->element_count;
           return 1;
         } else return 0;
@@ -143,12 +141,12 @@ module AutoC
 
     def definitions(stream)
       stream << %$
-        static #{_bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
-          return #{_buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{_buckets.size}(&self->buckets));
+        static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
+          return #{@buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{@buckets.size}(&self->buckets));
         }
         /* Push value to the set bypassing the element's copy function */
         static void #{adopt}(#{ptr_type} self, #{element.const_type} value) {
-          #{_bucket.adopt}((#{_bucket.ptr_type})#{_locate}(self, value), value);
+          #{@bucket.adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
         }
         /* Perform a rehash accomodating new actual size */
         static void #{_rehash}(#{ptr_type} self) {
@@ -156,11 +154,11 @@ module AutoC
           if(#{size}(self) > self->capacity) {
             #{type} t;
             #{range.type} r;
-            #{create_capacity}(&t, self->capacity*#{_manager[:expand_factor]}, 0);
+            #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
             for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
               #{adopt}(&t, *#{range.view_front}(&r));
             }
-            #{_buckets.dispose}(&self->buckets);
+            #{@buckets.dispose}(&self->buckets);
             *self = t;
           }
         }
@@ -172,12 +170,10 @@ module AutoC
     # @private
     class HashSet::Range < Range::Forward
 
-      private attr_reader :_bucket_range, :_buckets_range
-
-      def initialize(iterable, visibility, _bucket, _buckets)
+      def initialize(iterable, visibility)
         super(iterable, visibility)
-        @_bucket_range = _bucket.range
-        @_buckets_range = _buckets.range
+        @bucket = iterable.instance_variable_get(:@bucket)
+        @buckets = iterable.instance_variable_get(:@buckets)
       end
 
       def composite_interface_declarations(stream)
@@ -199,8 +195,8 @@ module AutoC
             @since 2.0
           */
           typedef struct {
-            #{_bucket_range.type} bucket_range; /**< @private */
-            #{_buckets_range.type} buckets_range; /**< @private */
+            #{@bucket.range.type} bucket_range; /**< @private */
+            #{@buckets.range.type} buckets_range; /**< @private */
           } #{type};
         $
         super
@@ -208,25 +204,25 @@ module AutoC
 
       private def configure
         super
-        code :custom_create, %{
+        custom_create.code %{
           assert(self);
           assert(iterable);
-          #{_buckets_range.custom_create}(&self->buckets_range, &iterable->buckets);
+          #{@buckets.range.custom_create}(&self->buckets_range, &iterable->buckets);
           #{_next_bucket}(self, 1);
         }
-        code :empty, %{
+        empty.code %{
           assert(self);
-          return #{_bucket_range.empty}(&self->bucket_range);
+          return #{@bucket.range.empty}(&self->bucket_range);
         }
-        code :pop_front, %{
+        pop_front.code %{
           assert(self);
-          #{_bucket_range.pop_front}(&self->bucket_range);
-          if(#{_bucket_range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
+          #{@bucket.range.pop_front}(&self->bucket_range);
+          if(#{@bucket.range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
         }
-        code :view_front, %{
+        view_front.code %{
           assert(self);
           assert(!#{empty}(self));
-          return #{_bucket_range.view_front}(&self->bucket_range);
+          return #{@bucket.range.view_front}(&self->bucket_range);
         }
       end
 
@@ -234,11 +230,11 @@ module AutoC
         stream << %$
           static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
             do {
-              if (new_bucket_range) #{_bucket_range.custom_create}(&self->bucket_range, #{_buckets_range.view_front}(&self->buckets_range));
+              if (new_bucket_range) #{@bucket.range.custom_create}(&self->bucket_range, #{@buckets.range.view_front}(&self->buckets_range));
               else new_bucket_range = 1; /* Skip the first creation act only */
-              if (!#{_bucket_range.empty}(&self->bucket_range)) break;
-              else #{_buckets_range.pop_front}(&self->buckets_range);
-            } while(!#{_buckets_range.empty}(&self->buckets_range));
+              if (!#{@bucket.range.empty}(&self->bucket_range)) break;
+              else #{@buckets.range.pop_front}(&self->buckets_range);
+            } while(!#{@buckets.range.empty}(&self->buckets_range));
           }
         $
         super
@@ -259,7 +255,7 @@ module AutoC
       def_method :void, :adopt, { self: type, value: element.const_type } do
         code %{
           /* Derived from #{push} */
-          #{_node}* new_node = #{memory.allocate(_node)};
+          #{@node}* new_node = #{memory.allocate(@node)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;
           new_node->element = value;
@@ -270,7 +266,7 @@ module AutoC
         code %{
           /* Derived from #{drop}() */
           while(!#{empty}(self)) {
-            #{_node}* this_node = self->head_node; assert(this_node);
+            #{@node}* this_node = self->head_node; assert(this_node);
             self->head_node = self->head_node->next_node;
             #{memory.free(:this_node)};
             --self->node_count;

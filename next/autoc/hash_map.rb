@@ -14,14 +14,12 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    private attr_reader :_node, :_set
-
     def initialize(type, key, element, visibility = :public)
       super
-      @_node = Node.new(self, self.key, self.element)
-      @_set = Set.new(self, _node, self.key, self.element)
-      @range = Range.new(self, visibility, _set)
-      dependencies << range << _node << _set
+      @node = Node.new(self)
+      @set = Set.new(self, @node)
+      @range = Range.new(self, visibility)
+      dependencies << range << @node << @set
     end
 
     def orderable? = false
@@ -47,7 +45,7 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{_set.type} set;
+          #{@set.type} set;
         } #{type};
       $
       super
@@ -58,69 +56,69 @@ module AutoC
       def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
         code %{
           assert(self);
-          #{_set.create_capacity}(&self->set, capacity, manage_capacity);
+          #{@set.create_capacity}(&self->set, capacity, manage_capacity);
         }
         header %{
           @brief Create a map with specified initial capacity
           TODO
         }
       end
-      def_method _node.const_ptr_type, :_lookup_node, { self: const_type, key: key.const_type }, visibility: :private do
+      def_method @node.const_ptr_type, :_lookup_node, { self: const_type, key: key.const_type }, visibility: :private do
         code %{
-          #{_node.type} node;
+          #{@node.type} node;
           node.key = key; /* .element remains uninitialized as it's not considered by the comparison code */
-          return #{_set.lookup}(&self->set, node);
+          return #{@set.lookup}(&self->set, node);
         }
       end
-      inline_code :default_create, %{
+      default_create.inline_code %{
         assert(self);
         #{create_capacity}(self, 0, 1);
       }
-      code :destroy, %{
-        #{_set.destroy}(&self->set);
+      destroy.code %{
+        #{@set.destroy}(&self->set);
       }
-      code :size, %{
-        return #{_set.size}(&self->set);
+      size.code %{
+        return #{@set.size}(&self->set);
       }
-      code :empty, %{
-        return #{_set.empty}(&self->set);
+      empty.code %{
+        return #{@set.empty}(&self->set);
       }
-      code :copy, %{
-        #{_set.copy}(&self->set, &source->set);
+      copy.code %{
+        #{@set.copy('self->set', 'source->set')};
       }
-      code :equal, %{
-        return #{_set.equal}(&self->set, &other->set);
+      equal.code %{
+        return #{@set.equal('self->set', 'other->set')};
       }
-      code :purge, %{
-        #{_set.purge}(&self->set);
+      purge.code %{
+        #{@set.purge}(&self->set);
       }
-      inline_code :view, %{
-        #{_node.const_ptr_type} node = #{_lookup_node}(self, key);
+      view.inline_code %{
+        #{@node.const_ptr_type} node = #{_lookup_node}(self, key);
         return node ? &node->element : NULL;
       }
-      inline_code :lookup_key, %{
-        #{_node.const_ptr_type} node = #{_lookup_node}(self, key);
+      lookup_key.inline_code %{
+        #{@node.const_ptr_type} node = #{_lookup_node}(self, key);
         return node ? &node->key : NULL;
       }
-      code :put, %{
-        #{_node.type} node;
+      put.code %{
+        #{@node.type} node;
         node.key = key;
-        if(!#{_set.contains}(&self->set, node)) {
+        if(!#{@set.contains}(&self->set, node)) {
           #{key.copy('node.key', :key)};
           #{element.copy('node.element', :value)};
-          #{_set.put}(&self->set, node);
+          #{@set.put}(&self->set, node);
           return 1;
         } else return 0;
       }
-      code :set, %{
+      set.code %{
         int replace = #{remove}(self, key);
         #{put}(self, key, value);
         return replace;
       }
-      code :remove, %{
-        #{_node.type} node;
+      remove.code %{
+        #{@node.type} node;
         node.key = key;
-        return #{_set.remove}(&self->set, node);
+        return #{@set.remove}(&self->set, node);
       }
     end
 
@@ -130,11 +128,9 @@ module AutoC
   # @private
   class HashMap::Range < AssociativeContainer::Range
 
-    private attr_reader :_set_range
-
-    def initialize(iterable, visibility, _set)
+    def initialize(iterable, visibility)
       super(iterable, visibility)
-      @_set_range = _set.range
+      @set = iterable.instance_variable_get(:@set)
     end
 
     def composite_interface_declarations(stream)
@@ -157,7 +153,7 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{_set_range.type} set_range; /**< @private */
+          #{@set.range.type} set_range; /**< @private */
         } #{type};
       $
       super
@@ -165,28 +161,28 @@ module AutoC
 
     private def configure
       super
-      code :custom_create, %{
+      custom_create.code %{
         assert(self);
         assert(iterable);
-        #{_set_range.custom_create}(&self->set_range, &iterable->set);
+        #{@set.range.custom_create}(&self->set_range, &iterable->set);
       }
-      code :empty, %{
+      empty.code %{
         assert(self);
-        return #{_set_range.empty}(&self->set_range);
+        return #{@set.range.empty}(&self->set_range);
       }
-      code :pop_front, %{
+      pop_front.code %{
         assert(self);
-        #{_set_range.pop_front}(&self->set_range);
+        #{@set.range.pop_front}(&self->set_range);
       }
-      code :view_front, %{
-        assert(self);
-        assert(!#{empty}(self));
-        return &#{_set_range.view_front}(&self->set_range)->element;
-      }
-      code :view_key_front, %{
+      view_front.code %{
         assert(self);
         assert(!#{empty}(self));
-        return &#{_set_range.view_front}(&self->set_range)->key;
+        return &#{@set.range.view_front}(&self->set_range)->element;
+      }
+      view_key_front.code %{
+        assert(self);
+        assert(!#{empty}(self));
+        return &#{@set.range.view_front}(&self->set_range)->key;
       }
     end
 
@@ -195,12 +191,8 @@ module AutoC
   # @private
   class HashMap::Set < HashSet
 
-    private attr_reader :_node, :_node_key, :_node_element
-
-    def initialize(map, element, _node_key, _node_element)
-      @_node = element
-      @_node_key = _node_key
-      @_node_element = _node_element
+    def initialize(map, element)
+      @node = element
       @omit_set_operations = true
       super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
     end
@@ -209,15 +201,15 @@ module AutoC
       super
       # Rolling out the custom set hasher to include both key and element into consideration
       # instead of using node's version which is for key searching only
-      code :hash_code, %{
+      hash_code.code %{
         size_t hash;
         #{range.type} r;
         #{hasher.type} hasher;
         #{hasher.create(:hasher)};
         for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-          #{_node.const_ptr_type} node = #{range.view_front}(&r);
-          #{hasher.update(:hasher, _node_key.hash_code('node->key'))};
-          #{hasher.update(:hasher, _node_element.hash_code('node->element'))};
+          #{@node.const_ptr_type} node = #{range.view_front}(&r);
+          #{hasher.update(:hasher, @node.key.hash_code('node->key'))};
+          #{hasher.update(:hasher, @node.element.hash_code('node->element'))};
         }
         hash = #{hasher.result(:hasher)};
         #{hasher.destroy(:hasher)};
@@ -231,24 +223,24 @@ module AutoC
   # @private
   class HashMap::Node < Composite
 
-    private attr_reader :_key, :_element
+    attr_reader :key, :element
 
-    def initialize(map, key, element)
+    def initialize(map)
       super(Once.new { map.decorate_identifier(:_node) }, :internal)
-      dependencies << (@_key = key) << (@_element = element)
+      dependencies << (@key = map.key) << (@element = map.element)
     end
 
     def default_constructible? = false
     def orderable? = false
-    def destructible? = _key.destructible? || _element.destructible?
+    def destructible? = key.destructible? || element.destructible?
 
-    def copy(value, source) = "#{value} = #{source}"
+    #def copy(value, source) = "#{value} = #{source}"
 
     def composite_interface_declarations(stream)
       stream << %$
         typedef struct {
-          #{_key.type} key;
-          #{_element.type} element;
+          #{key.type} key;
+          #{element.type} element;
         } #{type};
       $
       super
@@ -256,30 +248,30 @@ module AutoC
 
     private def configure
       super
-      def_method :void, :create, { self: type, key: _key.type, element: _element.type }, instance: :custom_create do
+      def_method :void, :create, { self: type, key: key.type, element: element.type }, instance: :custom_create do
         inline_code %{
-          #{_key.copy('self->key', :key)};
-          #{_element.copy('self->element', :element)};
+          #{key.copy('self->key', :key)};
+          #{element.copy('self->element', :element)};
         }
       end
-      inline_code :equal, %{
+      equal.inline_code %{
         assert(self);
         assert(other);
-        return #{_key.equal('self->key', 'other->key')};
+        return #{key.equal('self->key', 'other->key')};
       }
-      inline_code :copy, %{
+      copy.inline_code %{
         #{destroy}(self);
         #{create}(self, source->key, source->element);
       }
-      inline_code :destroy, %{
-        #{_key.destroy('self->key') if _key.destructible?};
-        #{_element.destroy('self->element') if _element.destructible?};
+      destroy.inline_code %{
+        #{key.destroy('self->key') if key.destructible?};
+        #{element.destroy('self->element') if element.destructible?};
       }
-      code :hash_code, %{
+      hash_code.code %{
         size_t hash;
         #{hasher.type} hasher;
         #{hasher.create(:hasher)};
-        #{hasher.update(:hasher, _key.hash_code('self->key'))};
+        #{hasher.update(:hasher, key.hash_code('self->key'))};
         hash = #{hasher.result(:hasher)};
         #{hasher.destroy(:hasher)};
         return hash;

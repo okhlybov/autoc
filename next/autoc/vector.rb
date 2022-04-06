@@ -254,20 +254,20 @@ module AutoC
           @since 2.0
         }
       end
-      inline_code :default_create, %{
+      default_create.inline_code %{
         assert(self);
         self->element_count = 0;
         self->elements = NULL;
       }
-      inline_code :size, %{
+      size.inline_code %{
         assert(self);
         return self->element_count;
       }
-      inline_code :empty, %{
+      empty.inline_code %{
         assert(self);
         return #{size}(self) == 0;
       }
-      code :copy, %{
+      copy.code %{
         size_t index, size;
         assert(self);
         assert(source);
@@ -276,7 +276,7 @@ module AutoC
           #{element.copy('self->elements[index]', 'source->elements[index]')};
         }
       }
-      code :equal, %{
+      equal.code %{
         size_t index, size;
         assert(self);
         assert(other);
@@ -294,7 +294,7 @@ module AutoC
         for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
       }} if element.destructible?
       x += "#{memory.free('self->elements')};"
-      code :destroy, x
+      destroy.code x
     end
 
     def definitions(stream)
@@ -355,18 +355,18 @@ module AutoC
       
       private def configure
         super
-        inline_code :custom_create, %{
+        custom_create.inline_code %{
           assert(self);
           assert(iterable);
           self->iterable = iterable;
           self->front_position = 0;
           self->back_position = #{iterable.size}(iterable)-1;
         }
-        inline_code :length, %{
+        length.inline_code %{
           assert(self);
           return #{empty}(self) ? 0 : self->back_position - self->front_position + 1;
         }
-        inline_code :empty, %{
+        empty.inline_code %{
           assert(self);
           return !(
             self->front_position <= self->back_position &&
@@ -374,27 +374,27 @@ module AutoC
             self->back_position  <  self->iterable->element_count
           );
         }
-        inline_code :pop_front, %{
+        pop_front.inline_code %{
           assert(!#{@empty}(self));
           ++self->front_position;
         }
-        inline_code :pop_back, %{
+        pop_back.inline_code %{
           assert(!#{empty}(self));
           --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
         }
-        inline_code :view_front, %{
+        view_front.inline_code %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->front_position')};
         }
-        inline_code :view_back, %{
+        view_back.inline_code %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->back_position')};
         }
-        inline_code :peek, %{
+        peek.inline_code %{
           assert(self);
           return #{iterable.view('self->iterable', 'self->front_position + position')};
         }
-        inline_code :get, %{
+        get.inline_code %{
           assert(self);
           return #{iterable.get('self->iterable', 'self->front_position + position')};
         }

@@ -16,18 +16,25 @@ module AutoC
 
     #
     private def def_method(result, name, parameters, refs: 1, inline: false, visibility: nil, require: true, instance: name, &code)
-      meth = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
-      meth.instance_eval(&code) if block_given?
-      x = instance.to_sym
-      raise "Method definition for #{meth} is already registered" if @methods.key?(x)
-      @methods[x] = meth
+      begin
+        instance = instance.to_sym
+        @_method = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
+        raise "Method definition for #{meth} is already registered" if @methods.key?(instance)
+        @methods[instance] = @_method
+        instance_eval(&code) if block_given?
+      ensure
+        @_method = nil
+      end
     end
 
     #
-    private def code(instance, code) = @methods[instance.to_sym].code(code)
+    private def code(code) = @_method.code(code)
     
     #
-    private def inline_code(instance, code) = @methods[instance.to_sym].inline_code(code)
+    private def inline_code(code) = @_method.inline_code(code)
+
+    #
+    private def header(code) = @_method.header(code)
 
     #
     class Method < AutoC::Function
@@ -52,7 +59,7 @@ module AutoC
       end
 
       def call(*args)
-        if args.empty? then name # Emit bare function name, fn
+        if args.empty? then self # Return self to provide method chaining
         elsif args.first.nil? then super() # Emit function call without parameters, fn()
         else
           i = 0
@@ -253,7 +260,7 @@ module AutoC
         else "#{function}(#{args.join(', ')})" # Emit normal function call with specified parameters
         end
       else
-        meth[*args] # Delegate actual rendering to the function object
+        meth.(*args) # Delegate actual rendering to the function object
       end
     end
 
