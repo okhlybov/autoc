@@ -103,6 +103,24 @@ module AutoC
           @since 2.0
         }
       end
+      def_method :void, :purge, { self: type } do
+        code %{
+          assert(self);
+          #{destroy}(self);
+          #{default_create}(self);
+        }
+        header %{
+          @brief Remove and destroy all contained elements
+
+          @param[in] self list to be purged
+
+          The elements are destroyed with respective destructor.
+
+          After call to this function the set will remain intact yet contain zero elements.
+
+          @since 2.0
+        }
+      end
     end
   
     end
@@ -175,13 +193,6 @@ module AutoC
 
     private def configure
       super
-      # TODO move to Container
-      def_method :void, :purge, { self: type } do
-        header %{
-          @brief Remove and destroy all contained keys along with associated elements
-          TODO
-        }
-      end
       def_method element.const_ptr_type, :view, { self: const_type, key: key.const_type } do
         header %{
           @brief Return a view of the element associated with the specified key or NULL if there is no such element

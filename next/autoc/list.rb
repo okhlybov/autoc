@@ -69,24 +69,6 @@ module AutoC
           --self->node_count;
         }
       end
-      def_method :void, :purge, { self: type } do
-        inline_code %{
-          assert(self);
-          #{destroy}(self);
-          #{default_create}(self);
-        }
-        header %{
-          @brief Remove and destroy all contained elements
-
-          @param[in] self list to be purged
-
-          The elements are destroyed with respective destructor.
-
-          After call to this function the list will remain intact yet contain zero elements.
-
-          @since 2.0
-        }
-      end
       def_method element.const_ptr_type, :view_front, { self: const_type } do
         inline_code %{
           assert(!#{empty}(self));

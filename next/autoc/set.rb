@@ -49,19 +49,6 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :purge, { self: type } do
-        header %{
-          @brief Remove and destroy all contained elements
-
-          @param[in] self list to be purged
-
-          The elements are destroyed with respective destructor.
-
-          After call to this function the set will remain intact yet contain zero elements.
-
-          @since 2.0
-        }
-      end
       def_method :int, :remove, { self: type, value: element.const_type } do
         header %{
           @brief Remove value from the set

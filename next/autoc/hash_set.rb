@@ -94,12 +94,6 @@ module AutoC
       destroy.code %{
         #{@buckets.destroy('self->buckets')};
       }
-      purge.code %{
-        #{@buckets.range.type} r;
-        for(r = #{@buckets.get_range}(&self->buckets); !#{@buckets.range.empty}(&r); #{@buckets.range.pop_front}(&r)) {
-          #{@bucket.purge}((#{@bucket.ptr_type})#{@buckets.range.view_front}(&r));
-        }
-      }
       copy.code %{
         #{range.type} r;
         assert(self);
