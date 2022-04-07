@@ -375,7 +375,7 @@ module AutoC
           );
         }
         pop_front.inline_code %{
-          assert(!#{@empty}(self));
+          assert(!#{empty}(self));
           ++self->front_position;
         }
         pop_back.inline_code %{
