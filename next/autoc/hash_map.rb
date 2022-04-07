@@ -234,8 +234,6 @@ module AutoC
     def orderable? = false
     def destructible? = key.destructible? || element.destructible?
 
-    #def copy(value, source) = "#{value} = #{source}"
-
     def composite_interface_declarations(stream)
       stream << %$
         typedef struct {
@@ -260,7 +258,7 @@ module AutoC
         return #{key.equal('self->key', 'other->key')};
       }
       copy.inline_code %{
-        #{destroy}(self);
+        #{destroy('*self') if destructible?};
         #{create}(self, source->key, source->element);
       }
       destroy.inline_code %{
