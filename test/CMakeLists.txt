@@ -28,17 +28,24 @@ CPMAddPackage(
 
 find_program(Ruby_EXECUTABLE ruby)
 
-add_custom_target(
-    code
-    BYPRODUCTS ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.h
-    COMMAND ${Ruby_EXECUTABLE} -I. -I../next test.rb
+find_program(AStyle NAMES astyle REQUIRED)
+
+# Source code formatting with AStyle is mandatory for proper Doxygen operation
+add_custom_command(
+    OUTPUT fake ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test.rb
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${Ruby_EXECUTABLE} -I. -I../next ${CMAKE_CURRENT_SOURCE_DIR}/test.rb
+    COMMAND ${AStyle} -n test_auto.[ch]
     VERBATIM
 )
 
+# Use fake dependency to force code rebuild on every CMake invokation
+add_custom_target(auto DEPENDS fake)
+
 # ****
 # Instruct to create a named executable from the space-separated list of source files which consitute the program
-add_executable(${PROJECT_NAME} test_auto.c)
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/test_auto.c)
 
 # ***
 # Set to the space-separated list of dependent PkgConfig modules
