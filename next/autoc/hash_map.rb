@@ -104,9 +104,10 @@ module AutoC
         #{@node.type} node;
         node.key = key;
         if(!#{@set.contains}(&self->set, node)) {
-          #{key.copy('node.key', :key)};
-          #{element.copy('node.element', :value)};
+          /* TODO use (future) emplace method instead of the temporary node instance */
+          #{@node.custom_create}(&node, key, value);
           #{@set.put}(&self->set, node);
+          #{@node.destroy(:node) if @node.destructible?};
           return 1;
         } else return 0;
       }
@@ -230,8 +231,8 @@ module AutoC
       dependencies << (@key = map.key) << (@element = map.element)
     end
 
-    def default_constructible? = false
     def orderable? = false
+    def default_constructible? = false
     def destructible? = key.destructible? || element.destructible?
 
     def composite_interface_declarations(stream)
@@ -246,7 +247,7 @@ module AutoC
 
     private def configure
       super
-      def_method :void, :create, { self: type, key: key.type, element: element.type }, instance: :custom_create do
+      def_method :void, :create, { self: type, key: key.type, element: element.type }, instance: :custom_create, require:-> { key.copyable? && element.copyable? } do
         inline_code %{
           #{key.copy('self->key', :key)};
           #{element.copy('self->element', :element)};
@@ -258,7 +259,6 @@ module AutoC
         return #{key.equal('self->key', 'other->key')};
       }
       copy.inline_code %{
-        #{destroy('*self') if destructible?};
         #{create}(self, source->key, source->element);
       }
       destroy.inline_code %{
