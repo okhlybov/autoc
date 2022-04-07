@@ -114,14 +114,22 @@ module AutoC
         }
       end
       def_method :void, :pop_front, { self: type } do
-        code %{
-          #{element.type} value;
-          assert(self);
-          assert(!#{empty}(self));
-          value = *#{view_front}(self);
-          #{element.destroy(:value) if element.destructible?};
-          #{_drop_front}(self);
-        }
+        if element.destructible?
+          code %{
+            #{element.type} value;
+            assert(self);
+            assert(!#{empty}(self));
+            value = *#{view_front}(self);
+            #{element.destroy(:value)};
+            #{_drop_front}(self);
+          }
+        else
+          code %{
+            assert(self);
+            assert(!#{empty}(self));
+            #{_drop_front}(self);
+          }
+        end
         header %{
           @brief Drop front element
 
