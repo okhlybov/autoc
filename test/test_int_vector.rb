@@ -2,24 +2,24 @@ require 'autoc/vector'
 
 type_test(AutoC::Vector, :IntVector, :int) do
 
-  setup %$
-    #{type} t;
-  $
-  cleanup %$
-    #{destroy}(&t);
-  $
+  #
 
-  test :create, %$
+  setup %{ #{type} t; }
+  cleanup %{ #{destroy}(&t); }
+
+  test :create, %{
     #{default_create(:t)};
     TEST_EQUAL( #{size}(&t), 0 );
-  $
+  }
 
-  test :create_ex, %$
+  test :create_ex, %{
     #{custom_create(:t, 100)};
     TEST_EQUAL( #{size}(&t), 100 );
-  $
+  }
 
-  setup %$
+  #
+
+  setup %{
     #{type} t1, t2;
     int i, c = 3;
     #{custom_create(:t1, :c)};
@@ -30,13 +30,13 @@ type_test(AutoC::Vector, :IntVector, :int) do
       #{set}(&t2, i, i);
     }
     TEST_TRUE( #{equal(:t1, :t2)} );
-  $
-  cleanup %$
+  }
+  cleanup %{
     #{destroy}(&t1);
     #{destroy}(&t2);
-  $
+  }
 
-  test :sort, %$
+  test :sort, %{
     #{sort}(&t2, -1);
     /* 2,1,0 */
     TEST_FALSE( #{equal(:t1, :t2)} );
@@ -47,6 +47,6 @@ type_test(AutoC::Vector, :IntVector, :int) do
     TEST_TRUE( #{equal(:t1, :t2)} );
     TEST_EQUAL( #{get}(&t2, 0), 0 );
     TEST_EQUAL( #{get}(&t2, 1), 1 );
-  $
+  }
 
 end

@@ -42,30 +42,24 @@ def type_test(cls, *opts, &code)
     def test(name, code)
       s = name.to_s
       @test_names << [name, func_name = eval("test#{s[0,1].upcase}#{s[1..-1]}")]
-      @tests << %~
+      @tests << %{
         static void #{func_name}(void) {
           #{@setup_code}
           #{code}
           #{@cleanup_code}
         }
-      ~
+      }
     end
     def definitions(stream)
       super
       @tests.each { |f| stream << f }
-      stream << %~static void #{run_tests}(void) {~
-      stream << %~
-          fprintf(stdout, "* %s\\n", "#{type}");
-          fflush(stdout);
-        ~
-        @test_names.each do |name, func_name|
-          stream << %~
-            run_test("#{name}", #{func_name});
-          ~
-        end
-      stream << %~
-        fputs("\\n", stdout); fflush(stdout);}
-      ~
+      stream << "static void #{run_tests}(void) {"
+      stream << %{
+        fprintf(stdout, "* %s\\n", "#{type}");
+        fflush(stdout);
+      }
+      @test_names.each { |name, func_name| stream << %$run_test("#{name}", #{func_name});$ }
+      stream << %$fputs("\\n", stdout); fflush(stdout);}$
     end
     def write_test_calls(stream)
       stream << "#{run_tests}();"
@@ -81,7 +75,7 @@ class TestSuite
 
   def forward_declarations(stream)
     super
-    stream << %$
+    stream << %{
       #include <stdio.h>
       struct {
         int total, processed, failed;
@@ -123,7 +117,7 @@ class TestSuite
       #define TEST_NOT_EQUAL(x, y) if((x) == (y)) print_equality_failure("expected non-equality", #x, #y, __FILE__, __LINE__)
       #define TEST_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) {} else print_equality_failure("expected strings equality", #x, #y, __FILE__, __LINE__)
       #define TEST_NOT_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) print_equality_failure("expected strings non-equality", #x, #y, __FILE__, __LINE__)
-    $
+    }
   end
 
   def definitions(stream)
@@ -142,6 +136,9 @@ class TestSuite
 end
 
 $tests = []
+
+require_relative 'generic_value'
+Value = GenericValue.new(:Value)
 
 Dir['test_*.rb'].each { |t| load t }
 
