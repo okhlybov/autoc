@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 
-require 'autoc/container'
 require 'autoc/hash_set'
 
 
@@ -45,7 +44,7 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{@set.type} set;
+          #{@set.type} set; /**< @private */
         } #{type};
       $
       super
