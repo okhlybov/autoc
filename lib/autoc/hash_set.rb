@@ -1,224 +1,296 @@
-require 'autoc/type'
-require 'autoc/memory'
+# frozen_string_literal: true
+
+
 require 'autoc/vector'
 require 'autoc/list'
-require 'autoc/hasher'
+require 'autoc/set'
 
 
 module AutoC
 
 
-  #
-  class HashSet < Container
+  # @private
+  class HashSet < Set
 
-    include Container::Hashable
+    prepend Container::Hashable
 
-    %i(create destroy).each {|s| redirect(s, 1)}
-    %i(clone equal).each {|s| redirect(s, 2)}
-
-    attr_reader :range
-
-    def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps)
-      @bucket = List.new("_#{self.type}Bucket", self.element)
-      @buckets = Vector.new("_#{self.type}Buckets", @bucket)
-      @range = Range.new(self, @buckets, @bucket)
-      self.dependencies << @range
-      @weak << @range
-    end
-
-    def interface_declarations(stream)
+    def initialize(type, element, visibility = :public)
       super
-      stream << %$
-        typedef struct #{type} #{type};
-        struct #{type} {
-          #{@buckets.type} buckets;
-          size_t element_count, capacity;
-          float overfill;
-        };
-      $
+      raise 'Hash-based set requires hashable element type' unless self.element.hashable?
+      @bucket = Bucket.new(self, self.element)
+      @buckets = Buckets.new(self, @bucket)
+      @range = Range.new(self, visibility)
+      @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
+      dependencies << range << @bucket << @buckets
     end
 
-    def interface_definitions(stream)
-      super
-      stream << %$
-        #{declare} #{type}* #{createEx}(#{type}* self, size_t capacity);
-        #{define} #{type}* #{create}(#{type}* self) {
-          assert(self);
-          return #{createEx}(self, 16);
-        }
-        #{define} size_t #{size}(const #{type}* self) {
-          assert(self);
-          return self->element_count;
-        }
-        #{define} int #{empty}(const #{type}* self) {
-          assert(self);
-          return #{size}(self) == 0;
-        }
-        #{declare} void #{destroy}(#{type}* self);
-        #{declare} void #{_rehash}(#{type}* self, size_t capacity, int live);
-        #{define} void #{rehash}(#{type}* self, size_t capacity) {
-          assert(self);
-          #{_rehash}(self, capacity, 1);
-        }
-      $
-      stream << %$
-        #{declare} int #{put}(#{type}* self, const #{element.type} value);
-      $ if element.cloneable?
-      stream << %$
-        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value);
-        #{define} int #{contains}(const #{type}* self, const #{element.type} value) {
-          return #{findView}(self, value) != NULL;
-        }
-        #{declare} int #{subsetOf}(const #{type}* self, const #{type}* other);
-        #{declare} int #{remove}(#{type}* self, const #{element.type} what);
-      $ if element.equality_testable?
-      stream << %$
-        #{define} int #{equal}(const #{type}* self, const #{type}* other) {
-          assert(self);
-          assert(other);
-          return #{size}(self) == #{size}(other) && #{subsetOf}(self, other) && #{subsetOf}(other, self);
-        }
-      $ if equality_testable?
-    end
+    def canonic_tag = "HashSet<#{element.type}>"
 
-    def definitions(stream)
+    def composite_interface_declarations(stream)
       stream << %$
-        #{define} void #{_rehash}(#{type}* self, size_t capacity, int live) {
-          #{type} origin = *self;
-          assert(self);
-          assert(self->overfill > 0);
-          #{createEx}(self, (self->capacity = capacity)/self->overfill);
-          if(live) {
-            #{range.type} r;
-            /* TODO employ light element transfer instead of a full fledged copying */
-            for(#{range.create}(&r, &origin); !#{range.empty}(&r); #{range.popFront}(&r)) #{put}(self, *#{range.frontView}(&r));
-            #{destroy}(&origin);
-          }
-        }
-        #{define} #{type}* #{createEx}(#{type}* self, size_t capacity) {
-          assert(self);
-          self->element_count = 0;
-          self->overfill = 2.0;
-          #{_rehash}(self, capacity, 0);
-          assert(#{@buckets.size}(&self->buckets) > 0);
-          return self;
-        }
-        #{define} void #{destroy}(#{type}* self) {
-          assert(self);
-          #{@buckets.destroy}(&self->buckets);
-        }
-      $
-      stream << %$
-        static #{@bucket.type}* #{findBucket}(#{type}* self, const #{element.type} value) {
-          return (#{@bucket.type}*)#{@buckets.view}(&self->buckets, #{element.identify(:value)} % #{@buckets.size}(&self->buckets));
-        }
-        #{define} int #{put}(#{type}* self, const #{element.type} value) {
-        #{@bucket.type}* bucket;
-        assert(self);
-        if(#{@bucket.contains}(bucket = #{findBucket}(self, value), value)) {
-          return 0;
-        } else {
-          #{@bucket.push}(bucket, value);
-          return 1;
-        }
-      }
-      $ if element.cloneable?
-      stream << %$
-        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} value) {
-          assert(self);
-          return #{@bucket.findView}(#{findBucket}(self, value), value);
-        }
-        #{define} int #{subsetOf}(const #{type}* self, const #{type}* other) {
-          #{range} r;
-          assert(self);
-          assert(other);
-          if(#{size}(self) > #{size}(other)) return 0;
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
-            if(!#{contains}(other, *#{range.frontView}(&r))) return 0;
-          }
-          return 1;
-        }
-        #{define} int #{remove}(#{type}* self, const #{element.type} what) {
-          assert(self);
-          return #{@bucket.remove}(#{findBucket}(self, what), what);
-        }
-      $ if element.equality_testable?
-    end
-  end # HashSet
+        /**
+          #{defgroup}
+          @brief Hash-based unordered collection of unique elements of type #{element.type}
 
+          For iteration over the set elements refer to @ref #{range.type}.
 
-  class HashSet::Range < Range::Input
+          @see C++ [std::unordered_set<T>](https://en.cppreference.com/w/cpp/container/unordered_set)
 
-    def initialize(container, buckets, bucket)
-      super(container, nil, [@bucket = bucket, @bucketsRange = buckets.range, @bucketRange = bucket.range])
-    end
-
-    def interface_declarations(stream)
-      super
-      stream << %$
+          @since 2.0
+        */
+        /**
+          #{ingroup}
+          @brief Opaque structure holding state of the hash set
+          @since 2.0
+        */
         typedef struct {
-          #{@bucketsRange.type} buckets_range;
-          #{@bucketRange.type} bucket_range;
+          #{@buckets.type} buckets; /**< @private */
+          size_t element_count; /**< @private */
+          size_t capacity; /**< @private */
         } #{type};
       $
+      super
     end
 
-    def interface_definitions(stream)
+    private def configure
       super
-      stream << %$
-        AUTOC_EXTERN void #{_bucketFF}(#{type}* self);
-        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
+      def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
+        code %{
           assert(self);
-          assert(container);
-          #{@bucketsRange.create}(&self->buckets_range, &container->buckets);
-          #{@bucketRange.create}(&self->bucket_range, #{@bucketsRange.frontView}(&self->buckets_range));
-          #{_bucketFF}(self);
-          return self;
+          #{@buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
+          if(!manage_capacity) self->capacity = ~0;
+          self->element_count = 0;
         }
-        #{define} int #{empty}(const #{type}* self) {
-          assert(self);
-          return #{@bucketRange.empty}(&self->bucket_range);
+        header %{
+          @brief Create a set with specified initial capacity
+
+          @param[out] self container to be initialized
+          @param[in] capacity desired capacity
+          @param[in] manage_capacity permit expanding the storage if non-zero
+
+          This function creates an empty hash set configured for accomodating `capacity` elements.
+
+          The `manage_capacity` flag determines whether the set is allowed to grow when the capacity is exceeded.
+          Non-zero value allows expanding the storage (which incurs implicit rehashing) if needed.
+          Zero value, on the contrary, fixes the capacity to initial value despite the demand for expanding.
+          The set created with @ref #{default_create} sets this value to non-zero.
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
         }
-        #{define} void #{popFront}(#{type}* self) {
-          assert(!#{empty}(self));
-          if(#{@bucketRange.empty}(&self->bucket_range)) {
-            #{_bucketFF}(self);
-          } else {
-            #{@bucketRange.popFront}(&self->bucket_range);
-          }
+      end
+      size.inline_code %{
+        assert(self);
+        return self->element_count;
+      }
+      empty.inline_code %{
+        assert(self);
+        return #{size}(self) == 0;
+      }
+      default_create.code %{
+        #{create_capacity}(self, #{@manager[:minimum_capacity]}, 1);
+      }
+      destroy.code %{
+        #{@buckets.destroy('self->buckets')};
+      }
+      copy.code %{
+        #{range.type} r;
+        assert(self);
+        assert(source);
+        #{create_capacity}(self, #{size}(source), 0);
+        for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          #{put}(self, *#{range.view_front}(&r));
         }
-        #{define} const #{@container.element.type}* #{frontView}(const #{type}* self) {
-          assert(self);
-          assert(!#{@bucketRange.empty}(&self->bucket_range));
-          return #{@bucketRange.frontView}(&self->bucket_range);
-        }
-      $
-      stream << %$
-        #{define} #{@container.element.type} #{front}(const #{type}* self) {
-          #{@container.element.type} result;
-          const #{@container.element.type}* e = #{frontView}(self);
-          #{@container.element.clone(:result, '*e')};
-          return result;
-        }
-      $ if @container.element.cloneable?
+      }
+      equal.code %{
+        return #{@buckets.equal}(&self->buckets, &other->buckets);
+      }
+      lookup.code %{
+        return #{@bucket.lookup}(#{_locate}(self, value), value);
+      }
+      put.code %{
+        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(!#{@bucket.contains}(bucket, value)) {
+          #{@bucket.push_front}((#{@bucket.ptr_type})bucket, value);
+          ++self->element_count;
+          #{_rehash}(self);
+          return 1;
+        } else return 0;
+      }
+      push.code %{
+        /* FIXME get rid of code duplication */
+        int replace = #{remove}(self, value);
+        #{put}(self, value);
+        return replace;
+      }
+      remove.code %{
+        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(#{@bucket.remove}((#{@bucket.ptr_type})bucket, value)) {
+          --self->element_count;
+          return 1;
+        } else return 0;
+      }
     end
 
     def definitions(stream)
-      super
       stream << %$
-        /* Fast forward to the next non-empty bucket if any */
-        void #{_bucketFF}(#{type}* self) {
+        static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
+          return #{@buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{@buckets.size}(&self->buckets));
+        }
+        /* Push value to the set bypassing the element's copy function */
+        static void #{adopt}(#{ptr_type} self, #{element.const_type} value) {
+          #{@bucket.adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
+        }
+        /* Perform a rehash accomodating new actual size */
+        static void #{_rehash}(#{ptr_type} self) {
           assert(self);
-          while(#{@bucket.empty}(#{@bucketsRange.frontView}(&self->buckets_range))) {
-            #{@bucketsRange.popFront}(&self->buckets_range);
-            if(#{@bucketsRange.empty}(&self->buckets_range)) return;
+          if(#{size}(self) > self->capacity) {
+            #{type} t;
+            #{range.type} r;
+            #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
+            for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+              #{adopt}(&t, *#{range.view_front}(&r));
+            }
+            #{@buckets.dispose}(&self->buckets);
+            *self = t;
           }
-          #{@bucketRange.create}(&self->bucket_range, #{@bucketsRange.frontView}(&self->buckets_range));
         }
       $
+      super
     end
 
-  end # Range
 
-end # AutoC
+    # @private
+    class HashSet::Range < Range::Forward
+
+      def initialize(iterable, visibility)
+        super(iterable, visibility)
+        @bucket = iterable.instance_variable_get(:@bucket)
+        @buckets = iterable.instance_variable_get(:@buckets)
+      end
+
+      def composite_interface_declarations(stream)
+        stream << %$
+          /**
+            #{defgroup}
+            @ingroup #{iterable.type}
+
+              @brief #{canonic_desc}
+
+              This range implements the @ref #{archetype} archetype.
+
+              @see @ref Range
+
+              @since 2.0
+          */
+          /**
+            @brief Opaque structure holding state of the set's range
+            @since 2.0
+          */
+          typedef struct {
+            #{@bucket.range.type} bucket_range; /**< @private */
+            #{@buckets.range.type} buckets_range; /**< @private */
+          } #{type};
+        $
+        super
+      end
+
+      private def configure
+        super
+        custom_create.code %{
+          assert(self);
+          assert(iterable);
+          #{@buckets.range.custom_create}(&self->buckets_range, &iterable->buckets);
+          #{_next_bucket}(self, 1);
+        }
+        empty.code %{
+          assert(self);
+          return #{@bucket.range.empty}(&self->bucket_range);
+        }
+        pop_front.code %{
+          assert(self);
+          #{@bucket.range.pop_front}(&self->bucket_range);
+          if(#{@bucket.range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
+        }
+        view_front.code %{
+          assert(self);
+          assert(!#{empty}(self));
+          return #{@bucket.range.view_front}(&self->bucket_range);
+        }
+      end
+
+      def definitions(stream)
+        stream << %$
+          static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
+            do {
+              if (new_bucket_range) #{@bucket.range.custom_create}(&self->bucket_range, #{@buckets.range.view_front}(&self->buckets_range));
+              else new_bucket_range = 1; /* Skip the first creation act only */
+              if (!#{@bucket.range.empty}(&self->bucket_range)) break;
+              else #{@buckets.range.pop_front}(&self->buckets_range);
+            } while(!#{@buckets.range.empty}(&self->buckets_range));
+          }
+        $
+        super
+      end
+    end
+
+
+  end
+
+
+  # @private
+  class HashSet::Bucket < AutoC::List
+
+    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
+
+    private def configure
+      super
+      def_method :void, :adopt, { self: type, value: element.const_type } do
+        code %{
+          /* Derived from #{push} */
+          #{@node}* new_node = #{memory.allocate(@node)};
+          new_node->next_node = self->head_node;
+          self->head_node = new_node;
+          new_node->element = value;
+          ++self->node_count;
+        }
+      end
+      def_method :void, :dispose, { self: type } do
+        code %{
+          /* Derived from #{drop}() */
+          while(!#{empty}(self)) {
+            #{@node}* this_node = self->head_node; assert(this_node);
+            self->head_node = self->head_node->next_node;
+            #{memory.free(:this_node)};
+            --self->node_count;
+          }
+        }
+      end
+    end
+
+  end
+
+
+  # @private
+  class HashSet::Buckets < AutoC::Vector
+
+    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
+
+    private def configure
+      super
+      def_method :void, :dispose, { self: type } do
+        code %{
+          #{range.type} r;
+          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element.dispose}((#{element.ptr_type})#{range.view_front}(&r));
+          }
+          #{memory.free('self->elements')};
+        }
+      end
+    end
+
+  end
+
+
+end

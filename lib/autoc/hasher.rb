@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+
 require 'singleton'
 require 'autoc/module'
 
@@ -5,31 +8,23 @@ require 'autoc/module'
 module AutoC
 
 
-  # Basic incremental hasher.
+  # Basic incremental xor-shift hasher.
   class Hasher
 
     include Singleton
-    include Module::Entity
+    include Entity
 
-    def type
-      :size_t
-    end
+    def type = :size_t
 
-    def create(hasher)
-      "#{hasher} = AUTOC_HASHER_SEED"
-    end
+    def create(hasher) = "#{hasher} = AUTOC_HASHER_SEED"
 
-    def update(hasher, value)
-      "#{hasher} = ((#{hasher} << 1) | (#{hasher} >> (sizeof(#{hasher})*CHAR_BIT - 1))) ^ (#{value})"
-    end
+    def update(hasher, value) = "#{hasher} = ((#{hasher} << 1) | (#{hasher} >> (sizeof(#{hasher})*CHAR_BIT - 1))) ^ (#{value})"
 
-    def result(hasher)
-      hasher
-    end
+    def result(hasher) = hasher
 
-    def destroy(hasher) end
+    def destroy(hasher) = nil
 
-    def interface(stream)
+    def interface_definitions(stream)
       stream << %$
         #include <limits.h>
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
@@ -79,7 +74,9 @@ module AutoC
     end
 
     @@default = instance
-    def self.default; @@default end
+
+    def self.default = @@default
+
     def self.default=(hasher) @@default = hasher end
 
   end # Hasher

@@ -1,167 +1,207 @@
-require 'autoc/type'
+# frozen_string_literal: true
+
+
+require 'autoc/container'
 require 'autoc/range'
-require 'autoc/memory'
 
 
 module AutoC
 
 
-  #
+  # Generator for the linked list container type.
   class List < Container
 
-    %i(create destroy).each {|s| redirect(s, 1)}
-    %i(clone equal).each {|s| redirect(s, 2)}
+    prepend Container::Hashable
+    prepend Container::Sequential
 
-    alias default_create create
-
-    attr_reader :range
-
-    def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps << (@range = Range.new(self)))
-      @weak << range
+    def initialize(type, element, visibility = :public)
+      super
+      @node = decorate_identifier(:_node)
+      dependencies << (@range = Range.new(self, visibility))
     end
 
-    def interface_declarations(stream)
-      super
+    def orderable? = false # No idea how to compute the ordering of this container
+
+    def canonic_tag = "List<#{element.type}>"
+
+    def composite_interface_declarations(stream)
       stream << %$
-        typedef struct #{node} #{node};
-        typedef struct #{type} #{type};
+        /**
+          #{defgroup}
+
+          @brief Singly linked list of elements of type #{element.type}
+
+          For iteration over the list elements refer to @ref #{range.type}.
+
+          @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
+
+          @since 2.0
+        */
+        typedef struct #{@node} #{@node}; /**< @private */
+        typedef struct #{type} #{type}; /**< @private */
+        /**
+          #{ingroup}
+          @brief Opaque structure holding state of the list
+          @since 2.0
+        */
         struct #{type} {
-          #{node}* head_node;
-          size_t node_count;
+          #{@node}* head_node; /**< @private */
+          size_t node_count; /**< @private */
         };
-        struct #{node} {
+        /** @private */
+        struct #{@node} {
           #{element.type} element;
-          #{node}* next_node;
+          #{@node}* next_node;
         };
       $
-    end
-
-    def interface_definitions(stream)
       super
-      stream << %$
-        #{define} size_t #{size}(const #{type}* self) {
-          assert(self);
-          return self->node_count;
-        }
-        #{define} int #{empty}(const #{type}* self) {
-          assert((self->node_count == 0) == (self->head_node == NULL));
-          return #{size}(self) == 0;
-        }
-        #{define} #{type}* #{create}(#{type}* self) {
-          assert(self);
-          self->head_node = NULL;
-          self->node_count = 0;
-          return self;
-        }
-        #{define} int #{drop}(#{type}* self) {
-          if(!#{empty}(self)) {
-            #{node}* this_node = self->head_node; assert(this_node);
-            self->head_node = self->head_node->next_node;
-            #{element.destroy('this_node->element') if element.destructible?};
-            #{memory.free(:this_node)};
-            --self->node_count;
-            return 1;
-          } else return 0;
-        }
-        #{define} #{type}* #{destroy}(#{type}* self) {
-          while(#{drop}(self));
-          return NULL;
-        }
-        #{define} const #{element.type}* #{view}(const #{type}* self) {
+    end
+    
+    private def configure
+      super
+      def_method :void, :_drop_front, { self: type }, visibility: :private do
+        code %{
+          #{@node}* this_node;
           assert(!#{empty}(self));
-          return &self->head_node->element;
+          this_node = self->head_node; assert(this_node);
+          self->head_node = self->head_node->next_node;
+          #{memory.free(:this_node)};
+          --self->node_count;
         }
-      $
-      stream << %$
-        #{define} #{element.type} #{peek}(const #{type}* self) {
+      end
+      def_method element.const_ptr_type, :view_front, { self: const_type } do
+        inline_code %{
+          assert(!#{empty}(self));
+          return &(self->head_node->element);
+        }
+        header %{
+          @brief Get a view of the front element
+
+          @param[in] self list to get element from
+          @return a view of a front element
+
+          This function is used to get a constant reference (in form of the C pointer) to the front value contained in `self`.
+          Refer to @ref #{take_front} to get an independent copy of that element.
+
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+
+          @note List must not be empty (see @ref #{empty}).
+
+          @since 2.0
+        }
+      end
+      def_method element.type, :pull_front, { self: type } do
+        code %{
+          #{element.type} value;
+          assert(self);
+          assert(!#{empty}(self));
+          value = *#{view_front}(self);
+          #{_drop_front}(self);
+          return value;
+        }
+        header %{
+          @brief Extract front element
+
+          @param[in] self list to extract element from
+          @return front element
+
+          This function returns and removes front element from the list.
+          Note that contrary to @ref #{take_front} no copy operation is performed - it is the contained value itself that is returned.
+
+          @note List must not be empty (see @ref #{empty}).
+
+          @since 2.0
+        }
+      end
+      def_method :void, :pop_front, { self: type } do
+        if element.destructible?
+          code %{
+            #{element.type} value;
+            assert(self);
+            assert(!#{empty}(self));
+            value = *#{view_front}(self);
+            #{element.destroy(:value)};
+            #{_drop_front}(self);
+          }
+        else
+          code %{
+            assert(self);
+            assert(!#{empty}(self));
+            #{_drop_front}(self);
+          }
+        end
+        header %{
+          @brief Drop front element
+
+          @param[in] self list to drop element from
+
+          This function removes front element from the list and destroys it with the respective destructor.
+
+          @note List must not be empty (see @ref #{empty}).
+
+          @since 2.0
+        }
+      end
+      def_method element.type, :take_front, { self: const_type }, require:-> { element.copyable? } do
+        code %{
           #{element.type} result;
-          const #{element.type}* e;
+          #{element.const_ptr_type} e;
+          assert(self);
           assert(!#{empty}(self));
-          e = #{view}(self);
-          #{element.clone(:result, '*e')};
+          e = #{view_front}(self);
+          #{element.copy(:result, '*e')};
           return result;
         }
-        #{define} #{element.type} #{pop}(#{type}* self) {
-          #{element.type} result;
-          assert(!#{empty}(self));
-          result = #{peek}(self);
-          #{drop}(self);
-          return result;
+        header %{
+          @brief Get front element
+
+          @param[in] self list to get element from
+          @return a *copy* of a front element
+
+          This function is used to get a *copy* of the front value contained in `self`.
+          Refer to @ref #{view_front} to get a view of that element without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note List must not be empty (see @ref #{empty}).
+
+          @since 2.0
         }
-        #{define} void #{push}(#{type}* self, const #{element.type} value) {
-          #{node}* new_node = #{memory.allocate(node)};
-          #{element.clone('new_node->element', :value)};
+      end
+      def_method :void, :push_front, { self: type, value: element.const_type }, require:-> { element.copyable? } do
+        code %{
+          #{@node}* new_node;
+          assert(self);
+          new_node = #{memory.allocate(_node)};
+          #{element.copy('new_node->element', :value)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;
           ++self->node_count;
         }
-      $ if element.cloneable?
-      stream << %$
-        #{declare} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} what);
-        #{define} int contains(const #{type}* self, const #{element.type} what) {
-          return #{findView}(self, what) != NULL;
-        }
-        #{declare} int #{remove}(#{type}* self, const #{element.type} what);
-      $ if element.equality_testable?
-      stream << "#{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);" if cloneable?
-      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
-    end
+        header %{
+          @brief Put element
 
-    def definitions(stream)
-      super
-      stream << %$
-        #{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) {
-          #{range.type} r;
-          #{node}* new_node;
-          #{node}* last_node = NULL;
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
-            const #{element.type}* e = #{range.viewFront}(&r);
-            new_node = #{memory.allocate(node)};
-            #{element.clone('new_node->element', '*e')};
-            new_node->next_node = NULL;
-            if(last_node) {
-              last_node->next_node = new_node;
-              last_node = new_node;
-            } else {
-              self->head_node = last_node = new_node;
-            }
-          }
-          self->node_count = #{size}(origin);
-          return self;
+          @param[in] self vector to put element into
+          @param[in] value value to put
+
+          This function pushes a *copy* of the specified value to the front position of `self`.
+          It becomes a new front element.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @since 2.0
         }
-      $ if cloneable?
-      stream << %$
-        #{define} int #{equal}(const #{type}* self, const #{type}* other) {
-          if(#{size}(self) == #{size}(other)) {
-            #{range.type} ra, rb;
-            for(#{range.create}(&ra, self), #{range.create}(&rb, other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.popFront}(&ra), #{range.popFront}(&rb)) {
-              const #{element.type}* a = #{range.viewFront}(&ra);
-              const #{element.type}* b = #{range.viewFront}(&rb);
-              if(!#{element.equal('*a', '*b')}) return 0;
-            }
-            return 1;
-          } else return 0;
-        }
-      $ if equality_testable?
-      stream << %$
-        #{define} const #{element.type}* #{findView}(const #{type}* self, const #{element.type} what) {
-          #{range.type} r;
-          for(#{range.create}(&r, self); !#{range.empty}(&r); #{range.popFront}(&r)) {
-            const #{element.type}* e = #{range.viewFront}(&r);
-            if(#{element.equal('*e', :what)}) return e;
-          }
-          return NULL;
-        }
-        #{define} int #{remove}(#{type}* self, const #{element.type} what) {
-          #{node} *node, *prev_node;
+      end
+      def_method :int, :remove, { self: type, value: element.const_type }, require:-> { element.comparable? } do
+        code %{
+          #{@node} *node, *prev_node;
           int removed = 0;
           assert(self);
           node = self->head_node;
           prev_node = NULL;
           while(node) {
-            if(#{element.equal('node->element', :what)}) {
-              #{node}* this_node;
+            if(#{element.equal('node->element', :value)}) {
+              #{@node}* this_node;
               if(prev_node) {
                 this_node = prev_node->next_node = node->next_node;
               } else {
@@ -180,62 +220,124 @@ module AutoC
           }
           return removed;
         }
-      $ if element.equality_testable?
-    end
-  end # List
+        header %{
+          @brief Remove element
 
-  class List::Range < Range::Forward
+          @param[in] self list to remove element from
+          @param[in] value value to search in list
+          @return non-zero value on successful removal and zero value otherwise
 
-    def initialize(list)
-      super(list, nil, [])
-    end
+          This function searches `self` for a first element equal to the specified `value` and removes it from the list.
+          The removed element is destroyed with respective destructor.
 
-    def interface_declarations(stream)
-      super
-      stream << %$
-        typedef struct {
-          #{@container.node}* node;
-        } #{type};
-      $
-    end
+          The function return value is non-zero if such element was found and removed and zero value otherwise.
 
-    def interface_definitions(stream)
-      super
-      stream << %$
-        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
-          assert(self);
-          assert(container);
-          self->node = container->head_node;
-          return self;
+          This function requires the element type to be *comparable* (i.e. to have a well-defined equality operation).
+
+          @since 2.0
         }
-        #{define} int #{empty}(const #{type}* self) {
+      end
+      default_create.inline_code %{
+        assert(self);
+        self->head_node = NULL;
+        self->node_count = 0;
+      }
+      destroy.inline_code %{
+        assert(self);
+        while(!#{empty}(self)) #{pop_front}(self);
+      }
+      size.inline_code %{
+        assert(self);
+        return self->node_count;
+      }
+      empty.inline_code %{
+        assert(self);
+        assert((self->node_count == 0) == (self->head_node == NULL));
+        return #{size}(self) == 0;
+      }
+      copy.code %{
+        #{range.type} r;
+        assert(self);
+        assert(source);
+        #{create}(self);
+        for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          #{push_front}(self, *#{range.view_front}(&r));
+        }
+      }
+      equal.code %{
+        #{range.type} ra, rb;
+        assert(self);
+        assert(other);
+        if(#{size}(self) == #{size}(other)) {
+          for(ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
+            #{element.const_ptr_type} a = #{range.view_front}(&ra);
+            #{element.const_ptr_type} b = #{range.view_front}(&rb);
+            if(!#{element.equal('*a', '*b')}) return 0;
+          }
+          return 1;
+        } else return 0;
+      }
+    end
+
+    class List::Range < Range::Forward
+
+      def initialize(*args)
+        super
+        @list_node = iterable.instance_variable_get(:@node)
+      end
+
+      def composite_interface_declarations(stream)
+        stream << %$
+          /**
+            #{defgroup}
+            @ingroup #{iterable.type}
+
+            @brief #{canonic_desc}
+
+            This range implements the @ref #{archetype} archetype.
+
+            @see @ref Range
+
+            @since 2.0
+          */
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the list's range
+            @since 2.0
+          */
+          typedef struct {
+            #{@list_node}* node; /**< @private */
+          } #{type};
+        $
+        super
+      end
+
+      private def configure
+        super
+        custom_create.inline_code %{
+          assert(self);
+          assert(iterable);
+          self->node = iterable->head_node;
+        }
+        empty.inline_code %{
           assert(self);
           return self->node == NULL;
         }
-        #{define} #{type}* #{save}(#{type}* self, const #{type}* origin) {
+        pop_front.inline_code %{
           assert(self);
-          assert(origin);
-          *self = *origin;
-          return self;
-        }
-        #{define} void #{popFront}(#{type}* self) {
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        #{define} const #{@container.element.type}* #{viewFront}(const #{type}* self) {
+        view_front.inline_code %{
+          assert(self);
           assert(!#{empty}(self));
           return &self->node->element;
         }
-      $
-      stream << %$
-        #{define} #{@container.element.type} #{front}(const #{type}* self) {
-          #{@container.element.type} result;
-          const #{@container.element.type}* e = #{viewFront}(self);
-          #{@container.element.clone(:result, '*e')};
-          return result;
-        }
-      $ if @container.element.cloneable?
-    end
-  end # Range
+      end
+    end # Range
 
-end # AutoC
+
+  end # List
+
+
+end

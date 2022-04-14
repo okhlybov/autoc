@@ -27,7 +27,7 @@ add_custom_command(
     OUTPUT fake ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.c ${CMAKE_CURRENT_SOURCE_DIR}/doc_auto.h
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc.rb
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${Ruby_EXECUTABLE} -I. -I../next ${CMAKE_CURRENT_SOURCE_DIR}/doc.rb
+    COMMAND ${Ruby_EXECUTABLE} -I. -I../lib ${CMAKE_CURRENT_SOURCE_DIR}/doc.rb
     COMMAND ${AStyle} -n doc_auto.h
     VERBATIM
 )

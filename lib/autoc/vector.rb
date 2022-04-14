@@ -1,143 +1,158 @@
-require 'autoc/type'
-require 'autoc/stdc'
+# frozen_string_literal: true
+
+
+require 'autoc/container'
 require 'autoc/range'
-require 'autoc/memory'
 
 
 module AutoC
 
 
+  # Generator for the vector container type.
   class Vector < Container
 
-    include ConstructibleAdapter
-
-    %i(destroy).each {|s| redirect(s, 1)}
-    %i(clone equal).each {|s| redirect(s, 2)}
-
-    # @note Vector is default constructible regardless of the element's traits since zero-size instance is allowed.
-    def default_constructible?
-      true
-    end
-
-    # @note Vector itself has custom constructor only if the element type has default constructor defined.
-    def custom_constructible?
-      element.default_constructible?
-    end
-
-    attr_reader :range
-
-    def initialize(type, element, prefix: nil, deps: [])
-      super(type, element, prefix, deps << (@range = Range.new(self)))
-      @weak << range
-      @default_create = :create0
-      if custom_constructible?
-        @custom_create = :create
-        self.custom_create_params = [STDC::SIZE_T]
-      end
-    end
-
-    def interface_declarations(stream)
+    include Container::Hashable
+    include Container::Sequential
+    
+    def initialize(type, element, visibility = :public)
       super
+      dependencies << (@range = Range.new(self, visibility))
+    end
+
+    def orderable? = false # No idea how to compute the ordering of this container
+
+    def canonic_tag = "Vector<#{element.type}>"
+
+    def composite_interface_declarations(stream)
       stream << %$
+        /**
+          #{defgroup}
+          @brief Resizable vector of elements of type #{element.type}
+
+          #{type} is a container that encapsulates dynamic size array of values of type #{element.type}.
+
+          It is a contiguous sequence direct access container where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
+
+          For iteration over the vector elements refer to @ref #{range.type}.
+
+          @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
+
+          @since 2.0
+        */
+        /**
+          #{ingroup}
+          @brief Opaque structure holding state of the vector
+          @since 2.0
+        */
         typedef struct {
-          #{element.type}* elements;
-          size_t element_count;
+          #{element.ptr_type} elements; /**< @private */
+          size_t element_count; /**< @private */
         } #{type};
       $
+      super
     end
 
-    def interface_definitions(stream)
+    private def configure
       super
-      stream << %$
-        #{define} size_t #{size}(const #{type}* self) {
+      def_method :int, :check_position, { self: const_type, position: :size_t } do
+        inline_code %{
           assert(self);
-          return self->element_count;
+          return position < #{size}(self);
         }
-        #{define} int #{within}(const #{type}* self, size_t index) {
-          assert(self);
-          return index < #{size}(self);
-        }
-        #{define} const #{element.type}* #{view}(const #{type}* self, size_t index) {
-          assert(self);
-          assert(#{within}(self, index));
-          return &self->elements[index];
-        }
-        #{define} #{type}* #{send(@default_create)}(#{type}* self) {
-          assert(self);
-          self->element_count = 0;
-          self->elements = NULL;
-          return self;
-        }
-        #{declare} #{type}* #{destroy}(#{type}* self);
-      $
-      stream << %$
-        #{declare} #{type}* #{send(@custom_create)}(#{type}* self, size_t size);
-      $ if custom_constructible?
-      stream << %$
-        #{declare} void #{resize}(#{type}* self, size_t new_size);
-      $ if element.default_constructible?
-      stream << %$
-        #{declare} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value);
-        #{declare} #{type}* #{clone}(#{type}* self, const #{type}* origin);
-        #{define} #{element.type} #{get}(const #{type}* self, size_t index) {
-          #{element.type} value;
-          const #{element.type}* p = #{view(:self, :index)};
-          #{element.clone(:value, '*p')};
-          return value;
-        }
-        #{define} void #{set}(#{type}* self, size_t index, const #{element.type} value) {
-          assert(self);
-          assert(#{within}(self, index));
-          #{element.destroy('self->elements[index]') if element.destructible?};
-          #{element.clone('self->elements[index]', :value)};
-        }
-      $ if element.cloneable?
-      stream << "#{declare} int #{equal}(const #{type}* self, const #{type}* other);" if equality_testable?
-      stream << "#{declare} void #{sort}(#{type}* self, int direction);" if element.comparable?
-    end
+        header %{
+          @brief Check for position index validity
 
-    def definitions(stream)
-      super
-      stream << %$
-        static void #{allocate}(#{type}* self, size_t element_count) {
-          assert(self);
-          if((self->element_count = element_count) > 0) {
-            self->elements = #{memory.allocate(element.type, :element_count)}; assert(self->elements);
-          } else {
-            self->elements = NULL;
-          }
+          @param[in] self vector to check position for
+          @param[in] position position index to check for validity
+          @return non-zero if `position` is valid (i.e. falls within [0,size) range) and zero otherwise
+
+          The function checks whether `position` falls within [0,size) range.
+
+          @note This function should be used to do explicit bounds checking prior accessing/setting
+            the vector's element (see @ref #{get}, @ref #{view}, @ref #{set})
+            as the respective functions skip this test for performance reasons.
+
+          @since 2.0
         }
-      $
-      stream << %$
-        #{define} #{type}* #{destroy}(#{type}* self) {
-          assert(self);
-      $
-        stream << %${
-            size_t index, size = #{size}(self);
-            for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
-        }$ if element.destructible?
-      stream << %$
-          #{memory.free('self->elements')};
-          return NULL;
-        }
-      $
-      stream << %$
-        #{define} #{type}* #{send(@custom_create)}(#{type}* self, size_t size) {
+      end
+      def_method :void, :create_size, { self: type, size: :size_t }, instance: :custom_create, require:-> { custom_constructible? } do
+        code %{
           size_t index;
           assert(self);
           #{allocate}(self, size);
           for(index = 0; index < size; ++index) {
             #{element.default_create('self->elements[index]')};
           }
-          return self;
         }
-      $ if custom_constructible?
-      stream << %$
-        #{define} void #{resize}(#{type}* self, size_t new_size) {
+        header %{
+          @brief Create a new vector of specified size
+
+          @param[out] self vector to be initialized
+          @param[in] size size of new vector
+
+          Each new vector's element is initialized with the respective default constructor.
+
+          This function requires the element type to be *default constructible* (i.e. to have a well-defined parameterless constructor).
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        }
+      end
+      def_method :void, :create_set, { self: type, size: :size_t, value: element.const_type }, require:-> { element.copyable? } do
+        code %{
+          size_t index;
+          assert(self);
+          #{allocate}(self, size);
+          for(index = 0; index < size; ++index) {
+            #{element.copy('self->elements[index]', :value)};
+          }
+        }
+        header %{
+          @brief Create and initialize a new vector of specified size
+
+          @param[out] self vector to be initialized
+          @param[in] size size of new vector
+          @param[in] value value to initialize the vector with
+
+          Each new vector's element is set to a *copy* of the specified value.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note Previous contents of `*self` is overwritten.
+
+          @since 2.0
+        }
+      end
+      def_method element.const_ptr_type, :view, { self: const_type, position: :size_t } do
+        inline_code %{
+          assert(self);
+          assert(#{check_position}(self, position));
+          return &(self->elements[position]);
+        }
+        header %{
+          @brief Get a view of the element at specified position
+
+          @param[in] self vector to access element from
+          @param[in] position position to access element at
+          @return a view of element at `position`
+
+          This function is used to get a constant reference (in form the C pointer) to the value contained in `self` at specified position (`return &self[position]`).
+          Refer to @ref #{get} to get an independent copy of the element.
+
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+
+          @note `position` must be valid (see @ref #{check_position}).
+
+          @since 2.0
+        }
+      end
+      def_method :void, :resize, { self: type, new_size: :size_t }, require:-> { element.default_constructible? } do
+        code %{
           size_t index, size, from, to;
           assert(self);
           if((size = #{size}(self)) != new_size) {
-            #{element.type}* elements = #{memory.allocate(element.type, :new_size)}; assert(elements);
+            #{element.ptr_type} elements = #{memory.allocate(element.type, :new_size)}; assert(elements);
             from = AUTOC_MIN(size, new_size);
             to = AUTOC_MAX(size, new_size);
             for(index = 0; index < from; ++index) {
@@ -155,147 +170,239 @@ module AutoC
             self->element_count = new_size;
           }
         }
-      $ if element.default_constructible?
-      stream << %$
-        #{define} #{type}* #{createEx}(#{type}* self, size_t size, const #{element.type} value) {
-          size_t index;
+        header %{
+          @brief Resize vector
+
+          @param[in,out] self vector to be resized
+          @param[in] new_size new size for the vector
+
+          This function reallocates and transfers all elements from original storage to a new one without preforming a copy operation.
+
+          If new size is gerater than old one (the vector expansion operation), extra elements are initialized with the respective default constructor.
+
+          If new size is smaller the old one (the vector shrinking operation), excessive elements are destroyed with respective destructor.
+
+          This function requires the element type to be *default constructible* (i.e. to have a well-defined parameterless constructor).
+
+          @since 2.0
+        }
+      end
+      def_method element.type, :get, { self: const_type, position: :size_t }, require:-> { element.copyable? } do
+        inline_code %{
+          #{element.type} value;
+          #{element.const_ptr_type} p = #{view}(self, position);
+          #{element.copy(:value, '*p')};
+          return value;
+        }
+        header %{
+          @brief Get an element at specified position
+
+          @param[in] self vector to get element from
+          @param[in] position position to get element at
+          @return a *copy* of element at `position`
+
+          This function is used to get a *copy* of the value contained in `self` at specified position (`return self[position]`).
+          Refer to @ref #{view} to get a view of the element without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `position` must be valid (see @ref #{check_position}).
+
+          @since 2.0
+        }
+      end
+      def_method :void, :set, { self: type, position: :size_t, value: element.const_type }, require:-> { element.copyable? } do
+        inline_code %{
           assert(self);
-          #{allocate}(self, size);
+          assert(#{check_position}(self, position));
+          #{element.destroy('self->elements[position]') if element.destructible?};
+          #{element.copy('self->elements[position]', :value)};
+        }
+        header %{
+          @brief Set an element at specified position
+
+          @param[in] self vector to put element into
+          @param[in] position position to put element at
+          @param[in] value value to put
+
+          This function is used to set the value in `self` at specified position (`self[position] = value`) to a *copy* of the specified value
+          displacing previous value which is destroyed with respective destructor.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `position` must be valid (see @ref #{check_position}).
+
+          @since 2.0
+        }
+      end
+      def_method :void, :sort, { self: type, direction: :int }, require:-> { element.orderable? } do
+        code %{
+          typedef int (*F)(const void*, const void*);
+          assert(self);
+          qsort(self->elements, #{size}(self), sizeof(#{element.type}), direction > 0 ? (F)#{ascend} : (F)#{descend});
+        }
+        header %{
+          @brief Perform an in-place sorting of the elements
+
+          @param[in] self vector to sort the elements of
+          @param[in] direction greater than zero for ascending sort otherwise perform descending sort
+
+          The function performs sorting of the array.
+
+          This function requires the element type to be *orderable* (i.e. to have a well-defined ordering function).
+
+          @since 2.0
+        }
+      end
+      default_create.inline_code %{
+        assert(self);
+        self->element_count = 0;
+        self->elements = NULL;
+      }
+      size.inline_code %{
+        assert(self);
+        return self->element_count;
+      }
+      empty.inline_code %{
+        assert(self);
+        return #{size}(self) == 0;
+      }
+      copy.code %{
+        size_t index, size;
+        assert(self);
+        assert(source);
+        #{allocate}(self, size = #{size}(source));
+        for(index = 0; index < size; ++index) {
+          #{element.copy('self->elements[index]', 'source->elements[index]')};
+        }
+      }
+      equal.code %{
+        size_t index, size;
+        assert(self);
+        assert(other);
+        if(#{size}(self) == (size = #{size}(other))) {
           for(index = 0; index < size; ++index) {
-            #{element.clone('self->elements[index]', :value)};
+            if(!(#{element.equal('self->elements[index]', 'other->elements[index]')})) return 0;
           }
-          return self;
-        }
-        #{define} #{type}* #{clone}(#{type}* self, const #{type}* origin) {
-          size_t index, size;
-          assert(self);
-          assert(origin);
-          #{destroy}(self);
-          #{allocate}(self, size = #{size}(origin));
-          for(index = 0; index < size; ++index) {
-            #{element.clone('self->elements[index]', 'origin->elements[index]')};
-          }
-          return self;
-        }
-      $ if element.cloneable?
+          return 1;
+        } else return 0;
+      }
+      # destroy
+      x = 'assert(self);'
+      x += %{{
+        size_t index, size = #{size}(self);
+        for(index = 0; index < size; ++index) #{element.destroy('self->elements[index]')};
+      }} if element.destructible?
+      x += "#{memory.free('self->elements')};"
+      destroy.code x
+    end
+
+    def definitions(stream)
       stream << %$
-        #{define} int #{equal}(const #{type}* self, const #{type}* other) {
-          size_t index, size;
+        static void #{allocate}(#{ptr_type} self, size_t element_count) {
           assert(self);
-          assert(other);
-          if(#{size}(self) == (size = #{size}(other))) {
-            for(index = 0; index < size; ++index) {
-              if(!(#{element.equal('self->elements[index]', 'other->elements[index]')})) return 0;
-            }
-            return 1;
-          } else return 0;
-        }
-      $ if equality_testable?
-      stream << %$
-        static int #{ascend}(void* lp_, void* rp_) {
-          #{element.type}* lp = (#{element.type}*)lp_;
-          #{element.type}* rp = (#{element.type}*)rp_;
-          if(#{element.equal('*lp', '*rp')}) {
-            return 0;
-          } else if(#{element.less('*lp', '*rp')}) {
-            return -1;
+          if((self->element_count = element_count) > 0) {
+            self->elements = #{memory.allocate(element.type, :element_count)}; assert(self->elements);
           } else {
-            return +1;
+            self->elements = NULL;
           }
+        }
+      $
+      stream << %$
+        #include <stdlib.h>
+        static int #{ascend}(void* lp_, void* rp_) {
+          #{element.const_type}* lp = (#{element.type}*)lp_;
+          #{element.const_type}* rp = (#{element.type}*)rp_;
+          return #{element.compare('*lp', '*rp')};
         }
         static int #{descend}(void* lp_, void* rp_) {
           return -#{ascend}(lp_, rp_);
         }
-        #include <stdlib.h>
-        #{define} void #{sort}(#{type}* self, int order) {
-          typedef int (*F)(const void*, const void*);
-          assert(self);
-          qsort(self->elements, #{size}(self), sizeof(#{element.type}), order > 0 ? (F)#{ascend} : (F)#{descend});
-        }
-      $ if element.comparable?
+      $ if element.orderable?
+      super
     end
+
+
+    class Vector::Range < Range::RandomAccess
+
+      def composite_interface_declarations(stream)
+        stream << %$
+          /**
+            #{defgroup}
+            @ingroup #{iterable.type}
+
+            @brief #{canonic_desc}
+
+            This range implements the @ref #{archetype} archetype.
+
+            @see @ref Range
+
+            @since 2.0
+          */
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the vector's range
+            @since 2.0
+          */
+          typedef struct {
+            #{iterable.const_ptr_type} iterable; /**< @private */
+            size_t front_position /**< @private */,
+                   back_position; /**< @private */
+          } #{type};
+        $
+        super
+      end
+      
+      private def configure
+        super
+        custom_create.inline_code %{
+          assert(self);
+          assert(iterable);
+          self->iterable = iterable;
+          self->front_position = 0;
+          self->back_position = #{iterable.size}(iterable)-1;
+        }
+        length.inline_code %{
+          assert(self);
+          return #{empty}(self) ? 0 : self->back_position - self->front_position + 1;
+        }
+        empty.inline_code %{
+          assert(self);
+          return !(
+            self->front_position <= self->back_position &&
+            self->front_position <  self->iterable->element_count &&
+            self->back_position  <  self->iterable->element_count
+          );
+        }
+        pop_front.inline_code %{
+          assert(!#{empty}(self));
+          ++self->front_position;
+        }
+        pop_back.inline_code %{
+          assert(!#{empty}(self));
+          --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
+        }
+        view_front.inline_code %{
+          assert(!#{empty}(self));
+          return #{iterable.view('self->iterable', 'self->front_position')};
+        }
+        view_back.inline_code %{
+          assert(!#{empty}(self));
+          return #{iterable.view('self->iterable', 'self->back_position')};
+        }
+        peek.inline_code %{
+          assert(self);
+          return #{iterable.view('self->iterable', 'self->front_position + position')};
+        }
+        get.inline_code %{
+          assert(self);
+          return #{iterable.get('self->iterable', 'self->front_position + position')};
+        }
+      end
+    end # Range
+
 
   end # Vector
 
 
-  class Vector::Range < Range::RandomAccess
-
-    def initialize(vector)
-      super(vector, nil, [])
-    end
-
-    def interface_declarations(stream)
-      super
-      stream << %$
-        typedef struct {
-          const #{@container.type}* container;
-          size_t position;
-        } #{type};
-      $
-    end
-
-    def interface_definitions(stream)
-      super
-      stream << %$
-        #{define} #{type}* #{create}(#{type}* self, const #{@container.type}* container) {
-            assert(self);
-            assert(container);
-            self->container = container;
-            self->position = 0;
-            return self;
-        }
-        #{define} #{type}* #{save}(#{type}* self, const #{type}* origin) {
-          assert(self);
-          assert(origin);
-          *self = *origin;
-          return self;
-        }
-        #{define} size_t #{size}(const #{type}* self) {
-          assert(self);
-          return #{@container.size('self->container')};
-        }
-        #{define} const #{@container.element.type}* #{view}(const #{type}* self, size_t index) {
-          assert(self);
-          return #{@container.view('self->container', :index)};
-        }
-        #{define} int #{empty}(const #{type}* self) {
-          assert(self);
-          return !#{@container.within('self->container', 'self->position')};
-        }
-        #{define} void #{popFront}(#{type}* self) {
-          assert(self);
-          ++self->position;
-        }
-        #{define} const #{@container.element.type}* #{viewFront}(const #{type}* self) {
-          assert(self);
-          return #{view}(self, self->position);
-        }
-        #{define} void #{popBack}(#{type}* self) {
-          assert(self);
-          --self->position;
-        }
-        #{define} const #{@container.element.type}* #{viewBack}(const #{type}* self) {
-          assert(self);
-          return #{view}(self, self->position);
-        }
-      $
-      stream << %$
-        #{define} #{@container.element.type} #{get}(const #{type}* self, size_t index) {
-            assert(self);
-            return #{@container.get('self->container', :index)};
-        }
-        #{define} #{@container.element.type} #{front}(const #{type}* self) {
-          assert(self);
-          return #{get}(self, self->position);
-        }
-        #{define} #{@container.element.type} #{back}(const #{type}* self) {
-          assert(self);
-          return #{get}(self, self->position);
-        }
-      $ if @container.element.cloneable?
-    end
-
-  end # Range
-
-
-end # AutoC
+end
