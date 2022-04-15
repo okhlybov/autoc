@@ -242,7 +242,7 @@ module AutoC
         self->head_node = NULL;
         self->node_count = 0;
       }
-      destroy.inline_code %{
+      destroy.code %{
         assert(self);
         while(!#{empty}(self)) #{pop_front}(self);
       }
