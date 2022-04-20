@@ -34,7 +34,7 @@ module AutoC
 
     def composite_interface_declarations(stream)
       super
-      stream << %$
+      stream << "
         /**
           #{defgroup}
           @brief
@@ -44,7 +44,7 @@ module AutoC
           @brief Opaque struct holding state of the structure
         */
         typedef struct {
-      $
+      "
       fields.each { |name, type| stream << "#{type} _#{name}; /**< @private */\n" }
       stream << %"} #{type};"
     end

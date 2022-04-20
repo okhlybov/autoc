@@ -110,17 +110,17 @@ module AutoC
     private
 
     def prologue(stream)
-      stream << %$
+      stream << %{
         #{Module::CAP}
         #ifndef #{@tag}
         #define #{@tag}
-      $
+      }
     end
 
     def epilogue(stream)
-      stream << %$
+      stream << %{
         #endif
-      $
+      }
     end
 
     def stream = @stream ||= File.new(file_name, 'w')
@@ -165,10 +165,10 @@ module AutoC
     private
 
     def prologue(stream)
-      stream << %$
+      stream << %{
         #{Module::CAP}
         #include "#{self.module.header.file_name}"
-      $
+      }
     end
 
     def stream = @stream ||= File.new(file_name, 'w')

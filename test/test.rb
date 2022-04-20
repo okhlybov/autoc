@@ -125,10 +125,10 @@ class TestSuite
     total = 0
     $tests.each { |t| total += t.tests.size }
     stream << "int main(int argc, char** argv) {"
-    stream << %$
+    stream << %{
       tests.total = #{total};
       tests.processed = tests.failed = 0;
-    $
+    }
     $tests.each { |t| t.write_test_calls(stream) }
     stream << "print_summary();"
     stream << "return tests.failed > 0;}"

@@ -26,7 +26,7 @@ module AutoC
     def canonic_tag = "HashMap<#{key.type} -> #{element.type}>"
 
     def composite_interface_declarations(stream)
-      stream << %$
+      stream << %{
         /**
           #{defgroup}
 
@@ -46,7 +46,7 @@ module AutoC
         typedef struct {
           #{@set.type} set; /**< @private */
         } #{type};
-      $
+      }
       super
     end
 
@@ -134,7 +134,7 @@ module AutoC
     end
 
     def composite_interface_declarations(stream)
-      stream << %$
+      stream << %{
         /**
           #{defgroup}
           @ingroup #{iterable.type}
@@ -155,7 +155,7 @@ module AutoC
         typedef struct {
           #{@set.range.type} set_range; /**< @private */
         } #{type};
-      $
+      }
       super
     end
 
@@ -235,12 +235,13 @@ module AutoC
     def destructible? = key.destructible? || element.destructible?
 
     def composite_interface_declarations(stream)
-      stream << %$
+      stream << %{
+        /** @private */
         typedef struct {
           #{key.type} key;
           #{element.type} element;
         } #{type};
-      $
+      }
       super
     end
 

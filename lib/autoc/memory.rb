@@ -23,9 +23,9 @@ module AutoC
 
     def interface_declarations(stream)
       super
-      stream << %$
+      stream << %{
         #include <stdlib.h>
-      $
+      }
     end
 
     @@default = instance
@@ -49,9 +49,9 @@ module AutoC
 
     def interface_declarations(stream)
       super
-      stream << %$
+      stream << %{
         #include <gc.h>"
-      $
+      }
     end
 
   end # BDW

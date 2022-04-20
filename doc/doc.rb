@@ -2,7 +2,7 @@ require 'autoc'
 require 'autoc/vector'
 require 'autoc/hash_map'
 
-main = AutoC::Code.new interface: %$
+main = AutoC::Code.new interface: %{
   /**
     @mainpage Sample interfaces for the AutoC-generated containers
 
@@ -62,7 +62,7 @@ main = AutoC::Code.new interface: %$
     > valgrind ./test
     ```
   */
-$
+  }
 
 require_relative '../test/generic_value'
 

@@ -25,7 +25,7 @@ module AutoC
     def destroy(hasher) = nil
 
     def interface_definitions(stream)
-      stream << %$
+      stream << %{
         #include <limits.h>
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
           #if defined(__GNUC__) || defined(__clang__)
@@ -40,11 +40,11 @@ module AutoC
           #define AUTOC_HASHER_SEED __autoc_hasher_seed
           extern size_t __autoc_hasher_seed;
         #endif
-      $
+      }
     end
 
     def definitions(stream)
-      stream << %$
+      stream << %{
         #ifndef AUTOC_HASHER_TRIVIAL_SEED
           #include <time.h>
           #include <stdlib.h>
@@ -70,7 +70,7 @@ module AutoC
             static __autoc_hasher __autoc_hasher_instance;
           #endif
         #endif
-      $
+      }
     end
 
     @@default = instance

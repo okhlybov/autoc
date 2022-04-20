@@ -338,7 +338,7 @@ module AutoC
       @methods.each_value { |meth| meth.implementation(stream) }
     end
 
-    CODE = Code.interface %$
+    CODE = Code.interface %{
       #include <stddef.h>
       #include <assert.h>
       #ifndef AUTOC_INLINE
@@ -370,7 +370,7 @@ module AutoC
       #endif
       #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
       #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
-    $
+    }
 
     # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
   end

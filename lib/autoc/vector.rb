@@ -25,7 +25,7 @@ module AutoC
     def canonic_tag = "Vector<#{element.type}>"
 
     def composite_interface_declarations(stream)
-      stream << %$
+      stream << %{
         /**
           #{defgroup}
           @brief Resizable vector of elements of type #{element.type}
@@ -49,7 +49,7 @@ module AutoC
           #{element.ptr_type} elements; /**< @private */
           size_t element_count; /**< @private */
         } #{type};
-      $
+      }
       super
     end
 
@@ -299,7 +299,7 @@ module AutoC
     end
 
     def definitions(stream)
-      stream << %$
+      stream << %{
         static void #{allocate}(#{ptr_type} self, size_t element_count) {
           assert(self);
           if((self->element_count = element_count) > 0) {
@@ -308,8 +308,8 @@ module AutoC
             self->elements = NULL;
           }
         }
-      $
-      stream << %$
+      }
+      stream << %{
         #include <stdlib.h>
         static int #{ascend}(void* lp_, void* rp_) {
           #{element.const_type}* lp = (#{element.type}*)lp_;
@@ -319,7 +319,7 @@ module AutoC
         static int #{descend}(void* lp_, void* rp_) {
           return -#{ascend}(lp_, rp_);
         }
-      $ if element.orderable?
+      } if element.orderable?
       super
     end
 
@@ -332,7 +332,7 @@ module AutoC
       end
 
       def composite_interface_declarations(stream)
-        stream << %$
+        stream << %{
           /**
             #{defgroup}
             @ingroup #{iterable.type}
@@ -363,7 +363,7 @@ module AutoC
             size_t front_position /**< @private */,
                    back_position; /**< @private */
           } #{type};
-        $
+        }
         super
       end
       

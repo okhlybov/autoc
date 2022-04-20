@@ -25,7 +25,8 @@ module AutoC
     def canonic_tag = "List<#{element.type}>"
 
     def composite_interface_declarations(stream)
-      stream << %$
+      super
+      stream << %{
         /**
           #{defgroup}
 
@@ -53,7 +54,7 @@ module AutoC
           #{element.type} element;
           #{@node}* next_node;
         };
-      $
+      }
       super
     end
     
@@ -287,7 +288,7 @@ module AutoC
       end
 
       def composite_interface_declarations(stream)
-        stream << %$
+        stream << %{
           /**
             #{defgroup}
             @ingroup #{iterable.type}
@@ -308,7 +309,7 @@ module AutoC
           typedef struct {
             #{@list_node}* node; /**< @private */
           } #{type};
-        $
+        }
         super
       end
 

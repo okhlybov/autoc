@@ -27,7 +27,7 @@ module AutoC
     def canonic_tag = "HashSet<#{element.type}>"
 
     def composite_interface_declarations(stream)
-      stream << %$
+      stream << %{
         /**
           #{defgroup}
           @brief Hash-based unordered collection of unique elements of type #{element.type}
@@ -48,7 +48,7 @@ module AutoC
           size_t element_count; /**< @private */
           size_t capacity; /**< @private */
         } #{type};
-      $
+      }
       super
     end
 
@@ -134,7 +134,7 @@ module AutoC
     end
 
     def definitions(stream)
-      stream << %$
+      stream << %{
         static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
           return #{@buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{@buckets.size}(&self->buckets));
         }
@@ -156,7 +156,7 @@ module AutoC
             *self = t;
           }
         }
-      $
+      }
       super
     end
 
@@ -171,7 +171,7 @@ module AutoC
       end
 
       def composite_interface_declarations(stream)
-        stream << %$
+        stream << %{
           /**
             #{defgroup}
             @ingroup #{iterable.type}
@@ -192,7 +192,7 @@ module AutoC
             #{@bucket.range.type} bucket_range; /**< @private */
             #{@buckets.range.type} buckets_range; /**< @private */
           } #{type};
-        $
+        }
         super
       end
 
@@ -221,7 +221,7 @@ module AutoC
       end
 
       def definitions(stream)
-        stream << %$
+        stream << %{
           static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
             do {
               if (new_bucket_range) #{@bucket.range.custom_create}(&self->bucket_range, #{@buckets.range.view_front}(&self->buckets_range));
@@ -230,7 +230,7 @@ module AutoC
               else #{@buckets.range.pop_front}(&self->buckets_range);
             } while(!#{@buckets.range.empty}(&self->buckets_range));
           }
-        $
+        }
         super
       end
     end

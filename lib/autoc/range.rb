@@ -329,7 +329,7 @@ module AutoC
   end
 
 
-  Range::Doc = Code.new interface: %$
+  Range::Doc = Code.new interface: %{
     /**
       @page Range
 
@@ -395,7 +395,7 @@ module AutoC
 
       @since 2.0
     */
-  $
+  }
 
 
 end
