@@ -312,8 +312,8 @@ module AutoC
       stream << %{
         #include <stdlib.h>
         static int #{ascend}(void* lp_, void* rp_) {
-          #{element.const_type}* lp = (#{element.type}*)lp_;
-          #{element.const_type}* rp = (#{element.type}*)rp_;
+          #{element.const_ptr_type} lp = (#{element.const_ptr_type})lp_;
+          #{element.const_ptr_type} rp = (#{element.const_ptr_type})rp_;
           return #{element.compare('*lp', '*rp')};
         }
         static int #{descend}(void* lp_, void* rp_) {
