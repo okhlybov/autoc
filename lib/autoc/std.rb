@@ -49,4 +49,11 @@ module AutoC
   LONG_DOUBLE_COMPLEX = COMPLEX_H.new 'long double _Complex'
 
 
+  OMP_H = Code.new interface: %{
+    #ifdef _OPENMP
+      #include <omp.h>
+    #endif
+  }
+
+
 end

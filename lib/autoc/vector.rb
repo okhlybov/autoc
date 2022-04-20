@@ -3,6 +3,7 @@
 
 require 'autoc/container'
 require 'autoc/range'
+require 'autoc/std'
 
 
 module AutoC
@@ -325,6 +326,11 @@ module AutoC
 
     class Vector::Range < Range::RandomAccess
 
+      def initialize(*args)
+        super
+        dependencies << OMP_H
+      end
+
       def composite_interface_declarations(stream)
         stream << %$
           /**
@@ -334,6 +340,14 @@ module AutoC
             @brief #{canonic_desc}
 
             This range implements the @ref #{archetype} archetype.
+
+            The @ref #{iterable.get_range} and @ref #{custom_create} range constructors create OpenMP-aware range objects
+            which account for parallel iteration in the way
+
+            @code{.c}
+            #pragma omp parallel
+            for(#{type} r = #{iterable.get_range}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+            @endcode
 
             @see @ref Range
 
@@ -356,11 +370,25 @@ module AutoC
       private def configure
         super
         custom_create.inline_code %{
+          #ifdef _OPENMP
+            int chunk_count;
+          #endif
           assert(self);
           assert(iterable);
           self->iterable = iterable;
-          self->front_position = 0;
-          self->back_position = #{iterable.size}(iterable)-1;
+          #ifdef _OPENMP
+            if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
+              int chunk_id = omp_get_thread_num();
+              size_t chunk_size = #{iterable.size}(iterable) / omp_get_num_threads();
+              self->front_position = chunk_id*chunk_size;
+              self->back_position = chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : #{iterable.size}(iterable)-1;
+            } else {
+          #endif
+              self->front_position = 0;
+              self->back_position = #{iterable.size}(iterable)-1;
+          #ifdef _OPENMP
+            }
+          #endif
         }
         length.inline_code %{
           assert(self);
