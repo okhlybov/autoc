@@ -145,7 +145,7 @@ module AutoC
     attr_reader :visibility
 
     # Perform additional configuration step following convetional initializition
-    def self.new(*args, &code)
+    def self.new(*args, **kwargs, &code)
       obj = super
       obj.send(:configure)
       obj

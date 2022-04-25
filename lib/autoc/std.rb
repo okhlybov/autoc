@@ -8,7 +8,7 @@ module AutoC
 
 
   class SystemHeader < Code
-    def initialize(header) = super interface: "\n#include <#{header}>\n"
+    def initialize(header) = super(interface: "\n#include <#{header}>\n")
   end
 
 
