@@ -36,7 +36,7 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/test.rb
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND ${Ruby_EXECUTABLE} -I. -I../lib ${CMAKE_CURRENT_SOURCE_DIR}/test.rb
-    COMMAND ${AStyle} -n test_auto.[ch]
+    COMMAND ${AStyle} -n test_auto.c test_auto.h
     VERBATIM
 )
 
