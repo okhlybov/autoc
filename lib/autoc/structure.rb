@@ -12,16 +12,17 @@ module AutoC
 
     attr_reader :fields
 
-    def initialize(type, fields, visibility = :public)
+    def initialize(type, fields, visibility: :public, profile: :blackbox)
       super(type, visibility)
       @fields = fields.transform_values { |type| Type.coerce(type) }
       self.fields.each_value { |type| dependencies << type }
-      # Ordering is not supported by default
+      # trait_all_true(:orderable) # Ordering is not supported by default
       trait_all_true(:default_constructible)
       trait_any_true(:destructible)
       trait_all_true(:comparable)
       trait_all_true(:hashable)
       trait_all_true(:copyable)
+      process_profile(profile)
     end
 
     def default_constructible? = @default_constructible
@@ -32,49 +33,94 @@ module AutoC
     def copyable? = @copyable
     def orderable? = false
 
+    # @private
+    private def process_profile(profile)
+      case profile
+      when :blackbox
+        @inline_methods = false
+        @omit_accessors = false
+        @opaque = true
+      when :glassbox
+        @inline_methods = true
+        @omit_accessors = true
+        @opaque = false
+      else raise 'unknown profile'
+      end
+    end
+
     def composite_interface_declarations(stream)
       super
-      stream << "
+      stream << %{
         /**
           #{defgroup}
-          @brief
+          @brief Synthesized managed structure
         */
-        /**
-          #{ingroup}
-          @brief Opaque struct holding state of the structure
-        */
-        typedef struct {
-      "
-      fields.each { |name, type| stream << "#{type} _#{name}; /**< @private */\n" }
-      stream << %"} #{type};"
+      }
+      if @opaque
+        stream << %{
+          /**
+            #{ingroup}
+            @brief Opaque struct holding state of the structure
+          */
+        }
+      else
+        stream << %{
+          /**
+            #{ingroup}
+            @brief Struct holding state of the structure
+          */
+        }
+      end
+      stream << 'typedef struct {'
+        fields.each { |name, type| stream << field_declaration(type, name) << "\n" }
+      stream << "} #{type};"
+    end
+
+    # @private
+    private def defgroup = "#{@defgroup} #{type}"
+
+    # @private
+    private def field_variable(opt)
+      if opt.is_a?(::Hash)
+        obj, name = opt.first
+        "#{obj}->#{name}"
+      else
+        opt
+      end
+    end
+
+    # @private
+    private def field_declaration(type, name)
+      s = "#{type} #{field_variable(name)};"
+      s += '/**< @private */' if @opaque
+      s
     end
 
     private def configure
       super
-      configure_accessors
       ### custom_create
       ctor_params = { self: type }
-      fields.each { |name, type| ctor_params["_#{name}"] = type.const_type }
+      fields.each { |name, type| ctor_params[field_variable(name)] = type.const_type }
       def_method :void, :setup, ctor_params, instance: :custom_create, require:-> { copyable? } do
         _code = 'assert(self);'
-        fields.each { |name, type| _code += type.copy("self->_#{name}", "_#{name}")+';' }
+        fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(name))+';' }
         code(_code)
       end
       ### default_create
       _code = 'assert(self);'
-      fields.each { |name, type| _code += type.default_create("self->_#{name}")+';' }
+      fields.each { |name, type| _code += type.default_create(field_variable(self: name))+';' }
       default_create.code _code
       ### destroy
       _code = 'assert(self);'
-      fields.each { |name, type| _code += type.destroy("self->_#{name}")+';' if type.destructible? }
+      fields.each { |name, type| _code += type.destroy(field_variable(self: name))+';' if type.destructible? }
       destroy.code _code
       ### copy
       _code = 'assert(self); assert(source);'
-      fields.each { |name, type| _code += type.copy("self->_#{name}", "source->_#{name}")+';' }
+      fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(source: name))+';' }
       copy.code _code
       ### equal
       _code = 'assert(self); assert(other);'
-      _code += 'return ' + fields.to_a.collect { |name, type| type.equal("self->_#{name}", "other->_#{name}") }.join(' && ') + ';'
+      _code += 'return ' + fields.to_a.collect { |name, type| type.equal(field_variable(self: name), field_variable(other: name)) }.join(' && ') + ';'
       equal.code _code
       ### hash_code
       _code = %{
@@ -82,43 +128,56 @@ module AutoC
         #{hasher.type} hasher;
         #{hasher.create(:hasher)};
       }
-      fields.each { |name, type| _code += hasher.update(:hasher, type.hash_code("self->_#{name}"))+';' }
+      fields.each { |name, type| _code += hasher.update(:hasher, type.hash_code(field_variable(self: name)))+';' }
       _code += %{
         hash = #{hasher.result(:hasher)};
         #{hasher.destroy(:hasher)};
         return hash;
       }
       hash_code.code _code
+      [default_create, custom_create, destroy, copy, equal, compare, hash_code].each { |x| x.inline = true } if @inline_methods
+      ### accessors
+      fields.each do |name, field_type|
+        def_viewer(name, field_type)
+        if field_type.copyable?
+          def_getter(name, field_type)
+          def_setter(name, field_type)
+        end
+      end
     end
 
-    private def configure_accessors
-      fields.each do |name, field_type|
-        if field_type.copyable?
-          ### Getter
-          meth = "get_#{name}".to_sym
-          def_method field_type, meth, { self: const_type }
-          send(meth).inline_code %{
-            #{field_type} result;
-            assert(self);
-            #{field_type.copy(:result, "self->_#{name}")};
-            return result;
-          }
-          ### Setter
-          meth = "set_#{name}".to_sym
-          def_method :void, meth, { self: type, "_#{name}": field_type.const_type }
-          send(meth).inline_code %{
-            assert(self);
-            #{field_type.copy("self->_#{name}", "_#{name}")};
-          }
-        end
-        ### Viewer
-        meth = "view_#{name}".to_sym
-        def_method field_type.const_ptr_type, meth, { self: const_type }
-        send(meth).inline_code %{
-          assert(self);
-          return &self->_#{name};
-        }
-      end
+    # @private
+    private def def_getter(name, field_type)
+      meth = "get_#{name}".to_sym
+      def_method field_type, meth, { self: const_type }, require:-> { !@omit_accessors }
+      send(meth).inline_code %{
+        #{field_type} result;
+        assert(self);
+        #{field_type.copy(:result, field_variable(self: name))};
+        return result;
+      }
+    end
+
+    # @private
+    private def def_setter(name, field_type)
+      meth = "set_#{name}".to_sym
+      params = { self: type }
+      params[field_variable(name)] = field_type.const_type
+      def_method :void, meth, params, require:-> { !@omit_accessors }
+      send(meth).inline_code %{
+        assert(self);
+        #{field_type.copy(field_variable(self: name), field_variable(name))};
+      }
+    end
+
+    # @private
+    private def def_viewer(name, field_type)
+      meth = "view_#{name}".to_sym
+      def_method field_type.const_ptr_type, meth, { self: const_type }, require:-> { !@omit_accessors }
+      send(meth).inline_code %{
+        assert(self);
+        return &#{field_variable(self: name)};
+      }
     end
 
     # @private
