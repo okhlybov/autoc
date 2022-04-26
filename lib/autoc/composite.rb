@@ -151,7 +151,7 @@ module AutoC
       obj
     end
 
-    def initialize(type, visibility)
+    def initialize(type, visibility:)
       super(type)
       @methods = {}
       @initial_prefix = nil

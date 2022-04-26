@@ -17,8 +17,8 @@ module AutoC
 
     attr_reader :range
 
-    def initialize(type, element, visibility)
-      super(type, visibility)
+    def initialize(type, element, visibility:)
+      super(type, visibility: visibility)
       @element = Type.coerce(element)
       dependencies << self.element
     end
@@ -168,8 +168,8 @@ module AutoC
 
     attr_reader :key
 
-    def initialize(type, key, element, visibility)
-      super(type, element, visibility)
+    def initialize(type, key, element, visibility:)
+      super(type, element, visibility: visibility)
       @key = Type.coerce(key)
       dependencies << self.key
     end

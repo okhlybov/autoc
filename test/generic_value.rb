@@ -7,7 +7,7 @@ require 'autoc/composite'
 # Full-fledged value type equipped with dynamic memory management
 # useful for testing & documentation purposes
 class GenericValue < AutoC::Composite
-  def initialize(type, visibility = :public) = super
+  def initialize(type, visibility: :public) = super
   def composite_interface_declarations(stream)
     super
     stream << %{

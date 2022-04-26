@@ -14,10 +14,10 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    def initialize(type, element, visibility = :public)
+    def initialize(type, element, visibility: :public)
       super
       @node = decorate_identifier(:_node)
-      dependencies << (@range = Range.new(self, visibility))
+      dependencies << (@range = Range.new(self, visibility: visibility))
     end
 
     def orderable? = false # No idea how to compute the ordering of this container
@@ -282,7 +282,7 @@ module AutoC
 
     class List::Range < Range::Forward
 
-      def initialize(*args)
+      def initialize(*args, **kws)
         super
         @list_node = iterable.instance_variable_get(:@node)
       end

@@ -15,9 +15,9 @@ module AutoC
     include Container::Hashable
     include Container::Sequential
     
-    def initialize(type, element, visibility = :public)
+    def initialize(type, element, visibility: :public)
       super
-      dependencies << (@range = Range.new(self, visibility))
+      dependencies << (@range = Range.new(self, visibility: visibility))
     end
 
     def orderable? = false # No idea how to compute the ordering of this container
@@ -326,7 +326,7 @@ module AutoC
 
     class Vector::Range < Range::RandomAccess
 
-      def initialize(*args)
+      def initialize(*args, **kws)
         super
         dependencies << OMP_H
       end

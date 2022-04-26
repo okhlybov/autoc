@@ -14,12 +14,12 @@ module AutoC
 
     prepend Container::Hashable
 
-    def initialize(type, element, visibility = :public)
+    def initialize(type, element, visibility: :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
       @bucket = Bucket.new(self, self.element)
       @buckets = Buckets.new(self, @bucket)
-      @range = Range.new(self, visibility)
+      @range = Range.new(self, visibility: visibility)
       @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
       dependencies << range << @bucket << @buckets
     end
@@ -164,8 +164,8 @@ module AutoC
     # @private
     class HashSet::Range < Range::Forward
 
-      def initialize(iterable, visibility)
-        super(iterable, visibility)
+      def initialize(iterable, visibility:)
+        super
         @bucket = iterable.instance_variable_get(:@bucket)
         @buckets = iterable.instance_variable_get(:@buckets)
       end
@@ -242,7 +242,7 @@ module AutoC
   # @private
   class HashSet::Bucket < AutoC::List
 
-    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, :internal)
+    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, visibility: :internal)
 
     private def configure
       super
@@ -275,7 +275,7 @@ module AutoC
   # @private
   class HashSet::Buckets < AutoC::Vector
 
-    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, :internal)
+    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, visibility: :internal)
 
     private def configure
       super

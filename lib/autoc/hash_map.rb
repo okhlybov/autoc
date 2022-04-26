@@ -13,11 +13,11 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    def initialize(type, key, element, visibility = :public)
+    def initialize(type, key, element, visibility: :public)
       super
       @node = Node.new(self)
       @set = Set.new(self, @node)
-      @range = Range.new(self, visibility)
+      @range = Range.new(self, visibility: visibility)
       dependencies << range << @node << @set
     end
 
@@ -128,8 +128,8 @@ module AutoC
   # @private
   class HashMap::Range < AssociativeContainer::Range
 
-    def initialize(iterable, visibility)
-      super(iterable, visibility)
+    def initialize(iterable, visibility:)
+      super(iterable, visibility: visibility)
       @set = iterable.instance_variable_get(:@set)
     end
 
@@ -194,7 +194,7 @@ module AutoC
     def initialize(map, element)
       @node = element
       @omit_set_operations = true
-      super(Once.new { map.decorate_identifier(:_set) }, element, :internal)
+      super(Once.new { map.decorate_identifier(:_set) }, element, visibility: :internal)
     end
 
     private def configure
@@ -226,7 +226,7 @@ module AutoC
     attr_reader :key, :element
 
     def initialize(map)
-      super(Once.new { map.decorate_identifier(:_node) }, :internal)
+      super(Once.new { map.decorate_identifier(:_node) }, visibility: :internal)
       dependencies << (@key = map.key) << (@element = map.element)
     end
 

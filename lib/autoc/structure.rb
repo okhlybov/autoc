@@ -13,7 +13,7 @@ module AutoC
     attr_reader :fields
 
     def initialize(type, fields, visibility: :public, profile: :blackbox)
-      super(type, visibility)
+      super(type, visibility: visibility)
       @fields = fields.transform_values { |type| Type.coerce(type) }
       self.fields.each_value { |type| dependencies << type }
       # trait_all_true(:orderable) # Ordering is not supported by default
