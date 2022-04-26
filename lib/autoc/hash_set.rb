@@ -242,7 +242,7 @@ module AutoC
   # @private
   class HashSet::Bucket < AutoC::List
 
-    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_bucket) }, element, visibility: :internal)
+    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_L) }, element, visibility: :internal)
 
     private def configure
       super
@@ -275,7 +275,7 @@ module AutoC
   # @private
   class HashSet::Buckets < AutoC::Vector
 
-    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_buckets) }, bucket, visibility: :internal)
+    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_V) }, bucket, visibility: :internal)
 
     private def configure
       super

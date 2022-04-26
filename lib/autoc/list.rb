@@ -16,7 +16,7 @@ module AutoC
 
     def initialize(type, element, visibility: :public)
       super
-      @node = decorate_identifier(:_node)
+      @node = decorate_identifier(:_N)
       dependencies << (@range = Range.new(self, visibility: visibility))
     end
 
@@ -173,7 +173,7 @@ module AutoC
         code %{
           #{@node}* new_node;
           assert(self);
-          new_node = #{memory.allocate(_node)};
+          new_node = #{memory.allocate(@node)};
           #{element.copy('new_node->element', :value)};
           new_node->next_node = self->head_node;
           self->head_node = new_node;

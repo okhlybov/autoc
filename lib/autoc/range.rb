@@ -25,7 +25,7 @@ module AutoC
     def canonic_desc = "Range (iterator) for the iterable container @ref #{iterable.type}"
 
     def initialize(iterable, visibility:)
-      super(Once.new { iterable.decorate_identifier(:range) }, visibility: visibility)
+      super(Once.new { iterable.decorate_identifier(visibility == :internal ? :_R : :range) }, visibility: visibility)
       dependencies << (@iterable = iterable) << Doc
     end
 
