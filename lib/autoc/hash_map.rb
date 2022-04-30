@@ -13,14 +13,6 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    def initialize(type, key, element, visibility: :public)
-      super
-      @node = Node.new(self)
-      @set = Set.new(self, @node)
-      @range = Range.new(self, visibility: visibility)
-      dependencies << range << @node << @set
-    end
-
     def orderable? = false
 
     def canonic_tag = "HashMap<#{key.type} -> #{element.type}>"
@@ -51,6 +43,10 @@ module AutoC
     end
 
     private def configure
+      @node = Node.new(self)
+      @set = Set.new(self, @node)
+      @range = Range.new(self, visibility: visibility)
+      dependencies << @range << @node << @set
       super
       def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
         code %{
@@ -194,7 +190,7 @@ module AutoC
     def initialize(map, element)
       @node = element
       @omit_set_operations = true
-      super(Once.new { map.decorate_identifier(:_S) }, element, visibility: :internal)
+      super(map.decorate_identifier(:_S), element, visibility: :internal)
     end
 
     private def configure
@@ -226,7 +222,7 @@ module AutoC
     attr_reader :key, :element
 
     def initialize(map)
-      super(Once.new { map.decorate_identifier(:_N) }, visibility: :internal)
+      super(map.decorate_identifier(:_N), visibility: :internal)
       dependencies << (@key = map.key) << (@element = map.element)
     end
 

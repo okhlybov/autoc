@@ -49,8 +49,7 @@ module AutoC
           else
             parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
           end
-        # Use Once object to override default identifier decoration scheme
-        super(name.is_a?(Once) ? name : Once.new { self.type.decorate_identifier(name) }, parameters, result)
+        super(type.decorate_identifier(name), parameters, result)
         @type = type
         @refs = refs
         @guard = guard
@@ -117,9 +116,9 @@ module AutoC
 
       private
 
-      def ref_value_type(type) = Once.new { "#{type}*" }
+      def ref_value_type(type) = "#{type}*"
 
-      def ref_value_call(arg) = Once.new { "&(#{arg})" }
+      def ref_value_call(arg) = "&(#{arg})"
 
     end
 
@@ -144,14 +143,14 @@ module AutoC
 
     attr_reader :visibility
 
-    # Perform additional configuration step following convetional initializition
+    # Perform additional configuration step following conventional initializition
     def self.new(*args, **kwargs, &code)
       obj = super
       obj.send(:configure)
       obj
     end
 
-    def initialize(type, visibility:)
+    def initialize(type, visibility: :public)
       super(type)
       @methods = {}
       @initial_prefix = nil

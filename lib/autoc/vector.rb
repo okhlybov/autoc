@@ -15,11 +15,6 @@ module AutoC
     include Container::Hashable
     include Container::Sequential
     
-    def initialize(type, element, visibility: :public)
-      super
-      dependencies << (@range = Range.new(self, visibility: visibility))
-    end
-
     def orderable? = false # No idea how to compute the ordering of this container
 
     def canonic_tag = "Vector<#{element.type}>"
@@ -54,6 +49,7 @@ module AutoC
     end
 
     private def configure
+      dependencies << (@range = Range.new(self, visibility: visibility))
       super
       def_method :int, :check_position, { self: const_type, position: :size_t } do
         inline_code %{
@@ -326,11 +322,6 @@ module AutoC
 
     class Vector::Range < Range::RandomAccess
 
-      def initialize(*args, **kws)
-        super
-        dependencies << OMP_H
-      end
-
       def composite_interface_declarations(stream)
         stream << %{
           /**
@@ -368,6 +359,7 @@ module AutoC
       end
       
       private def configure
+        dependencies << OMP_H
         super
         custom_create.inline_code %{
           #ifdef _OPENMP

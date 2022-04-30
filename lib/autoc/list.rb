@@ -14,12 +14,6 @@ module AutoC
     prepend Container::Hashable
     prepend Container::Sequential
 
-    def initialize(type, element, visibility: :public)
-      super
-      @node = decorate_identifier(:_N)
-      dependencies << (@range = Range.new(self, visibility: visibility))
-    end
-
     def orderable? = false # No idea how to compute the ordering of this container
 
     def canonic_tag = "List<#{element.type}>"
@@ -59,6 +53,8 @@ module AutoC
     end
     
     private def configure
+      @node = decorate_identifier(:_N)
+      dependencies << (@range = Range.new(self, visibility: visibility))
       super
       def_method :void, :_drop_front, { self: type }, visibility: :private do
         code %{

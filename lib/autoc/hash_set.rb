@@ -17,11 +17,7 @@ module AutoC
     def initialize(type, element, visibility: :public)
       super
       raise 'Hash-based set requires hashable element type' unless self.element.hashable?
-      @bucket = Bucket.new(self, self.element)
-      @buckets = Buckets.new(self, @bucket)
-      @range = Range.new(self, visibility: visibility)
       @manager = { minimum_capacity: 8, load_factor: 0.75, expand_factor: 1.5 }
-      dependencies << range << @bucket << @buckets
     end
 
     def canonic_tag = "HashSet<#{element.type}>"
@@ -53,6 +49,10 @@ module AutoC
     end
 
     private def configure
+      @bucket = Bucket.new(self, element)
+      @buckets = Buckets.new(self, @bucket)
+      @range = Range.new(self, visibility: visibility)
+      dependencies << range << @bucket << @buckets
       super
       def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
         code %{
@@ -242,7 +242,7 @@ module AutoC
   # @private
   class HashSet::Bucket < AutoC::List
 
-    def initialize(set, element) = super(Once.new { set.decorate_identifier(:_L) }, element, visibility: :internal)
+    def initialize(set, element) = super(set.decorate_identifier(:_L), element, visibility: :internal)
 
     private def configure
       super
@@ -275,7 +275,7 @@ module AutoC
   # @private
   class HashSet::Buckets < AutoC::Vector
 
-    def initialize(set, bucket) = super(Once.new { set.decorate_identifier(:_V) }, bucket, visibility: :internal)
+    def initialize(set, bucket) = super(set.decorate_identifier(:_V), bucket, visibility: :internal)
 
     private def configure
       super

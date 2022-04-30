@@ -7,12 +7,6 @@ require 'autoc/module'
 module AutoC
 
 
-  class Once < ::Proc
-    def to_s = @value ||= call
-    def to_sym = to_s.to_sym
-  end
-
-
   # Generator class for C function declarator.
   class Function
 
@@ -35,9 +29,9 @@ module AutoC
         end
     end
 
-    def signature = Once.new { '%s(%s)' % [result, parameters.values.join(', ')] }
+    def signature = '%s(%s)' % [result, parameters.values.join(', ')]
 
-    def definition = Once.new { '%s %s(%s)' % [result, name, parameters.collect{ |var, type| "#{type} #{var}" }.join(', ')] }
+    def definition ='%s %s(%s)' % [result, name, parameters.collect{ |var, type| "#{type} #{var}" }.join(', ')]
 
     def declaration = definition
 
@@ -79,9 +73,9 @@ module AutoC
 
     def initialize(type)
       @type = type
-      @ptr_type = Once.new { "#{type}*" }
-      @const_type = Once.new { "const #{type}" }
-      @const_ptr_type = Once.new { "const #{type}*" }
+      @ptr_type = "#{type}*"
+      @const_type = "const #{type}"
+      @const_ptr_type = "const #{type}*"
     end
 
     # @abstract
