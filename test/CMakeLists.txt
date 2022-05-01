@@ -82,7 +82,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE)
 # *
 # Specify GCC-specific optimization flags
 # Set it to empty string or comment it out to revert to default configuration behavior
-set(GNU_RELEASE_FLAGS "-pipe -O3 -Wall -pedantic")
+set(GNU_RELEASE_FLAGS "-pipe -O3 -Wall -pedantic -ansi")
 
 # *
 # Specify GCC-specific debugging flags

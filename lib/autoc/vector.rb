@@ -19,6 +19,8 @@ module AutoC
 
     def canonic_tag = "Vector<#{element.type}>"
 
+    def range = @range ||= Range.new(self, visibility: visibility)
+
     def composite_interface_declarations(stream)
       stream << %{
         /**
@@ -49,7 +51,6 @@ module AutoC
     end
 
     private def configure
-      dependencies << (@range = Range.new(self, visibility: visibility))
       super
       def_method :int, :check_position, { self: const_type, position: :size_t } do
         inline_code %{
@@ -332,12 +333,12 @@ module AutoC
 
             This range implements the @ref #{archetype} archetype.
 
-            The @ref #{iterable.get_range} and @ref #{custom_create} range constructors create OpenMP-aware range objects
+            The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
             which account for parallel iteration in the way
 
             @code{.c}
             #pragma omp parallel
-            for(#{type} r = #{iterable.get_range}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+            for(#{type} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
             @endcode
 
             @see @ref Range

@@ -42,12 +42,12 @@ module AutoC
 
           @note Previous contents of `*self` is overwritten.
 
-          @see #{get_range}
+          @see #{new}
 
           @since 2.0
         }
       end
-      def_method type, iterable.get_range, { iterable: iterable.const_type } do
+      def_method type, :new, { iterable: iterable.const_type } do
         header %{
           @brief Return new range iterator for the specified container
 
@@ -58,7 +58,7 @@ module AutoC
           It is intended to be used within the ***for(;;)*** statement as follows
 
           @code{.c}
-          for(#{type} r = #{iterable.get_range}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+          for(#{type} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
           @endcode
 
           where `it` is the iterable to iterate over and `r` is a locally-scoped range bound to it.

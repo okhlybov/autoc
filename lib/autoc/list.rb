@@ -18,6 +18,8 @@ module AutoC
 
     def canonic_tag = "List<#{element.type}>"
 
+    def range = @range ||= Range.new(self, visibility: visibility)
+
     def composite_interface_declarations(stream)
       super
       stream << %{
@@ -54,7 +56,6 @@ module AutoC
     
     private def configure
       @node = decorate_identifier(:_N)
-      dependencies << (@range = Range.new(self, visibility: visibility))
       super
       def_method :void, :_drop_front, { self: type }, visibility: :private do
         code %{
@@ -257,7 +258,7 @@ module AutoC
         assert(self);
         assert(source);
         #{create}(self);
-        for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+        for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{push_front}(self, *#{range.view_front}(&r));
         }
       }
@@ -266,7 +267,7 @@ module AutoC
         assert(self);
         assert(other);
         if(#{size}(self) == #{size}(other)) {
-          for(ra = #{get_range}(self), rb = #{get_range}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
+          for(ra = #{range.new}(self), rb = #{range.new}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
             #{element.const_ptr_type} a = #{range.view_front}(&ra);
             #{element.const_ptr_type} b = #{range.view_front}(&rb);
             if(!#{element.equal('*a', '*b')}) return 0;

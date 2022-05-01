@@ -22,6 +22,11 @@ module AutoC
 
     def canonic_tag = "HashSet<#{element.type}>"
 
+    def range = @range ||= Range.new(self, visibility: visibility)
+
+    private def _bucket = @_bucket ||= Bucket.new(self, element)
+    private def _buckets = @_buckets ||= Buckets.new(self, _bucket)
+
     def composite_interface_declarations(stream)
       stream << %{
         /**
@@ -40,7 +45,7 @@ module AutoC
           @since 2.0
         */
         typedef struct {
-          #{@buckets.type} buckets; /**< @private */
+          #{_buckets.type} buckets; /**< @private */
           size_t element_count; /**< @private */
           size_t capacity; /**< @private */
         } #{type};
@@ -49,15 +54,12 @@ module AutoC
     end
 
     private def configure
-      @bucket = Bucket.new(self, element)
-      @buckets = Buckets.new(self, @bucket)
-      @range = Range.new(self, visibility: visibility)
-      dependencies << range << @bucket << @buckets
       super
+      dependencies << _bucket << _buckets
       def_method :void, :create_capacity, { self: type, capacity: :size_t, manage_capacity: :int } do
         code %{
           assert(self);
-          #{@buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
+          #{_buckets.custom_create}(&self->buckets, self->capacity = AUTOC_MAX(capacity, #{@manager[:minimum_capacity]})*#{@manager[:load_factor]});
           if(!manage_capacity) self->capacity = ~0;
           self->element_count = 0;
         }
@@ -92,27 +94,27 @@ module AutoC
         #{create_capacity}(self, #{@manager[:minimum_capacity]}, 1);
       }
       destroy.code %{
-        #{@buckets.destroy('self->buckets')};
+        #{_buckets.destroy('self->buckets')};
       }
       copy.code %{
         #{range.type} r;
         assert(self);
         assert(source);
         #{create_capacity}(self, #{size}(source), 0);
-        for(r = #{get_range}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+        for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{put}(self, *#{range.view_front}(&r));
         }
       }
       equal.code %{
-        return #{@buckets.equal}(&self->buckets, &other->buckets);
+        return #{_buckets.equal}(&self->buckets, &other->buckets);
       }
       lookup.code %{
-        return #{@bucket.lookup}(#{_locate}(self, value), value);
+        return #{_bucket.lookup}(#{_locate}(self, value), value);
       }
       put.code %{
-        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
-        if(!#{@bucket.contains}(bucket, value)) {
-          #{@bucket.push_front}((#{@bucket.ptr_type})bucket, value);
+        #{_bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(!#{_bucket.contains}(bucket, value)) {
+          #{_bucket.push_front}((#{_bucket.ptr_type})bucket, value);
           ++self->element_count;
           #{_rehash}(self);
           return 1;
@@ -125,8 +127,8 @@ module AutoC
         return replace;
       }
       remove.code %{
-        #{@bucket.const_ptr_type} bucket = #{_locate}(self, value);
-        if(#{@bucket.remove}((#{@bucket.ptr_type})bucket, value)) {
+        #{_bucket.const_ptr_type} bucket = #{_locate}(self, value);
+        if(#{_bucket.remove}((#{_bucket.ptr_type})bucket, value)) {
           --self->element_count;
           return 1;
         } else return 0;
@@ -135,12 +137,12 @@ module AutoC
 
     def definitions(stream)
       stream << %{
-        static #{@bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
-          return #{@buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{@buckets.size}(&self->buckets));
+        static #{_bucket.const_ptr_type} #{_locate}(#{const_ptr_type} self, #{element.const_type} value) {
+          return #{_buckets.view}(&self->buckets, #{element.hash_code(:value)} % #{_buckets.size}(&self->buckets));
         }
         /* Push value to the set bypassing the element's copy function */
         static void #{adopt}(#{ptr_type} self, #{element.const_type} value) {
-          #{@bucket.adopt}((#{@bucket.ptr_type})#{_locate}(self, value), value);
+          #{_bucket.adopt}((#{_bucket.ptr_type})#{_locate}(self, value), value);
         }
         /* Perform a rehash accomodating new actual size */
         static void #{_rehash}(#{ptr_type} self) {
@@ -149,10 +151,10 @@ module AutoC
             #{type} t;
             #{range.type} r;
             #{create_capacity}(&t, self->capacity*#{@manager[:expand_factor]}, 0);
-            for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
               #{adopt}(&t, *#{range.view_front}(&r));
             }
-            #{@buckets.dispose}(&self->buckets);
+            #{_buckets.dispose}(&self->buckets);
             *self = t;
           }
         }
@@ -164,11 +166,8 @@ module AutoC
     # @private
     class HashSet::Range < Range::Forward
 
-      def initialize(iterable, visibility:)
-        super
-        @bucket = iterable.instance_variable_get(:@bucket)
-        @buckets = iterable.instance_variable_get(:@buckets)
-      end
+      private def _bucket = @_bucket ||= iterable.send(:_bucket)
+      private def _buckets = @_buckets ||= iterable.send(:_buckets)
 
       def composite_interface_declarations(stream)
         stream << %{
@@ -189,8 +188,8 @@ module AutoC
             @since 2.0
           */
           typedef struct {
-            #{@bucket.range.type} bucket_range; /**< @private */
-            #{@buckets.range.type} buckets_range; /**< @private */
+            #{_bucket.range.type} bucket_range; /**< @private */
+            #{_buckets.range.type} buckets_range; /**< @private */
           } #{type};
         }
         super
@@ -201,22 +200,22 @@ module AutoC
         custom_create.code %{
           assert(self);
           assert(iterable);
-          #{@buckets.range.custom_create}(&self->buckets_range, &iterable->buckets);
+          #{_buckets.range.custom_create}(&self->buckets_range, &iterable->buckets);
           #{_next_bucket}(self, 1);
         }
         empty.code %{
           assert(self);
-          return #{@bucket.range.empty}(&self->bucket_range);
+          return #{_bucket.range.empty}(&self->bucket_range);
         }
         pop_front.code %{
           assert(self);
-          #{@bucket.range.pop_front}(&self->bucket_range);
-          if(#{@bucket.range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
+          #{_bucket.range.pop_front}(&self->bucket_range);
+          if(#{_bucket.range.empty}(&self->bucket_range)) #{_next_bucket}(self, 0);
         }
         view_front.code %{
           assert(self);
           assert(!#{empty}(self));
-          return #{@bucket.range.view_front}(&self->bucket_range);
+          return #{_bucket.range.view_front}(&self->bucket_range);
         }
       end
 
@@ -224,11 +223,11 @@ module AutoC
         stream << %{
           static void #{_next_bucket}(#{ptr_type} self, int new_bucket_range) {
             do {
-              if (new_bucket_range) #{@bucket.range.custom_create}(&self->bucket_range, #{@buckets.range.view_front}(&self->buckets_range));
+              if (new_bucket_range) #{_bucket.range.custom_create}(&self->bucket_range, #{_buckets.range.view_front}(&self->buckets_range));
               else new_bucket_range = 1; /* Skip the first creation act only */
-              if (!#{@bucket.range.empty}(&self->bucket_range)) break;
-              else #{@buckets.range.pop_front}(&self->buckets_range);
-            } while(!#{@buckets.range.empty}(&self->buckets_range));
+              if (!#{_bucket.range.empty}(&self->bucket_range)) break;
+              else #{_buckets.range.pop_front}(&self->buckets_range);
+            } while(!#{_buckets.range.empty}(&self->buckets_range));
           }
         }
         super
@@ -282,7 +281,7 @@ module AutoC
       def_method :void, :dispose, { self: type } do
         code %{
           #{range.type} r;
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.dispose}((#{element.ptr_type})#{range.view_front}(&r));
           }
           #{memory.free('self->elements')};

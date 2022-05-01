@@ -60,10 +60,10 @@ module AutoC
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             if(#{contains}(other, *#{range.view_front}(&r))) return 0;
           }
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             if(#{contains}(self, *#{range.view_front}(&r))) return 0;
           }
           return 1;
@@ -85,7 +85,7 @@ module AutoC
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             if(!#{contains}(other, *#{range.view_front}(&r))) return 0;
           }
           return 1;
@@ -100,7 +100,7 @@ module AutoC
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{put}(self, *#{range.view_front}(&r));
           }
         }
@@ -114,7 +114,7 @@ module AutoC
           #{range.type} r;
           assert(self);
           assert(other);
-          for(r = #{get_range}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+          for(r = #{range.new}(other); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{remove}(self, *#{range.view_front}(&r));
           }
         }

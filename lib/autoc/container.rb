@@ -15,7 +15,8 @@ module AutoC
 
     attr_reader :element
 
-    attr_reader :range
+    #
+    abstract def range = raise
 
     def initialize(type, element, visibility: :public)
       super(type, visibility: visibility)
@@ -42,6 +43,7 @@ module AutoC
     private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> iterable.range cyclic dependency
 
     private def configure
+      dependencies << range
       super
       def_method :int, :empty, { self: const_type } do
         header %{
@@ -134,7 +136,7 @@ module AutoC
         #{range.type} r;
         #{hasher.type} hasher;
         #{hasher.create(:hasher)};
-        for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+        for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{element.const_ptr_type} p = #{range.view_front}(&r);
           #{hasher.update(:hasher, element.hash_code('*p'))};
         }
@@ -153,7 +155,7 @@ module AutoC
       lookup.code %{
         #{range.type} r;
         assert(self);
-        for(r = #{get_range}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+        for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{element.const_ptr_type} e = #{range.view_front}(&r);
           if(#{element.equal(:value, '*e')}) return e;
         }
