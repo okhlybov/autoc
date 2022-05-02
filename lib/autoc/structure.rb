@@ -14,15 +14,8 @@ module AutoC
 
     def initialize(type, fields, visibility: :public, profile: :blackbox)
       super(type, visibility: visibility)
-      @fields = fields.transform_values { |type| Type.coerce(type) }
-      self.fields.each_value { |type| dependencies << type }
-      # trait_all_true(:orderable) # Ordering is not supported by default
-      trait_all_true(:default_constructible)
-      trait_any_true(:destructible)
-      trait_all_true(:comparable)
-      trait_all_true(:hashable)
-      trait_all_true(:copyable)
-      process_profile(profile)
+      self.profile = profile
+      self.fields = fields
     end
 
     def default_constructible? = @default_constructible
@@ -34,7 +27,19 @@ module AutoC
     def orderable? = false
 
     # @private
-    private def process_profile(profile)
+    private def fields=(fields)
+      @fields = fields.transform_values { |type| Type.coerce(type) }
+      self.fields.each_value { |type| dependencies << type }
+      # trait_all_true(:orderable) # Ordering is not supported by default
+      trait_all_true(:default_constructible)
+      trait_any_true(:destructible)
+      trait_all_true(:comparable)
+      trait_all_true(:hashable)
+      trait_all_true(:copyable)
+    end
+
+    # @private
+    private def profile=(profile)
       case profile
       when :blackbox
         @inline_methods = false
@@ -44,7 +49,7 @@ module AutoC
         @inline_methods = true
         @omit_accessors = true
         @opaque = false
-      else raise 'unknown profile'
+      else raise "Unknown profile: #{profile}"
       end
     end
 
@@ -99,51 +104,52 @@ module AutoC
     private def configure
       super
       ### custom_create
-      ctor_params = { self: type }
-      fields.each { |name, type| ctor_params[field_variable(name)] = type.const_type }
-      def_method :void, :setup, ctor_params, instance: :custom_create, require:-> { copyable? } do
-        _code = 'assert(self);'
-        fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(name))+';' }
-        code(_code)
-      end
-      ### default_create
-      _code = 'assert(self);'
-      fields.each { |name, type| _code += type.default_create(field_variable(self: name))+';' }
-      default_create.code _code
-      ### destroy
-      _code = 'assert(self);'
-      fields.each { |name, type| _code += type.destroy(field_variable(self: name))+';' if type.destructible? }
-      destroy.code _code
-      ### copy
-      _code = 'assert(self); assert(source);'
-      fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(source: name))+';' }
-      copy.code _code
-      ### equal
-      _code = 'assert(self); assert(other);'
-      _code += 'return ' + fields.to_a.collect { |name, type| type.equal(field_variable(self: name), field_variable(other: name)) }.join(' && ') + ';'
-      equal.code _code
-      ### hash_code
-      _code = %{
-        size_t hash;
-        #{hasher.type} hasher;
-        #{hasher.create(:hasher)};
-      }
-      fields.each { |name, type| _code += hasher.update(:hasher, type.hash_code(field_variable(self: name)))+';' }
-      _code += %{
-        hash = #{hasher.result(:hasher)};
-        #{hasher.destroy(:hasher)};
-        return hash;
-      }
-      hash_code.code _code
-      [default_create, custom_create, destroy, copy, equal, compare, hash_code].each { |x| x.inline = true } if @inline_methods
-      ### accessors
-      fields.each do |name, field_type|
-        def_viewer(name, field_type)
-        if field_type.copyable?
-          def_getter(name, field_type)
-          def_setter(name, field_type)
+        ctor_params = { self: type }
+        fields.each { |name, type| ctor_params[field_variable(name)] = type.const_type }
+        def_method :void, :setup, ctor_params, instance: :custom_create, require:-> { copyable? } do
+          _code = 'assert(self);'
+          fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(name))+';' }
+          code(_code)
         end
-      end
+      ### default_create
+        _code = 'assert(self);'
+        fields.each { |name, type| _code += type.default_create(field_variable(self: name))+';' }
+        default_create.code _code
+      ### destroy
+        _code = 'assert(self);'
+        fields.each { |name, type| _code += type.destroy(field_variable(self: name))+';' if type.destructible? }
+        destroy.code _code
+      ### copy
+        _code = 'assert(self); assert(source);'
+        fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(source: name))+';' }
+        copy.code _code
+      ### equal
+        _code = 'assert(self); assert(other);'
+        _code += 'return ' + fields.to_a.collect { |name, type| type.equal(field_variable(self: name), field_variable(other: name)) }.join(' && ') + ';'
+        equal.code _code
+      ### hash_code
+        _code = %{
+          size_t hash;
+          #{hasher.type} hasher;
+          #{hasher.create(:hasher)};
+        }
+        fields.each { |name, type| _code += hasher.update(:hasher, type.hash_code(field_variable(self: name)))+';' }
+        _code += %{
+          hash = #{hasher.result(:hasher)};
+          #{hasher.destroy(:hasher)};
+          return hash;
+        }
+        hash_code.code _code
+      ### accessors
+        fields.each do |name, field_type|
+          def_viewer(name, field_type)
+          if field_type.copyable?
+            def_getter(name, field_type)
+            def_setter(name, field_type)
+          end
+        end
+      # Mark all special methods as inline if requested
+      [default_create, custom_create, destroy, copy, equal, compare, hash_code].each { |x| x.inline = true } if @inline_methods
     end
 
     # @private
