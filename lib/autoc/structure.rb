@@ -106,7 +106,7 @@ module AutoC
       ### custom_create
         ctor_params = { self: type }
         fields.each { |name, type| ctor_params[field_variable(name)] = type.const_type }
-        def_method :void, :setup, ctor_params, instance: :custom_create, require:-> { copyable? } do
+        def_method :void, :setup, ctor_params, instance: :custom_create, require:-> { custom_constructible? } do
           _code = 'assert(self);'
           fields.each { |name, type| _code += type.copy(field_variable(self: name), field_variable(name))+';' }
           code(_code)
