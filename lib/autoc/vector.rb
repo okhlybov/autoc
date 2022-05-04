@@ -19,8 +19,6 @@ module AutoC
 
     def canonic_tag = "Vector<#{element.type}>"
 
-    def range = @range ||= Range.new(self, visibility: visibility)
-
     def composite_interface_declarations(stream)
       stream << %{
         /**

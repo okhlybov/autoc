@@ -17,8 +17,6 @@ module AutoC
 
     def canonic_tag = "HashMap<#{key.type} -> #{element.type}>"
 
-    def range = @range ||= Range.new(self, visibility: visibility)
-      
     private def _node = @_node ||= Node.new(self)
     private def _set = @_set ||= Set.new(self, _node)
 

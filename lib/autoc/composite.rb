@@ -36,93 +36,6 @@ module AutoC
     #
     private def header(code) = @_method.header(code)
 
-    #
-    class Method < AutoC::Function
-
-      attr_reader :type
-
-      def initialize(type, name, parameters, result, refs, inline, visibility, guard)
-        i = 0
-        parameters =
-          if parameters.is_a?(Array)
-            parameters.collect { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-          else
-            parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-          end
-        super(type.decorate_identifier(name), parameters, result)
-        @type = type
-        @refs = refs
-        @guard = guard
-        @inline = inline
-        @visibility = visibility
-      end
-
-      def call(*args)
-        if args.empty? then self # Return self to provide method chaining
-        elsif args.first.nil? then super() # Emit function call without parameters, fn()
-        else
-          i = 0
-          super(args.collect { |v| (i += 1) <= @refs ? ref_value_call(v) : v }) # Emit function call with specified parameters, fn(...)
-        end
-      end
-
-      def code(code) = @code = code
-
-      def inline_code(code)
-        @inline = true
-        @code = code
-      end
-
-      def header(info) = @info = info
-
-      def method_missing(meth, *args) = type.send(meth, *args)
-
-      attr_writer :inline
-
-      def inline? = @inline == true
-
-      def public? = @visibility == :public
-
-      def live? = @live ||= (@guard.is_a?(Proc) ? @guard.() : @guard) == true
-
-      attr_writer :visibility
-
-      def interface_declaration(stream)
-        if live?
-          raise "Method body for #{self} is absent" if @code.nil?
-          stream << if public?
-            %{
-              /**
-                #{ingroup}
-                #{@info}
-              */
-            }
-          else
-            %{
-              /** @private */
-            }
-          end
-          stream << "#{declare(self)};"
-        end
-      end
-
-      def interface_definition(stream)
-        stream << "#{define(self)} {#{@code}}" if live? && inline?
-      end
-
-      def implementation(stream)
-        stream << "#{define(self)} {#{@code}}" if live? && !inline?
-      end
-
-      private
-
-      def ref_value_type(type) = "#{type}*"
-
-      def ref_value_call(arg) = "&(#{arg})"
-
-    end
-
-
     # Prefix used to generate fully qualified type-specific identifiers.
     def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
 
@@ -337,42 +250,141 @@ module AutoC
       @methods.each_value { |meth| meth.implementation(stream) }
     end
 
-    CODE = Code.interface %{
-      #include <stddef.h>
-      #include <assert.h>
-      #ifndef AUTOC_INLINE
-        #if defined(_MSC_VER) || defined(__DMC__)
-          #define AUTOC_INLINE AUTOC_STATIC __inline
-        #elif defined(__LCC__)
-          #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
-        #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
-          #define AUTOC_INLINE  AUTOC_STATIC inline
-        #else
-          #define AUTOC_INLINE AUTOC_STATIC
-        #endif
-      #endif
-      #ifndef AUTOC_EXTERN
-        #ifdef __cplusplus
-          #define AUTOC_EXTERN extern "C"
-        #else
-          #define AUTOC_EXTERN extern
-        #endif
-      #endif
-      #ifndef AUTOC_STATIC
-        #if defined(_MSC_VER)
-          #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
-        #elif defined(__GNUC__)
-          #define AUTOC_STATIC __attribute__((__used__)) static
-        #else
-          #define AUTOC_STATIC static
-        #endif
-      #endif
-      #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
-      #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
-    }
-
-    # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
   end
 
+
+  # Provides basic functionality for composites whose contents can be iterated over
+  module Composite::Traversable
+    def range = @range ||= self.class::Range.new(self, visibility:)
+    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> iterable.range cyclic dependency
+    private def configure
+      dependencies << range
+      super
+    end
+  end
+
+
+  #
+  class Composite::Method < AutoC::Function
+
+    attr_reader :type
+
+    def initialize(type, name, parameters, result, refs, inline, visibility, guard)
+      i = 0
+      parameters =
+        if parameters.is_a?(Array)
+          parameters.collect { |t| (i += 1) <= refs ? ref_value_type(t) : t }
+        else
+          parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
+        end
+      super(type.decorate_identifier(name), parameters, result)
+      @type = type
+      @refs = refs
+      @guard = guard
+      @inline = inline
+      @visibility = visibility
+    end
+
+    def call(*args)
+      if args.empty? then self # Return self to provide method chaining
+      elsif args.first.nil? then super() # Emit function call without parameters, fn()
+      else
+        i = 0
+        super(args.collect { |v| (i += 1) <= @refs ? ref_value_call(v) : v }) # Emit function call with specified parameters, fn(...)
+      end
+    end
+
+    def code(code) = @code = code
+
+    def inline_code(code)
+      @inline = true
+      @code = code
+    end
+
+    def header(info) = @info = info
+
+    def method_missing(meth, *args) = type.send(meth, *args)
+
+    attr_writer :inline
+
+    def inline? = @inline == true
+
+    def public? = @visibility == :public
+
+    def live? = @live ||= (@guard.is_a?(Proc) ? @guard.() : @guard) == true
+
+    attr_writer :visibility
+
+    def interface_declaration(stream)
+      if live?
+        raise "Method body for #{self} is absent" if @code.nil?
+        stream << if public?
+          %{
+            /**
+              #{ingroup}
+              #{@info}
+            */
+          }
+        else
+          %{
+            /** @private */
+          }
+        end
+        stream << "#{declare(self)};"
+      end
+    end
+
+    def interface_definition(stream)
+      stream << "#{define(self)} {#{@code}}" if live? && inline?
+    end
+
+    def implementation(stream)
+      stream << "#{define(self)} {#{@code}}" if live? && !inline?
+    end
+
+    private
+
+    def ref_value_type(type) = "#{type}*"
+
+    def ref_value_call(arg) = "&(#{arg})"
+
+  end
+
+
+  Composite::CODE = Code.interface %{
+    #include <stddef.h>
+    #include <assert.h>
+    #ifndef AUTOC_INLINE
+      #if defined(_MSC_VER) || defined(__DMC__)
+        #define AUTOC_INLINE AUTOC_STATIC __inline
+      #elif defined(__LCC__)
+        #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
+      #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
+        #define AUTOC_INLINE  AUTOC_STATIC inline
+      #else
+        #define AUTOC_INLINE AUTOC_STATIC
+      #endif
+    #endif
+    #ifndef AUTOC_EXTERN
+      #ifdef __cplusplus
+        #define AUTOC_EXTERN extern "C"
+      #else
+        #define AUTOC_EXTERN extern
+      #endif
+    #endif
+    #ifndef AUTOC_STATIC
+      #if defined(_MSC_VER)
+        #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
+      #elif defined(__GNUC__)
+        #define AUTOC_STATIC __attribute__((__used__)) static
+      #else
+        #define AUTOC_STATIC static
+      #endif
+    #endif
+    #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
+    #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
+  }
+
+  # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
 
 end

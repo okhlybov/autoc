@@ -13,10 +13,9 @@ module AutoC
   # such as vector, list, map etc.
   class Container < Composite
 
-    attr_reader :element
+    prepend Composite::Traversable
 
-    #
-    abstract def range = raise
+    attr_reader :element
 
     def initialize(type, element, visibility: :public)
       super(type, visibility: visibility)
@@ -40,10 +39,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
 
-    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> iterable.range cyclic dependency
-
     private def configure
-      dependencies << range
       super
       def_method :int, :empty, { self: const_type } do
         header %{

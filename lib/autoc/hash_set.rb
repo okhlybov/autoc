@@ -22,8 +22,6 @@ module AutoC
 
     def canonic_tag = "HashSet<#{element.type}>"
 
-    def range = @range ||= Range.new(self, visibility: visibility)
-
     private def _bucket = @_bucket ||= Bucket.new(self, element)
     private def _buckets = @_buckets ||= Buckets.new(self, _bucket)
 
