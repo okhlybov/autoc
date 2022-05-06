@@ -59,9 +59,15 @@ module AutoC
       sources.each(&:render)
     end
 
+    private def total_entities
+      @total_entities ||= begin
+        set = ::Set.new
+        entities.each { |e| set.merge(e.total_dependencies) }
+        set
+      end
+    end
+
     private def distribute_entities
-      total_entities = ::Set.new
-      entities.each { |e| total_entities.merge(e.total_dependencies) }
       header.entities.merge(total_entities)
       if @source_count.nil?
         if @source_complexity_threshold.nil?
