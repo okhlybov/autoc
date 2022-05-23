@@ -292,4 +292,46 @@ module AutoC
   end
 
 
+  Module::DEFINITIONS = Code.interface %{
+    #ifndef AUTOC_INLINE
+      #if defined(_MSC_VER) || defined(__DMC__)
+        #define AUTOC_INLINE AUTOC_STATIC __inline
+      #elif defined(__LCC__)
+        #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
+      #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
+        #define AUTOC_INLINE  AUTOC_STATIC inline
+      #else
+        #define AUTOC_INLINE AUTOC_STATIC
+      #endif
+    #endif
+    #ifndef AUTOC_EXTERN
+      #ifdef __cplusplus
+        #define AUTOC_EXTERN extern "C"
+      #else
+        #define AUTOC_EXTERN extern
+      #endif
+    #endif
+    #ifndef AUTOC_STATIC
+      #if defined(_MSC_VER)
+        #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
+      #elif defined(__GNUC__)
+        #define AUTOC_STATIC __attribute__((__used__)) static
+      #else
+        #define AUTOC_STATIC static
+      #endif
+    #endif
+    #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
+    #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
+  }
+
+
+  Module::INCLUDES = Code.new interface: %{
+    #include <stddef.h>
+    #include <assert.h>
+  }
+
+  
+  # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
+
+
 end
