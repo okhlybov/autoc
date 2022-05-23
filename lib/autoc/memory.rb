@@ -72,13 +72,18 @@ module AutoC
     def definitions(stream)
       super
       stream << %{
-        #include <malloc.h>
         #include <string.h>
+        #include <malloc.h>
+        #if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+          #include <mm_malloc.h>
+        #endif
         void* _autoc_aligned_malloc(size_t size, size_t alignment) {
           #if __STDC_VERSION__ >= 201112L
             return aligned_alloc(alignment, size);
           #elif defined(MSC_VER) || defined(__MINGW32__)
             return _aligned_malloc(size, alignment);
+          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+            return _mm_malloc(size, alignment);
           #elif _POSIX_VERSION >= 200112L
             void* ptr;
             return posix_memalign(&ptr, alignment, size) ? NULL : ptr;
@@ -93,6 +98,8 @@ module AutoC
         void _autoc_aligned_free(void* ptr) {
           #if defined(MSC_VER) || defined(__MINGW32__)
             _aligned_free(ptr);
+          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+            _mm_free(ptr);
           #else
             free(ptr);
           #endif
