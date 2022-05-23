@@ -74,15 +74,15 @@ module AutoC
       stream << %{
         #include <string.h>
         #include <malloc.h>
-        #if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+        #if defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__GNUC__) || defined(__clang__)
           #include <mm_malloc.h>
         #endif
         void* _autoc_aligned_malloc(size_t size, size_t alignment) {
           #if __STDC_VERSION__ >= 201112L
             return aligned_alloc(alignment, size);
-          #elif defined(MSC_VER) || defined(__MINGW32__)
+          #elif defined(MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
             return _aligned_malloc(size, alignment);
-          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__GNUC__) || defined(__clang__)
             return _mm_malloc(size, alignment);
           #elif _POSIX_VERSION >= 200112L
             void* ptr;
@@ -96,9 +96,9 @@ module AutoC
           return memset(_autoc_aligned_malloc(bytes, alignment), 0, bytes);
         }
         void _autoc_aligned_free(void* ptr) {
-          #if defined(MSC_VER) || defined(__MINGW32__)
+          #if defined(MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
             _aligned_free(ptr);
-          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__GNUC__) || defined(__clang__)
             _mm_free(ptr);
           #else
             free(ptr);
