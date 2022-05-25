@@ -369,8 +369,8 @@ module AutoC
           self->iterable = iterable;
           #ifdef _OPENMP
             if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
-              int chunk_id = omp_get_thread_num();
-              size_t chunk_size = #{iterable.size}(iterable) / omp_get_num_threads();
+              const int chunk_id = omp_get_thread_num();
+              const size_t chunk_size = #{iterable.size}(iterable) / omp_get_num_threads();
               self->front_position = chunk_id*chunk_size;
               self->back_position = chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : #{iterable.size}(iterable)-1;
             } else {
