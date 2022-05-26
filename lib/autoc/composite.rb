@@ -188,7 +188,7 @@ module AutoC
           false
         end
       # Convert _separated_names to the CamelCase
-      id = prefix + fn.split('_').collect(&:capitalize).join
+      id = prefix + fn.split('_').collect{ |s| s[0].upcase << s[1..-1] }.join
       # Carry over the method name's leading underscore only if the prefix is not in turn underscored
       underscored && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     end
