@@ -6,10 +6,15 @@ require 'autoc/type'
 require 'autoc/module'
 
 
+class AutoC::Type
+  def self.coerce(type) = type.is_a?(AutoC::Type) ? type : AutoC::STDC::Primitive.coerce(type)
+end
+
+
 module AutoC::STDC
 
 
-  class SystemHeader < Code
+  class SystemHeader < AutoC::Code
     def initialize(header) = super(interface: "\n#include <#{header}>\n")
   end
 
@@ -53,9 +58,13 @@ module AutoC::STDC
   end
 
 
-  CHAR = Integer.new 'char'
-  SIGNED_CHAR = Integer.new 'signed char', /^signed\s+char$/
-  UNSIGNED_CHAR = Integer.new 'unsigned char', /^unsigned\s+char$/
+  class Character < Integer
+  end
+
+
+  CHAR = Character.new 'char'
+  SIGNED_CHAR = Character.new 'signed char', /^signed\s+char$/
+  UNSIGNED_CHAR = Character.new 'unsigned char', /^unsigned\s+char$/
 
 
   SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Integer.new 'short', /^(signed\s+)?short(\s+int)?$/
