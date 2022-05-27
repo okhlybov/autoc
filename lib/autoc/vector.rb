@@ -3,7 +3,7 @@
 
 require 'autoc/container'
 require 'autoc/range'
-require 'autoc/std'
+require 'autoc/openmp'
 
 
 module AutoC
