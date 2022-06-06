@@ -69,7 +69,7 @@ require_relative '../test/generic_value'
 class Value < GenericValue
   attr_reader :description
   def initialize(type, desc)
-    super(type, :public)
+    super(type, visibility: :public)
     @description = desc
   end
 end
