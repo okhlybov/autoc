@@ -13,7 +13,7 @@ module AutoC
     attr_reader :fields
 
     def initialize(type, fields, visibility: :public, profile: :blackbox)
-      super(type, visibility: visibility)
+      super(type, visibility:)
       self.profile = profile
       self.fields = fields
     end

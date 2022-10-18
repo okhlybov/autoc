@@ -18,7 +18,7 @@ module AutoC
     attr_reader :element
 
     def initialize(type, element, visibility: :public)
-      super(type, visibility: visibility)
+      super(type, visibility:)
       dependencies << (@element = Type.coerce(element))
     end
 
@@ -166,7 +166,7 @@ module AutoC
     attr_reader :key
 
     def initialize(type, key, element, visibility: :public)
-      super(type, element, visibility: visibility)
+      super(type, element, visibility:)
       @key = Type.coerce(key)
       dependencies << self.key
     end
