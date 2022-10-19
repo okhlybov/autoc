@@ -19,7 +19,7 @@ module AutoC
       begin
         instance = instance.to_sym
         @_method = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
-        raise "Method definition for #{meth} is already registered" if @methods.key?(instance)
+        raise "Method definition for #{meth} is already registered" if @methods.key?(instance) && !@allow_method_redefines
         @methods[instance] = @_method
         instance_eval(&code) if block_given?
       ensure

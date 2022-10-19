@@ -14,6 +14,7 @@ module AutoC
     def custom_constructible? = true
 
     def initialize(type = :CString, visibility: :public)
+      @allow_method_redefines = true
       super(type, visibility:)
       @char = STDC::CHAR
     end
@@ -41,7 +42,7 @@ module AutoC
 
     def configure
       super
-      def_method :void, :create, { self: type, source: @char.const_ptr_type }, instance: :custom_create do
+      def_method :void, :create, { self: type, source: const_type }, refs: 1, instance: :custom_create do
         inline_code %{
           size_t size;
           assert(self);
@@ -52,43 +53,51 @@ module AutoC
           (*self)[size] = '\\0';
         }
       end
-      def_method :size_t, :size, { self: const_type } do
+      def_method :size_t, :size, { self: const_type }, refs: 0 do
         inline_code %{
           assert(self);
-          return strlen(*self);
+          return strlen(self);
         }
       end
-      equal.inline_code %{
-        assert(self);
-        assert(other);
-        return strcmp(*self, *other) == 0;
-      }
-      hash_code.inline_code %{
-        /* djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html */
-        size_t hash;
-        assert(self);
-        hash = 5381;
-        if(*self) {
-          size_t c;
-          #{@char.ptr_type} str = *self;
-          while((c = *str++)) hash = hash*33 ^ c;
+      def_method :int, :equal, { self: const_type, other: const_type }, refs: 0 do
+        inline_code %{
+          assert(self);
+          assert(other);
+          return strcmp(self, other) == 0;
         }
-        return hash;
-      }
-      compare.inline_code %{
-        assert(self);
-        assert(other);
-        return strcmp(*self, *other);
-      }
-      copy.inline_code %{
-        assert(source);
-        #{destroy('*self')};
-        #{custom_create('*self', '*source')};
-      }
-      destroy.inline_code %{
-        assert(self);
-        free(*self);
-      }
+      end
+      def_method :size_t, :hash_code, { self: const_type }, refs: 0 do
+        inline_code %{
+          /* djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html */
+          size_t hash;
+          assert(self);
+          hash = 5381;
+          size_t c;
+          #{@char.ptr_type} str = self;
+          while((c = *str++)) hash = hash*33 ^ c;
+          return hash;
+        }
+      end
+      def_method :int, :compare, { self: const_type, other: const_type }, refs: 0 do
+        inline_code %{
+          assert(self);
+          assert(other);
+          return strcmp(self, other);
+        }
+      end
+      def_method :void, :copy, { self: type, source: const_type}, refs: 1 do
+        inline_code %{
+          assert(source);
+          #{destroy('*self')};
+          #{custom_create('*self', :source)};
+        }
+      end
+      def_method :void, :destroy, { self: type }, refs: 1 do
+        inline_code %{
+          assert(self);
+          free(*self);
+        }
+      end
     end
 end
 
