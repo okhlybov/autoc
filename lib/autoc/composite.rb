@@ -14,18 +14,21 @@ module AutoC
   # or elaborate data containers.
   class Composite < Type
 
-    #
+    # The first refs: arguments are converted to references (C pointers), the remaining are left as is
     private def def_method(result, name, parameters, refs: 1, inline: false, visibility: nil, require: true, instance: name, &code)
       begin
         instance = instance.to_sym
         @_method = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
-        raise "Method definition for #{meth} is already registered" if @methods.key?(instance) && !@allow_method_redefines
+        raise "Method definition for ##{name} is already registered" if @methods.key?(instance) && !@allow_method_redefines
         @methods[instance] = @_method
         instance_eval(&code) if block_given?
       ensure
         @_method = nil
       end
     end
+
+    #
+    private def refs=(refs) @_method.refs = refs end
 
     #
     private def code(code) = @_method.code(code)
@@ -269,20 +272,20 @@ module AutoC
 
     attr_reader :type
 
+    attr_accessor :refs
+
     def initialize(type, name, parameters, result, refs, inline, visibility, guard)
-      i = 0
-      parameters =
-        if parameters.is_a?(Array)
-          parameters.collect { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-        else
-          parameters.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-        end
       super(type.decorate_identifier(name), parameters, result)
       @type = type
       @refs = refs
       @guard = guard
       @inline = inline
       @visibility = visibility
+    end
+
+    # Transform first refs value type arguments to reference type
+    def parameters
+      i = 0; super.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
     end
 
     def call(*args)

@@ -14,24 +14,15 @@ module AutoC
 
     attr_reader :result
 
-    attr_reader :parameters
-
     def initialize(name, parameters = [], result = :void)
       @name = name
       @result = result
-      @parameters =
-        if parameters.is_a?(Array)
-          hash = {}
-          (0..parameters.size-1).each { |i| hash["__#{i}__"] = parameters[i] }
-          hash
-        else
-          parameters.to_h
-        end
+      @parameters = parameters
     end
 
     def signature = '%s(%s)' % [result, parameters.values.join(', ')]
 
-    def definition ='%s %s(%s)' % [result, name, parameters.collect{ |var, type| "#{type} #{var}" }.join(', ')]
+    def definition ='%s %s(%s)' % [result, name, parameters.collect { |var, type| "#{type} #{var}" }.join(', ')]
 
     def declaration = definition
 
@@ -40,6 +31,17 @@ module AutoC
     def [](*args) = call(*args)
 
     def to_s = name.to_s
+
+    # Assign syntheric parameter names if the input is a mere array of types
+    def parameters
+      if @parameters.is_a?(Array)
+        hash = {}
+        (0..@parameters.size-1).each { |i| hash["__#{i}__"] = @parameters[i] }
+        hash
+      else
+        @parameters.to_h
+      end
+    end
 
   end
 
