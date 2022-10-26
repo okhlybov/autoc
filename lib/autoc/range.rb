@@ -329,6 +329,112 @@ module AutoC
   end
 
 
+  # A concrete range implementation for contiguous memory storage types such ar vector, string etc.
+  class Range::Contiguous < Range::RandomAccess
+
+    def composite_interface_declarations(stream)
+      stream << %{
+        /**
+          #{defgroup}
+          @ingroup #{iterable.type}
+
+          @brief #{canonic_desc}
+
+          This range implements the @ref #{archetype} archetype.
+
+          The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
+          which account for parallel iteration in the way
+
+          @code{.c}
+          #pragma omp parallel
+          for(#{type} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+          @endcode
+
+          @see @ref Range
+
+          @since 2.0
+        */
+        /**
+          #{ingroup}
+          @brief Opaque structure holding state of the iterable's range
+          @since 2.0
+        */
+        typedef struct {
+          #{iterable.element.const_ptr_type} front; /**< @private */
+          #{iterable.element.const_ptr_type} back; /**< @private */
+        } #{type};
+      }
+      super
+    end
+    
+    private def configure
+      super
+      custom_create.inline_code %{
+        #ifdef _OPENMP
+          size_t chunk_count;
+        #endif
+        size_t element_count;
+        assert(self);
+        assert(iterable);
+        assert(#{iterable.storage_ptr(:iterable)});
+        element_count = #{iterable.size('*iterable')};
+        #ifdef _OPENMP
+          if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
+            const int chunk_id = omp_get_thread_num();
+            const size_t chunk_size = element_count / omp_get_num_threads();
+            /* CHECKME */
+            self->front = #{iterable.storage_ptr(:iterable)} + chunk_id*chunk_size;
+            self->back = #{iterable.storage_ptr(:iterable)} + (chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : element_count-1);
+          } else {
+        #endif
+          self->front = #{iterable.storage_ptr(:iterable)};
+          self->back = #{iterable.storage_ptr(:iterable)} + element_count-1;
+        #ifdef _OPENMP
+          }
+        #endif
+      }
+      length.inline_code %{
+        assert(self);
+        return #{empty}(self) ? 0 : self->back - self->front + 1;
+      }
+      empty.inline_code %{
+        assert(self);
+        assert(self->front);
+        assert(self->back);
+        return self->front > self->back;
+      }
+      pop_front.inline_code %{
+        assert(!#{empty}(self));
+        ++self->front;
+      }
+      pop_back.inline_code %{
+        assert(!#{empty}(self));
+        --self->back;
+      }
+      view_front.inline_code %{
+        assert(!#{empty}(self));
+        return self->front;
+      }
+      view_back.inline_code %{
+        assert(!#{empty}(self));
+        return self->back;
+      }
+      peek.inline_code %{
+        assert(self);
+        assert(position < #{length}(self));
+        return self->front + position;
+      }
+      get.inline_code %{
+        #{iterable.element.type} e;
+        assert(self);
+        assert(position < #{length}(self));
+        #{iterable.element.copy(:e, '*(self->front + position)')};
+        return e;
+      }
+    end
+  end # ContiguousRange
+
+
   Range::Doc = Code.new interface: %{
     /**
       @page Range

@@ -3,6 +3,7 @@
 
 require 'autoc/composite'
 require 'autoc/range'
+require 'autoc/stdc'
 
 
 module AutoC
@@ -100,7 +101,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :purge, { self: type } do
+      def_method :void, :purge, { self: type }, require:-> { default_constructible? } do
         code %{
           assert(self);
           #{destroy}(self);
@@ -109,18 +110,18 @@ module AutoC
         header %{
           @brief Remove and destroy all contained elements
 
-          @param[in] self list to be purged
+          @param[in] self container to be purged
 
           The elements are destroyed with respective destructor.
 
-          After call to this function the set will remain intact yet contain zero elements.
+          After call to this function the container will remain intact yet contain zero elements.
 
           @since 2.0
         }
       end
     end
   
-    end
+  end # Container
 
 
   # Provides generic implementation of hashable container support code.
@@ -161,14 +162,64 @@ module AutoC
   end
 
 
+  # @abstract
+  # Generator type for direct access containers whose elements are indexed by (usually) an integer index.
+  class IndexedContainer < Container
+
+    attr_reader :index
+
+    def initialize(type, element, index = STDC::SIZE_T, visibility: :public)
+      super(type, element, visibility:)
+      dependencies << @index = Type.coerce(index)
+    end
+
+    def configure
+      super
+      def_method :int, :valid_index, { self: const_type, index: index.const_type } do
+        header %{
+          @brief Return non-zero if specified index is valid and zero value otherwise
+          TODO
+        }
+      end
+      def_method element.const_ptr_type, :view, { self: const_type, index: index.const_type } do
+        header %{
+          @brief Return a view of the element associated with the specified key or NULL if there the specified index is invalid
+          TODO
+        }
+      end
+      def_method element.type, :get, { self: const_type, index: index.const_type }, require:-> { element.copyable? } do
+        inline_code %{
+          #{element.type} result;
+          #{element.const_ptr_type} e;
+          assert(#{valid_index(:self, :index)});
+          e = #{view(:self, :index)}; assert(e);
+          #{element.copy(:result, '*e')};
+          return result;
+        }
+        header %{
+          @brief Return a copy of the element associated at the specified index
+          TODO
+        }
+      end
+      def_method :void, :set, { self: type, index: index.const_type, value: element.const_type }, require:-> { element.copyable? } do
+        header %{
+          @brief Set the container element at the specified index
+          TODO
+        }
+      end
+    end
+
+  end # IndexedContainer
+
+
+  # @abstract
   class AssociativeContainer < Container
 
     attr_reader :key
 
     def initialize(type, key, element, visibility: :public)
       super(type, element, visibility:)
-      @key = Type.coerce(key)
-      dependencies << self.key
+      dependencies << @key = Type.coerce(key)
     end
 
     # Additional container-specific trait restrictions
@@ -219,7 +270,7 @@ module AutoC
           #{element.type} result;
           #{element.const_ptr_type} e;
           assert(#{contains_key}(self, key));
-          e = #{view}(self, key);
+          e = #{view}(self, key); assert(e);
           #{element.copy(:result, '*e')};
           return result;
         }
