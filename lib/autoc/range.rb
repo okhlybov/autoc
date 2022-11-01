@@ -369,6 +369,8 @@ module AutoC
     
     private def configure
       super
+      container = '*iterable'
+      storage = iterable.storage_ptr(container)
       custom_create.inline_code %{
         #ifdef _OPENMP
           size_t chunk_count;
@@ -376,19 +378,19 @@ module AutoC
         size_t element_count;
         assert(self);
         assert(iterable);
-        assert(#{iterable.storage_ptr(:iterable)});
-        element_count = #{iterable.size('*iterable')};
+        assert(#{storage});
+        element_count = #{iterable.size(container)};
         #ifdef _OPENMP
           if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
             const int chunk_id = omp_get_thread_num();
             const size_t chunk_size = element_count / omp_get_num_threads();
             /* CHECKME */
-            self->front = #{iterable.storage_ptr(:iterable)} + chunk_id*chunk_size;
-            self->back = #{iterable.storage_ptr(:iterable)} + (chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : element_count-1);
+            self->front = #{storage} + chunk_id*chunk_size;
+            self->back = #{storage} + (chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : element_count-1);
           } else {
         #endif
-          self->front = #{iterable.storage_ptr(:iterable)};
-          self->back = #{iterable.storage_ptr(:iterable)} + element_count-1;
+          self->front = #{storage};
+          self->back = #{storage} + element_count-1;
         #ifdef _OPENMP
           }
         #endif

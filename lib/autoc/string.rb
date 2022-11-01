@@ -2,6 +2,7 @@
 
 
 require 'autoc/container'
+require 'autoc/range'
 require 'autoc/stdc'
 
 
@@ -9,7 +10,7 @@ module AutoC
 
 
   # Value type string based on plain C string
-  class CString < IndexedContainer
+  class CString < ContiguousContainer
 
     include Container::Sequential
 
@@ -30,12 +31,14 @@ module AutoC
         /**
           #{defgroup}
           @brief Value type string wrapper around the plain C null-terminated #{element} string
+          TODO
         */
       }
       stream << %{
         /**
           #{ingroup}
           @brief Managed C string value
+          TODO
         */
         typedef #{element.ptr_type} #{type};
       }
@@ -55,6 +58,11 @@ module AutoC
         }
       end
       ###
+        get.refs = 0
+        set.refs = 0
+        view.refs = 0
+        valid_index.refs = 0
+      ###
         destroy.inline_code %{
           assert(self);
           free(*self);
@@ -70,33 +78,6 @@ module AutoC
         empty.inline_code %{
           assert(self);
           return *self == '\\0';
-        }
-      ###
-        valid_index.refs = 0
-        valid_index.inline_code %{
-          assert(self);
-          return index < #{size}(self);
-        }
-      ###
-        view.refs = 0
-        view.inline_code %{
-          assert(self);
-          assert(#{valid_index(:self, :index)});
-          return &self[index];
-        }
-      ###
-        get.refs = 0
-        get.inline_code %{
-          assert(self);
-          assert(#{valid_index(:self, :index)});
-          return self[index];
-        }
-      ###
-        set.refs = 0
-        set.inline_code %{
-          assert(self);
-          assert(#{valid_index(:self, :index)});
-          self[index] = value;
         }
       ###
         equal.refs = 0
@@ -137,12 +118,11 @@ module AutoC
 
     # @private
     # Required by the contigious range type to gain direct access to the object's storage
-    def storage_ptr(iterable) = "(*#{iterable})"
+    def storage_ptr(iterable) = iterable
 
   end # CString
 
-
   CString::Range = Range::Contiguous
 
-  
+
 end

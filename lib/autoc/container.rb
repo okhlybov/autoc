@@ -146,6 +146,7 @@ module AutoC
 
 
   # Provides generic implementations of sequential algorithms
+  # Employs type-provided range for iteration
   module Container::Sequential
     def configure
       super
@@ -164,7 +165,7 @@ module AutoC
 
   # @abstract
   # Generator type for direct access containers whose elements are indexed by (usually) an integer index.
-  class IndexedContainer < Container
+  class ContiguousContainer < Container
 
     attr_reader :index
 
@@ -173,43 +174,109 @@ module AutoC
       dependencies << @index = Type.coerce(index)
     end
 
+    # private def storage_ptr(self)
+
     def configure
       super
       def_method :int, :valid_index, { self: const_type, index: index.const_type } do
+        inline_code %{
+          assert(self);
+          return index < #{size('*self')};
+        }
         header %{
-          @brief Return non-zero if specified index is valid and zero value otherwise
-          TODO
+          @brief Check for position index validity
+
+          @param[in] self vector to check position for
+          @param[in] position position index to check for validity
+          @return non-zero if `position` is valid (i.e. falls within [0,size) range) and zero otherwise
+
+          The function checks whether `position` falls within [0,size) range.
+
+          @note This function should be used to do explicit bounds checking prior accessing/setting
+            the vector's element (see @ref #{get}, @ref #{view}, @ref #{set})
+            as the respective functions skip this test for performance reasons.
+
+          @since 2.0
         }
       end
       def_method element.const_ptr_type, :view, { self: const_type, index: index.const_type } do
+        inline_code %{
+          assert(self);
+          assert(#{valid_index('*self', :index)});
+          return #{storage_ptr(:self)} + index;
+        }
         header %{
-          @brief Return a view of the element associated with the specified key or NULL if there the specified index is invalid
-          TODO
+          @brief Get a view of the element at specified position
+
+          @param[in] self vector to access element from
+          @param[in] index position to access element at
+          @return a view of element at `position`
+
+          This function is used to get a constant reference (in form the C pointer) to the value contained in `self` at specified position (`return &self[index]`).
+          Refer to @ref #{get} to get an independent copy of the element.
+
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+
+          @note `index` must be valid (see @ref #{valid_index}).
+
+          @since 2.0
         }
       end
       def_method element.type, :get, { self: const_type, index: index.const_type }, require:-> { element.copyable? } do
         inline_code %{
           #{element.type} result;
           #{element.const_ptr_type} e;
-          assert(#{valid_index(:self, :index)});
-          e = #{view(:self, :index)}; assert(e);
+          assert(#{valid_index('*self', :index)});
+          e = #{view('*self', :index)}; assert(e);
           #{element.copy(:result, '*e')};
           return result;
         }
         header %{
-          @brief Return a copy of the element associated at the specified index
-          TODO
+          @brief Get an element at specified position
+
+          @param[in] self vector to get element from
+          @param[in] index position to get element at
+          @return a *copy* of element at `position`
+
+          This function is used to get a *copy* of the value contained in `self` at specified position (`return self[index]`).
+          Refer to @ref #{view} to get a view of the element without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `index` must be valid (see @ref #{valid_index}).
+
+          @since 2.0
         }
       end
       def_method :void, :set, { self: type, index: index.const_type, value: element.const_type }, require:-> { element.copyable? } do
+        inline_code %{
+          #{element.ptr_type} e;
+          assert(self);
+          assert(#{valid_index('*self', :index)});
+          e = #{storage_ptr(:self)} + index;
+          #{element.destroy('*e') if element.destructible?};
+          #{element.copy('*e', :value)};
+        }
         header %{
-          @brief Set the container element at the specified index
-          TODO
+          @brief Set an element at specified position
+
+          @param[in] self vector to put element into
+          @param[in] index position to put element at
+          @param[in] value value to put
+
+          This function is used to set the value in `self` at specified position (`self[index] = value`) to a *copy* of the specified value
+          displacing previous value which is destroyed with respective destructor.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note `index` must be valid (see @ref #{valid_index}).
+
+          @since 2.0
         }
       end
     end
 
-  end # IndexedContainer
+  end # ContiguousContainer
 
 
   # @abstract
