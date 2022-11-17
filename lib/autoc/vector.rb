@@ -50,8 +50,8 @@ module AutoC
 
     private def configure
       super
-      def_method :int, :check_position, { self: const_type, position: :size_t } do
-        inline_code %{
+      def_method :int, :check_position, { self: const_rvalue, position: :size_t.const_rvalue } do
+        inline.code %{
           assert(self);
           return position < #{size}(self);
         }
@@ -71,7 +71,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :create_size, { self: type, size: :size_t }, instance: :custom_create, require:-> { custom_constructible? } do
+      def_method :void, :create_size, { self: lvalue, size: :size_t.const_rvalue }, instance: :custom_create, require:-> { custom_constructible? } do
         code %{
           size_t index;
           assert(self);
@@ -95,7 +95,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :create_set, { self: type, size: :size_t, value: element.const_type }, require:-> { element.copyable? } do
+      def_method :void, :create_set, { self: lvalue, size: :size_t.const_rvalue, value: element.const_rvalue }, require:-> { element.copyable? } do
         code %{
           size_t index;
           assert(self);
@@ -120,8 +120,8 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.const_ptr_type, :view, { self: const_type, position: :size_t } do
-        inline_code %{
+      def_method element.const_ptr_type, :view, { self: const_rvalue, position: :size_t.const_rvalue } do
+        inline.code %{
           assert(self);
           assert(#{check_position}(self, position));
           return &(self->elements[position]);
@@ -143,7 +143,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :resize, { self: type, new_size: :size_t }, require:-> { element.default_constructible? } do
+      def_method :void, :resize, { self: rvalue, new_size: :size_t.const_rvalue }, require:-> { element.default_constructible? } do
         code %{
           size_t index, size, from, to;
           assert(self);
@@ -183,11 +183,11 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.type, :get, { self: const_type, position: :size_t }, require:-> { element.copyable? } do
-        inline_code %{
+      def_method element.type, :get, { self: const_rvalue, position: :size_t.const_rvalue }, require:-> { element.copyable? } do
+        inline.code %{
           #{element.type} value;
           #{element.const_ptr_type} p = #{view}(self, position);
-          #{element.copy(:value, '*p')};
+          #{element.copy(:value, ~:p)};
           return value;
         }
         header %{
@@ -207,8 +207,8 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :set, { self: type, position: :size_t, value: element.const_type }, require:-> { element.copyable? } do
-        inline_code %{
+      def_method :void, :set, { self: rvalue, position: :size_t.const_rvalue, value: element.const_rvalue }, require:-> { element.copyable? } do
+        inline.code %{
           assert(self);
           assert(#{check_position}(self, position));
           #{element.destroy('self->elements[position]') if element.destructible?};
@@ -231,7 +231,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :sort, { self: type, direction: :int }, require:-> { element.orderable? } do
+      def_method :void, :sort, { self: rvalue, direction: :int.const_rvalue }, require:-> { element.orderable? } do
         code %{
           typedef int (*F)(const void*, const void*);
           assert(self);
@@ -250,16 +250,16 @@ module AutoC
           @since 2.0
         }
       end
-      default_create.inline_code %{
+      default_create.inline.code %{
         assert(self);
         self->element_count = 0;
         self->elements = NULL;
       }
-      size.inline_code %{
+      size.inline.code %{
         assert(self);
         return self->element_count;
       }
-      empty.inline_code %{
+      empty.inline.code %{
         assert(self);
         return #{size}(self) == 0;
       }
@@ -360,7 +360,7 @@ module AutoC
       private def configure
         dependencies << OMP_H
         super
-        custom_create.inline_code %{
+        custom_create.inline.code %{
           #ifdef _OPENMP
             int chunk_count;
           #endif
@@ -381,11 +381,11 @@ module AutoC
             }
           #endif
         }
-        length.inline_code %{
+        length.inline.code %{
           assert(self);
           return #{empty}(self) ? 0 : self->back_position - self->front_position + 1;
         }
-        empty.inline_code %{
+        empty.inline.code %{
           assert(self);
           return !(
             self->front_position <= self->back_position &&
@@ -393,27 +393,27 @@ module AutoC
             self->back_position  <  self->iterable->element_count
           );
         }
-        pop_front.inline_code %{
+        pop_front.inline.code %{
           assert(!#{empty}(self));
           ++self->front_position;
         }
-        pop_back.inline_code %{
+        pop_back.inline.code %{
           assert(!#{empty}(self));
           --self->back_position; /* This relies on wrapping of unsigned integer used as an index, e.g. (0-1) --> max(size_t) */
         }
-        view_front.inline_code %{
+        view_front.inline.code %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->front_position')};
         }
-        view_back.inline_code %{
+        view_back.inline.code %{
           assert(!#{empty}(self));
           return #{iterable.view('self->iterable', 'self->back_position')};
         }
-        peek.inline_code %{
+        peek.inline.code %{
           assert(self);
           return #{iterable.view('self->iterable', 'self->front_position + position')};
         }
-        get.inline_code %{
+        get.inline.code %{
           assert(self);
           return #{iterable.get('self->iterable', 'self->front_position + position')};
         }

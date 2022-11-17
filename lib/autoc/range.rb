@@ -31,7 +31,7 @@ module AutoC
 
     private def configure
       super
-      def_method :void, :create, { self: type, iterable: iterable.const_type }, refs: 2, instance: :custom_create do
+      def_method :void, :create, { self: lvalue, iterable: iterable.const_rvalue }, instance: :custom_create do
         header %{
           @brief Create a new range for the specified iterable
 
@@ -47,7 +47,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method type, :new, { iterable: iterable.const_type } do
+      def_method type, :new, { iterable: iterable.const_rvalue } do
         header %{
           @brief Return new range iterator for the specified container
 
@@ -65,7 +65,7 @@ module AutoC
 
           @since 2.0
         }
-        inline_code %{
+        inline.code %{
           #{type} r;
           assert(iterable);
           #{custom_create}(&r, iterable);
@@ -83,7 +83,7 @@ module AutoC
 
     private def configure
       super
-      def_method :int, :empty, { self: const_type } do
+      def_method :int, :empty, { self: const_rvalue } do
         header %{
           @brief Check for range emptiness
 
@@ -97,7 +97,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :pop_front, { self: type } do
+      def_method :void, :pop_front, { self: rvalue } do
         header %{
           @brief Advance front position to the next existing element
 
@@ -111,7 +111,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :view_front, { self: const_type } do
+      def_method iterable.element.const_ptr_type, :view_front, { self: const_rvalue } do
         header %{
           @brief Get a view of the front element
 
@@ -128,13 +128,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.type, :take_front, { self: const_type }, require:-> { iterable.element.copyable? } do
-        inline_code %{
+      def_method iterable.element.type, :take_front, { self: const_rvalue }, require:-> { iterable.element.copyable? } do
+        inline.code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
           e = #{view_front}(self);
-          #{iterable.element.copy(:result, '*e')};
+          #{iterable.element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -165,8 +165,8 @@ module AutoC
 
     private def configure
       super
-      def_method :void, :save, { self: type, origin: const_type }, refs: 2 do
-        inline_code %{
+      def_method :void, :save, { self: lvalue, origin: const_rvalue } do
+        inline.code %{
           assert(self);
           assert(origin);
           *self = *origin;
@@ -198,7 +198,7 @@ module AutoC
 
     private def configure
       super
-      def_method :void, :pop_back, { self: type } do
+      def_method :void, :pop_back, { self: rvalue } do
         header %{
           @brief Rewind back position to the previous existing element
 
@@ -212,7 +212,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :view_back, { self: const_type } do
+      def_method iterable.element.const_ptr_type, :view_back, { self: const_rvalue } do
         header %{
           @brief Get a view of the back element
 
@@ -229,13 +229,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.type, :take_back, { self: const_type }, require:-> { iterable.element.copyable? } do
-        inline_code %{
+      def_method iterable.element.type, :take_back, { self: const_rvalue }, require:-> { iterable.element.copyable? } do
+        inline.code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
           e = #{view_back}(self);
-          #{iterable.element.copy(:result, '*e')};
+          #{iterable.element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -266,7 +266,7 @@ module AutoC
 
     private def configure
       super
-      def_method :size_t, :length, { self: const_type } do
+      def_method :size_t, :length, { self: const_rvalue } do
         header %{
           @brief Get a number of elements in the range
 
@@ -282,7 +282,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :peek, { self: const_type, position: :size_t } do
+      def_method iterable.element.const_ptr_type, :peek, { self: const_rvalue, position: :size_t } do
         header %{
           @brief Get view of the specific element
 
@@ -298,13 +298,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.type, :get, { self: const_type, position: :size_t }, require:-> { iterable.element.copyable? } do
-        inline_code %{
+      def_method iterable.element.type, :get, { self: const_rvalue, position: :size_t }, require:-> { iterable.element.copyable? } do
+        inline.code %{
           #{iterable.element.type} result;
           #{iterable.element.const_ptr_type} e;
           assert(!#{empty}(self));
           e = #{peek}(self, position);
-          #{iterable.element.copy(:result, '*e')};
+          #{iterable.element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -369,9 +369,9 @@ module AutoC
     
     private def configure
       super
-      container = '*iterable'
+      container = ~:iterable
       storage = iterable.storage_ptr(container)
-      custom_create.inline_code %{
+      custom_create.inline.code %{
         #ifdef _OPENMP
           size_t chunk_count;
         #endif
@@ -395,38 +395,38 @@ module AutoC
           }
         #endif
       }
-      length.inline_code %{
+      length.inline.code %{
         assert(self);
         return #{empty}(self) ? 0 : self->back - self->front + 1;
       }
-      empty.inline_code %{
+      empty.inline.code %{
         assert(self);
         assert(self->front);
         assert(self->back);
         return self->front > self->back;
       }
-      pop_front.inline_code %{
+      pop_front.inline.code %{
         assert(!#{empty}(self));
         ++self->front;
       }
-      pop_back.inline_code %{
+      pop_back.inline.code %{
         assert(!#{empty}(self));
         --self->back;
       }
-      view_front.inline_code %{
+      view_front.inline.code %{
         assert(!#{empty}(self));
         return self->front;
       }
-      view_back.inline_code %{
+      view_back.inline.code %{
         assert(!#{empty}(self));
         return self->back;
       }
-      peek.inline_code %{
+      peek.inline.code %{
         assert(self);
         assert(position < #{length}(self));
         return self->front + position;
       }
-      get.inline_code %{
+      get.inline.code %{
         #{iterable.element.type} e;
         assert(self);
         assert(position < #{length}(self));

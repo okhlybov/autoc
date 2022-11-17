@@ -21,13 +21,13 @@ class GenericValue < AutoC::Composite
   end
   private def configure
     super
-    def_method :void, :set, { self: type, value: :int }, instance: :custom_create do
+    def_method :void, :set, { self: lvalue, value: :int }, instance: :custom_create do
       code %{
         #{default_create}(self);
         *self->value = value;
       }
     end
-    def_method :int, :get, { self: const_type } do
+    def_method :int, :get, { self: const_rvalue } do
       code %{
         assert(self);
         return *self->value;

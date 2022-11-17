@@ -6,48 +6,134 @@ require 'autoc/module'
 
 module AutoC
 
+  module TypeCoercer
+    def to_type = AutoC::Type.coerce(self)
+    def lvalue = to_type.lvalue
+    def rvalue = to_type.rvalue
+    def const_rvalue = to_type.const_rvalue
+    def parameter = to_type.parameter
+    def ~@ = "*#{self}"
+  end
 
-  # Generator class for C function declarator.
+  class ::String
+    include TypeCoercer
+  end
+
+  class ::Symbol
+    include TypeCoercer
+  end
+
+  class Parameter
+    attr_reader :type
+    def to_s = type.to_s
+    def to_type = type
+    def initialize(type, constant: false, kind: :value)
+      @type = type
+      @constant = constant
+      @kind = kind
+    end
+    def constant? = @constant == true
+    def value? = @kind == :value
+    def reference? = @kind == :reference
+    def parameter = self
+    def declare
+      t = reference? ? "#{to_s}*" : to_s
+      constant? ? "const #{t}" : t
+    end
+    def pass(value)
+      reference? ? "&(#{value})" : value.to_s
+    end
+  end
+
+  # Generator class for standalone function
   class Function
 
+    # Parameter
+
+    #
     attr_reader :name
 
+    #
     attr_reader :result
 
-    def initialize(name, parameters = [], result = :void)
-      @name = name
-      @result = result
-      @parameters = parameters
+    #
+    attr_reader :parameters
+
+    def initialize(name, parameters = [], result = :void, inline: false, visibility: :public, requirement: true)
+      @name = name.to_s
+      @result = result.to_type
+      @requirement = requirement
+      @inline = inline
+      @visibility = visibility
+      @parameters =
+        if parameters.is_a?(Hash)
+          hash = {}
+          parameters.each { |name, parameter| hash[name.to_sym] = parameter.parameter }
+          hash
+        else
+          hash = {}
+          (0..parameters.size-1).each { |i| hash["__#{i}__".to_sym] = parameters[i].parameter }
+          hash
+        end
     end
 
-    def signature = '%s(%s)' % [result, parameters.values.join(', ')]
+    def inline? = @inline == true
 
-    def definition ='%s %s(%s)' % [result, name, parameters.collect { |var, type| "#{type} #{var}" }.join(', ')]
+    def public? = @visibility == :public
+  
+    def live? = (@requirement.is_a?(Proc) ? @requirement.() : @requirement) == true
+  
+    def to_s = name
 
-    def declaration = definition
+    def signature = '%s(%s)' % [result, parameters.values.collect(&:declare).join(',')]
 
-    def call(*args) = args.first.nil? ? to_s : '%s(%s)' % [name, args.join(', ')]
+    def declaration = '%s %s(%s)' % [result, name, parameters.collect { |var, type| "#{type.declare} #{var}" }.join(', ')]
 
-    def [](*args) = call(*args)
+    def pointer(name) = '%s(*%s)(%s)' % [result, name, parameters.values.collect(&:declare).join(',')]
 
-    def to_s = name.to_s
-
-    # Assign syntheric parameter names if the input is a mere array of types
-    def parameters
-      if @parameters.is_a?(Array)
-        hash = {}
-        (0..@parameters.size-1).each { |i| hash["__#{i}__"] = @parameters[i] }
-        hash
+    def call(*arguments)
+      if arguments.empty?
+        self
       else
-        @parameters.to_h
+        if arguments.first.nil?
+          "#{name}()"
+        else
+          formals = parameters.to_a
+          '%s(%s)' % [name, (0..arguments.size-1).collect { |i| i < formals.size ? formals[i].last.pass(arguments[i]) : arguments[i] }.join(', ')]
+        end
       end
     end
 
-  end
+    def inline
+      @inline = true
+      self
+    end
+
+    def external
+      @inline = false
+      self
+    end
+
+    def header(header) = @header = header
+
+    def code(code) = @code = code
+
+  end # Function
+
+
+  # Type-bound function (aka method) generator
+  class Method < Function
+    attr_reader :type
+    def initialize(type, name, *args, **kws)
+      super(type.decorate_identifier(name), *args, **kws)
+      @type = type
+    end
+    def method_missing(meth, *args) = type.send(meth, *args)
+  end # Method
 
 
   # @abstract
-  # Generator type base.
+  # Base class for type generators
   class Type
 
     include Entity
@@ -72,6 +158,9 @@ module AutoC
 
     #
     def to_s = type.to_s
+
+    #
+    def to_type = self
 
     def initialize(type)
       @type = type
@@ -122,19 +211,6 @@ module AutoC
     # @return [String] source side code snippet
     abstract def copy(value, source) = nil
 
-    # @abstract
-    # Synthesize the source side code to transfer the contents of +origin+ into the +value+ (the move constructor).
-    # This code may either create a instance in place of +value+ or move the data from +origin+ to +value+, depending on
-    # the implementation.
-    #
-    # Original contents of the +value+ is overwritten.
-    # The contents of the +origin+ is no longer valid afterwards.
-    #
-    # @param destination [String | Symbol] source side storage designation where the instance is to be placed
-    # @param source [String | Symbol] source side storage designation taken as the origin for the transfer operation
-    # @return [String] source side code snippet
-    abstract def move(destination, source) = nil
-
     # @abstract TODO
     abstract def equal(value, other) = nil
 
@@ -167,10 +243,6 @@ module AutoC
     # This implementation looks up the {#copy} method.
     def copyable? = respond_to?(:copy)
 
-    # Test whether the type's instance can be transferred from one location to another.
-    # This implementation looks up the {#move} method.
-    def movable? = respond_to?(:move)
-
     # Test whether the type has a well-defined test for content equality against another value of the same type.
     # This implementation looks up the {#equal} method.
     def comparable? = respond_to?(:equal)
@@ -182,7 +254,10 @@ module AutoC
 
     # Test whether the type's values which can be the elements of hash-based containers.
     def hashable? = comparable? && respond_to?(:hash_code)
-  end
+
+    # TODO movable semantics
+
+  end # Type
 
 
   # Generator type for wrappers of primitive C types such as numbers, bare pointers etc.
@@ -192,20 +267,26 @@ module AutoC
 
     def custom_create(value, initial) = copy(value, initial)
 
-    def copy(value, source) = "((#{value}) = (#{source}))"
+    def copy(value, source) = "(#{value} = #{source})"
 
-    def move(destination, source) = copy(destination, source)
+    def equal(lt, rt) = "(#{lt} == #{rt})"
 
-    def equal(value, other) = "((#{value}) == (#{other}))"
+    def compare(lt, rt) = "(#{lt} == #{rt} ? 0 : (#{lt} > #{rt} ? +1 : -1))"
 
-    def compare(value, other) = "((#{value}) == (#{other}) ? 0 : ((#{value}) > (#{other}) ? +1 : -1))"
+    def hash_code(value) = "(size_t)(#{value})"
 
-    def hash_code(value) = "((size_t)(#{value}))"
+    def parameter = rvalue
 
-  end
+    def lvalue = @lv ||= Parameter.new(self, kind: :reference)
+
+    def rvalue = @rv ||= Parameter.new(self)
+
+    def const_rvalue = @crv ||= Parameter.new(self, constant: true)
+
+  end # Primitive
 
 
-  # Generator type for pure user-defined types.
+  # Generator type for pure user-defined types
   class Synthetic < Type
 
     def initialize(type, dependencies: [], interface: nil, declarations: nil, definitions: nil, **call)
@@ -219,7 +300,6 @@ module AutoC
       def_call(call, :default_create, { self: type} , type)
       def_call(call, :destroy, { self: type }, :void)
       def_call(call, :copy, { self: type, source: const_type }, type)
-      def_call(call, :move, { self: type, source: type }, type)
       def_call(call, :equal, { self: const_type, other: const_type }, :int)
       def_call(call, :compare, { self: const_type, other: const_type }, :int)
       def_call(call, :hash_code, { self: const_type }, :size_t)
@@ -254,7 +334,7 @@ module AutoC
       stream << @definitions_ unless @definitions_.nil?
     end
 
-  end
+  end # Synthetic
 
 
 end

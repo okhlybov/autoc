@@ -55,7 +55,7 @@ module AutoC
     private def configure
       @node = decorate_identifier(:_N)
       super
-      def_method :void, :_drop_front, { self: type }, visibility: :private do
+      def_method :void, :_drop_front, { self: rvalue }, visibility: :private do
         code %{
           #{@node}* this_node;
           assert(!#{empty}(self));
@@ -65,8 +65,8 @@ module AutoC
           --self->node_count;
         }
       end
-      def_method element.const_ptr_type, :view_front, { self: const_type } do
-        inline_code %{
+      def_method element.const_ptr_type, :view_front, { self: const_rvalue } do
+        inline.code %{
           assert(!#{empty}(self));
           return &(self->head_node->element);
         }
@@ -86,7 +86,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.type, :pull_front, { self: type } do
+      def_method element.type, :pull_front, { self: rvalue } do
         code %{
           #{element.type} value;
           assert(self);
@@ -109,7 +109,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :pop_front, { self: type } do
+      def_method :void, :pop_front, { self: rvalue } do
         if element.destructible?
           code %{
             #{element.type} value;
@@ -138,14 +138,14 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.type, :take_front, { self: const_type }, require:-> { element.copyable? } do
+      def_method element.type, :take_front, { self: const_rvalue }, require:-> { element.copyable? } do
         code %{
           #{element.type} result;
           #{element.const_ptr_type} e;
           assert(self);
           assert(!#{empty}(self));
           e = #{view_front}(self);
-          #{element.copy(:result, '*e')};
+          #{element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -164,7 +164,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :push_front, { self: type, value: element.const_type }, require:-> { element.copyable? } do
+      def_method :void, :push_front, { self: rvalue, value: element.const_rvalue }, require:-> { element.copyable? } do
         code %{
           #{@node}* new_node;
           assert(self);
@@ -188,7 +188,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :remove, { self: type, value: element.const_type }, require:-> { element.comparable? } do
+      def_method :int, :remove, { self: rvalue, value: element.const_rvalue }, require:-> { element.comparable? } do
         code %{
           #{@node} *node, *prev_node;
           int removed = 0;
@@ -233,7 +233,7 @@ module AutoC
           @since 2.0
         }
       end
-      default_create.inline_code %{
+      default_create.inline.code %{
         assert(self);
         self->head_node = NULL;
         self->node_count = 0;
@@ -242,11 +242,11 @@ module AutoC
         assert(self);
         while(!#{empty}(self)) #{pop_front}(self);
       }
-      size.inline_code %{
+      size.inline.code %{
         assert(self);
         return self->node_count;
       }
-      empty.inline_code %{
+      empty.inline.code %{
         assert(self);
         assert((self->node_count == 0) == (self->head_node == NULL));
         return #{size}(self) == 0;
@@ -268,7 +268,7 @@ module AutoC
           for(ra = #{range.new}(self), rb = #{range.new}(other); !#{range.empty}(&ra) && !#{range.empty}(&rb); #{range.pop_front}(&ra), #{range.pop_front}(&rb)) {
             #{element.const_ptr_type} a = #{range.view_front}(&ra);
             #{element.const_ptr_type} b = #{range.view_front}(&rb);
-            if(!#{element.equal('*a', '*b')}) return 0;
+            if(!#{element.equal(~:a, ~:b)}) return 0;
           }
           return 1;
         } else return 0;
@@ -310,21 +310,21 @@ module AutoC
 
       private def configure
         super
-        custom_create.inline_code %{
+        custom_create.inline.code %{
           assert(self);
           assert(iterable);
           self->node = iterable->head_node;
         }
-        empty.inline_code %{
+        empty.inline.code %{
           assert(self);
           return self->node == NULL;
         }
-        pop_front.inline_code %{
+        pop_front.inline.code %{
           assert(self);
           assert(!#{empty}(self));
           self->node = self->node->next_node;
         }
-        view_front.inline_code %{
+        view_front.inline.code %{
           assert(self);
           assert(!#{empty}(self));
           return &self->node->element;

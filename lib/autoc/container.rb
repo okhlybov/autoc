@@ -42,7 +42,7 @@ module AutoC
 
     private def configure
       super
-      def_method :int, :empty, { self: const_type } do
+      def_method :int, :empty, { self: const_rvalue } do
         header %{
           @brief Check whether container is empty
 
@@ -52,7 +52,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :size_t, :size, { self: const_type } do
+      def_method :size_t, :size, { self: const_rvalue } do
         header %{
           @brief Get number of contained elements
 
@@ -64,8 +64,8 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :contains, { self: const_type, value: element.const_type }, require:-> { element.comparable? } do
-        inline_code %{
+      def_method :int, :contains, { self: const_rvalue, value: element.const_rvalue }, require:-> { element.comparable? } do
+        inline.code %{
           return #{lookup}(self, value) != NULL;
         }
         header %{
@@ -83,7 +83,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.const_ptr_type, :lookup, { self: const_type, value: element.const_type }, require:-> { element.comparable? } do
+      def_method element.const_ptr_type, :lookup, { self: const_rvalue, value: element.const_rvalue }, require:-> { element.comparable? } do
         header %{
           @brief Search for specific element
 
@@ -101,7 +101,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :purge, { self: type }, require:-> { default_constructible? } do
+      def_method :void, :purge, { self: rvalue }, require:-> { default_constructible? } do
         code %{
           assert(self);
           #{destroy}(self);
@@ -135,7 +135,7 @@ module AutoC
         #{hasher.create(:hasher)};
         for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{element.const_ptr_type} p = #{range.view_front}(&r);
-          #{hasher.update(:hasher, element.hash_code('*p'))};
+          #{hasher.update(:hasher, element.hash_code(~:p))};
         }
         hash = #{hasher.result(:hasher)};
         #{hasher.destroy(:hasher)};
@@ -155,7 +155,7 @@ module AutoC
         assert(self);
         for(r = #{range.new}(self); !#{range.empty}(&r); #{range.pop_front}(&r)) {
           #{element.const_ptr_type} e = #{range.view_front}(&r);
-          if(#{element.equal(:value, '*e')}) return e;
+          if(#{element.equal(:value, ~:e)}) return e;
         }
         return NULL;
       }
@@ -178,10 +178,10 @@ module AutoC
 
     def configure
       super
-      def_method :int, :valid_index, { self: const_type, index: index.const_type } do
-        inline_code %{
+      def_method :int, :valid_index, { self: const_rvalue, index: index.const_rvalue } do
+        inline.code %{
           assert(self);
-          return index < #{size('*self')};
+          return index < #{size(~:self)};
         }
         header %{
           @brief Check for position index validity
@@ -199,10 +199,10 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.const_ptr_type, :view, { self: const_type, index: index.const_type } do
-        inline_code %{
+      def_method element.const_ptr_type, :view, { self: const_rvalue, index: index.const_rvalue } do
+        inline.code %{
           assert(self);
-          assert(#{valid_index('*self', :index)});
+          assert(#{valid_index(~:self, :index)});
           return #{storage_ptr(:self)} + index;
         }
         header %{
@@ -222,13 +222,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method element.type, :get, { self: const_type, index: index.const_type }, require:-> { element.copyable? } do
-        inline_code %{
+      def_method element.type, :get, { self: const_rvalue, index: index.const_rvalue }, require:-> { element.copyable? } do
+        inline.code %{
           #{element.type} result;
           #{element.const_ptr_type} e;
-          assert(#{valid_index('*self', :index)});
-          e = #{view('*self', :index)}; assert(e);
-          #{element.copy(:result, '*e')};
+          assert(#{valid_index(~:self, :index)});
+          e = #{view(~:self, :index)}; assert(e);
+          #{element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -248,14 +248,14 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :set, { self: type, index: index.const_type, value: element.const_type }, require:-> { element.copyable? } do
-        inline_code %{
+      def_method :void, :set, { self: rvalue, index: index.const_rvalue, value: element.const_rvalue }, require:-> { element.copyable? } do
+        inline.code %{
           #{element.ptr_type} e;
           assert(self);
-          assert(#{valid_index('*self', :index)});
+          assert(#{valid_index(~:self, :index)});
           e = #{storage_ptr(:self)} + index;
-          #{element.destroy('*e') if element.destructible?};
-          #{element.copy('*e', :value)};
+          #{element.destroy(~:e) if element.destructible?};
+          #{element.copy(~:e, :value)};
         }
         header %{
           @brief Set an element at specified position
@@ -308,37 +308,37 @@ module AutoC
 
     private def configure
       super
-      def_method element.const_ptr_type, :view, { self: const_type, key: key.const_type } do
+      def_method element.const_ptr_type, :view, { self: const_rvalue, key: key.const_rvalue } do
         header %{
           @brief Return a view of the element associated with the specified key or NULL if there is no such element
           TODO
         }
       end
-      def_method :int, :put, { self: type, key: key.const_type, value: element.const_type }, require:-> { key.copyable? && element.copyable? } do
+      def_method :int, :put, { self: rvalue, key: key.const_rvalue, value: element.const_rvalue }, require:-> { key.copyable? && element.copyable? } do
         header %{
           @brief Associate a copy of the specified element with a copy of the specified key if there is no such key present
           TODO
         }
       end
-      def_method :int, :set, { self: type, key: key.const_type, value: element.const_type }, require:-> { key.copyable? && element.copyable? } do
+      def_method :int, :set, { self: rvalue, key: key.const_rvalue, value: element.const_rvalue }, require:-> { key.copyable? && element.copyable? } do
         header %{
           @brief Associate a copy of the specified element with a copy of the specified key overriding existing key/value pair
           TODO
         }
       end
-      def_method :int, :remove, { self: type, key: key.const_type } do
+      def_method :int, :remove, { self: rvalue, key: key.const_rvalue } do
         header %{
           @brief Remove and destroy key and element pair referenced by the specified key if it exists
           TODO
         }
       end
-      def_method element.type, :get, { self: const_type, key: key.const_type }, require:-> { element.copyable? } do
-        inline_code %{
+      def_method element.type, :get, { self: const_rvalue, key: key.const_rvalue }, require:-> { element.copyable? } do
+        inline.code %{
           #{element.type} result;
           #{element.const_ptr_type} e;
           assert(#{contains_key}(self, key));
           e = #{view}(self, key); assert(e);
-          #{element.copy(:result, '*e')};
+          #{element.copy(:result, ~:e)};
           return result;
         }
         header %{
@@ -346,7 +346,7 @@ module AutoC
           TODO
         }
       end
-      def_method :int, :contains_key, { self: const_type, key: key.const_type }, require:-> { key.comparable? } do
+      def_method :int, :contains_key, { self: const_rvalue, key: key.const_rvalue }, require:-> { key.comparable? } do
         inline_code %{
           return #{lookup_key}(self, key) != NULL;
         }
@@ -362,7 +362,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method key.const_ptr_type, :lookup_key, { self: const_type, key: key.const_type }, require:-> { key.comparable? } do
+      def_method key.const_ptr_type, :lookup_key, { self: const_rvalue, key: key.const_rvalue }, require:-> { key.comparable? } do
         header %{
           @brief Search for specific key
 
@@ -386,7 +386,7 @@ module AutoC
   class AssociativeContainer::Range < Range::Forward
     private def configure
       super
-      def_method iterable.key.const_ptr_type, :view_key_front, { self: const_type } do
+      def_method iterable.key.const_ptr_type, :view_key_front, { self: const_rvalue } do
         header %{
           @brief Get a view of the front key
 
@@ -403,13 +403,13 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.key.type, :take_key_front, { self: const_type }, require:-> { iterable.key.copyable? } do
-        inline_code %{
+      def_method iterable.key.type, :take_key_front, { self: const_rvalue }, require:-> { iterable.key.copyable? } do
+        inline.code %{
           #{iterable.key.type} result;
           #{iterable.key.const_ptr_type} e;
           assert(!#{empty}(self));
           e = #{view_key_front}(self);
-          #{iterable.key.copy(:result, '*e')};
+          #{iterable.key.copy(:result, ~:e)};
           return result;
         }
         header %{

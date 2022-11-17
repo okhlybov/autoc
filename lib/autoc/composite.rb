@@ -14,11 +14,10 @@ module AutoC
   # or elaborate data containers.
   class Composite < Type
 
-    # The first refs: arguments are converted to references (C pointers), the remaining are left as is
-    private def def_method(result, name, parameters, refs: 1, inline: false, visibility: nil, require: true, instance: name, &code)
+    private def def_method(result, name, parameters, inline: false, visibility: nil, require: true, instance: name, &code)
       begin
         instance = instance.to_sym
-        @_method = Method.new(self, name, parameters, result, refs, inline, visibility.nil? ? self.visibility : visibility, require)
+        @_method = Method.new(self, name, parameters, result, inline:, visibility: (visibility.nil? ? self.visibility : visibility), requirement: require)
         raise "Method definition for ##{name} is already registered" if @methods.key?(instance) && !@allow_method_redefines
         @methods[instance] = @_method
         instance_eval(&code) if block_given?
@@ -28,16 +27,13 @@ module AutoC
     end
 
     #
-    private def refs=(refs) @_method.refs = refs end
+    private def inline = @_method.inline
 
     #
     private def code(code) = @_method.code(code)
-    
-    #
-    private def inline_code(code) = @_method.inline_code(code)
 
     #
-    private def header(code) = @_method.header(code)
+    private def header(header) = @_method.header(header)
 
     # Prefix used to generate fully qualified type-specific identifiers.
     def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
@@ -51,7 +47,7 @@ module AutoC
     end
 
     #
-    def define(obj = nil) = obj.nil? ? @define : "#{@define} #{obj.definition}"
+    def define(obj = nil) = obj.nil? ? @define : "#{@define} #{obj.declaration}"
 
     def memory = AutoC::Allocator.default
 
@@ -74,8 +70,15 @@ module AutoC
       dependencies.merge [Module::DEFINITIONS, Module::INCLUDES, memory, hasher]
     end
 
+    # Composite types are always passed by reference by default
+
+    def parameter = rvalue
+    def lvalue = rvalue
+    def rvalue = @rv ||= Parameter.new(self, kind: :reference)
+    def const_rvalue = @crv ||= Parameter.new(self, constant: true, kind: :reference)
+  
     private def configure
-      def_method :void, :create, { self: type }, instance: :default_create, require:-> { default_constructible? } do
+      def_method :void, :create, { self: lvalue }, instance: :default_create, require:-> { default_constructible? } do
         header %{
           @brief Create a new instance
 
@@ -88,7 +91,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :destroy, { self: type }, require:-> { destructible? } do
+      def_method :void, :destroy, { self: lvalue }, require:-> { destructible? } do
         header %{
           @brief Destroy the composite object along with all constituent parts
 
@@ -100,7 +103,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :copy, { self: type, source: const_type }, refs: 2, require:-> { copyable? } do
+      def_method :void, :copy, { self: lvalue, source: const_rvalue }, require:-> { copyable? } do
         header %{
           @brief Create a new container with copies of the source container's elements
 
@@ -116,7 +119,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :equal, { self: const_type, other: const_type }, refs: 2, require:-> { comparable? } do
+      def_method :int, :equal, { self: const_rvalue, other: const_rvalue }, require:-> { comparable? } do
         header %{
           @brief Check whether two containers are equal by contents
 
@@ -133,7 +136,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :int, :compare, { self: const_type, other: const_type }, refs: 2, require:-> { orderable? } do
+      def_method :int, :compare, { self: const_rvalue, other: const_rvalue }, require:-> { orderable? } do
         header %{
           @brief Compute the ordering of two containers
 
@@ -148,7 +151,7 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :size_t, :hash_code, { self: const_type }, require:-> { hashable? } do
+      def_method :size_t, :hash_code, { self: const_rvalue }, require:-> { hashable? } do
         header %{
           @brief Return hash code for container
 
@@ -267,56 +270,7 @@ module AutoC
   end
 
 
-  #
-  class Composite::Method < AutoC::Function
-
-    attr_reader :type
-
-    attr_accessor :refs
-
-    def initialize(type, name, parameters, result, refs, inline, visibility, guard)
-      super(type.decorate_identifier(name), parameters, result)
-      @type = type
-      @refs = refs
-      @guard = guard
-      @inline = inline
-      @visibility = visibility
-    end
-
-    # Transform first refs value type arguments to reference type
-    def parameters
-      i = 0; super.transform_values { |t| (i += 1) <= refs ? ref_value_type(t) : t }
-    end
-
-    def call(*args)
-      if args.empty? then self # Return self to provide method chaining
-      elsif args.first.nil? then super() # Emit function call without parameters, fn()
-      else
-        i = 0
-        super(args.collect { |v| (i += 1) <= @refs ? ref_value_call(v) : v }) # Emit function call with specified parameters, fn(...)
-      end
-    end
-
-    def code(code) = @code = code
-
-    def inline_code(code)
-      @inline = true
-      @code = code
-    end
-
-    def header(info) = @info = info
-
-    def method_missing(meth, *args) = type.send(meth, *args)
-
-    attr_writer :inline
-
-    def inline? = @inline == true
-
-    def public? = @visibility == :public
-
-    def live? = @live ||= (@guard.is_a?(Proc) ? @guard.() : @guard) == true
-
-    attr_writer :visibility
+  class Composite::Method < Method
 
     def interface_declaration(stream)
       if live?
@@ -325,7 +279,7 @@ module AutoC
           %{
             /**
               #{ingroup}
-              #{@info}
+              #{@header}
             */
           }
         else
@@ -345,13 +299,6 @@ module AutoC
       stream << "#{define(self)} {#{@code}}" if live? && !inline?
     end
 
-    private
-
-    def ref_value_type(type) = "#{type}*"
-
-    def ref_value_call(arg) = "&(#{arg})"
-
   end
-
 
 end
