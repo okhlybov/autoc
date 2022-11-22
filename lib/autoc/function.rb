@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 
-require 'autoc/module'
 require 'autoc/type'
+require 'autoc/module'
 require 'autoc/primitive'
 
 
@@ -114,36 +114,43 @@ module AutoC
 
     def signature = '%s(%s)' % [result.signature, parameters.collect(&:signature).join(',')]
   
-    def declaration = '%s %s(%s)' % [result.signature, name, parameters.collect(&:declaration).join(',')]
+    def prototype = '%s %s(%s)' % [result.signature, name, parameters.collect(&:declaration).join(',')]
   
-    def definition = '%s {%s}' % [declaration, @code]
+    def definition = '%s {%s}' % [prototype, @code]
   
-    def interface_definitions(stream)
+    def interface
+      stream = super
+      if live? && public?
+        if inline?
+          stream << definition
+        else
+          stream << prototype << ';'
+        end
+      end
+      stream
+    end
+
+    def declaration
+      stream = super
+      if live? && !public?
+        if inline?
+          stream << prototype << ';'
+        else
+          stream << definition
+        end
+      end
+      stream
+    end
+
+    def implementation
+      stream = super
       if live?
-        function_header(stream)
-        inline? ? function_definition(stream) : function_declaration(stream)
+        if !inline?
+          stream << definition
+        end
       end
+      stream
     end
-
-    def definitions(stream)
-      if live?
-        function_definition(stream) unless inline?
-      end
-    end
-
-    private def function_header(stream)
-      if public?
-        stream << %{
-          /*
-            #{@header}
-          */
-        } unless @header.nil?
-      end
-    end
-
-    private def function_declaration(stream) = stream << declaration << ';'
-
-    private def function_definition(stream) = stream << definition
 
     def call(*arguments)
       if arguments.empty?

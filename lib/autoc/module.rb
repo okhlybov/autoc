@@ -17,7 +17,7 @@ module AutoC
       self
     end
 
-  end
+  end # EntityContainer
 
 
   class Module
@@ -87,7 +87,8 @@ module AutoC
       yield(m) if block_given?
       m.render
     end
-  end
+
+  end # Module
 
 
   class Module::Header
@@ -130,7 +131,8 @@ module AutoC
     end
 
     def stream = @stream ||= File.new(file_name, 'w')
-  end
+
+  end # Header
 
 
   class Module::Source
@@ -156,7 +158,7 @@ module AutoC
       prologue(s)
       total_entities = ::Set.new
       entities.each { |e| total_entities.merge(e.total_dependencies) }
-      total_entities.to_a.sort.each { |e| e.declarations.each { |x| s << x } }
+      total_entities.to_a.sort.each { |e| e.declaration.each { |x| s << x } }
       entities.to_a.sort.each { |e| e.implementation.each { |x| s << x } }
     ensure
       s.close
@@ -178,12 +180,11 @@ module AutoC
     end
 
     def stream = @stream ||= File.new(file_name, 'w')
-  end
+
+  end # Source
 
 
   module Entity
-
-    def visibility = :public
 
     # A set of the entity's immediate dependencies
     def dependencies = @dependencies ||= ::Set.new
@@ -215,123 +216,17 @@ module AutoC
 
     def <=>(other) = position <=> other.position
 
-    def interface
-      @interface ||=
-        begin
-          stream = Module::Builder.new
-          interface_declarations(stream)
-          case visibility
-          when :public
-            interface_definitions(stream)
-          end
-          stream
-        end
-    end
+    def interface(stream = Module::Builder.new) = stream
 
-    def declarations
-      @declarations ||=
-        begin
-          stream = Module::Builder.new
-          case visibility
-          when :internal
-            interface_definitions(stream)
-          end
-          forward_declarations(stream)
-          stream
-        end
-    end
+    def declaration(stream = Module::Builder.new) = stream
 
-    def implementation
-      @implementation ||=
-        begin
-          stream = Module::Builder.new
-          definitions(stream)
-          stream
-        end
-    end
+    def implementation(stream = Module::Builder.new) = stream
 
-    def complexity = declarations.complexity + implementation.complexity
+    def complexity = declaration.complexity + implementation.complexity # Interface part is not considered as it is shared across the sources
 
-    def interface_declarations(stream) = nil
-
-    def interface_definitions(stream) = nil
-
-    def forward_declarations(stream) = nil
-
-    def definitions(stream) = nil
-
-  end
+  end # Entity
 
 
-  class Code
-
-    include Entity
-
-    def self.interface(s) = Code.new(interface: s)
-
-    def initialize(interface: nil, declarations: nil, definitions: nil)
-      @interface_ = interface
-      @declarations_ = declarations
-      @definitions_ = definitions
-    end
-
-    def interface_declarations(stream)
-      super
-      stream << @interface_ unless @interface_.nil?
-    end
-
-    def definitions(stream)
-      super
-      stream << @definitions_ unless @definitions_.nil?
-    end
-
-    def forward_declarations(stream)
-      super
-      stream << @declarations_ unless @declarations_.nil?
-    end
-
-  end
-
-
-  Module::DEFINITIONS = Code.interface %{
-    #ifndef AUTOC_INLINE
-      #if defined(_MSC_VER) || defined(__DMC__)
-        #define AUTOC_INLINE AUTOC_STATIC __inline
-      #elif defined(__LCC__)
-        #define AUTOC_INLINE AUTOC_STATIC /* LCC rejects static __inline */
-      #elif __STDC_VERSION__ >= 199901L || defined(__cplusplus)
-        #define AUTOC_INLINE  AUTOC_STATIC inline
-      #else
-        #define AUTOC_INLINE AUTOC_STATIC
-      #endif
-    #endif
-    #ifndef AUTOC_EXTERN
-      #ifdef __cplusplus
-        #define AUTOC_EXTERN extern "C"
-      #else
-        #define AUTOC_EXTERN extern
-      #endif
-    #endif
-    #ifndef AUTOC_STATIC
-      #if defined(_MSC_VER)
-        #define AUTOC_STATIC __pragma(warning(suppress:4100)) static
-      #elif defined(__GNUC__)
-        #define AUTOC_STATIC __attribute__((__used__)) static
-      #else
-        #define AUTOC_STATIC static
-      #endif
-    #endif
-    #define AUTOC_MIN(a,b) ((a) < (b) ? (a) : (b))
-    #define AUTOC_MAX(a,b) ((a) > (b) ? (a) : (b))
-  }
-
-
-  Module::INCLUDES = Code.new interface: %{
-    #include <stddef.h>
-    #include <assert.h>
-  }
-
-  
   # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
 
 

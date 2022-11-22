@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
 
-require 'autoc/module'
-
-
 module AutoC
 
 
@@ -32,8 +29,6 @@ module AutoC
 
 
   class Type
-
-    include Entity
 
     # C side type signature
     attr_reader :signature
