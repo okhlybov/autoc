@@ -185,6 +185,7 @@ module AutoC
 
     def visibility = :public
 
+    # A set of the entity's immediate dependencies
     def dependencies = @dependencies ||= ::Set.new
 
     # Return the entire entity dependency set staring with self
