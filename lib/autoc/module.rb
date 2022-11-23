@@ -8,6 +8,7 @@ require 'autoc'
 module AutoC
 
 
+  # :nodoc:
   module EntityContainer
 
     def entities = @entities ||= ::Set.new
@@ -158,7 +159,7 @@ module AutoC
       prologue(s)
       total_entities = ::Set.new
       entities.each { |e| total_entities.merge(e.total_dependencies) }
-      total_entities.to_a.sort.each { |e| e.declaration.each { |x| s << x } }
+      total_entities.to_a.sort.each { |e| e.forward_declarations.each { |x| s << x } }
       entities.to_a.sort.each { |e| e.implementation.each { |x| s << x } }
     ensure
       s.close
@@ -212,22 +213,67 @@ module AutoC
         end
     end
 
-    private def relative_position(other) = equal?(other) ? 0 : other.position + 1
-
     def <=>(other) = position <=> other.position
 
-    def interface(stream = Module::Builder.new) = stream
+    def complexity = forward_declarations.complexity + implementation.complexity # Interface part is not considered as it is shared across the sources
 
-    def declaration(stream = Module::Builder.new) = stream
+    def interface
+      @interface ||= begin
+        render_interface(stream = Module::Builder.new)
+        stream
+      end
+    end
 
-    def implementation(stream = Module::Builder.new) = stream
+    def forward_declarations
+      @forward_declarations ||= begin
+        render_forward_declarations(stream = Module::Builder.new)
+        stream
+      end
+    end
 
-    def complexity = declaration.complexity + implementation.complexity # Interface part is not considered as it is shared across the sources
+    def implementation
+      @implementation ||= begin
+        render_implementation(stream = Module::Builder.new)
+        stream
+      end
+    end
+  
+  private
+
+    def relative_position(other) = equal?(other) ? 0 : other.position + 1
+
+    ### Overridable rendering methods
+
+    def render_interface(stream) = nil
+
+    def render_forward_declarations(stream) = nil
+
+    def render_implementation(stream) = nil
 
   end # Entity
 
 
-  # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
+  # Plain C side code block
+  class Code
+
+    include Entity
+
+    def initialize(interface: nil, implementation: nil)
+      @interface_ = interface
+      @implementation_ = implementation
+    end
+
+  private
+
+    def render_interface(stream)
+      stream << @interface_ unless @interface_.nil?
+    end
+
+    def render_implementation(stream)
+      stream << @implementation_ unless @implementation_.nil?
+    end
+
+  end # Code
 
 
 end

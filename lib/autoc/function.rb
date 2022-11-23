@@ -61,7 +61,8 @@ module AutoC
   end # Parameter
   
   
-  # Standalone function
+  # Standalone C side function
+  # The generated function is meant to be the C89-compliant
   class Function
   
     include Entity
@@ -86,6 +87,8 @@ module AutoC
         else
           i = -1; parameters.collect { |descriptor| Parameter.new(descriptor, "_#{i+=1}") }
         end
+      @arguments = {}
+      self.parameters.each { |parameter| @arguments[parameter.name] = parameter }
     end
   
     def inline_code(code)
@@ -118,20 +121,52 @@ module AutoC
   
     def definition = '%s {%s}' % [prototype, @code]
   
-    def interface
-      stream = super
+    def parameter(name) = @values[name]
+
+    def call(*arguments)
+      xs = []
+      (0...arguments.size).each do |i|
+        a = arguments[i]
+        v = a.is_a?(Parameter) ? a.to_value_argument : a
+        xs << (i < parameters.size ? parameters[i].value.(v) : v)
+      end
+      '%s(%s)' % [name, xs.join(',')]
+    end
+  
+    def configure(&block) = instance_eval(&block)
+    
+    # This allows to call other functions with this function's individual parameters as arguments
+    def method_missing(meth, *args) = @arguments.has_key?(meth) ? @arguments[meth] : super
+
+  private
+
+    # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
+
+    # static __inline seems to be THE way but consider the possible code bloat it incurs
+
+    def render_declaration_specifier(stream)
+      stream << 'static __inline ' if inline?
+    end
+
+    def render_function_header(stream)
+      stream << %{
+        /* #{@header} */
+      } unless @header.nil?
+    end
+
+    def render_interface(stream)
       if live? && public?
+        render_function_header(stream)
+        render_declaration_specifier(stream)
         if inline?
           stream << definition
         else
           stream << prototype << ';'
         end
       end
-      stream
     end
 
-    def declaration
-      stream = super
+    def render_forward_declarations(stream)
       if live? && !public?
         if inline?
           stream << prototype << ';'
@@ -139,37 +174,14 @@ module AutoC
           stream << definition
         end
       end
-      stream
     end
 
-    def implementation
-      stream = super
+    def render_implementation(stream)
       if live?
-        if !inline?
-          stream << definition
-        end
+        stream << definition unless inline?
       end
-      stream
     end
 
-    def call(*arguments)
-      if arguments.empty?
-        name
-      elsif arguments.first.nil?
-        '%s()' % [name]
-      else
-        xs = []
-        (0...arguments.size).each do |i|
-          a = arguments[i]
-          v = a.is_a?(Parameter) ? a.to_value_argument : a
-          xs << (i < parameters.size ? parameters[i].value.(v) : v)
-        end
-        '%s(%s)' % [name, xs.join(',')]
-      end
-    end
-  
-    def configure(&block) = instance_eval(&block)
-  
   end # Function
 
 
