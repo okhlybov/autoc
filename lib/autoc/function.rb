@@ -12,6 +12,7 @@ module AutoC
   using Refinements
     
 
+  # :nodoc:
   class Value
 
     attr_reader :type
@@ -40,6 +41,7 @@ module AutoC
   end # Value
   
   
+  # :nodoc:
   # Function parameter
   class Parameter
   
@@ -81,14 +83,19 @@ module AutoC
       @requirement = requirement
       @visibility = visibility
       @inline = inline
-      @parameters =
-        if parameters.is_a?(Hash)
-          parameters.collect { |name, descriptor| Parameter.new(descriptor, name) }
-        else
-          i = -1; parameters.collect { |descriptor| Parameter.new(descriptor, "_#{i+=1}") }
+      @parameters = Parameters.new(self)
+      if parameters.is_a?(Hash)
+        parameters.each do |name, descriptor|
+          x = Parameter.new(descriptor, name)
+          @parameters[x.name] = x
         end
-      @arguments = {}
-      self.parameters.each { |parameter| @arguments[parameter.name] = parameter }
+      else
+        i = -1
+        parameters.each do |descriptor|
+          x = Parameter.new(descriptor, "_#{i+=1}")
+          @parameters[x.name] = x
+        end
+      end
     end
   
     def inline_code(code)
@@ -115,9 +122,9 @@ module AutoC
     
     def defined? = !@code.nil?
 
-    def signature = '%s(%s)' % [result.signature, parameters.collect(&:signature).join(',')]
+    def signature = '%s(%s)' % [result.signature, parameters.to_a.collect(&:signature).join(',')]
   
-    def prototype = '%s %s(%s)' % [result.signature, name, parameters.collect(&:declaration).join(',')]
+    def prototype = '%s %s(%s)' % [result.signature, name, parameters.to_a.collect(&:declaration).join(',')]
   
     def definition = '%s {%s}' % [prototype, @code]
   
@@ -125,10 +132,11 @@ module AutoC
 
     def call(*arguments)
       xs = []
+      ps = parameters.to_a
       (0...arguments.size).each do |i|
         a = arguments[i]
         v = a.is_a?(Parameter) ? a.to_value_argument : a
-        xs << (i < parameters.size ? parameters[i].value.(v) : v)
+        xs << (i < ps.size ? ps[i].value.(v) : v)
       end
       '%s(%s)' % [name, xs.join(',')]
     end
@@ -136,13 +144,15 @@ module AutoC
     def configure(&block) = instance_eval(&block)
     
     # This allows to call other functions with this function's individual parameters as arguments
-    def method_missing(meth, *args) = @arguments.has_key?(meth) ? @arguments[meth] : super
+    # A call to unknown method results in the method's name being emitted
+    def method_missing(meth, *args) = @parameters.has_key?(meth) ? @parameters[meth] : meth
 
   private
 
     # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
 
-    # static __inline seems to be THE way but consider the possible code bloat it incurs
+    # static __inline seems to be THE most portable way without resorting to preprocessor
+    # but consider the possible code bloat it incurs
 
     def render_declaration_specifier(stream)
       stream << 'static __inline ' if inline?
@@ -183,6 +193,21 @@ module AutoC
     end
 
   end # Function
+
+
+  # :nodoc:
+  # Named parameter list for the function
+  class Function::Parameters < ::Hash
+    def initialize(function)
+      @function = function
+      super()
+    end
+    def to_a = values
+    def [](name)
+      raise "unknown parameter #{name} in function #{@function}()" unless has_key?(name)
+      super
+    end
+  end # Parameters
 
 
 end
