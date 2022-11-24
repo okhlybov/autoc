@@ -9,7 +9,7 @@ require 'autoc/primitive'
 module AutoC
 
 
-  using Refinements
+  using Coercions
     
 
   # :nodoc:
@@ -65,6 +65,8 @@ module AutoC
   
   # Standalone C side function
   # The generated function is meant to be the C89-compliant
+  # NOTE: This function does not track parameter and result types as its dependencies
+  # This can be done manually by appending to #dependencies property with <<
   class Function
   
     include Entity

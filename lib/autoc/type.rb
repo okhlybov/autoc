@@ -4,7 +4,8 @@
 module AutoC
 
 
-  module Coercion
+  # :nodoc:
+  module ValueCoercer
     def to_type = Type.coerce(self)
     def to_value = rvalue
     def lvalue = to_type.lvalue
@@ -14,20 +15,17 @@ module AutoC
   end # Coercer
   
   
-  module Refinements
+  module Coercions
     refine ::Symbol do
-      import_methods Coercion
+      import_methods ValueCoercer
     end
     refine ::String do
-      import_methods Coercion
+      import_methods ValueCoercer
       def ~@ = %{"#{self}"} # Return C side string literal
     end
-  end # Refinements
+  end # Coercions
   
   
-  using Refinements
-
-
   class Type
 
     # C side type signature
@@ -35,6 +33,7 @@ module AutoC
 
     def initialize(signature) = @signature = signature.to_s
 
+    # Everything not yet typed gets transformed downto a primitive type
     def self.coerce(x) = x.is_a?(Type) ? x : Primitive.coerce(x)
 
     def to_type = self
@@ -136,3 +135,6 @@ module AutoC
 
 
 end
+
+
+require 'autoc/primitive' # Due to Type::coerce

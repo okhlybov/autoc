@@ -253,7 +253,7 @@ module AutoC
   end # Entity
 
 
-  # Plain C side code block
+  # Helper class to represent plain C side code block
   class Code
 
     include Entity
@@ -274,6 +274,16 @@ module AutoC
     end
 
   end # Code
+
+
+  # Helper class to inject a system-wide header into the C side interface part of the module
+  class SystemHeader < AutoC::Code
+    def initialize(header)
+      super interface: %{
+        #include <#{header}>
+      }
+    end
+  end # SystemHeader
 
 
 end
