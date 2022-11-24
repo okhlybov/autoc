@@ -143,7 +143,10 @@ module AutoC
       '%s(%s)' % [name, xs.join(',')]
     end
   
-    def configure(&block) = instance_eval(&block)
+    def configure(&block)
+      instance_eval(&block)
+      self
+    end
     
     # This allows to call other functions with this function's individual parameters as arguments
     # A call to unknown method results in the method's name being emitted
