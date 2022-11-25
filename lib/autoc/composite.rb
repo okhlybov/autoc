@@ -1,192 +1,60 @@
 # frozen_string_literal: true
 
 
+require 'autoc/std'
 require 'autoc/type'
-require 'autoc/memory'
-require 'autoc/hasher'
+require 'autoc/module'
+
+
+#require 'autoc/memory'
+#require 'autoc/hasher'
 
 
 module AutoC
 
 
-  # @abstract
-  # Generator type for composite types which comprise of other primitive or composite types such as bare C structs
-  # or elaborate data containers.
   class Composite < Type
 
-    private def def_method(result, name, parameters, inline: false, visibility: nil, require: true, instance: name, &code)
-      begin
-        instance = instance.to_sym
-        @_method = Method.new(self, name, parameters, result, inline:, visibility: (visibility.nil? ? self.visibility : visibility), requirement: require)
-        raise "Method definition for ##{name} is already registered" if @methods.key?(instance) && !@allow_method_redefines
-        @methods[instance] = @_method
-        instance_eval(&code) if block_given?
-      ensure
-        @_method = nil
-      end
-    end
+    using STD::Coercions
 
-    #
-    private def inline = @_method.inline
+    include STD
 
-    #
-    private def code(code) = @_method.code(code)
-
-    #
-    private def header(header) = @_method.header(header)
-
-    # Prefix used to generate fully qualified type-specific identifiers.
-    def prefix = @prefix ||= (@initial_prefix.nil? ? type : @initial_prefix).to_s
-
-    #
-    def declare(obj = nil)
-      if obj.nil? then @declare
-      elsif obj.inline? then "#{@define} #{obj.declaration}"
-      else "#{@declare} #{obj.declaration}"
-      end
-    end
-
-    #
-    def define(obj = nil) = obj.nil? ? @define : "#{@define} #{obj.declaration}"
-
-    def memory = AutoC::Allocator.default
-
-    def hasher = AutoC::Hasher.default
+    include Entity
 
     attr_reader :visibility
 
-    # Perform additional configuration step following conventional initializition
-    def self.new(*args, **kwargs, &code)
+    def initialize(signature, visibility: :public)
+      super(signature)
+      @methods = {}
+      @visibility = visibility
+    end
+
+    def self.new(*args, **kws, &block)
       obj = super
       obj.send(:configure)
       obj
     end
 
-    def initialize(type, visibility: :public)
-      super(type)
-      @methods = {}
-      @initial_prefix = nil
-      @visibility = visibility
-      dependencies.merge [Module::DEFINITIONS, Module::INCLUDES, memory, hasher]
-    end
-
-    # Composite types are always passed by reference by default
-
-    def parameter = rvalue
-    def lvalue = rvalue
-    def rvalue = @rv ||= Parameter.new(self, kind: :reference)
-    def const_rvalue = @crv ||= Parameter.new(self, constant: true, kind: :reference)
+    def rvalue = @rv ||= Value.new(self, reference: true)
   
-    private def configure
-      def_method :void, :create, { self: lvalue }, instance: :default_create, require:-> { default_constructible? } do
-        header %{
-          @brief Create a new instance
+    def lvalue = @lv ||= Value.new(self, reference: true)
+  
+    def const_rvalue = @crv ||= Value.new(self, constant: true, reference: true)
+  
+    def const_lvalue = @crv ||= Value.new(self, constant: true, reference: true)
 
-          @param[out] self object to be created
+    # Prefix used to generate type-qualified identifiers
+    # By default it returns the C side type signature but can be overridden
+    # to handle the cases where the signature is not itself a valid C identifier (char*, for example)
+    def prefix = signature
 
-          The instance is constructed with default constructor.
+    def dependencies = super.merge(@methods.values)
 
-          @note Previous contents of `*self` is overwritten.
-
-          @since 2.0
-        }
-      end
-      def_method :void, :destroy, { self: lvalue }, require:-> { destructible? } do
-        header %{
-          @brief Destroy the composite object along with all constituent parts
-
-          @param[in] self object to be destructed
-
-          Upon destruction all contained elements get destroyed in turn with respective destructors and allocated memory is reclaimed.
-          After call to this function the `*self` storage can be disposed.
-
-          @since 2.0
-        }
-      end
-      def_method :void, :copy, { self: lvalue, source: const_rvalue }, require:-> { copyable? } do
-        header %{
-          @brief Create a new container with copies of the source container's elements
-
-          @param[out] self container to be initialized
-          @param[in] source container to obtain the elements from
-
-          The container constructed with this function contains *copies* of all elements from `source`.
-
-          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
-
-          @note Previous contents of `*self` is overwritten.
-
-          @since 2.0
-        }
-      end
-      def_method :int, :equal, { self: const_rvalue, other: const_rvalue }, require:-> { comparable? } do
-        header %{
-          @brief Check whether two containers are equal by contents
-
-          @param[in] self container to compare
-          @param[in] other container to compare
-          @return non-zero if the containers are equal by contents and zero otherwise
-
-          The containers are considered equal if they contain the same number of the elements which in turn are pairwise equal.
-          The exact semantics is container-specific, e.g. sequence containers like vector of list mandate the equal elements
-          the elements are compared sequentially whereas unordered containers such as sets have no notion of the specific element position.
-
-          This function requires the element type to be *comparable* (i.e. to have a well-defined comparison operation).
-
-          @since 2.0
-        }
-      end
-      def_method :int, :compare, { self: const_rvalue, other: const_rvalue }, require:-> { orderable? } do
-        header %{
-          @brief Compute the ordering of two containers
-
-          @param[in] self container to order
-          @param[in] other container to order
-          @return zero if containers are considered equal, negative value if `self` < `other` and positive value if `self` > `other`
-
-          The function computes the ordering of two containers based on respective contents.
-
-          This function requires the element type to be *orderable* (i.e. to have a well-defined less-equal-more relation operation).
-
-          @since 2.0
-        }
-      end
-      def_method :size_t, :hash_code, { self: const_rvalue }, require:-> { hashable? } do
-        header %{
-          @brief Return hash code for container
-
-          @param[in] self container to get hash code for
-          @return hash code
-
-          The function computes a hash code - an integer value that somehow identifies the container's contents.
-
-          This is done by employing the element's hash function, hence this function requires the container's
-          element type to be *hashable* (i.e. to have a well-defined hash function).
-
-          @since 2.0
-        }
-      end
-    end
-
-    def respond_to_missing?(*args) = @methods.key?(args.first.to_sym) ? true : super
-
-    def method_missing(symbol, *args)
-      if (meth = @methods[symbol]).nil?
-        function = decorate_identifier(symbol) # Construct C function name for the method
-        if args.empty? then function # Emit bare function name
-        elsif args.first.nil? then "#{function}()" # Use first nil argument to emit function call with no parameters
-        else "#{function}(#{args.join(', ')})" # Emit normal function call with specified parameters
-        end
-      else
-        meth.(*args) # Delegate actual rendering to the function object
-      end
-    end
-
-    #
-    def decorate_identifier(id)
+    # Decorate identifier with type-specific prefix
+    def identifier(id)
       fn = id.to_s.sub(/[!?]$/, '') # Strip trailing !?
       # Check for leading underscore
-      underscored =
+      _ =
         if /^(_+)(.*)/ =~ fn
           fn = Regexp.last_match(2)
           true
@@ -196,109 +64,196 @@ module AutoC
       # Convert _separated_names to the CamelCase
       id = prefix + fn.split('_').collect{ |s| s[0].upcase << s[1..-1] }.join
       # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-      underscored && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
+      _ && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     end
 
-    private def defgroup = "#{@defgroup} #{type} #{canonic_tag}"
-    private def ingroup = "#{@ingroup} #{type}"
+    def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
-    def interface_declarations(stream)
-      super
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_INLINE
-      case visibility
-      when :public
-        @defgroup = '@public @defgroup'
-        @ingroup = '@public @ingroup'
+  private
+    
+    def method_missing(meth, *args)
+      if (method = @methods[meth]).nil?
+        # On anything thats not a defined method return a type-decorated identifier
+        # This allows to generate arbitrary type-qualified identifiers with #{type.foo}
+        raise "unexpected arguments" unless args.empty?
+        identifier(meth)
       else
-        @defgroup = '@internal @defgroup'
-        @ingroup = '@internal @ingroup'
+        method
       end
-      composite_interface_declarations(stream)
     end
 
-    def interface_definitions(stream)
-      super
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_INLINE
-      case visibility
-      when :public
-        @defgroup = '@public @defgroup'
-        @ingroup = '@public @ingroup'
+    # Overridable for custom method in derived classes
+    def method_class = Method
+
+    # Create a new type-bound function (aka method)
+    def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name)
+      v = (visibility.nil? ? self.visibility : visibility)
+      method = method_class.new(
+        self,
+        result, name, parameters,
+        inline:,
+        visibility: (visibility.nil? ? self.visibility : visibility), # Method's visibility property can be borrowed from the type itself
+        requirement: constraint
+      )
+      raise "##{instance} method redefinition is not allowed" if @methods.has_key?(instance)
+      @methods[instance] = method
+      method
+    end
+
+    # Let registered methods arrange themselves to follow its bound type
+    def relative_position(dependency) = @methods.values.include?(dependency) ? 0 : super
+
+    def configure
+      dependencies << DEFINITIONS
+      method(:void, :create, { target: lvalue }, instance: :default_create, constraint: -> { default_constructible? }).configure do
+        header %{
+          @brief Create a new value
+
+          @param[out] target value to be created
+
+          This function constructs the value with parameterless constructor.
+
+          Previous contents of `*target` is overwritten.
+
+          Once constructed, the value is to be destroyed with #{type.destroy}().
+
+          @since 2.0
+        }
+      end
+      method(:void, :destroy, { target: lvalue }, constraint: -> { destructible? }).configure do
+        header %{
+          @brief Destroy existing value
+
+          @param[out] target value to be destroyed
+
+          This function destroys the value previously constructed with any constructor.
+          It involves freeing allocated memory and destroying the constituent values with the respective destructors.
+
+          It is an error to use the value after call to this function (`*target` is considered to contain garbage afterwards).
+
+          @since 2.0
+        }
+      end
+      method(:void, :copy, { target: lvalue, source: const_rvalue }, constraint: -> { copyable? }).configure do
+        header %{
+          @brief Create a copy of source value
+
+          @param[out] target value to be created
+          @param[in]  source value to be cloned
+
+          This function is meant to an independent copy (a clone) of `*source` value in place of `*target`.
+
+          Previous contents of `*target` is overwritten.
+
+          Once constructed, the value is to be destroyed with #{type.destroy}().
+          
+          @since 2.0
+        }
+      end
+      method(INT, :equal, { left: const_rvalue, right: const_rvalue }, constraint: -> { comparable? }).configure do
+        header %{
+          @brief Perform equality testing of two values
+
+          @param[in] left  value to test for equality
+          @param[in] right value to test for equality
+
+          @return non-zero if values are considered equal and zero otherwise
+
+          This function returns a non-zero value if specified values are considered equal and zero value otherwise.
+          Normally the values' contents are considered on equality testing.
+
+          @since 2.0
+        }
+      end
+      method(INT, :compare, { left: const_rvalue, right: const_rvalue }, constraint: -> { orderable? }).configure do
+        header %{
+          @brief Compute relative ordering of two values
+
+          @param[in] left  value to order
+          @param[in] right value to order
+
+          @return negative, positive or zero value depending on comparison of the specified values
+
+          This function returns negative value if `left` precedes `right`, positive value if `left` follows `right` and zero if both values are considered equal.
+
+          Normally the values' contents are considered on comparison.
+
+          This function is in general independent to but is expected to be consistent with #{type.equal}() function.
+
+          @since 2.0
+        }
+      end
+      method(SIZE_T, :hash_code, { target: const_rvalue }, constraint: -> { hashable? } ).configure do
+        header %{
+          @brief Compute hash code
+
+          @param[in] target value to compute hash code for
+
+          @return hash code
+
+          This function computes a hash code which reflects the value's contents in some way,
+          that is two values considered equal must yield identical hash codes.
+          Two different values may or may not yield identical hash codes, however.
+
+          @since 2.0
+        }
+      end
+    end
+
+  end # Composite
+
+
+  class Composite::Method < Function
+
+    attr_reader :type
+  
+    def initialize(type, result, name, parameters, **kws)
+      @type = type
+      super(result, self.type.identifier(name), parameters, **kws)
+      #dependencies << self.type # This arranges the method to follow the type it is bound to
+    end
+
+  private
+
+    def render_function_header(stream)
+      if public?
+        stream << %{
+          /**
+            #{@header}
+          */
+        } unless @header.nil?
       else
-        @defgroup = '@internal @defgroup'
-        @ingroup = '@internal @ingroup'
-      end
-      composite_interface_definitions(stream)
-    end
-
-    def composite_interface_declarations(stream) = nil
-
-    def composite_interface_definitions(stream)
-      @methods.each_value { |meth| meth.interface_declaration(stream) }
-      @methods.each_value { |meth| meth.interface_definition(stream) }
-    end
-
-    def forward_declarations(stream)
-      super
-      @declare = :AUTOC_EXTERN
-      @define = :AUTOC_STATIC
-      @defgroup = '@internal @defgroup'
-      @addtogroup = '@internal @addtogroup'
-    end
-
-    def definitions(stream)
-      super
-      @declare = :AUTOC_STATIC
-      @define = nil
-      @defgroup = '@internal @defgroup'
-      @addtogroup = '@internal @addtogroup'
-      @methods.each_value { |meth| meth.implementation(stream) }
-    end
-
-  end
-
-
-  # Provides basic functionality for composites whose contents can be iterated over
-  module Composite::Traversable
-    def range = @range ||= self.class::Range.new(self, visibility:)
-    private def relative_position(other) = other.equal?(range) ? 0 : super # Extra check to break the iterable <-> iterable.range cyclic dependency
-    private def configure
-      dependencies << range
-      super
-    end
-  end
-
-
-  class Composite::Method < Method
-
-    def interface_declaration(stream)
-      if live?
-        raise "Method body for #{self} is absent" if @code.nil?
-        stream << if public?
-          %{
-            /**
-              #{ingroup}
-              #{@header}
-            */
-          }
-        else
-          %{
-            /** @private */
-          }
-        end
-        stream << "#{declare(self)};"
+        stream << %{/** @private */}
       end
     end
 
-    def interface_definition(stream)
-      stream << "#{define(self)} {#{@code}}" if live? && inline?
+    def render_declaration_specifier(stream)
+      stream << (inline? ? 'AUTOC_INLINE ' : 'AUTOC_EXTERN ')
     end
 
-    def implementation(stream)
-      stream << "#{define(self)} {#{@code}}" if live? && !inline?
-    end
+  end # Method
 
-  end
+
+  Composite::DEFINITIONS = Code.new interface: %{
+    #ifndef AUTOC_INLINE
+      #if defined(__cplusplus)
+        #define AUTOC_INLINE extern "C" inline
+      #else
+        #if __STDC_VERSION__ >= 199901L
+          #define AUTOC_INLINE inline
+        #else
+          #define AUTOC_INLINE static
+        #endif
+      #endif
+    #endif
+    #ifndef AUTOC_EXTERN
+      #ifdef __cplusplus
+        #define AUTOC_EXTERN extern "C"
+      #else
+        #define AUTOC_EXTERN extern
+      #endif
+    #endif
+  }
+
 
 end

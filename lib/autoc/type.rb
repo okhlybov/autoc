@@ -31,6 +31,8 @@ module AutoC
     # C side type signature
     attr_reader :signature
 
+    def self.abstract(method) = remove_method(method)
+
     def initialize(signature) = @signature = signature.to_s
 
     # Everything not yet typed gets transformed downto a primitive type
@@ -53,7 +55,7 @@ module AutoC
     #
     # @param value [String | Symbol] source side storage designation where the instance is to be created
     # @return [String] source side code snippet
-    def default_create(value) = ABSTRACT
+    abstract def default_create(value) = ABSTRACT
 
     # @abstract
     # Synthesize the source side code to create an instance in place of the +value+ and and initialize it with
@@ -66,14 +68,14 @@ module AutoC
     # @param value [String | Symbol] source side storage designation where the instance is to be created
     # @param args [Array] list of types to be supplied to the constructor
     # @return [String] source side code snippet
-    def custom_create(value, *args) = ABSTRACT
+    abstract def custom_create(value, *args) = ABSTRACT
 
     # @abstract
     # Synthesize the source side code to destroy the instance in place of the +value+ (the destructor).
     #
     # @param value [String | Symbol] source side storage designation for the instance to be destroyed
     # @return [String] source side code snippet
-    def destroy(value) = ABSTRACT
+    abstract def destroy(value) = ABSTRACT
 
     # @abstract
     # Synthesize the source side code to create an instance in place of the +value+ initializing it with a contents of
@@ -85,16 +87,16 @@ module AutoC
     # @param value [String | Symbol] source side storage designation where the instance is to be created
     # @param source [String | Symbol] source side storage designation taken as the origin for the copying operation
     # @return [String] source side code snippet
-    def copy(value, source) = ABSTRACT
+    abstract def copy(value, source) = ABSTRACT
 
     # @abstract TODO
-    def equal(value, other) = ABSTRACT
+    abstract def equal(value, other) = ABSTRACT
 
     # @abstract TODO
-    def compare(value, other) = ABSTRACT
+    abstract def compare(value, other) = ABSTRACT
 
     # @abstract TODO
-    def hash_code(value) = ABSTRACT
+    abstract def hash_code(value) = ABSTRACT
 
     # @abstract TODO replace value with a copy of source destroying prevous contents
     # abstract def replace(value,  source) = nil

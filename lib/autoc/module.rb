@@ -240,7 +240,7 @@ module AutoC
   
   private
 
-    def relative_position(other) = equal?(other) ? 0 : other.position + 1
+    def relative_position(dependency) = equal?(dependency) ? 0 : dependency.position + 1
 
     ### Overridable rendering methods
 

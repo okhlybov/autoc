@@ -160,41 +160,52 @@ module AutoC
     # but consider the possible code bloat it incurs
 
     def render_declaration_specifier(stream)
-      stream << 'static __inline ' if inline?
+      # The inline specifier is not a part of C89 yet descent compilers do inlining at will
+      # given the function definition is available at the function call
+      stream << 'static ' if inline?
     end
 
+    # Render the commentary block preceding the function declaration, both inline or external
     def render_function_header(stream)
       stream << %{
         /* #{@header} */
       } unless @header.nil?
     end
 
+    # Render full function declaration statement including the commentary block
+    # For inline functions this also renders a function body effectively making this also a function definition
+    # The declaration comes into either public interface of forward declaration block depending on the function's visibility status
+    def render_function_declaration(stream)
+      render_function_header(stream)
+      render_declaration_specifier(stream)
+      if inline?
+        render_function_definition(stream)
+      else
+        stream << prototype << ';'
+      end
+    end
+
+    # Render function definition, both inline or extern
+    # This code never gets into public interface
+    def render_function_definition(stream)
+      raise "function body is missing" if @code.nil?
+      stream << definition
+    end
+
+    # Render function's public interface
+    # Only public functions are rendered
     def render_interface(stream)
-      if live? && public?
-        render_function_header(stream)
-        render_declaration_specifier(stream)
-        if inline?
-          stream << definition
-        else
-          stream << prototype << ';'
-        end
-      end
+      render_function_declaration(stream) if live? && public?
     end
 
+    # Render function's interface for non-public functions which should not appear in the public interface
     def render_forward_declarations(stream)
-      if live? && !public?
-        if inline?
-          stream << prototype << ';'
-        else
-          stream << definition
-        end
-      end
+      render_function_declaration(stream) if live? && !public?
     end
 
+    # Render non-inline function definition regardless of function's visibility status
     def render_implementation(stream)
-      if live?
-        stream << definition unless inline?
-      end
+        stream << definition if live? && !inline?
     end
 
   end # Function
