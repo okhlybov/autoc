@@ -13,9 +13,10 @@ require 'autoc/module'
 module AutoC
 
 
-  class Composite < Type
+  using STD::Coercions
 
-    using STD::Coercions
+
+  class Composite < Type
 
     include STD
 
@@ -48,7 +49,7 @@ module AutoC
     # to handle the cases where the signature is not itself a valid C identifier (char*, for example)
     def prefix = signature
 
-    def dependencies = super.merge(@methods.values)
+    def inspect = "#{signature} <#{self.class}>"
 
     # Decorate identifier with type-specific prefix
     def identifier(id)
@@ -87,21 +88,20 @@ module AutoC
 
     # Create a new type-bound function (aka method)
     def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name)
-      v = (visibility.nil? ? self.visibility : visibility)
       method = method_class.new(
         self,
-        result, name, parameters,
+        Type.coerce(result), # Force refined coercion from STD
+        name,
+        parameters, # TODO force parameter types coercion
         inline:,
         visibility: (visibility.nil? ? self.visibility : visibility), # Method's visibility property can be borrowed from the type itself
         requirement: constraint
       )
       raise "##{instance} method redefinition is not allowed" if @methods.has_key?(instance)
       @methods[instance] = method
+      references << method # Avoid introducing cyclic dependency due to the method's dependency on self
       method
     end
-
-    # Let registered methods arrange themselves to follow its bound type
-    def relative_position(dependency) = @methods.values.include?(dependency) ? 0 : super
 
     def configure
       dependencies << DEFINITIONS
@@ -150,7 +150,7 @@ module AutoC
           @since 2.0
         }
       end
-      method(INT, :equal, { left: const_rvalue, right: const_rvalue }, constraint: -> { comparable? }).configure do
+      method(:int, :equal, { left: const_rvalue, right: const_rvalue }, constraint: -> { comparable? }).configure do
         header %{
           @brief Perform equality testing of two values
 
@@ -165,7 +165,7 @@ module AutoC
           @since 2.0
         }
       end
-      method(INT, :compare, { left: const_rvalue, right: const_rvalue }, constraint: -> { orderable? }).configure do
+      method(:int, :compare, { left: const_rvalue, right: const_rvalue }, constraint: -> { orderable? }).configure do
         header %{
           @brief Compute relative ordering of two values
 
@@ -183,7 +183,8 @@ module AutoC
           @since 2.0
         }
       end
-      method(SIZE_T, :hash_code, { target: const_rvalue }, constraint: -> { hashable? } ).configure do
+      method(:size_t, :hash_code, { target: const_rvalue }, constraint: -> { hashable? } ).
+        configure do
         header %{
           @brief Compute hash code
 
@@ -203,6 +204,7 @@ module AutoC
   end # Composite
 
 
+  # Type-bound C side function
   class Composite::Method < Function
 
     attr_reader :type
@@ -210,8 +212,11 @@ module AutoC
     def initialize(type, result, name, parameters, **kws)
       @type = type
       super(result, self.type.identifier(name), parameters, **kws)
-      #dependencies << self.type # This arranges the method to follow the type it is bound to
+      dependencies << self.type << self.result
+      # TODO register parameters' types as dependencies
     end
+
+    def inspect = "#{prototype} <#{self.class}>"
 
   private
 

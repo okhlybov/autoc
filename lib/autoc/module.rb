@@ -63,7 +63,7 @@ module AutoC
     private def total_entities
       @total_entities ||= begin
         set = ::Set.new
-        entities.each { |e| set.merge(e.total_dependencies) }
+        entities.each { |e| set.merge(e.total_references) }
         set
       end
     end
@@ -107,17 +107,17 @@ module AutoC
 
     def render
       s = stream
-      prologue(s)
+      render_prologue(s)
       entities.to_a.sort.each { |e| e.interface.each { |x| s << x } }
-      epilogue(s)
+      render_epilogue(s)
     ensure
       s.close
       @stream = nil
     end
 
-    private
+  private
 
-    def prologue(stream)
+    def render_prologue(stream)
       stream << %{
         #{Module::CAP}
         #ifndef #{@tag}
@@ -125,7 +125,7 @@ module AutoC
       }
     end
 
-    def epilogue(stream)
+    def render_epilogue(stream)
       stream << %{
         #endif
       }
@@ -156,7 +156,7 @@ module AutoC
 
     def render
       s = stream
-      prologue(s)
+      render_prologue(s)
       total_entities = ::Set.new
       entities.each { |e| total_entities.merge(e.total_dependencies) }
       total_entities.to_a.sort.each { |e| e.forward_declarations.each { |x| s << x } }
@@ -171,9 +171,9 @@ module AutoC
       super
     end
 
-    private
+  private
 
-    def prologue(stream)
+    def render_prologue(stream)
       stream << %{
         #{Module::CAP}
         #include "#{self.module.header.file_name}"
@@ -187,33 +187,51 @@ module AutoC
 
   module Entity
 
-    # A set of the entity's immediate dependencies
-    def dependencies = @dependencies ||= ::Set.new
+    include ::Comparable
 
-    # Return the entire entity dependency set staring with self
+    # A set of the entity's immediate references which, unlike dependencies, do not enforce the entities relative ordering
+    def references = @references ||= ReferenceSet.new
+
+    # Return the entire entity's reference set staring with self
+    def total_references = @total_references ||= collect_references(::Set.new)
+
+    # A set of the entity's immediate dependencies which enforce the entities relative ordering
+    def dependencies = @dependencies ||= DependencySet.new(self)
+
+    # Return the entire entity's dependency set staring with self
     def total_dependencies = @total_dependencies ||= collect_dependencies(::Set.new)
 
-    protected def collect_dependencies(set)
+    protected def collect_references(set)
       unless set.include?(self)
         set << self
-        dependencies.each { |d| d.collect_dependencies(set) }
+        references.each { |x| x.collect_references(set) }
       end
       set
     end
 
-    def position
-      @position ||=
-        begin
-          p = 0
-          total_dependencies.each do |d|
-            x = relative_position(d)
-            p = x if p < x
-          end
-          p
-        end
+    protected def collect_dependencies(set)
+      unless set.include?(self)
+        set << self
+        dependencies.each { |x| x.collect_dependencies(set) }
+      end
+      set
     end
 
-    def <=>(other) = position <=> other.position
+    def <=>(other)
+      if equal?(other)
+        0
+      else
+        other_depends_self = other.total_dependencies.include?(self)
+        if total_dependencies.include?(other)
+          raise "(indirect) #{self} <-> #{other} cyclic dependency detected" if other_depends_self
+          +1
+        elsif other_depends_self
+          -(other <=> self)
+        else
+          object_id <=> other.object_id
+        end
+      end
+    end
 
     def complexity = forward_declarations.complexity + implementation.complexity # Interface part is not considered as it is shared across the sources
 
@@ -240,8 +258,6 @@ module AutoC
   
   private
 
-    def relative_position(dependency) = equal?(dependency) ? 0 : dependency.position + 1
-
     ### Overridable rendering methods
 
     def render_interface(stream) = nil
@@ -253,6 +269,25 @@ module AutoC
   end # Entity
 
 
+  Entity::ReferenceSet = ::Set
+
+
+  # :nodoc:
+  class Entity::DependencySet < ::Set
+
+    def initialize(entity)
+      super()
+      @entity = entity
+    end
+
+    def <<(x)
+      @entity.references << x # Every dependency is also tracked as a reference
+      super
+    end
+
+  end # DependencySet
+
+
   # Helper class to represent plain C side code block
   class Code
 
@@ -262,6 +297,8 @@ module AutoC
       @interface_ = interface
       @implementation_ = implementation
     end
+
+    def inspect = "... <#{self.class}>"
 
   private
 

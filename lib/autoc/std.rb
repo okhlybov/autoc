@@ -27,7 +27,7 @@ module AutoC::STD
 
     def self.coerce(x)
       @@types.each { |t| return t unless (t.matcher =~ x).nil? }
-      AutoC::Primitive.new(x)
+      Primitive.new(x)
     end
 
     attr_reader :matcher
@@ -37,6 +37,8 @@ module AutoC::STD
       @matcher = matcher
       @@types << self
     end
+
+    def inspect = "#{signature} <#{self.class}>"
 
   end
 
