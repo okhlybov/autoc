@@ -4,6 +4,7 @@
 require 'autoc/std'
 require 'autoc/type'
 require 'autoc/module'
+require 'autoc/function'
 
 
 #require 'autoc/memory'

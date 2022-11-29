@@ -32,9 +32,10 @@ module AutoC::STD
 
     attr_reader :matcher
 
-    def initialize(type, matcher = Regexp.new("^#{type}$"))
+    def initialize(type, matcher: Regexp.new("^#{type}$"), header: nil)
       super(type)
       @matcher = matcher
+      dependencies << header unless header.nil?
       @@types << self
     end
 
@@ -43,101 +44,69 @@ module AutoC::STD
   end
 
 
-  class Primitive
-
-    class Boolean < Primitive; end
-
-    class STDBOOL_H < Boolean
-      SET = ::Set[AutoC::SystemHeader.new 'stdbool.h']
-      def dependencies = SET
-    end
-
-    class Integer < Primitive; end
-
-    class Character < Integer; end
-
-    class STDDEF_H < Integer
-      SET = ::Set[AutoC::SystemHeader.new 'stddef.h']
-      def dependencies = SET
-    end
-
-    class Real < Primitive; end
-
-    class MATH_H < Real
-      SET = ::Set[AutoC::SystemHeader.new 'math.h']
-      def dependencies = SET
-    end
-
-    class Complex < Primitive
-      SET = ::Set[AutoC::SystemHeader.new 'complex.h']
-      def dependencies = SET
-      def orderable? = false
-    end
-
-    class INTTYPES_H < Integer
-      SET = ::Set[AutoC::SystemHeader.new 'inttypes.h']
-      def dependencies = SET
-    end
-
-  end # Primitive
+  MATH_H = AutoC::SystemHeader.new 'math.h'
+  STDDEF_H = AutoC::SystemHeader.new 'stddef.h'
+  STDBOOL_H = AutoC::SystemHeader.new 'stdbool.h'
+  COMPLEX_H = AutoC::SystemHeader.new 'complex.h'
+  INTTYPES_H = AutoC::SystemHeader.new 'inttypes.h'
 
 
-  BOOL = Primitive::STDBOOL_H.new '_Bool', /^(bool|_Bool)$/
+  BOOL = Primitive.new '_Bool', matcher: /^(bool|_Bool)$/, header: STDBOOL_H
 
 
-  CHAR = Primitive::Character.new 'char'
-  SIGNED_CHAR = Primitive::Character.new 'signed char', /^signed\s+char$/
-  UNSIGNED_CHAR = Primitive::Character.new 'unsigned char', /^unsigned\s+char$/
+  CHAR = Primitive.new 'char'
+  SIGNED_CHAR = Primitive.new 'signed char', matcher: /^signed\s+char$/
+  UNSIGNED_CHAR = Primitive.new 'unsigned char', matcher: /^unsigned\s+char$/
 
 
-  SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Primitive::Integer.new 'short', /^(signed\s+)?short(\s+int)?$/
-  UNSIGNED_SHORT = UNSIGNED_SHORT_INT = Primitive::Integer.new 'unsigned short', /^unsigned\s+short(\s+int)?$/
+  SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Primitive.new 'short', matcher: /^(signed\s+)?short(\s+int)?$/
+  UNSIGNED_SHORT = UNSIGNED_SHORT_INT = Primitive.new 'unsigned short', matcher: /^unsigned\s+short(\s+int)?$/
 
 
-  INT = SIGNED = SIGNED_INT = Primitive::Integer.new 'int', /^(int|signed|signed\s+int)$/
-  UNSIGNED = UNSIGNED_INT = Primitive::Integer.new 'unsigned', /^(unsigned|unsigned\s+int)$/
+  INT = SIGNED = SIGNED_INT = Primitive.new 'int', matcher: /^(int|signed|signed\s+int)$/
+  UNSIGNED = UNSIGNED_INT = Primitive.new 'unsigned', matcher: /^(unsigned|unsigned\s+int)$/
 
 
-  LONG = SIGNED_LONG = LONG_INT = SIGNED_LONG_INT = Primitive::Integer.new 'long', /^(signed\s+)?long(\s+int)?$/
-  UNSIGNED_LONG = UNSIGNED_LONG_INT = Primitive::Integer.new 'unsigned long', /^unsigned\s+long(\s+int)?$/
+  LONG = SIGNED_LONG = LONG_INT = SIGNED_LONG_INT = Primitive.new 'long', matcher: /^(signed\s+)?long(\s+int)?$/
+  UNSIGNED_LONG = UNSIGNED_LONG_INT = Primitive.new 'unsigned long', matcher: /^unsigned\s+long(\s+int)?$/
 
 
-  LONG_LONG = SIGNED_LONG_LONG = LONG_LONG_INT = SIGNED_LONG_LONG_INT = Primitive::Integer.new 'long long', /^(signed\s+)?long\s+long(\s+int)?$/
-  UNSIGNED_LONG_LONG = UNSIGNED_LONG_LONG_INT = Primitive::Integer.new 'unsigned long long', /^unsigned\s+long\s+long(\s+int)?$/
+  LONG_LONG = SIGNED_LONG_LONG = LONG_LONG_INT = SIGNED_LONG_LONG_INT = Primitive.new 'long long', matcher: /^(signed\s+)?long\s+long(\s+int)?$/
+  UNSIGNED_LONG_LONG = UNSIGNED_LONG_LONG_INT = Primitive.new 'unsigned long long', matcher: /^unsigned\s+long\s+long(\s+int)?$/
 
 
-  SIZE_T = Primitive::STDDEF_H.new 'size_t'
-  PTRDIFF_T = Primitive::STDDEF_H.new 'ptrdiff_t'
-  UINTPTR_T = Primitive::STDDEF_H.new 'uintptr_t'
+  SIZE_T = Primitive.new 'size_t', header: STDDEF_H
+  PTRDIFF_T = Primitive.new 'ptrdiff_t', header: STDDEF_H
+  UINTPTR_T = Primitive.new 'uintptr_t', header: STDDEF_H
 
 
-  FLOAT = Primitive::Real.new 'float'
-  DOUBLE = Primitive::Real.new 'double'
-  LONG_DOUBLE = Primitive::Real.new 'long double', /^long\s+double$/
+  FLOAT = Primitive.new 'float'
+  DOUBLE = Primitive.new 'double'
+  LONG_DOUBLE = Primitive.new 'long double', matcher: /^long\s+double$/
 
 
-  FLOAT_T = Primitive::MATH_H.new 'float_t'
-  DOUBLE_T = Primitive::MATH_H.new 'double_t'
+  FLOAT_T = Primitive.new 'float_t', header: MATH_H
+  DOUBLE_T = Primitive.new 'double_t', header: MATH_H
 
 
-  COMPLEX = Primitive::Complex.new '_Complex', /^(complex|_Complex)$/
-  FLOAT_COMPLEX = Primitive::Complex.new 'float _Complex', /^float\s+(complex|_Complex)$/
-  DOUBLE_COMPLEX = Primitive::Complex.new 'double _Complex', /^double\s+(complex|_Complex)$/
-  LONG_DOUBLE_COMPLEX = Primitive::Complex.new 'long double _Complex', /^long\s+double\s+(complex|_Complex)$/
+  COMPLEX = Primitive.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
+  FLOAT_COMPLEX = Primitive.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
+  DOUBLE_COMPLEX = Primitive.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
+  LONG_DOUBLE_COMPLEX = Primitive.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/, header: COMPLEX_H
 
 
-  INTPTR_T = Primitive::INTTYPES_H.new 'intptr_t'
-  INTMAX_T = Primitive::INTTYPES_H.new 'intmax_t'
-  UINTMAX_T = Primitive::INTTYPES_H.new 'uintmax_t'
+  INTPTR_T = Primitive.new 'intptr_t', header: INTTYPES_H
+  INTMAX_T = Primitive.new 'intmax_t', header: INTTYPES_H
+  UINTMAX_T = Primitive.new 'uintmax_t', header: INTTYPES_H
 
 
   [8, 16, 32, 64].each do |bit|
-    const_set((type = "int#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
-    const_set((type = "uint#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
-    const_set((type = "int_fast#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
-    const_set((type = "uint_fast#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
-    const_set((type = "int_least#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
-    const_set((type = "uint_least#{bit}_t").upcase, Primitive::INTTYPES_H.new(type))
+    const_set((type = "int#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+    const_set((type = "uint#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+    const_set((type = "int_fast#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+    const_set((type = "uint_fast#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+    const_set((type = "int_least#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+    const_set((type = "uint_least#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
   end
 
 
