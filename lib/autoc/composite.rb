@@ -217,8 +217,6 @@ module AutoC
       # TODO register parameters' types as dependencies
     end
 
-    def inspect = "#{prototype} <#{self.class}>"
-
   private
 
     def render_function_header(stream)

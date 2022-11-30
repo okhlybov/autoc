@@ -42,6 +42,8 @@ module AutoC
 
     def to_s = signature
 
+    def inspect = "#{signature} <#{self.class}>"
+
     # def lvalue()
     # def rvalue()
     # def const_lvalue()

@@ -39,8 +39,6 @@ module AutoC::STD
       @@types << self
     end
 
-    def inspect = "#{signature} <#{self.class}>"
-
   end
 
 

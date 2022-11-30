@@ -115,6 +115,8 @@ module AutoC
     def code(code) = @code = code
   
     def to_s = name
+
+    def inspect = "#{prototype} <#{self.class}>"
   
     def inline? = @inline == true
   
