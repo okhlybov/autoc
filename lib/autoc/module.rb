@@ -60,7 +60,7 @@ module AutoC
       sources.each(&:render)
     end
 
-    private def total_entities
+    def total_entities
       @total_entities ||= begin
         set = ::Set.new
         entities.each { |e| set.merge(e.total_references) }
@@ -217,20 +217,20 @@ module AutoC
       set
     end
 
-    def <=>(other)
-      if equal?(other)
-        0
-      else
-        other_depends_self = other.total_dependencies.include?(self)
-        if total_dependencies.include?(other)
-          raise "(indirect) #{self} <-> #{other} cyclic dependency detected" if other_depends_self
-          +1
-        elsif other_depends_self
-          -(other <=> self)
-        else
-          object_id <=> other.object_id
+    def <=>(other) = position <=> other.position
+
+    # Compute the entity's relative position with respect to its dependencies
+    def position = @position ||= begin
+      p = 0
+      # This code goes into infinite recursion on circular dependency
+      # which must be resolved manually with Entity#references
+      total_dependencies.each do |d|
+        unless equal?(d)
+          dp = d.position
+          p = dp if p < dp # p <- max(p, dp)
         end
       end
+      p + 1 # Arrange entity to follow all its dependencies
     end
 
     def complexity = forward_declarations.complexity + implementation.complexity # Interface part is not considered as it is shared across the sources
@@ -281,7 +281,7 @@ module AutoC
     end
 
     def <<(x)
-      @entity.references << x # Every dependency is also tracked as a reference
+      @entity.references << x # Each dependency is also registered as a reference
       super
     end
 
