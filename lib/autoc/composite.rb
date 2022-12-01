@@ -17,6 +17,7 @@ module AutoC
   using STD::Coercions
 
 
+  # @abstract
   class Composite < Type
 
     include STD
@@ -71,6 +72,12 @@ module AutoC
 
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
+    def tag = signature
+
+    def defgroup = @defgroup ||= (public? ? :@public : :@internal).to_s + " @defgroup #{signature} #{tag}"
+
+    def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
+
   private
     
     def method_missing(meth, *args)
@@ -116,7 +123,7 @@ module AutoC
 
           Previous contents of `*target` is overwritten.
 
-          Once constructed, the value is to be destroyed with #{type.destroy}().
+          Once constructed, the value is to be destroyed with @ref #{type.destroy}.
 
           @since 2.0
         }
@@ -146,7 +153,7 @@ module AutoC
 
           Previous contents of `*target` is overwritten.
 
-          Once constructed, the value is to be destroyed with #{type.destroy}().
+          Once constructed, the value is to be destroyed with @ref #{type.destroy}.
           
           @since 2.0
         }
@@ -179,7 +186,7 @@ module AutoC
 
           Normally the values' contents are considered on comparison.
 
-          This function is in general independent to but is expected to be consistent with #{type.equal}() function.
+          This function is in general independent to but is expected to be consistent with @ref #{type.equal} function.
 
           @since 2.0
         }
@@ -223,9 +230,10 @@ module AutoC
       if public?
         stream << %{
           /**
+            #{type.ingroup}
             #{@header}
           */
-        } unless @header.nil?
+        }
       else
         stream << %{/** @private */}
       end

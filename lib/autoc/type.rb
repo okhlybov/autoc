@@ -26,6 +26,7 @@ module AutoC
   end # Coercions
   
   
+  # @abstract
   class Type
 
     # C side type signature
