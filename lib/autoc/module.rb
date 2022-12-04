@@ -100,10 +100,9 @@ module AutoC
 
     def file_name = @file_name ||= "#{self.module.name}_auto.h"
 
-    def initialize(m)
-      @module = m
-      @tag = "#{self.module.name}_auto_h".upcase
-    end
+    def tag = @tag ||=  "#{self.module.name}_auto_h".upcase
+
+    def initialize(m) = @module = m
 
     def render
       s = stream
@@ -120,8 +119,8 @@ module AutoC
     def render_prologue(stream)
       stream << %{
         #{Module::CAP}
-        #ifndef #{@tag}
-        #define #{@tag}
+        #ifndef #{tag}
+        #define #{tag}
       }
     end
 
