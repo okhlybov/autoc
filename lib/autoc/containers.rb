@@ -32,7 +32,7 @@ module AutoC
     def orderable? = super && element.orderable?
 
     # A destructible element type mandates creation of the container's destructor
-    def destructibe? = super || element.destructible?
+    def destructible? = super || element.destructible?
 
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
@@ -73,7 +73,7 @@ module AutoC
 
           @param[in] target container to query
           @param[in] value element to look for
-          @return non-zero value if container has (at least one) element equal to the specified value and zero value otherwise.
+          @return non-zero value if container has (at least one) element equal to the specified value and zero value otherwise
 
           This function scans through the container's contents to look for an element which is considered equal to the specified value.
           The equality testing is performed with the element type's equality criterion.
@@ -87,17 +87,95 @@ module AutoC
 
 
   # @abstract
+  # Generator for C types for direct access using keys of specific type (hash/tree maps, strings, vector etc.)
+  class IndexedContainer < Container
+
+    attr_reader :index
+
+    def initialize(type, element, index, **kws)
+      super(type, element, **kws)
+      dependencies << (@index = index.to_type)
+    end
+
+    # For associative container to be copyable both hashable element and index types are required
+    def copyable? = super && index.copyable?
+
+    # For associative container to be comparable both hashable element and index types are required
+    def comparable? = super && index.comparable?
+
+    # For associative container to be orderable both hashable element and index types are required
+    def orderable? = super && index.orderable?
+
+    # The associative destructible element and index types mandates creation of the container's destructor
+    def destructible? = super || index.destructible?
+
+    # For associative container to be hashable both hashable element and index types are required
+    def hashable? = super && index.hashable?
+  
+  private
+
+    def configure
+      super
+      method(:int, :check, { target: const_rvalue, index: index.const_rvalue } ).configure do
+        header %{
+          @brief Validate specified index
+
+          @param[in] target container to query
+          @param[in] index index to verify
+          @return non-zero value if there is an element associated with specified index and zero value otherwise
+
+          This function performs the index validity check.
+          For the contiguous containers (vector, string etc.) the yields non-zero value if the index passes the boundaries check.
+          For the mappings (hash/tree maps) this yields non-zero value if there exists a index->element association.
+
+          In any case, this function should be used for the index validation prior getting direct access to contained elements
+          as the container functions do not normally do it themselves for performance reasons.
+
+          @since 2.0
+        }
+      end
+      method(element.const_lvalue, :view, { target: const_rvalue, index: index.const_rvalue } ).configure do
+        header %{
+          @brief Get a view of the element
+
+          @param[in] target container to 
+          @param[in] index lookup index
+          @return a view of contained element
+
+          This function returns a constant view of the contained element associated with specified index in the form constant C pointer to the storage.
+          It is generally not wise to modify the value pointed to (especially in the case of mapping).
+
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
+
+          @since 2.0
+        }
+      end
+      method(element, :get, { target: const_rvalue, index: index.const_rvalue }, constraint:-> { element.copyable? } ).configure do
+        header %{
+          @brief Get a copy of the element
+
+          @param[in] target container to 
+          @param[in] index lookup index
+          @return a copy of contained element
+
+          This function returns an independent copy of the contained element associated with specified index.
+
+          It is the caller's responsibility to to check for the index validity prior calling this function (see @ref #{type.check}).
+
+          @since 2.0
+        }
+      end
+
+    end
+
+  end # AssociativeContainer
+
+
+  # @abstract
   # Generator for C types which gain fast direct indexed access to specific elements (vectors, strings etc.)
   class ContiguousContainer < Container
     # TODO
   end # ContiguousContainer
-
-
-  # @abstract
-  # Generator for C types for direct access using keys of arbitrary type (hash/tree maps and alike)
-  class AssociativeContainer < Container
-    # TODO
-  end # AssociativeContainer
 
 
 end

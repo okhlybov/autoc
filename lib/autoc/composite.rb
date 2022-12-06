@@ -100,7 +100,7 @@ module AutoC
     def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name)
       method = method_class.new(
         self,
-        result.to_type,
+        result,
         name,
         parameters, # TODO force parameter types coercion
         inline:,
@@ -221,8 +221,8 @@ module AutoC
   
     def initialize(type, result, name, parameters, **kws)
       @type = type
-      super(result, self.type.identifier(name), parameters, **kws)
-      dependencies << self.type << self.result
+      super(result.to_value, self.type.identifier(name), parameters, **kws)
+      dependencies << self.type << self.result.to_type
       # TODO register parameters' types as dependencies
     end
 

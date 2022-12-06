@@ -77,7 +77,7 @@ module AutoC
     attr_reader :visibility
 
     def initialize(result, name, parameters, inline: false, visibility: :public, requirement: true)
-      @result = result.to_type
+      @result = result
       @name = name.to_s
       @requirement = requirement
       @visibility = visibility
