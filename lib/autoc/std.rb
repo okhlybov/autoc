@@ -10,11 +10,20 @@ require 'autoc/primitive'
 module AutoC::STD
 
 
+  module PrimitiveCoercions
+    def to_type = Primitive.adopt(self)
+    def to_value = to_type.to_value
+    def lvalue = to_type.lvalue
+    def rvalue = to_type.rvalue
+    def const_lvalue = to_type.const_lvalue
+    def const_rvalue = to_type.const_rvalue
+    def ~@ = %{"#{self}"} # Return C side string literal
+  end
+
   # Refinement handle automatic conversion o recognized C side types represented by string or symbol
   module Coercions
-    refine AutoC::Type.singleton_class do
-      def coerce(x) = x.is_a?(AutoC::Type) ? x : Primitive.coerce(x)
-    end
+    refine ::Symbol do import_methods PrimitiveCoercions end
+    refine ::String do import_methods PrimitiveCoercions end
   end
 
 
@@ -25,7 +34,7 @@ module AutoC::STD
 
     @@types = ::Set.new
 
-    def self.coerce(x)
+    def self.adopt(x)
       @@types.each { |t| return t unless (t.matcher =~ x).nil? }
       Primitive.new(x)
     end
@@ -39,6 +48,16 @@ module AutoC::STD
       @@types << self
     end
 
+    def to_value = rvalue
+
+    def rvalue = @rv ||= Value.new(self)
+  
+    def lvalue = @lv ||= Value.new(self, reference: true)
+    
+    def const_rvalue = @crv ||= Value.new(self, constant: true)
+    
+    def const_lvalue = @clv ||= Value.new(self, constant: true, reference: true)
+  
   end
 
 

@@ -38,13 +38,15 @@ module AutoC
       obj
     end
 
+    def to_value = rvalue
+
     def rvalue = @rv ||= Value.new(self, reference: true)
   
     def lvalue = @lv ||= Value.new(self, reference: true)
   
     def const_rvalue = @crv ||= Value.new(self, constant: true, reference: true)
   
-    def const_lvalue = @crv ||= Value.new(self, constant: true, reference: true)
+    def const_lvalue = @clv ||= Value.new(self, constant: true, reference: true)
 
     # Prefix used to generate type-qualified identifiers
     # By default it returns the C side type signature but can be overridden
@@ -98,7 +100,7 @@ module AutoC
     def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name)
       method = method_class.new(
         self,
-        Type.coerce(result), # Force refined coercion from STD
+        result.to_type,
         name,
         parameters, # TODO force parameter types coercion
         inline:,

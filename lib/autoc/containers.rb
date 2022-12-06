@@ -19,7 +19,7 @@ module AutoC
 
     def initialize(signature, element, **kws)
       super(signature, **kws)
-      dependencies << @element = Type.coerce(element)
+      dependencies << (@element = element.to_type)
     end
 
     # For container to be copyable a copyable element type is required

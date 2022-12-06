@@ -9,9 +9,6 @@ require 'autoc/primitive'
 module AutoC
 
 
-  using Coercions
-    
-
   # :nodoc:
   class Value
 
