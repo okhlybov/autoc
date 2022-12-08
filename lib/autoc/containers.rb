@@ -67,7 +67,7 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :contains, { target: const_rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }) do
+      method(:int, :contains, { target: const_rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
         header %{
           @brief Look up for specific element in container
 
@@ -87,7 +87,7 @@ module AutoC
 
 
   # @abstract
-  # Generator for C types for direct access using keys of specific type (hash/tree maps, strings, vector etc.)
+  # Generator for C types for direct access using keys of specific type (hash/tree maps, string, vector etc.)
   class IndexedContainer < Container
 
     attr_reader :index
@@ -138,7 +138,7 @@ module AutoC
         header %{
           @brief Get a view of the element
 
-          @param[in] target container to 
+          @param[in] target container
           @param[in] index lookup index
           @return a view of contained element
 
@@ -152,15 +152,40 @@ module AutoC
       end
       method(element, :get, { target: const_rvalue, index: index.const_rvalue }, constraint:-> { element.copyable? } ).configure do
         header %{
-          @brief Get a copy of the element
+          @brief Get specific element
 
-          @param[in] target container to 
+          @param[in] target container
           @param[in] index lookup index
           @return a copy of contained element
 
           This function returns an independent copy of the contained element associated with specified index.
 
-          It is the caller's responsibility to to check for the index validity prior calling this function (see @ref #{type.check}).
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
+
+          @since 2.0
+        }
+        code %{
+          #{result} r;
+          #{element.const_lvalue} e;
+          assert(target);
+          assert(#{check.(target, index)});
+          e = #{view.(target, index)};
+          #{element.copy.(:r, '*e')};
+          return r;
+        }
+      end
+      method(:void, :set, { target: rvalue, index: index.const_rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? } ).configure do
+        header %{
+          @brief Set specific element
+
+          @param[in] target container
+          @param[in] index lookup index
+          @param[in] value source value
+
+          This function unconditionally sets the element at specified index to a copy of the source value.
+          A previous element (if any) is destroyed with specific destructor.
+
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
 
           @since 2.0
         }
@@ -168,14 +193,46 @@ module AutoC
 
     end
 
-  end # AssociativeContainer
+  end # IndexedContainer
 
 
   # @abstract
   # Generator for C types which gain fast direct indexed access to specific elements (vectors, strings etc.)
-  class ContiguousContainer < Container
-    # TODO
+  class ContiguousContainer < IndexedContainer
+    
+  private
+    
+    def configure
+      super
+      # It's OK to modify contents of the vector-backed containers in-place
+      # This does not work for real associative containers (maps/dicts), though
+      set.configure do
+        code %{
+          #{element.lvalue} e;
+          assert(target);
+          assert(#{check.(target, index)});
+          e = (#{element.lvalue})#{view.(target, index)};
+          #{element.destroy.('*e') if element.destructible?};
+          #{element.copy.('*e', value)};
+        }
+      end
+    end
+
   end # ContiguousContainer
+
+
+  # @abstract
+  # Generator for C types which implement associative containers such as hash/tree maps
+  class AssociativeContainer < IndexedContainer
+
+  private
+
+    def configure
+      super
+      #method(:int, :put, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? } )
+    end
+
+  end # AssociativeContainer
 
 
 end

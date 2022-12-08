@@ -75,6 +75,9 @@ module AutoC::STD
   SIGNED_CHAR = Primitive.new 'signed char', matcher: /^signed\s+char$/
   UNSIGNED_CHAR = Primitive.new 'unsigned char', matcher: /^unsigned\s+char$/
 
+  
+  WCHAR_T = Primitive.new 'wchar_t', header: STDDEF_H
+
 
   SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Primitive.new 'short', matcher: /^(signed\s+)?short(\s+int)?$/
   UNSIGNED_SHORT = UNSIGNED_SHORT_INT = Primitive.new 'unsigned short', matcher: /^unsigned\s+short(\s+int)?$/

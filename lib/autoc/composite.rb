@@ -226,6 +226,13 @@ module AutoC
       # TODO register parameters' types as dependencies
     end
 
+    def method_missing(meth, *args) 
+      if parameters.has_key?(meth) then parameters[meth]
+      elsif type.respond_to?(meth) then type.send(meth, *args)
+      else meth
+      end
+    end
+
   private
 
     def render_function_header(stream)
@@ -267,6 +274,7 @@ module AutoC
         #define AUTOC_EXTERN extern
       #endif
     #endif
+    #include <assert.h>
   }
 
 

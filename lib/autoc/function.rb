@@ -28,6 +28,8 @@ module AutoC
       @reference = reference
     end
   
+    def to_s = signature
+
     def signature
       _ = reference? ? "#{type.signature}*" : type.signature
       constant? ? "const #{_}" : _
@@ -51,6 +53,8 @@ module AutoC
       @name = name.to_sym
     end
   
+    def to_s = name.to_s
+
     def to_value_argument = value.reference? ? "*#{name}" : name
   
     def signature = value.signature
@@ -76,12 +80,14 @@ module AutoC
   
     attr_reader :visibility
 
+    attr_writer :inline
+
     def initialize(result, name, parameters, inline: false, visibility: :public, requirement: true)
-      @result = result
       @name = name.to_s
-      @requirement = requirement
-      @visibility = visibility
+      @result = result
       @inline = inline
+      @visibility = visibility
+      @requirement = requirement
       @parameters = Parameters.new(self)
       if parameters.is_a?(Hash)
         parameters.each do |name, descriptor|
@@ -107,12 +113,12 @@ module AutoC
       code(code)
     end
   
+    def to_s = name
+
     def header(header) = @header = header
   
     def code(code) = @code = code
   
-    def to_s = name
-
     def inspect = "#{prototype} <#{self.class}>"
   
     def inline? = @inline == true
@@ -121,8 +127,6 @@ module AutoC
   
     def live? = (@requirement.is_a?(Proc) ? @requirement.() : @requirement) == true
     
-    def defined? = !@code.nil?
-
     def signature = '%s(%s)' % [result.signature, parameters.to_a.collect(&:signature).join(',')]
   
     def prototype = '%s %s(%s)' % [result.signature, name, parameters.to_a.collect(&:declaration).join(',')]
@@ -149,13 +153,13 @@ module AutoC
     
     # This allows to call other functions with this function's individual parameters as arguments
     # A call to unknown method results in the method's name being emitted
-    def method_missing(meth, *args) = @parameters.has_key?(meth) ? @parameters[meth] : meth
+    def method_missing(meth, *args) = parameters.has_key?(meth) ? parameters[meth] : meth
 
   private
 
     # On function inlining in C: http://www.greenend.org.uk/rjk/tech/inline.html
 
-    # static __inline seems to be THE most portable way without resorting to preprocessor
+    # static inline seems to be THE most portable way without resorting to preprocessor
     # but consider the possible code bloat it incurs
 
     def render_declaration_specifier(stream)
@@ -187,7 +191,7 @@ module AutoC
     # Render function definition, both inline or extern
     # This code never gets into public interface
     def render_function_definition(stream)
-      raise "function body is missing" if @code.nil?
+      raise("missing function definition for #{name}()") if @code.nil?
       stream << definition
     end
 
@@ -204,7 +208,7 @@ module AutoC
 
     # Render non-inline function definition regardless of function's visibility status
     def render_implementation(stream)
-        stream << definition if live? && !inline?
+      render_function_definition(stream) if live? && !inline?
     end
 
   end # Function

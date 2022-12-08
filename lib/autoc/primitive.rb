@@ -9,17 +9,17 @@ module AutoC
   
   class Primitive < Type
 
-    def default_create(value) = custom_create(value, 0)
+    def default_create = @default_create ||= -> (target) { copy.(target, 0) }
   
-    def custom_create(value, initial) = copy(value, initial)
+    def custom_create = @custom_create ||= -> (target, source) { copy.(target, source) }
   
-    def copy(value, source) = "(#{value} = #{source})"
+    def copy = @copy ||= -> (target, source) { "(#{target} = #{source})" }
   
-    def equal(lt, rt) = "(#{lt} == #{rt})"
+    def equal = @equal ||= -> (lt, rt) { "(#{lt} == #{rt})" }
+
+    def compare = @compare ||= -> (lt, rt) { "(#{lt} == #{rt} ? 0 : (#{lt} > #{rt} ? +1 : -1))" }
   
-    def compare(lt, rt) = "(#{lt} == #{rt} ? 0 : (#{lt} > #{rt} ? +1 : -1))"
-  
-    def hash_code(value) = "(size_t)(#{value})"
+    def hash_code = @hash_code ||= -> (target) { "(size_t)(#{value})" }
   
   end # Primitive
   
