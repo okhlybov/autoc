@@ -125,7 +125,7 @@ module AutoC
 
           Previous contents of `*target` is overwritten.
 
-          Once constructed, the value is to be destroyed with @ref #{type.destroy}.
+          Once constructed, the value is to be destroyed with @ref #{destroy}.
 
           @since 2.0
         }
@@ -155,7 +155,7 @@ module AutoC
 
           Previous contents of `*target` is overwritten.
 
-          Once constructed, the value is to be destroyed with @ref #{type.destroy}.
+          Once constructed, the value is to be destroyed with @ref #{destroy}.
           
           @since 2.0
         }
@@ -188,13 +188,12 @@ module AutoC
 
           Normally the values' contents are considered on comparison.
 
-          This function is in general independent to but is expected to be consistent with @ref #{type.equal} function.
+          This function is in general independent to but is expected to be consistent with @ref #{equal} function.
 
           @since 2.0
         }
       end
-      method(:size_t, :hash_code, { target: const_rvalue }, constraint: -> { hashable? } ).
-        configure do
+      method(:size_t, :hash_code, { target: const_rvalue }, constraint: -> { hashable? } ).configure do
         header %{
           @brief Compute hash code
 

@@ -17,6 +17,14 @@ module AutoC
 
     attr_reader :element
 
+    attr_reader :range
+
+    def self.new(*args, **kws, &block)
+      obj = super
+      obj.references << obj.range # Range has to be referenced after the iterable object gets fully configured
+      obj
+    end
+
     def initialize(signature, element, **kws)
       super(signature, **kws)
       dependencies << (@element = element.to_type)
@@ -50,7 +58,7 @@ module AutoC
           @param[in] target container to check
           @return non-zero value if container is empty (i.e. contains no elements) and zero value otherwise
 
-          @note This function's behavior must be consistent with @ref #{type.size}.
+          @note This function's behavior must be consistent with @ref #{size}.
 
           @since 2.0
         }
@@ -62,7 +70,7 @@ module AutoC
           @param[in] target container to query
           @return number of contained elements
 
-          @note This function's behavior must be consistent with @ref #{type.empty}.
+          @note This function's behavior must be consistent with @ref #{empty}.
 
           @since 2.0
         }

@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
 
+require 'autoc/std'
 require 'autoc/composite'
 
 
 module AutoC
+
+
+  using STD::Coercions
 
 
   # @abstract
@@ -12,42 +16,45 @@ module AutoC
 
     attr_reader :iterable
 
-    # Disable processing the traits the ranges do not normally have
-
     def default_constructible? = false
     def destructible? = false
     def comparable? = false
     def orderable? = false
-    def hashable? = false
     def copyable? = false
 
-    def canonic_tag = "#{iterable.canonic_tag}::Range"
-    def canonic_desc = "Range (iterator) for the iterable container @ref #{iterable.type}"
+    def to_value = @v ||= Value.new(self)
 
     def initialize(iterable, visibility:)
-      super(iterable.decorate_identifier(visibility == :internal ? :_R : :range), visibility:)
-      dependencies << (@iterable = iterable) << Doc
+      super(iterable.identifier(visibility == :internal ? :_R : :range), visibility:)
+      dependencies << (@iterable = iterable) << INFO
     end
 
-    private def configure
+    def tag = @tag ||= "#{iterable.tag}::Range"
+
+  private
+
+    alias _iterable iterable # Use _iterable.() within method bodies as it is shadowed by the commonly used iterable function parameter
+
+    def configure
       super
-      def_method :void, :create, { self: lvalue, iterable: iterable.const_rvalue }, instance: :custom_create do
+      method(:void, :create, { range: lvalue, iterable: iterable.const_rvalue }, instance: :custom_create).configure do
         header %{
           @brief Create a new range for the specified iterable
 
-          @param[out] self range to be initialized
+          @param[out] range range to be initialized
           @param[in] iterable container to iterate over
 
           This function creates a range to iterate over all iterable's elements.
 
-          @note Previous contents of `*self` is overwritten.
+          @note Previous contents of `*range` is overwritten.
 
           @see #{new}
 
           @since 2.0
         }
       end
-      def_method type, :new, { iterable: iterable.const_rvalue } do
+      method(self, :new, { iterable: iterable.const_rvalue }).configure do
+        dependencies << custom_create
         header %{
           @brief Return new range iterator for the specified container
 
@@ -65,29 +72,30 @@ module AutoC
 
           @since 2.0
         }
-        inline.code %{
+        inline_code %{
           #{type} r;
           assert(iterable);
-          #{custom_create}(&r, iterable);
+          #{custom_create.(:r, iterable)};
           return r;
         }
       end
     end
 
-  end
+  end # Range
 
-  #
-  class Range::Input < Range
 
-    private def archetype = :InputRange
+  # @abstract
+  class InputRange < Range
 
-    private def configure
+  private
+
+    def configure
       super
-      def_method :int, :empty, { self: const_rvalue } do
+      method(:int, :empty, { range: const_rvalue }).configure do
         header %{
           @brief Check for range emptiness
 
-          @param[in] self range to check
+          @param[in] range range to check
           @return non-zero value if the range is not empty or zero value otherwise
 
           An empty range is the range for which there are to accessible elements left.
@@ -97,11 +105,11 @@ module AutoC
           @since 2.0
         }
       end
-      def_method :void, :pop_front, { self: rvalue } do
+      method(:void, :pop_front, { range: rvalue }).configure do
         header %{
           @brief Advance front position to the next existing element
 
-          @param[in] self range to advance front position for
+          @param[in] range range to advance front position for
 
           This function is used to get to the next element in the range.
 
@@ -111,11 +119,11 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :view_front, { self: const_rvalue } do
+      method(iterable.element.const_lvalue, :view_front, { range: const_rvalue }).configure do
         header %{
           @brief Get a view of the front element
 
-          @param[in] self range to retrieve element from
+          @param[in] range range to retrieve element from
           @return a view of an element at the range's front position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's front position.
@@ -128,19 +136,20 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.type, :take_front, { self: const_rvalue }, require:-> { iterable.element.copyable? } do
-        inline.code %{
-          #{iterable.element.type} result;
-          #{iterable.element.const_ptr_type} e;
-          assert(!#{empty}(self));
-          e = #{view_front}(self);
-          #{iterable.element.copy(:result, ~:e)};
+      method(iterable.element, :take_front, { range: const_rvalue }, constraint:-> { iterable.element.copyable? }).configure do
+        dependencies << empty << view_front
+        inline_code %{
+          #{iterable.element} result;
+          #{iterable.element.const_lvalue} e;
+          assert(!#{empty.(range)});
+          e = #{view_front.(range)};
+          #{iterable.element.copy.(:result, '*e')};
           return result;
         }
         header %{
           @brief Get a copy of the front element
 
-          @param[in] self range to retrieve element from
+          @param[in] range range to retrieve element from
           @return a *copy* of element at the range's front position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
@@ -155,96 +164,85 @@ module AutoC
       end
     end
 
-  end
+  end # InputRange
 
 
-  #
-  class Range::Forward < Range::Input
+  # @abstract
+  class ForwardRange < InputRange
 
-    private def archetype = :ForwardRange
+    def copyable? = true
 
-    private def configure
+  private
+
+    def configure
       super
-      def_method :void, :save, { self: lvalue, origin: const_rvalue } do
-        inline.code %{
-          assert(self);
-          assert(origin);
-          *self = *origin;
-        }
-        header %{
-          @brief Capture a snapshot of the range's state
-
-          @param[out] self new range
-          @param[in] origin exising range
-
-          This is effectively a range cloning operation.
-          
-          After cloning the two ranges themselves become independent, they do however share the iterable container.
-
-          @note Previous contents of `*self` is overwritten.
-
-          @since 2.0
+      copy.configure do
+        inline_code %{
+          assert(target);
+          assert(source);
+          *target = *source;
         }
       end
     end
 
-  end
+  end # ForwardRange
 
 
-  #
-  class Range::Bidirectional < Range::Forward
+  # @abstract
+  class BidirectionalRange < ForwardRange
 
-    private def archetype = :BidirectionalRange
+    private
 
-    private def configure
+    def configure
       super
-      def_method :void, :pop_back, { self: rvalue } do
+      method(:void, :pop_back, { range: rvalue }).configure do
         header %{
           @brief Rewind back position to the previous existing element
 
-          @param[in] self range to rewind back position for
+          @param[in] range range to rewind back position for
 
           This function is used to get to the previous element in the range.
 
           @note Prior calling this function one must ensure that the range is not empty (see @ref #{empty}).
-          Advancing position of a range that is already empty results in undefined behaviour.
+          Rewinding position of a range that is already empty results in undefined behaviour.
 
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :view_back, { self: const_rvalue } do
+      method(iterable.element.const_lvalue, :view_back, { range: const_rvalue }).configure do
         header %{
           @brief Get a view of the back element
 
-          @param[in] self range to retrieve element from
+          @param[in] range range to retrieve element from
           @return a view of an element at the range's back position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's back position.
           Refer to @ref #{take_back} to get an independent copy of that element.
-
+  
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
-
+  
           @note Range must not be empty (see @ref #{empty}).
 
           @since 2.0
         }
       end
-      def_method iterable.element.type, :take_back, { self: const_rvalue }, require:-> { iterable.element.copyable? } do
-        inline.code %{
-          #{iterable.element.type} result;
-          #{iterable.element.const_ptr_type} e;
-          assert(!#{empty}(self));
-          e = #{view_back}(self);
-          #{iterable.element.copy(:result, ~:e)};
+      method(iterable.element, :take_back, { range: const_rvalue }, constraint:-> { iterable.element.copyable? }).configure do
+        dependencies << empty << view_back
+        inline_code %{
+          #{iterable.element} result;
+          #{iterable.element.const_lvalue} e;
+          assert(!#{empty.(range)});
+          e = #{view_back.(range)};
+          #{iterable.element.copy.(:result, '*e')};
           return result;
         }
         header %{
           @brief Get a copy of the back element
 
-          @param[in] self range to retrieve element from
+          @param[in] range range to retrieve element from
           @return a *copy* of element at the range's back position
 
-          This function is used to get a *copy* of the value contained in the iterable container at the range's back position.
+          This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
           Refer to @ref #{view_back} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
@@ -256,17 +254,17 @@ module AutoC
       end
     end
 
-  end
+  end # BidirectionalRange
 
 
-  #
-  class Range::RandomAccess < Range::Bidirectional
+  # @abstract
+  class DirectAccessRange < BidirectionalRange
 
-    private def archetype = :RandomAccessRange
+  private
 
-    private def configure
+    def configure
       super
-      def_method :size_t, :length, { self: const_rvalue } do
+      method(:size_t, :size, { range: const_rvalue }).configure do
         header %{
           @brief Get a number of elements in the range
 
@@ -282,162 +280,141 @@ module AutoC
           @since 2.0
         }
       end
-      def_method iterable.element.const_ptr_type, :peek, { self: const_rvalue, position: :size_t } do
+      method(iterable.element.const_lvalue, :view, { range: const_rvalue, index: :size_t.const_rvalue }).configure do
         header %{
           @brief Get view of the specific element
 
-          @param[in] self range to view element from
-          @param[in] position position to access element at
-          @return a view of element at `position`
+          @param[in] range range to view element from
+          @param[in] index position to access element at
+          @return a view of element at `index`
 
-          This function is used to get a constant reference (in form the C pointer) to the value contained in the range at the specific position.
+          This function is used to get a constant reference (in form of the C pointer) to the value contained in the range at the specific position.
           Refer to @ref #{get} to get a copy of the element.
 
-          @note The specified `position` is required to be within the [0, @ref #{length}) range.
+          @note The specified `index` is required to be within the [0, @ref #{size}) range.
 
           @since 2.0
         }
       end
-      def_method iterable.element.type, :get, { self: const_rvalue, position: :size_t }, require:-> { iterable.element.copyable? } do
-        inline.code %{
-          #{iterable.element.type} result;
-          #{iterable.element.const_ptr_type} e;
-          assert(!#{empty}(self));
-          e = #{peek}(self, position);
-          #{iterable.element.copy(:result, ~:e)};
-          return result;
+      method(iterable.element, :get, { range: const_rvalue, index: :size_t.const_rvalue }, constraint:-> { iterable.element.copyable? }).configure do
+        dependencies << empty << view
+        inline_code %{
+          #{iterable.element} r;
+          #{iterable.element.const_lvalue} e;
+          assert(!#{empty.(range)});
+          e = #{view.(range, index)};
+          #{iterable.element.copy.(:r, '*e')};
+          return r;
         }
         header %{
           @brief Get a copy of the specific element
 
-          @param[in] self range to retrieve element from
-          @param[in] position an element position
-          @return a *copy* of element at the range `position`
+          @param[in] range range to retrieve element from
+          @param[in] index position to view element at
+          @return a *copy* of element at `index`
 
           This function is used to get a *copy* of the value contained in the range at the specific position.
-          Refer to @ref #{peek} to get a view of the element without making an independent copy.
+          Refer to @ref #{view} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note The specified `position` is required to be within the [0, @ref #{length}) range.
+          @note The specified `position` is required to be within the [0, @ref #{size}) range.
 
           @since 2.0
         }
       end
     end
 
-  end
+  end # DirectAccessRange
 
 
-  # A concrete range implementation for contiguous memory storage types such ar vector, string etc.
-  class Range::Contiguous < Range::RandomAccess
-
-    def composite_interface_declarations(stream)
+  # @abstract
+  class ContiguousRange < DirectAccessRange
+    def render_interface(stream)
       stream << %{
         /**
           #{defgroup}
-          @ingroup #{iterable.type}
 
-          @brief #{canonic_desc}
-
-          This range implements the @ref #{archetype} archetype.
-
-          The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
-          which account for parallel iteration in the way
-
-          @code{.c}
-          #pragma omp parallel
-          for(#{type} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
-          @endcode
-
-          @see @ref Range
-
-          @since 2.0
-        */
-        /**
-          #{ingroup}
-          @brief Opaque structure holding state of the iterable's range
-          @since 2.0
+          @brief #{tag}
         */
         typedef struct {
-          #{iterable.element.const_ptr_type} front; /**< @private */
-          #{iterable.element.const_ptr_type} back; /**< @private */
-        } #{type};
-      }
-      super
-    end
-    
-    private def configure
-      super
-      container = ~:iterable
-      storage = iterable.storage_ptr(container)
-      custom_create.inline.code %{
-        #ifdef _OPENMP
-          size_t chunk_count;
-        #endif
-        size_t element_count;
-        assert(self);
-        assert(iterable);
-        assert(#{storage});
-        element_count = #{iterable.size(container)};
-        #ifdef _OPENMP
-          if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
-            const int chunk_id = omp_get_thread_num();
-            const size_t chunk_size = element_count / omp_get_num_threads();
-            /* CHECKME */
-            self->front = #{storage} + chunk_id*chunk_size;
-            self->back = #{storage} + (chunk_id < chunk_count-1 ? (chunk_id+1)*chunk_size-1 : element_count-1);
-          } else {
-        #endif
-          self->front = #{storage};
-          self->back = #{storage} + element_count-1;
-        #ifdef _OPENMP
-          }
-        #endif
-      }
-      length.inline.code %{
-        assert(self);
-        return #{empty}(self) ? 0 : self->back - self->front + 1;
-      }
-      empty.inline.code %{
-        assert(self);
-        assert(self->front);
-        assert(self->back);
-        return self->front > self->back;
-      }
-      pop_front.inline.code %{
-        assert(!#{empty}(self));
-        ++self->front;
-      }
-      pop_back.inline.code %{
-        assert(!#{empty}(self));
-        --self->back;
-      }
-      view_front.inline.code %{
-        assert(!#{empty}(self));
-        return self->front;
-      }
-      view_back.inline.code %{
-        assert(!#{empty}(self));
-        return self->back;
-      }
-      peek.inline.code %{
-        assert(self);
-        assert(position < #{length}(self));
-        return self->front + position;
-      }
-      get.inline.code %{
-        #{iterable.element.type} e;
-        assert(self);
-        assert(position < #{length}(self));
-        #{iterable.element.copy(:e, '*(self->front + position)')};
-        return e;
+          #{iterable.element.lvalue} front; /** @private */
+          #{iterable.element.lvalue} back; /** @private */
+        } #{signature};
       }
     end
+
+  private
+
+    def configure
+      super
+      empty.configure do
+        inline_code %{
+          assert(range);
+          assert(range->front);
+          assert(range->back);
+          return range->front > range->back;
+        }
+      end
+      pop_front.configure do
+        dependencies << empty
+        inline_code %{
+          assert(range);
+          assert(range->front);
+          assert(!#{empty.(range)});
+          ++range->front;
+        }
+      end
+      pop_back.configure do
+        dependencies << empty
+        inline_code %{
+          assert(range);
+          assert(range->back);
+          assert(!#{empty.(range)});
+          --range->back;
+        }
+      end
+      view_front.configure do
+        dependencies << empty
+        inline_code %{
+          assert(range);
+          assert(range->front);
+          assert(!#{empty.(range)});
+          return range->front;
+        }
+      end
+      view_back.configure do
+        dependencies << empty
+        inline_code %{
+          assert(range);
+          assert(range->back);
+          assert(!#{empty.(range)});
+          return range->back;
+        }
+      end
+      size.configure do
+        dependencies << empty
+        inline_code %{
+          assert(range);
+          assert(range->front);
+          assert(range->back);
+          return #{empty.(range)} ? 0 : range->back - range->front + 1;
+        }
+      end
+      view.configure do
+        dependencies << size
+        inline_code %{
+          assert(range);
+          assert(index < #{size.(range)});
+          return range->front + index;
+        }
+      end
+    end
+
   end # ContiguousRange
 
 
-  Range::Doc = Code.new interface: %{
+  Range::INFO = Code.new interface: %{
     /**
       @page Range
 
@@ -467,7 +444,7 @@ module AutoC
       @subpage InputRange
       @subpage ForwardRange
       @subpage BidirectionalRange
-      @subpage RandomAccessRange
+      @subpage DirectAccessRange
 
       @since 2.0
 
@@ -495,7 +472,7 @@ module AutoC
 
       @since 2.0
 
-      @page RandomAccessRange
+      @page DirectAccessRange
 
       @brief Bidirectional range with indexed access to specific elements
 
