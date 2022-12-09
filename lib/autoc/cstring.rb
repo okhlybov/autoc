@@ -85,6 +85,7 @@ module AutoC
         }
       end
       get.configure do
+        dependencies << check
         inline_code %{
           assert(target);
           assert(#{check.(target, index)});
@@ -92,6 +93,7 @@ module AutoC
         }
       end
       set.configure do
+        dependencies << check
         inline_code %{
           assert(target);
           assert(#{check.(target, index)});
@@ -99,6 +101,7 @@ module AutoC
         }
       end
       view.configure do
+        dependencies << check
         inline_code %{
           assert(target);
           assert(#{check.(target, index)});
