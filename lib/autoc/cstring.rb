@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 
+require 'autoc/ranges'
 require 'autoc/containers'
 
 
@@ -11,6 +12,8 @@ module AutoC
   class CString < IndexedContainer
 
     def default_constructible? = false
+
+    def range = @range ||= Range.new(self, visibility: visibility)
 
     def initialize(type = :CString, char = :char, index = :size_t, visibility: :public)
       super(type, char, index, visibility:)
@@ -58,7 +61,7 @@ module AutoC
 
           Previous contents of `*target` is overwritten.
 
-          Once constructed, the string is to be destroyed with @ref #{type.destroy}.
+          Once constructed, the string is to be destroyed with @ref #{destroy}.
 
           @since 2.0
         }
@@ -164,5 +167,23 @@ module AutoC
 
   end # CString
 
+
+  class CString::Range < ContiguousRange
+
+  private
+
+    def configure
+      super
+      custom_create.configure do
+        inline_code %{
+          assert(range);
+          assert(iterable);
+          range->front = iterable;
+          range->back = iterable + #{_iterable.size.(iterable)};
+        }
+      end
+    end
+
+  end # Range
 
 end
