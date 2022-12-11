@@ -330,6 +330,7 @@ module AutoC
 
   # @abstract
   class ContiguousRange < DirectAccessRange
+
     def render_interface(stream)
       stream << %{
         /**
@@ -348,6 +349,14 @@ module AutoC
 
     def configure
       super
+      custom_create.configure do
+        inline_code %{
+          assert(range);
+          assert(iterable);
+          range->front = #{_iterable.storage(iterable)};
+          range->back = #{_iterable.storage(iterable)} + #{_iterable.size.(iterable)};
+        }
+      end
       empty.configure do
         inline_code %{
           assert(range);

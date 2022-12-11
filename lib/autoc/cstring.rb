@@ -9,7 +9,7 @@ module AutoC
 
 
   # Value type string wrapper around plain C string
-  class CString < IndexedContainer
+  class CString < DirectAccessContainer
 
     def default_constructible? = false
 
@@ -44,6 +44,8 @@ module AutoC
         typedef #{element.lvalue} #{signature};
       }
     end
+
+    def storage(target) = target # Return C pointer to contiguous storage
 
   private
 
@@ -168,22 +170,7 @@ module AutoC
   end # CString
 
 
-  class CString::Range < ContiguousRange
+  CString::Range = ContiguousRange # Range
 
-  private
-
-    def configure
-      super
-      custom_create.configure do
-        inline_code %{
-          assert(range);
-          assert(iterable);
-          range->front = iterable;
-          range->back = iterable + #{_iterable.size.(iterable)};
-        }
-      end
-    end
-
-  end # Range
 
 end

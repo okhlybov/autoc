@@ -96,7 +96,7 @@ module AutoC
 
   # @abstract
   # Generator for C types for direct access using keys of specific type (hash/tree maps, string, vector etc.)
-  class IndexedContainer < Container
+  class DirectAccessContainer < Container
 
     attr_reader :index
 
@@ -153,7 +153,7 @@ module AutoC
           This function returns a constant view of the contained element associated with specified index in the form constant C pointer to the storage.
           It is generally not wise to modify the value pointed to (especially in the case of mapping).
 
-          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{check}).
 
           @since 2.0
         }
@@ -168,7 +168,7 @@ module AutoC
 
           This function returns an independent copy of the contained element associated with specified index.
 
-          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{check}).
 
           @since 2.0
         }
@@ -193,7 +193,7 @@ module AutoC
           This function unconditionally sets the element at specified index to a copy of the source value.
           A previous element (if any) is destroyed with specific destructor.
 
-          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{type.check}).
+          It is the caller's responsibility to check for the index validity prior calling this function (see @ref #{check}).
 
           @since 2.0
         }
@@ -201,46 +201,7 @@ module AutoC
 
     end
 
-  end # IndexedContainer
-
-
-  # @abstract
-  # Generator for C types which gain fast direct indexed access to specific elements (vectors, strings etc.)
-  class ContiguousContainer < IndexedContainer
-    
-  private
-    
-    def configure
-      super
-      # It's OK to modify contents of the vector-backed containers in-place
-      # This does not work for real associative containers (maps/dicts), though
-      set.configure do
-        code %{
-          #{element.lvalue} e;
-          assert(target);
-          assert(#{check.(target, index)});
-          e = (#{element.lvalue})#{view.(target, index)};
-          #{element.destroy.('*e') if element.destructible?};
-          #{element.copy.('*e', value)};
-        }
-      end
-    end
-
-  end # ContiguousContainer
-
-
-  # @abstract
-  # Generator for C types which implement associative containers such as hash/tree maps
-  class AssociativeContainer < IndexedContainer
-
-  private
-
-    def configure
-      super
-      #method(:int, :put, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? } )
-    end
-
-  end # AssociativeContainer
+  end # DirectAccessContainer
 
 
 end
