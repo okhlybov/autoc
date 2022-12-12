@@ -13,10 +13,10 @@ module AutoC
 
     def default_constructible? = false
 
-    def range = @range ||= Range.new(self, visibility: visibility)
+    def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
-    def initialize(type = :CString, char = :char, index = :size_t, visibility: :public)
-      super(type, char, index, visibility:)
+    def initialize(type = :CString, char = :char, index = :size_t, visibility: :public, parallel: nil)
+      super(type, char, index, visibility:, parallel:)
     end
 
     def rvalue = @rv ||= Value.new(self)

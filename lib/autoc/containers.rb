@@ -100,9 +100,10 @@ module AutoC
 
     attr_reader :index
 
-    def initialize(type, element, index, **kws)
-      super(type, element, **kws)
+    def initialize(type, element, index, visibility: :public, parallel: nil)
+      super(type, element, visibility:)
       dependencies << (@index = index.to_type)
+      @parallel = parallel
     end
 
     # For associative container to be copyable both hashable element and index types are required

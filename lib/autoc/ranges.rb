@@ -48,7 +48,7 @@ module AutoC
 
           @note Previous contents of `*range` is overwritten.
 
-          @see #{new}
+          @see #{type.new}
 
           @since 2.0
         }
@@ -61,11 +61,11 @@ module AutoC
           @param[in] iterable container to iterate over
           @return new initialized range
 
-          This function returns a new range created by @ref #{custom_create}.
+          This function returns a new range created by @ref #{type.custom_create}.
           It is intended to be used within the ***for(;;)*** statement as follows
 
           @code{.c}
-          for(#{type} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+          for(#{type.signature} r = #{type.new}(&it); !#{type.empty}(&r); #{type.pop_front}(&r)) { ... }
           @endcode
 
           where `it` is the iterable to iterate over and `r` is a locally-scoped range bound to it.
@@ -100,7 +100,7 @@ module AutoC
 
           An empty range is the range for which there are to accessible elements left.
           This specifically means that any calls to the element retrieval and position change functions
-          (@ref #{take_front}, @ref #{view_front}, @ref #{pop_front} et al.) are invalid for empty ranges.
+          (@ref #{type.take_front}, @ref #{type.view_front}, @ref #{type.pop_front} et al.) are invalid for empty ranges.
 
           @since 2.0
         }
@@ -113,7 +113,7 @@ module AutoC
 
           This function is used to get to the next element in the range.
 
-          @note Prior calling this function one must ensure that the range is not empty (see @ref #{empty}).
+          @note Prior calling this function one must ensure that the range is not empty (see @ref #{type.empty}).
           Advancing position of a range that is already empty results in undefined behaviour.
 
           @since 2.0
@@ -127,11 +127,11 @@ module AutoC
           @return a view of an element at the range's front position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's front position.
-          Refer to @ref #{take_front} to get an independent copy of that element.
+          Refer to @ref #{type.take_front} to get an independent copy of that element.
   
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
   
-          @note Range must not be empty (see @ref #{empty}).
+          @note Range must not be empty (see @ref #{type.empty}).
 
           @since 2.0
         }
@@ -153,11 +153,11 @@ module AutoC
           @return a *copy* of element at the range's front position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
-          Refer to @ref #{view_front} to get a view of the element without making an independent copy.
+          Refer to @ref #{type.view_front} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note Range must not be empty (see @ref #{empty}).
+          @note Range must not be empty (see @ref #{type.empty}).
 
           @since 2.0
         }
@@ -203,7 +203,7 @@ module AutoC
 
           This function is used to get to the previous element in the range.
 
-          @note Prior calling this function one must ensure that the range is not empty (see @ref #{empty}).
+          @note Prior calling this function one must ensure that the range is not empty (see @ref #{type.empty}).
           Rewinding position of a range that is already empty results in undefined behaviour.
 
           @since 2.0
@@ -217,11 +217,11 @@ module AutoC
           @return a view of an element at the range's back position
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the iterable container at the range's back position.
-          Refer to @ref #{take_back} to get an independent copy of that element.
+          Refer to @ref #{type.take_back} to get an independent copy of that element.
   
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
   
-          @note Range must not be empty (see @ref #{empty}).
+          @note Range must not be empty (see @ref #{type.empty}).
 
           @since 2.0
         }
@@ -243,11 +243,11 @@ module AutoC
           @return a *copy* of element at the range's back position
 
           This function is used to get a *copy* of the value contained in the iterable container at the range's front position.
-          Refer to @ref #{view_back} to get a view of the element without making an independent copy.
+          Refer to @ref #{type.view_back} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note Range must not be empty (see @ref #{empty}).
+          @note Range must not be empty (see @ref #{type.empty}).
 
           @since 2.0
         }
@@ -272,10 +272,31 @@ module AutoC
           @return a number of elements
 
           This function returns a number of elements between the range's front and back positions inclusively.
-          As a consequence, the result changes with every invocation of position change functions (@ref #{pop_front}, @ref #{pop_back}),
+          As a consequence, the result changes with every invocation of position change functions (@ref #{type.pop_front}, @ref #{type.pop_back}),
           so be careful not to cache this value.
 
           For empty range this function returns 0.
+
+          @since 2.0
+        }
+      end
+      method(:int, :check, { range: const_rvalue, index: :size_t.const_rvalue } ).configure do
+        dependencies << size
+        inline_code %{
+          assert(range);
+          return index < #{size.(range)};
+        }
+        header %{
+          @brief Validate specified range's index
+
+          @param[in] range range to query
+          @param[in] index index to verify
+          @return non-zero value if speicfied index is valid and zero value otherwise
+
+          This function performs the range's index validity check.
+
+          In any case, this function should be used for the index validation prior getting direct access to range's elements
+          with @ref #{type.get}, @ref #{type.view} etc. as these functions do not normally do it themselves for performance reasons.
 
           @since 2.0
         }
@@ -289,19 +310,19 @@ module AutoC
           @return a view of element at `index`
 
           This function is used to get a constant reference (in form of the C pointer) to the value contained in the range at the specific position.
-          Refer to @ref #{get} to get a copy of the element.
+          Refer to @ref #{type.get} to get a copy of the element.
 
-          @note The specified `index` is required to be within the [0, @ref #{size}) range.
+          @note The specified `index` is required to be within the [0, @ref #{type.size}) range.
 
           @since 2.0
         }
       end
       method(iterable.element, :get, { range: const_rvalue, index: :size_t.const_rvalue }, constraint:-> { iterable.element.copyable? }).configure do
-        dependencies << empty << view
+        dependencies << check << view
         inline_code %{
           #{iterable.element} r;
           #{iterable.element.const_lvalue} e;
-          assert(!#{empty.(range)});
+          assert(#{check.(range, index)});
           e = #{view.(range, index)};
           #{iterable.element.copy.(:r, '*e')};
           return r;
@@ -314,11 +335,11 @@ module AutoC
           @return a *copy* of element at `index`
 
           This function is used to get a *copy* of the value contained in the range at the specific position.
-          Refer to @ref #{view} to get a view of the element without making an independent copy.
+          Refer to @ref #{type.view} to get a view of the element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
-          @note The specified `position` is required to be within the [0, @ref #{size}) range.
+          @note The specified `position` is required to be within the [0, @ref #{type.size}) range.
 
           @since 2.0
         }
@@ -331,13 +352,57 @@ module AutoC
   # @abstract
   class ContiguousRange < DirectAccessRange
 
-    def render_interface(stream)
-      stream << %{
-        /**
-          #{defgroup}
+    def initialize(iterable, visibility: :public, parallel: nil)
+      super(iterable, visibility:)
+      @parallel = parallel
+    end
 
-          @brief #{tag}
-        */
+    def render_interface(stream)
+      case @parallel
+      when nil
+        stream << %{
+          /**
+            #{defgroup}
+
+            @brief #{tag}
+
+            This is the range for contiguous data structures (vectors, strings etc.)
+
+            It can be used the following way:
+
+            @code{.c}
+            for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+            @endcode
+
+            @see @ref Range
+
+            @since 2.0
+          */
+        }
+      when :openmp
+        stream << %{
+          /**
+            #{defgroup}
+
+            @brief #{tag}
+
+            This is the range for contiguous data structures (vectors, strings etc.)
+
+            The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
+            which account for parallel iteration in the way
+
+            @code{.c}
+            #pragma omp parallel
+            for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+            @endcode
+
+            @see @ref Range
+
+            @since 2.0
+          */
+        }
+      end
+      stream << %{
         typedef struct {
           #{iterable.element.lvalue} front; /** @private */
           #{iterable.element.lvalue} back; /** @private */
@@ -347,15 +412,56 @@ module AutoC
 
   private
 
+    OPTIONAL_OMP_H = AutoC::Code.new interface: %{
+      #ifdef _OPENMP
+        #include <omp.h>
+      #endif
+    }
+
     def configure
       super
-      custom_create.configure do
-        inline_code %{
-          assert(range);
-          assert(iterable);
-          range->front = #{_iterable.storage(iterable)};
-          range->back = #{_iterable.storage(iterable)} + #{_iterable.size.(iterable)};
-        }
+      case @parallel
+      when nil
+        custom_create.configure do
+          inline_code %{
+            assert(range);
+            assert(iterable);
+            range->front = #{_iterable.storage(iterable)};
+            range->back  = #{_iterable.storage(iterable)} + #{_iterable.size.(iterable)} - 1;
+          }
+        end
+      when :openmp
+        dependencies << OPTIONAL_OMP_H
+        custom_create.configure do
+          inline_code %{
+            size_t size;
+            #ifdef _OPENMP
+              unsigned chunk_count;
+            #endif
+            assert(range);
+            assert(iterable);
+            size = #{_iterable.size.(iterable)};
+            #ifdef _OPENMP
+              if(omp_in_parallel() && (chunk_count = omp_get_num_threads()) > 1) {
+                int chunk_id = omp_get_thread_num();
+                size_t chunk_size = size / omp_get_num_threads();
+                range->front = #{_iterable.storage(iterable)} + chunk_id*chunk_size;
+                range->back  = #{_iterable.storage(iterable)} + (
+                  chunk_id < chunk_count - 1 ?
+                  (chunk_id + 1)*chunk_size - 1 :
+                  size - 1
+                );
+              } else {
+            #endif
+              range->front = #{_iterable.storage(iterable)};
+              range->back  = #{_iterable.storage(iterable)} + size - 1;
+            #ifdef _OPENMP
+              }
+            #endif
+          }
+        end
+      else
+        raise "unsupported parallel range specifier #{@parallel}"
       end
       empty.configure do
         inline_code %{
@@ -411,10 +517,10 @@ module AutoC
         }
       end
       view.configure do
-        dependencies << size
+        dependencies << check
         inline_code %{
           assert(range);
-          assert(index < #{size.(range)});
+          assert(#{check.(range, index)});
           return range->front + index;
         }
       end
