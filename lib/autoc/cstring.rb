@@ -25,7 +25,7 @@ module AutoC
   
     def const_rvalue = @crv ||= Value.new(self, constant: true)
   
-    def const_lvalue = @clv ||= Value.new(self, constant: true)
+    def const_lvalue = @clv ||= Value.new(self, reference: true, constant: true)
 
     def render_interface(stream)
       super
