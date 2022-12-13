@@ -42,7 +42,7 @@ module AutoC
         */
         typedef struct {
           #{element.lvalue} elements; /**< @private */
-          size_t element_count; /**< @private */
+          size_t size; /**< @private */
         } #{signature};
       }
 
@@ -78,7 +78,7 @@ module AutoC
       super
       method(:void, :_allocate, { target: lvalue, size: :size_t.const_rvalue }, visibility: :internal).configure do
         code %{
-          if((target->element_count = size) > 0) {
+          if((target->size = size) > 0) {
             #{storage(:target)} = (#{element.lvalue})malloc(size*sizeof(#{element})); assert(#{storage(:target)});
           } else {
             #{storage(:target)} = NULL;
@@ -162,7 +162,7 @@ module AutoC
         inline_code %{
           assert(target);
           #{storage(:target)} = NULL;
-          target->element_count = 0;
+          target->size = 0;
         }
       end
       destroy_elements = "for(index = 0; index < #{size}(target); ++index) {#{element.destroy.("#{storage(:target)}[index]")};}" if element.destructible?
@@ -236,7 +236,7 @@ module AutoC
       size.configure do
         inline_code %{
           assert(target);
-          return target->element_count;
+          return target->size;
         }
       end
       check.configure do
