@@ -4,11 +4,8 @@
 require 'autoc/std'
 require 'autoc/type'
 require 'autoc/module'
+require 'autoc/memory'
 require 'autoc/function'
-
-
-#require 'autoc/memory'
-#require 'autoc/hasher'
 
 
 module AutoC
@@ -30,6 +27,7 @@ module AutoC
       super(signature)
       @methods = {}
       @visibility = visibility
+      dependencies << DEFINITIONS << STD::ASSERT_H << memory
     end
 
     def self.new(*args, **kws, &block)
@@ -80,6 +78,8 @@ module AutoC
 
     def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
 
+    def memory = Allocator.instance # Using standard malloc() & free() by default
+
   private
     
     def method_missing(meth, *args)
@@ -115,7 +115,6 @@ module AutoC
     end
 
     def configure
-      dependencies << DEFINITIONS
       method(:void, :create, { target: lvalue }, instance: :default_create, constraint: -> { default_constructible? }).configure do
         header %{
           @brief Create a new value
@@ -274,7 +273,6 @@ module AutoC
         #define AUTOC_EXTERN extern
       #endif
     #endif
-    #include <assert.h>
   }
 
 

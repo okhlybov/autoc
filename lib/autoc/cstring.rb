@@ -17,6 +17,7 @@ module AutoC
 
     def initialize(type = :CString, char = :char, **kws)
       super(type, char, **kws)
+      dependencies << STD::STRING_H
     end
 
     def rvalue = @rv ||= Value.new(self)
@@ -30,8 +31,6 @@ module AutoC
     def render_interface(stream)
       super
       stream << %{
-        #include <string.h>
-        #include <malloc.h>
         /**
           #{defgroup}
 
@@ -51,7 +50,7 @@ module AutoC
 
     def configure
       super
-      method(:void, :create, { target: lvalue, source: const_rvalue }, instance: :custom_create ).configure do
+      method(:void, :create, { target: lvalue, source: const_rvalue }, instance: :custom_create).configure do
         header %{
           @brief Create string
 
@@ -72,7 +71,7 @@ module AutoC
           assert(target);
           assert(source);
           size = strlen(source);
-          *target = (#{element.lvalue})malloc((size+1)*sizeof(#{element})); assert(*target);
+          *target = #{memory.allocate(element, 'size+1', atomic: true)}; assert(*target);
           memcpy(*target, source, size*sizeof(#{element}));
           (*target)[size] = '\\0';
         }
@@ -80,7 +79,7 @@ module AutoC
       destroy.configure do
         inline_code %{
           assert(target);
-          free(*target);
+          #{memory.free('*target')};
         }
       end
       copy.configure do

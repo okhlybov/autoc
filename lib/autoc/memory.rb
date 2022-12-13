@@ -2,6 +2,7 @@
 
 
 require 'singleton'
+require 'autoc/std'
 require 'autoc/type'
 require 'autoc/module'
 
@@ -9,125 +10,40 @@ require 'autoc/module'
 module AutoC
 
 
-  # Standard C malloc()-based allocator.
+  # Standard C malloc()-based dynamic memory handler
   class Allocator
 
     include Singleton
+
     include Entity
 
-    def allocate(type, count = 1, zero = false)
+    def initialize = dependencies << STD::STDLIB_H
+
+    def allocate(type, count = 1, zero: false, **kws)
       zero ? "(#{type}*)calloc(#{count}, sizeof(#{type}))" : "(#{type}*)malloc((#{count})*sizeof(#{type}))"
     end
 
-    def free(ptr) = "free(#{ptr})"
-
-    def interface_declarations(stream)
-      super
-      stream << %{
-        #include <stdlib.h>
-      }
-    end
-
-    @@default = instance
-
-    def self.default = @@default
-
-    def self.default=(allocator) @@default = allocator end
+    def free(pointer) = "free(#{pointer})"
 
   end # Allocator
 
 
-  # Aligned memory allocator.
-  class Allocator::Aligning
+  # Boehm-Demers-Weiser garbage-collecting memory handler https://www.hboehm.info/gc/
+  class BDWAllocator
 
     include Singleton
+
     include Entity
 
-    def initialize = dependencies << Module::DEFINITIONS
+    def initialize = dependencies << SystemHeader.new('gc.h')
 
-    def allocate(type, count = 1, zero = false, alignment = 32)
-      zero ? "(#{type}*)_autoc_aligned_calloc(#{count}, sizeof(#{type}), #{alignment})" : "(#{type}*)_autoc_aligned_malloc((#{count})*sizeof(#{type}), #{alignment})"
+    def allocate(type, count = 1, atomic: false, **kws)
+      atomic ? "(#{type}*)GC_malloc_atomic((#{count})*sizeof(#{type}))" : "(#{type}*)GC_malloc((#{count})*sizeof(#{type}))"
     end
 
-    def free(ptr) = "_autoc_aligned_free(#{ptr})"
+    def free(pointer) = nil
 
-    def interface_definitions(stream)
-      super
-      stream << %{
-        /**
-          @brief Aligned memory allocator
-        */
-        AUTOC_EXTERN void* _autoc_aligned_malloc(size_t size, size_t alignment);
-        /**
-          @brief Aligned memory allocator with zero initialization
-        */
-        AUTOC_EXTERN void* _autoc_aligned_calloc(size_t count, size_t size, size_t alignment);
-        /**
-          @brief Aligned memory deallocator
-        */
-        AUTOC_EXTERN void _autoc_aligned_free(void* ptr);
-      }
-    end
-
-    def definitions(stream)
-      super
-      stream << %{
-        #include <stdlib.h>
-        #include <string.h>
-        #include <malloc.h>
-        #if defined(__GNUC__) || defined(__clang__)
-          #include <mm_malloc.h>
-        #endif
-        void* _autoc_aligned_malloc(size_t size, size_t alignment) {
-          #if defined(MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
-            return _aligned_malloc(size, alignment);
-          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__GNUC__) || defined(__clang__)
-            return _mm_malloc(size, alignment);
-          #elif __STDC_VERSION__ >= 201112L
-            return aligned_alloc(alignment, size);
-          #elif _POSIX_VERSION >= 200112L
-            void* ptr;
-            return posix_memalign(&ptr, alignment, size) ? NULL : ptr;
-          #else
-            #error no suitable aligned memory allocation function found
-          #endif
-        }
-        void* _autoc_aligned_calloc(size_t count, size_t size, size_t alignment) {
-          const size_t bytes = count*size;
-          return memset(_autoc_aligned_malloc(bytes, alignment), 0, bytes);
-        }
-        void _autoc_aligned_free(void* ptr) {
-          #if defined(MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
-            _aligned_free(ptr);
-          #elif defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__GNUC__) || defined(__clang__)
-            _mm_free(ptr);
-          #else
-            free(ptr);
-          #endif
-        }
-      }
-    end
-
-  end # Allocator::Aliging
+  end # Allocator
 
 
-  # Boehm garbage-collecting allocator.
-  class Allocator::BDW
-
-    include Singleton
-    include Entity
-
-    def allocate(type, count = 1, zero = false) = "(#{type}*)GC_malloc((#{count})*sizeof(#{type}))"
-
-    def free(ptr) = nil
-
-    def interface_declarations(stream)
-      super
-      stream << %{
-        #include <gc.h>"
-      }
-    end
-
-  end # BDW
-
-end # AutoC
+end

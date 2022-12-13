@@ -17,6 +17,11 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
+    def initialize(*args, **kws)
+      super
+      dependencies << STD::STRING_H
+    end
+
     def render_interface(stream)
       stream << %{
         /**
@@ -49,10 +54,6 @@ module AutoC
     end
 
     def render_implementation(stream)
-      stream << %{
-        #include <malloc.h>
-        #include <string.h>
-      }
       if element.comparable?
         stream << %{
           #include <stdlib.h>
@@ -79,7 +80,7 @@ module AutoC
       method(:void, :_allocate, { target: lvalue, size: :size_t.const_rvalue }, visibility: :internal).configure do
         code %{
           if((target->size = size) > 0) {
-            #{storage(:target)} = (#{element.lvalue})malloc(size*sizeof(#{element})); assert(#{storage(:target)});
+            #{storage(:target)} = #{memory.allocate(element, size)}; assert(#{storage(:target)});
           } else {
             #{storage(:target)} = NULL;
           }
@@ -154,7 +155,7 @@ module AutoC
               #{element.default_create.('new_elements[index]')};
             }
             #{destroy_elements}
-            free(old_elements);
+            #{memory.free(:old_elements)};
           }
         }
       end
@@ -171,7 +172,7 @@ module AutoC
           size_t index;
           assert(target);
           #{destroy_elements}
-          free(#{storage(:target)});
+          #{memory.free(storage(:target))};
         }
       end
       copy.configure do
