@@ -215,7 +215,7 @@ module AutoC
     def render_implementation(stream)
       if live?
         if inline?
-          stream << "extern #{prototype};" # Force generation of the C99 externally-visible definition of inline function
+          stream << prototype << ';' # Force generation of the C99 externally-visible definition of inline function
         else
           render_function_definition(stream)
         end
