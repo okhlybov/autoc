@@ -72,7 +72,7 @@ module AutoC
           assert(target);
           assert(source);
           size = strlen(source);
-          *target = malloc((size+1)*sizeof(#{element})); assert(*target);
+          *target = (#{element.lvalue})malloc((size+1)*sizeof(#{element})); assert(*target);
           memcpy(*target, source, size*sizeof(#{element}));
           (*target)[size] = '\\0';
         }
