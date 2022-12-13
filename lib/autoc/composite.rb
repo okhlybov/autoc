@@ -97,7 +97,7 @@ module AutoC
     def method_class = Method
 
     # Create a new type-bound function (aka method)
-    def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name)
+    def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name, **kws)
       method = method_class.new(
         self,
         result,
@@ -105,7 +105,8 @@ module AutoC
         parameters, # TODO force parameter types coercion
         inline:,
         visibility: (visibility.nil? ? self.visibility : visibility), # Method's visibility property can be borrowed from the type itself
-        requirement: constraint
+        requirement: constraint,
+        **kws
       )
       raise "##{instance} method redefinition is not allowed" if @methods.has_key?(instance)
       @methods[instance] = method

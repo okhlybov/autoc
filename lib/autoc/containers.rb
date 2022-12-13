@@ -19,7 +19,7 @@ module AutoC
 
     attr_reader :range
 
-    def self.new(*args, **kws, &block)
+    def self.new(*args, **kws)
       obj = super
       obj.references << obj.range # Range has to be referenced after the iterable object gets fully configured
       obj
@@ -100,10 +100,9 @@ module AutoC
 
     attr_reader :index
 
-    def initialize(type, element, index, visibility: :public, parallel: nil)
-      super(type, element, visibility:)
+    def initialize(type, element, index, **kws)
+      super(type, element, **kws)
       dependencies << (@index = index.to_type)
-      @parallel = parallel
     end
 
     # For associative container to be copyable both hashable element and index types are required
@@ -159,7 +158,8 @@ module AutoC
           @since 2.0
         }
       end
-      method(element, :get, { target: const_rvalue, index: index.const_rvalue }, constraint:-> { element.copyable? } ).configure do
+      method(element, :get, { target: const_rvalue, index: index.const_rvalue }, inline: true, constraint:-> { element.copyable? } ).configure do
+        dependencies << check << view
         header %{
           @brief Get specific element
 
@@ -173,7 +173,7 @@ module AutoC
 
           @since 2.0
         }
-        code %{
+        inline_code %{
           #{result} r;
           #{element.const_lvalue} e;
           assert(target);
@@ -183,7 +183,7 @@ module AutoC
           return r;
         }
       end
-      method(:void, :set, { target: rvalue, index: index.const_rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? } ).configure do
+      method(:void, :set, { target: rvalue, index: index.const_rvalue, value: element.const_rvalue }, inline: true, constraint:-> { element.copyable? } ).configure do
         header %{
           @brief Set specific element
 
@@ -203,6 +203,19 @@ module AutoC
     end
 
   end # DirectAccessContainer
+
+
+  # @abstract
+  class ContiguousContainer < DirectAccessContainer
+
+    def initialize(type, element, parallel: nil, **kws)
+      super(type, element, :size_t, **kws)
+      @parallel = parallel
+    end
+
+    # def storage(target) =
+
+  end # ContiguousContainer
 
 
 end

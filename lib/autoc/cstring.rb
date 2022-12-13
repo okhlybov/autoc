@@ -9,14 +9,14 @@ module AutoC
 
 
   # Value type string wrapper around plain C string
-  class CString < DirectAccessContainer
+  class CString < ContiguousContainer
 
     def default_constructible? = false
 
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
-    def initialize(type = :CString, char = :char, index = :size_t, visibility: :public, parallel: nil)
-      super(type, char, index, visibility:, parallel:)
+    def initialize(type = :CString, char = :char, **kws)
+      super(type, char, **kws)
     end
 
     def rvalue = @rv ||= Value.new(self)

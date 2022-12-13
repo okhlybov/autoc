@@ -82,12 +82,13 @@ module AutoC
 
     attr_writer :inline
 
-    def initialize(result, name, parameters, inline: false, visibility: :public, requirement: true)
+    def initialize(result, name, parameters, inline: false, visibility: :public, requirement: true, abstract: false)
       @name = name.to_s
       @result = result
       @inline = inline
       @visibility = visibility
       @requirement = requirement
+      @abstract = abstract
       @parameters = Parameters.new(self)
       if parameters.is_a?(Hash)
         parameters.each do |name, descriptor|
@@ -124,6 +125,8 @@ module AutoC
     def inline? = @inline == true
   
     def public? = @visibility == :public
+
+    def abstract? = @abstract == true
   
     def live? = (@requirement.is_a?(Proc) ? @requirement.() : @requirement) == true
     
@@ -191,8 +194,10 @@ module AutoC
     # Render function definition, both inline or extern
     # This code never gets into public interface
     def render_function_definition(stream)
-      raise("missing function definition for #{name}()") if @code.nil?
-      stream << definition
+      unless abstract?
+        raise("missing function definition for #{name}()") if @code.nil?
+        stream << definition
+      end
     end
 
     # Render function's public interface
