@@ -13,8 +13,6 @@ module AutoC
 
   class Vector < ContiguousContainer
 
-    def hashable? = false # TODO
-
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
     def initialize(*args, **kws)

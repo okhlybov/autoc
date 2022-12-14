@@ -89,6 +89,20 @@ module AutoC
           @since 2.0
         }
       end
+      hash_code.configure do
+        code %{
+          #{range} r;
+          size_t result;
+          #{hasher.to_s} hash;
+          for(r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+            #{element.const_lvalue} e = #{range.view_front.(:r)};
+            #{hasher.update(:hash, element.hash_code.('*e'))};
+          }
+          result = #{hasher.result(:hash)};
+          #{hasher.destroy(:hash)};
+          return result;
+        }
+      end
     end
 
   end # Container

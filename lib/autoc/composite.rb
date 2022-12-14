@@ -5,6 +5,7 @@ require 'autoc/std'
 require 'autoc/type'
 require 'autoc/module'
 require 'autoc/memory'
+require 'autoc/hashers'
 require 'autoc/function'
 
 
@@ -27,7 +28,7 @@ module AutoC
       super(signature)
       @methods = {}
       @visibility = visibility
-      dependencies << DEFINITIONS << STD::ASSERT_H << memory
+      dependencies << DEFINITIONS << STD::ASSERT_H << memory << hasher
     end
 
     def self.new(*args, **kws, &block)
@@ -79,6 +80,8 @@ module AutoC
     def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
 
     def memory = Allocator.instance # Using standard malloc() & free() by default
+
+    def hasher = Hasher.instance
 
   private
     
