@@ -19,7 +19,7 @@ module AutoC
 
     def compare = @compare ||= -> (lt, rt) { "(#{lt} == #{rt} ? 0 : (#{lt} > #{rt} ? +1 : -1))" }
   
-    def hash_code = @hash_code ||= -> (target) { "(size_t)(#{value})" }
+    def hash_code = @hash_code ||= -> (target) { "(size_t)(#{target})" }
   
   end # Primitive
   
