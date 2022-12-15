@@ -47,7 +47,11 @@ module AutoC
           #if !defined(__cplusplus) && (defined(__GNUC__) || defined(__clang__))
             __attribute__((__constructor__))
           #else
-            #warning _autoc_hasher_randomize_seed() wont be called automatically; call it manually in order to actually yield random seed
+            #ifdef _MSC_VER
+              #pragma message("WARNING: _autoc_hasher_randomize_seed() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
+            #else
+              #warning _autoc_hasher_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
+            #endif
           #endif
           void _autoc_hasher_randomize_seed() {
             srand(time(NULL));
