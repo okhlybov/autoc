@@ -149,6 +149,12 @@ module AutoC
           return strchr(target, value) != NULL;
         }
       end
+      find_first.configure do
+        inline_code %{
+          assert(target);
+          return strchr(target, value);
+        }
+      end
       check.configure do
         dependencies << size
         inline_code %{
