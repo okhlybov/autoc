@@ -2,8 +2,8 @@
 
 
 require 'autoc/ranges'
-require 'autoc/containers'
 require 'autoc/sequential'
+require 'autoc/association'
 
 
 module AutoC
@@ -12,7 +12,7 @@ module AutoC
   using STD::Coercions
 
 
-  class Vector < DirectAccessCollection
+  class Vector < Association
 
     include Sequential
 

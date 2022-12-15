@@ -12,14 +12,20 @@ module AutoC
     def configure
       super
       contains.configure do
+        dependencies << find_first
+        inline_code %{
+          return #{find_first.(*parameters)} != NULL;
+        }
+      end
+      find_first.configure do
         code %{
           #{range} r;
           assert(target);
           for(r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
             #{element.const_lvalue} e = #{range.view_front.(:r)};
-            if(#{element.equal.('*e', value)}) return 1;
+            if(#{element.equal.('*e', value)}) return e;
           }
-          return 0;
+          return NULL;
         }
       end
       equal.configure do

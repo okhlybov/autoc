@@ -2,15 +2,15 @@
 
 
 require 'autoc/ranges'
-require 'autoc/containers'
 require 'autoc/sequential'
+require 'autoc/association'
 
 
 module AutoC
 
 
   # Value type string wrapper around plain C string
-  class CString < DirectAccessCollection
+  class CString < Association
 
     include Sequential
 
