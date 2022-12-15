@@ -13,7 +13,7 @@ module AutoC
 
   # @abstract
   # Generator for C types which can contains zero or more elements of some other type
-  class Container < Composite
+  class Collection < Composite
 
     attr_reader :element
 
@@ -89,28 +89,14 @@ module AutoC
           @since 2.0
         }
       end
-      hash_code.configure do
-        code %{
-          #{range} r;
-          size_t result;
-          #{hasher.to_s} hash;
-          for(r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            #{element.const_lvalue} e = #{range.view_front.(:r)};
-            #{hasher.update(:hash, element.hash_code.('*e'))};
-          }
-          result = #{hasher.result(:hash)};
-          #{hasher.destroy(:hash)};
-          return result;
-        }
-      end
     end
 
-  end # Container
+  end # Collection
 
 
   # @abstract
-  # Generator for C types for direct access using keys of specific type (hash/tree maps, string, vector etc.)
-  class DirectAccessContainer < Container
+  # Generator for C types for direct access using index of specific type (hash/tree maps, string, vector etc.)
+  class DirectAccessCollection < Collection
 
     attr_reader :index
 
@@ -213,23 +199,9 @@ module AutoC
           @since 2.0
         }
       end
-
     end
 
-  end # DirectAccessContainer
-
-
-  # @abstract
-  class ContiguousContainer < DirectAccessContainer
-
-    def initialize(type, element, parallel: nil, **kws)
-      super(type, element, :size_t, **kws)
-      @parallel = parallel
-    end
-
-    # def storage(target) =
-
-  end # ContiguousContainer
+  end # DirectAccessCollection
 
 
 end

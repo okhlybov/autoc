@@ -4,7 +4,7 @@
 module AutoC
 
 
-  # Method implementations for types which maintin predictable element order (vector, list, queue etc.)
+  # Method implementations for types which maintain predictable element order (vector, list, queue etc.)
   module Sequential
 
   private

@@ -3,21 +3,25 @@
 
 require 'autoc/ranges'
 require 'autoc/containers'
+require 'autoc/sequential'
 
 
 module AutoC
 
 
   # Value type string wrapper around plain C string
-  class CString < ContiguousContainer
+  class CString < DirectAccessCollection
+
+    include Sequential
 
     def default_constructible? = false
 
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
-    def initialize(type = :CString, char = :char, **kws)
-      super(type, char, **kws)
+    def initialize(type = :CString, char = :char, parallel: nil, **kws)
+      super(type, char, :size_t, **kws)
       dependencies << STD::STRING_H
+      @parallel = parallel
     end
 
     def rvalue = @rv ||= Value.new(self)
@@ -127,7 +131,7 @@ module AutoC
         }
       end
       hash_code.configure do
-        inline_code %{
+        code %{
           /* djb2 algorithm: http://www.cse.yorku.ca/~oz/hash.html */
           size_t c;
           size_t hash;

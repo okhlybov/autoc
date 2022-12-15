@@ -3,6 +3,7 @@
 
 require 'autoc/ranges'
 require 'autoc/containers'
+require 'autoc/sequential'
 
 
 module AutoC
@@ -11,13 +12,16 @@ module AutoC
   using STD::Coercions
 
 
-  class Vector < ContiguousContainer
+  class Vector < DirectAccessCollection
+
+    include Sequential
 
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
-    def initialize(*args, **kws)
-      super
+    def initialize(type, element, parallel: nil, **kws)
+      super(type, element, :size_t, **kws)
       dependencies << STD::STRING_H
+      @parallel = parallel
     end
 
     def render_interface(stream)
@@ -29,7 +33,7 @@ module AutoC
 
           #{type} is a container that encapsulates dynamic size array of values of type #{element}.
 
-          It is a contiguous sequence direct access container where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
+          It is a contiguous direct access collection where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
 
           For iteration over the vector elements refer to @ref #{range}.
 
@@ -69,7 +73,7 @@ module AutoC
       super
     end
 
-    def storage(target) = "(#{target})->elements" # Return C pointer to contiguous storage
+    def storage(target) = "#{target}->elements" # Return C pointer to contiguous storage
 
   private
 
@@ -185,53 +189,6 @@ module AutoC
           }
         }
       end
-      equal.configure do
-        code %{
-          size_t size;
-          assert(left);
-          assert(right);
-          size = #{size.(left)};
-          if(size == #{size.(right)}) {
-            size_t index;
-            for(index = 0; index < size; ++index) {
-              if(!#{element.equal.("#{storage(:left)}[index]", "#{storage(:right)}[index]")}) return 0;
-            }
-            return 1;
-          } else {
-            return 0;
-          }
-        }
-      end
-      compare.configure do
-        code %{
-          size_t index, min_size, ls, rs;
-          assert(left);
-          assert(right);
-          ls = #{size.(left)}; 
-          rs = #{size.(right)};
-          min_size = ls < rs ? ls : rs; /* min(ls, rs) */
-          for(index = 0; index < min_size; ++index) {
-            int c = #{element.compare.("#{storage(:left)}[index]", "#{storage(:right)}[index]")};
-            if(c != 0) return c; /* early exit on first non-equal pair encountered */
-          }
-          if(ls == rs) {
-            return 0; /* both vectors are completely equal */
-          } else {
-            return ls > rs ? +1 : -1; /* the longer vector of the two with equal common part is considered "the more" */
-          }
-        }
-      end
-      contains.configure do
-        code %{
-          size_t index, size;
-          assert(target);
-          size = #{size.(target)};
-          for(index = 0; index < size; ++index) {
-            if(#{element.equal.("#{storage(:target)}[index]", value)}) return 1;
-          }
-          return 0;
-        }
-      end
       size.configure do
         inline_code %{
           assert(target);
@@ -270,7 +227,21 @@ module AutoC
           #{element.copy.('*e', value)};
         }
       end
-      method(:void, :sort, { target: rvalue, ascending: :int.const_rvalue }, constraint:-> { element.orderable? }, abstract: true).configure do
+      method(:void, :sort, { target: rvalue, ascending: :int.const_rvalue }, constraint:-> { orderable? }, abstract: true).configure do
+        header %{
+          @brief Sort vector's values
+
+          @param[in] target vector to sort
+          @param[in] ascending sorting order
+
+          This function performs in-place sorting of the contained elements.
+          If `ascending` is non-zero, the elements are placed in ascending (lowest to highset) order,
+          otherwise the elements are placed in descending (highest to lowest) order.
+
+          The sorting process does not reallocate memory nor does it call elements' copy constructors.
+
+          @since 2.0
+        }
       end
     end
 
