@@ -98,7 +98,7 @@ module AutoC
         #@inline_methods = true
         @omit_accessors = true
         @opaque = false
-      else raise "Unknown profile: #{profile}"
+      else raise "unsupported profile #{profile}"
       end
     end
 
@@ -179,7 +179,7 @@ module AutoC
         _code = %$
           assert(target);
           assert(source);
-          if(target->tag) switch(target->tag) {
+          if(source->tag) switch(source->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}:"
