@@ -59,22 +59,13 @@ module AutoC
       stream << 'typedef enum {'
       i = 0; stream << (variants.collect { |name, type| "#{identifier(name)} = #{i+=1}" }).join(',')
       stream << "} #{tag_};"
-      if @opaque
-        stream << %{
-          /**
-            #{ingroup}
-            @brief Opaque struct holding state of the union
-          */
-        }
-      else
-        stream << %{
-          /**
-            #{ingroup}
-            @brief Struct holding state of the union
-          */
-        }
-      end
-      stream << "typedef struct {union {"
+      stream << %{
+        /**
+          #{ingroup}
+          @brief Opaque struct holding state of the box
+        */
+      }
+      stream << 'typedef struct {union {'
         variants.each { |name, type| stream << field_declaration(type, name) }
       stream << "} variant; /**< @private */ #{tag_} tag; /**< @private */} #{signature};"
     end
@@ -248,28 +239,73 @@ module AutoC
       _type = self
       variants.each do |name, type|
         method(type.const_lvalue, "view_#{name}", { target: const_rvalue }).configure do
-          inline_code %{
+          code %{
             assert(target);
             assert(target->tag == #{identifier(name)});
             return &target->variant.#{name};
           }
+          header %{
+            @brief Get a view of contained value
+
+            @param[in] target box to query
+            @return a view of the value
+
+            This function is used to get a constant reference (in form of the C pointer) to value contained in `target`.
+
+            It is the caller's responsibility to check the type of currently contained value.
+            Consider using guard `if(#{identifier(:tag)}(...) == #{identifier(name)}) ...`
+
+            @see @ref #{tag}
+
+            @since 2.0
+          }
         end
         if type.copyable?
           method(type, "get_#{name}", { target: const_rvalue }).configure do
-            inline_code %{
+            code %{
               #{type} result;
               assert(target);
               assert(target->tag == #{identifier(name)});
               #{type.copy.(:result, "target->variant.#{name}")};
               return result;
             }
+            header %{
+              @brief Get a copy of contained value
+  
+              @param[in] target box to query
+              @return a copy of the value
+  
+              This function is used to get a copy of the value contained in `target`.
+  
+              It is the caller's responsibility to check the type of currently contained value.
+              Consider using guard `if(#{identifier(:tag)}(...) == #{identifier(name)}) ...`
+  
+              @see @ref #{tag}
+  
+              @since 2.0
+            }
           end
-          method(:void, "set_#{name}", { target: rvalue, value: type.const_rvalue }).configure do
-            inline_code %{
+          method(:void, "put_#{name}", { target: rvalue, value: type.const_rvalue }).configure do
+            code %{
               assert(target);
               #{destroy.(target) if destructible?};
               #{type.copy.("target->variant.#{name}", value)};
               target->tag = #{identifier(name)};
+            }
+            header %{
+              @brief Put value to box
+  
+              @param[in] target box to set
+              @param[in] value value to put
+  
+              This function is used to put a copy of the value into the box.
+              The previously contained value is destroyed with respective destructor;
+  
+              After call to this function the value type may be obtained with @ref #{identifier(:tag)}.
+
+              @see @ref #{tag}
+  
+              @since 2.0
             }
           end
         end
