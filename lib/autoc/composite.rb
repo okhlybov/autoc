@@ -37,7 +37,7 @@ module AutoC
       obj
     end
 
-    def to_value = rvalue
+    def to_value = Value.new(self)
 
     def rvalue = @rv ||= Value.new(self, reference: true)
   

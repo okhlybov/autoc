@@ -12,16 +12,25 @@ module AutoC
 
 
   # C union wrapper with managed fields
-  class Variant < Composite
+  class Box < Composite
 
     attr_reader :variants
 
+    attr_reader :tag_
+
     def default_constructible? = true
+    def custom_constructible? = false
+    def destructible? = variants.values.any? { |t| t.destructible? }
+    def comparable? = variants.values.all? { |t| t.comparable? }
+    def orderable? = variants.values.all? { |t| t.orderable? }
+    def copyable? = variants.values.all? { |t| t.copyable? }
+    def hashable? = variants.values.all? { |t| t.hashable? }
 
     def initialize(type, variants, visibility: :public, profile: :blackbox)
       super(type, visibility:)
       setup_profile(profile)
       setup_variants(variants)
+      @tag_ = "#{signature}_";
       @default = %{
         #ifndef NDEBUG
           abort();
@@ -36,9 +45,20 @@ module AutoC
           @brief Value type wrapper of the C union
         */
       }
+      stream << %{
+        /**
+          #{ingroup}
+
+          @brief Box tag set
+
+          Use @ref #{identifier(:tag)} to query current box contents. Empty box is always tagged as 0.
+
+          @since 2.0
+        */
+      }
       stream << 'typedef enum {'
-      i = -1; stream << (["#{identifier(:void)} = #{i+=1}"] + variants.collect { |name, type| "#{identifier(name)} = #{i+=1}" }).join(',')
-      stream << "} #{identifier(:_tag)}; /**< @private */"
+      i = 0; stream << (variants.collect { |name, type| "#{identifier(name)} = #{i+=1}" }).join(',')
+      stream << "} #{tag_};"
       if @opaque
         stream << %{
           /**
@@ -56,7 +76,7 @@ module AutoC
       end
       stream << "typedef struct {union {"
         variants.each { |name, type| stream << field_declaration(type, name) }
-      stream << "} variant; /**< @private */ #{identifier(:_tag)} tag; /**< @private */} #{signature};"
+      stream << "} variant; /**< @private */ #{tag_} tag; /**< @private */} #{signature};"
     end
 
   private
@@ -65,21 +85,17 @@ module AutoC
     def setup_variants(variants)
       @variants = variants.transform_values { |type| type.to_type }
       self.variants.each_value { |type| dependencies << type }
-      #trait_any_true(:destructible)
-      #trait_all_true(:comparable)
-      #trait_all_true(:hashable)
-      #trait_all_true(:copyable)
     end
 
     # @private
     def setup_profile(profile)
       case profile
       when :blackbox
-        @inline_methods = false
+        #@inline_methods = false
         @omit_accessors = false
         @opaque = true
       when :glassbox
-        @inline_methods = true
+        #@inline_methods = true
         @omit_accessors = true
         @opaque = false
       else raise "Unknown profile: #{profile}"
@@ -108,13 +124,46 @@ module AutoC
       default_create.configure do
         inline_code %{
           assert(target);
-          target->tag = #{identifier(:void)};
+          target->tag = 0;
+        }
+      end
+      method(tag_, :tag, { target: const_rvalue }).configure do
+        inline_code %{
+          assert(target);
+          return target->tag;
+        }
+        header %{
+          @brief Get type of contained element
+
+          @param[in] target box to query
+          @return tag of currently contained element
+
+          This function returns a tag of currently contained element (@see @ref #{tag_}) or zero value if the box is empty (i.e. contains nothing).
+
+          @since 2.0
+        }
+      end
+      method(:void, :purge, { target: rvalue }).configure do
+        code %{
+          assert(target);
+          #{destroy.(target) if destructible?};
+          #{default_create.(target)};
+        }
+        header %{
+          @brief Reset box
+
+          @param[in] target box to purge
+
+          This function resets the box by destroying containing element (if any).
+          The box is left empty.
+
+          @since 2.0
         }
       end
       ### destroy
         _code = %$
           assert(target);
-          switch(target->tag) { case #{identifier(:void)}: break;
+          if(target->tag) switch(target->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}:"
@@ -130,7 +179,7 @@ module AutoC
         _code = %$
           assert(target);
           assert(source);
-          switch(target->tag) { case #{identifier(:void)}: break;
+          if(target->tag) switch(target->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}:"
@@ -147,7 +196,8 @@ module AutoC
           assert(left);
           assert(right);
           if(left->tag != right->tag) return 0;
-          switch(left->tag) { case #{identifier(:void)}: return 1; break;
+          if(!left->tag) return 1;
+          switch(left->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}:"
@@ -165,7 +215,8 @@ module AutoC
           assert(left);
           assert(right);
           assert(left->tag == right->tag);
-          switch(left->tag) { case #{identifier(:void)}: return 0; break;
+          if(!left->tag) return 0;
+          switch(left->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}: return "
@@ -180,7 +231,8 @@ module AutoC
       ### hash_code
         _code = %$
           assert(target);
-          switch(target->tag) { case #{identifier(:void)}: return AUTOC_HASHER_SEED; break;
+          if(!target->tag) return AUTOC_HASHER_SEED;
+          switch(target->tag) {
         $
         variants.each do |name, type|
           _code += "case #{identifier(name)}: return "
@@ -223,6 +275,8 @@ module AutoC
         end
       end
     end
-end
+
+  end # Box
+
 
 end
