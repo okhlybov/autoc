@@ -81,7 +81,7 @@ module AutoC
           @param[in] target list to get element from
           @return a view of a front element
 
-          This function is used to get a constant reference (in form of the C pointer) to the front value contained in `self`.
+          This function is used to get a constant reference (in form of the C pointer) to the front value contained in `target`.
           Refer to @ref #{take_front} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
