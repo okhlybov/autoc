@@ -115,7 +115,7 @@ module AutoC
       default_create.configure do
         inline_code %{
           assert(target);
-          target->tag = 0;
+          target->tag = (#{tag_})0;
         }
       end
       method(tag_, :tag, { target: const_rvalue }).configure do
