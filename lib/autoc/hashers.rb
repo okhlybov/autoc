@@ -39,19 +39,23 @@ module AutoC
     end
 
     def render_implementation(stream)
+      # Predefined C compiler macros datasheet: https://sourceforge.net/p/predef/wiki/Compilers/
       stream << %{
         #ifdef _AUTOC_RANDOM_SEED
           #include <time.h>
           #include <stdlib.h>
           size_t _autoc_hasher_seed = 0; /* fallback default until _autoc_hasher_randomize_seed() is called */
-          #if !defined(__cplusplus) && (defined(__GNUC__) || defined(__clang__))
-            __attribute__((__constructor__))
+          #if defined(__cplusplus)
+            extern "C" void _autoc_hasher_randomize_seed();
+          #elif defined(__GNUC__) || defined(__clang__)
+            void _autoc_hasher_randomize_seed()  __attribute__((__constructor__));
+          #elif defined(__POCC__)
+            void __cdecl _autoc_hasher_randomize_seed();
+            #pragma startup _autoc_hasher_randomize_seed
+          #elif defined(_MSC_VER)
+            #pragma message("WARNING: _autoc_hasher_randomize_seed() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
           #else
-            #ifdef _MSC_VER
-              #pragma message("WARNING: _autoc_hasher_randomize_seed() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
-            #else
-              #warning _autoc_hasher_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
-            #endif
+            #warning _autoc_hasher_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
           #endif
           void _autoc_hasher_randomize_seed() {
             srand(time(NULL));
