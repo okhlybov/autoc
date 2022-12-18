@@ -71,6 +71,7 @@ module AutoC
         }
       end
       method(element.const_lvalue, :view_front, { target: const_rvalue }).configure do
+        dependencies << empty
         inline_code %{
           assert(!#{empty.(target)});
           return &(target->front->element);
@@ -313,6 +314,7 @@ module AutoC
         }
       end
       pop_front.configure do
+        dependencies << empty
         inline_code %{
           assert(range);
           assert(!#{empty.(range)});
@@ -320,6 +322,7 @@ module AutoC
         }
       end
       view_front.configure do
+        dependencies << empty
         inline_code %{
           assert(range);
           assert(!#{empty.(range)});
