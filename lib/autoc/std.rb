@@ -64,13 +64,21 @@ module AutoC::STD
   MATH_H = AutoC::SystemHeader.new 'math.h'
   ASSERT_H = AutoC::SystemHeader.new 'assert.h'
   STDDEF_H = AutoC::SystemHeader.new 'stddef.h'
-  STDLIB_H = AutoC::SystemHeader.new 'stdlib.h'
   MALLOC_H = AutoC::SystemHeader.new 'malloc.h'
   STRING_H = AutoC::SystemHeader.new 'string.h'
   STDBOOL_H = AutoC::SystemHeader.new 'stdbool.h'
   COMPLEX_H = AutoC::SystemHeader.new 'complex.h'
   INTTYPES_H = AutoC::SystemHeader.new 'inttypes.h'
 
+
+  # STDLIB_H = AutoC::SystemHeader.new 'stdlib.h'
+  # Required by Visual Studio's rand_s() to work
+  STDLIB_H = AutoC::Code.new interface: %{
+    #ifdef _MSC_VER
+      #define _CRT_RAND_S
+    #endif
+    #include <stdlib.h>
+  }
 
   BOOL = Primitive.new '_Bool', matcher: /^(bool|_Bool)$/, header: STDBOOL_H
 
