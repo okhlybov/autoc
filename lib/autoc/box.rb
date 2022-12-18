@@ -31,11 +31,7 @@ module AutoC
       setup_profile(profile)
       setup_variants(variants)
       @tag_ = "#{signature}_";
-      @default = %{
-        #ifndef NDEBUG
-          abort();
-        #endif
-      }
+      @default = 'abort();'
     end
 
     def render_interface(stream)
