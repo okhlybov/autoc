@@ -18,9 +18,13 @@ module AutoC
 
     attr_reader :node
 
-    def initialize(*args, **kws)
-      super
+    # maintain_size:
+    #  true: managed size field (extra memory consumption)
+    #  false: computing #size function (slow, O(N))
+    def initialize(*args, maintain_size: true, **kws)
+      super(*args, **kws)
       @node = identifier(:_N)
+      @maintain_size = maintain_size
     end
 
     def render_interface(stream)
@@ -45,7 +49,7 @@ module AutoC
         */
         struct #{signature} {
           #{node}* front; /**< @private */
-          size_t size; /**< @private */
+          #{'size_t size; /**< @private */' if @maintain_size}
         };
         /** @private */
         struct #{node} {
@@ -66,7 +70,7 @@ module AutoC
           assert(!#{empty.(target)});
           node = target->front; assert(node);
           target->front = target->front->next;
-          --target->size;
+          #{'--target->size;' if @maintain_size}
           #{memory.free(:node)};
         }
       end
@@ -178,7 +182,7 @@ module AutoC
           #{element.copy.('node->element', value)};
           node->next = target->front;
           target->front = node;
-          ++target->size;
+          #{'++target->size;' if @maintain_size}
         }
         header %{
           @brief Put element
@@ -210,7 +214,7 @@ module AutoC
                 this_node = self->front = node->next;
               }
               removed = 1;
-              --self->size;
+              #{'--self->size;' if @maintain_size}
               #{element.destroy.('node->element') if element.destructible?};
               #{memory.free(:node)};
               node = this_node;
@@ -243,7 +247,7 @@ module AutoC
         inline_code %{
           assert(target);
           target->front = NULL;
-          target->size = 0;
+          #{'target->size = 0;' if @maintain_size}
         }
       end
       destroy.configure do
@@ -271,11 +275,23 @@ module AutoC
           return target->front == NULL;
         }
       end
-      size.configure do
-        inline_code %{
-          assert(target);
-          return target->size;
-        }
+      if @maintain_size
+        size.configure do
+          inline_code %{
+            assert(target);
+            return target->size;
+          }
+        end
+      else
+        size.configure do
+          code %{
+            #{range} r;
+            size_t size;
+            assert(target);
+            for(size = 0, r = #{range.new.(target)}; !#{range.empty.(:r)}; ++size, #{range.pop_front.(:r)});
+            return size;
+          }
+        end
       end
     end
   end # List
