@@ -1,10 +1,10 @@
 require 'autoc'
+require 'autoc/list'
 require 'autoc/vector'
-require 'autoc/hash_map'
 
 main = AutoC::Code.new interface: %{
   /**
-    @mainpage Sample interfaces for the AutoC-generated containers
+    @mainpage AutoC-generated interface reference version #{AutoC::VERSION}
 
     @section intro Introduction
 
@@ -64,24 +64,36 @@ main = AutoC::Code.new interface: %{
   */
   }
 
-require_relative '../test/generic_value'
+require_relative 'generic_value'
 
-class Value < GenericValue
+class DocsValue < GenericValue
   attr_reader :description
   def initialize(type, desc)
-    super(type, visibility: :public)
+    super(type)
     @description = desc
   end
 end
 
-T = Value.new(:T, 'A generic value type')
-K = Value.new(:K, 'A generic hashable value type')
+T = DocsValue.new(:T, 'A generic value type')
+K = DocsValue.new(:K, 'A generic hashable value type')
 
-AutoC::Module.render(:doc) do |m|
-  m << main
-  m << AutoC::Vector.new(:Vector, T)
-  m << AutoC::List.new(:List, T)
-  m << AutoC::HashMap.new(:HashMap, K, T)
-  m << AutoC::HashSet.new(:HashSet, T)
-  m << AutoC::Code.new(definitions: 'int main(int a, char**b) {return 0;}')
+class Docs < AutoC::Module
+  def initialize(*args, **kws)
+    super
+    class << header
+      def file_name = 'autoc.h'
+    end
+  end
+  def render
+    distribute_entities
+    header.render
+  end
 end
+
+m = Docs.new(:autoc)
+m << main
+m << AutoC::Vector.new(:Vector, T)
+m << AutoC::List.new(:List, T)
+#m << AutoC::HashMap.new(:HashMap, K, T)
+#m << AutoC::HashSet.new(:HashSet, T)
+m.render
