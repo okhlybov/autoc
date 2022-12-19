@@ -9,6 +9,8 @@ module AutoC
   # Basic xor-shift incremental hasher
   class Hasher
 
+    include STD
+    
     include Singleton
 
     include Entity
@@ -23,7 +25,7 @@ module AutoC
 
     def result(hasher) = hasher
     
-    def initialize = dependencies << STD::STDLIB_H
+    def initialize = dependencies << STDLIB_H
 
     def render_forward_declarations(stream)
       stream << %{

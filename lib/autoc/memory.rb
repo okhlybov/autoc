@@ -13,11 +13,13 @@ module AutoC
   # Standard C malloc()-based dynamic memory handler
   class Allocator
 
+    include STD
+
     include Singleton
 
     include Entity
 
-    def initialize = dependencies << STD::STDLIB_H
+    def initialize = dependencies << STDLIB_H
 
     def allocate(type, count = 1, zero: false, **kws)
       zero ? "(#{type}*)calloc(#{count}, sizeof(#{type}))" : "(#{type}*)malloc((#{count})*sizeof(#{type}))"

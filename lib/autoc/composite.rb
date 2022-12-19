@@ -28,7 +28,7 @@ module AutoC
       super(signature)
       @methods = {}
       @visibility = visibility
-      dependencies << DEFINITIONS << STD::ASSERT_H << memory << hasher
+      dependencies << DEFINITIONS << ASSERT_H << memory << hasher
     end
 
     def self.new(*args, **kws, &block)

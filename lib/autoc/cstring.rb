@@ -12,6 +12,8 @@ module AutoC
   # Value type string wrapper around plain C string
   class CString < Association
 
+    include STD
+
     include Sequential
 
     def default_constructible? = false
@@ -20,7 +22,7 @@ module AutoC
 
     def initialize(type = :CString, char = :char, parallel: nil, **kws)
       super(type, char, :size_t, **kws)
-      dependencies << STD::STRING_H
+      dependencies << STRING_H
       @parallel = parallel
     end
 
