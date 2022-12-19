@@ -116,7 +116,8 @@ The project's home page is [GitHub](https://github.com/okhlybov/autoc).
 The released ruby gems are published in [RubyGems](https://rubygems.org/gems/autoc).
 
 
+---
+
 _Cheers && happy coding!_
 
 Oleg A. Khlybov <fougas@mail.ru>
-
