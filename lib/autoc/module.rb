@@ -292,8 +292,9 @@ module AutoC
 
     include Entity
 
-    def initialize(interface: nil, implementation: nil)
+    def initialize(interface: nil, implementation: nil, definitions: nil)
       @interface_ = interface
+      @definitions_ = definitions
       @implementation_ = implementation
     end
 
@@ -307,6 +308,10 @@ module AutoC
 
     def render_implementation(stream)
       stream << @implementation_ unless @implementation_.nil?
+    end
+
+    def render_forward_declarations(stream)
+      stream << @definitions_ unless @definitions_.nil?
     end
 
   end # Code
