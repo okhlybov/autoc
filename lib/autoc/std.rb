@@ -50,13 +50,13 @@ module AutoC::STD
 
     def to_value = rvalue
 
-    def rvalue = @rv ||= Value.new(self)
+    def rvalue = @rv ||= AutoC::Value.new(self)
   
-    def lvalue = @lv ||= Value.new(self, reference: true)
+    def lvalue = @lv ||= AutoC::Value.new(self, reference: true)
     
-    def const_rvalue = @crv ||= Value.new(self, constant: true)
+    def const_rvalue = @crv ||= AutoC::Value.new(self, constant: true)
     
-    def const_lvalue = @clv ||= Value.new(self, constant: true, reference: true)
+    def const_lvalue = @clv ||= AutoC::Value.new(self, constant: true, reference: true)
   
   end
 
