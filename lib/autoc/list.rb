@@ -147,7 +147,7 @@ module AutoC
           @param[in] target list to get element from
           @return a *copy* of a front element
 
-          This function is used to get a *copy* of the front value contained in `self`.
+          This function is used to get a *copy* of the front value contained in `target`.
           Refer to @ref #{view_front} to get a view of that element without making an independent copy.
 
           This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
@@ -177,7 +177,7 @@ module AutoC
         header %{
           @brief Drop front element
 
-          @param[in] self list to drop element from
+          @param[in] target list to drop element from
 
           This function removes front element from the list and destroys it with the respective destructor.
 
@@ -210,12 +210,12 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :remove, { self: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
+      method(:int, :remove, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
         code %{
           #{node} *node, *prev_node;
           int removed = 0;
-          assert(self);
-          node = self->front;
+          assert(target);
+          node = target->front;
           prev_node = NULL;
           while(node) {
             if(#{element.equal.('node->element', :value)}) {
@@ -223,10 +223,10 @@ module AutoC
               if(prev_node) {
                 this_node = prev_node->next = node->next;
               } else {
-                this_node = self->front = node->next;
+                this_node = target->front = node->next;
               }
               removed = 1;
-              #{'--self->size;' if @maintain_size}
+              #{'--target->size;' if @maintain_size}
               #{element.destroy.('node->element') if element.destructible?};
               #{memory.free(:node)};
               node = this_node;
@@ -245,7 +245,7 @@ module AutoC
           @param[in] value value to search in list
           @return non-zero value on successful removal and zero value otherwise
 
-          This function searches `self` for a first element equal to the specified `value` and removes it from the list.
+          This function searches `target` for a first element equal to the specified `value` and removes it from the list.
           The removed element is destroyed with respective destructor.
 
           The function return value is non-zero if such element was found and removed and zero value otherwise.
