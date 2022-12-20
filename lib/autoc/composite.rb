@@ -249,8 +249,6 @@ module AutoC
             #{@header}
           */
         }
-      else
-        stream << '/** @private */'
       end
     end
 
