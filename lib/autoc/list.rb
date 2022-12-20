@@ -186,15 +186,21 @@ module AutoC
           @since 2.0
         }
       end
-      method(:void, :push_front, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? }).configure do
+      method("#{node}*", :_new_front, { target: rvalue }, visibility: :internal).configure do
         code %{
           #{node}* node;
           assert(target);
           node = #{memory.allocate(node)};
-          #{element.copy.('node->element', value)};
           node->next = target->front;
           target->front = node;
           #{'++target->size;' if @maintain_size}
+          return node;
+        }
+      end
+      method(:void, :push_front, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? }).configure do
+        code %{
+          #{node}* node = #{_new_front.(target)};
+          #{element.copy.('node->element', value)};
         }
         header %{
           @brief Put element
