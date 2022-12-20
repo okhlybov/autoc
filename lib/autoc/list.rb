@@ -75,7 +75,7 @@ module AutoC
 
     def configure
       super
-      method(:void, :_drop_front, { target: rvalue }, visibility: :internal).configure do
+      method(:void, :_pop_front, { target: rvalue }, visibility: :internal).configure do
         # Destroy front node but keep the element intact
         code %{
           #{node}* node;
@@ -114,7 +114,7 @@ module AutoC
           assert(target);
           assert(!#{empty.(target)});
           result = *#{view_front.(target)};
-          #{_drop_front.(target)};
+          #{_pop_front.(target)};
           return result;
         }
         header %{
@@ -165,13 +165,13 @@ module AutoC
             assert(!#{empty.(target)});
             e = (#{element.lvalue})#{view_front.(target)};
             #{element.destroy.('*e')};
-            #{_drop_front.(target)};
+            #{_pop_front.(target)};
           }
         else
           code %{
             assert(target);
             assert(!#{empty.(target)});
-            #{_drop_front.(target)};
+            #{_pop_front.(target)};
           }
         end
         header %{
