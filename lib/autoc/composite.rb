@@ -18,6 +18,8 @@ module AutoC
   # @abstract
   class Composite < Type
 
+    PRIVATE = '/** @private */'
+
     include STD
 
     include Entity
@@ -70,6 +72,8 @@ module AutoC
       # Carry over the method name's leading underscore only if the prefix is not in turn underscored
       _ && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     end
+
+    def public? = @visibility == :public
 
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
@@ -246,7 +250,7 @@ module AutoC
           */
         }
       else
-        stream << %{/** @private */}
+        stream << '/** @private */'
       end
     end
 
