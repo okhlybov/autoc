@@ -14,39 +14,50 @@ module AutoC
 
   class Vector < Association
 
+    include STD
+
     include Sequential
 
     def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
 
     def initialize(type, element, parallel: nil, **kws)
       super(type, element, :size_t, **kws)
-      dependencies << STD::STRING_H
+      dependencies << STRING_H
       @parallel = parallel
     end
 
     def render_interface(stream)
+      if public?
+        stream << %{
+          /**
+            #{defgroup}
+
+            @brief Resizable vector of elements of type #{element}
+
+            #{type} is a container that encapsulates dynamic size array of values of type #{element}.
+
+            It is a contiguous direct access collection where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
+
+            For iteration over the vector elements refer to @ref #{range}.
+
+            @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
+
+            @since 2.0
+          */
+        }
+        stream << %{
+          /**
+            #{ingroup}
+
+            @brief Opaque structure holding state of the vector
+
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << %{
-        /**
-          #{defgroup}
-
-          @brief Resizable vector of elements of type #{element}
-
-          #{type} is a container that encapsulates dynamic size array of values of type #{element}.
-
-          It is a contiguous direct access collection where elements can be directly referenced by an integer index belonging to the [0, @ref #{size}) range.
-
-          For iteration over the vector elements refer to @ref #{range}.
-
-          @see C++ [std::vector<T>](https://en.cppreference.com/w/cpp/container/vector)
-
-          @since 2.0
-        */
-        /**
-          #{ingroup}
-
-          @brief Opaque structure holding state of the vector
-          @since 2.0
-        */
         typedef struct {
           #{element.lvalue} elements; /**< @private */
           size_t size; /**< @private */
@@ -58,7 +69,6 @@ module AutoC
     def render_implementation(stream)
       if element.comparable?
         stream << %{
-          #include <stdlib.h>
           static int #{ascend}(const void* left, const void* right) {
             return #{element.compare.("(*(#{element.lvalue})left)", "(*(#{element.lvalue})right)")};
           }

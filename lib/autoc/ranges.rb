@@ -358,49 +358,53 @@ module AutoC
     end
 
     def render_interface(stream)
-      case @parallel
-      when nil
-        stream << %{
-          /**
-            #{defgroup}
+      if public?
+        case @parallel
+        when nil
+          stream << %{
+            /**
+              #{defgroup}
 
-            @brief #{tag}
+              @brief #{tag}
 
-            This is the range for contiguous data structures (vectors, strings etc.)
+              This is the range for contiguous data structures (vectors, strings etc.)
 
-            It can be used the following way:
+              It can be used the following way:
 
-            @code{.c}
-            for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
-            @endcode
+              @code{.c}
+              for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+              @endcode
 
-            @see @ref Range
+              @see @ref Range
 
-            @since 2.0
-          */
-        }
-      when :openmp
-        stream << %{
-          /**
-            #{defgroup}
+              @since 2.0
+            */
+          }
+        when :openmp
+          stream << %{
+            /**
+              #{defgroup}
 
-            @brief #{tag}
+              @brief #{tag}
 
-            This is the range for contiguous data structures (vectors, strings etc.)
+              This is the range for contiguous data structures (vectors, strings etc.)
 
-            The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
-            which account for parallel iteration in the way
+              The @ref #{new} and @ref #{custom_create} range constructors create OpenMP-aware range objects
+              which account for parallel iteration in the way
 
-            @code{.c}
-            #pragma omp parallel
-            for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
-            @endcode
+              @code{.c}
+              #pragma omp parallel
+              for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+              @endcode
 
-            @see @ref Range
+              @see @ref Range
 
-            @since 2.0
-          */
-        }
+              @since 2.0
+            */
+          }
+        end
+      else
+        stream << PRIVATE
       end
       stream << %{
         typedef struct {

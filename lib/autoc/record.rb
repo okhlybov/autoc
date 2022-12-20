@@ -31,19 +31,29 @@ module AutoC
     end
 
     def render_interface(stream)
-      stream << %{
-        /**
-          #{defgroup}
-          @brief Value type wrapper of the C struct
-        */
-      }
-      stream << %{
-        /**
-          #{ingroup}
-          @brief Opaque struct holding state of the record
-        */
-      }
-    stream << 'typedef struct {'
+      if public?
+        stream << %{
+          /**
+            #{defgroup}
+
+            @brief Value type wrapper of the C struct
+
+            @since 2.0
+          */
+        }
+        stream << %{
+          /**
+            #{ingroup}
+
+            @brief Opaque struct holding state of the record
+
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
+      stream << 'typedef struct {'
         fields.each { |name, type| stream << field_declaration(type, name) }
       stream << "} #{signature};"
     end

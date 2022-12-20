@@ -35,17 +35,22 @@ module AutoC
     def const_lvalue = @clv ||= Value.new(self, reference: true, constant: true)
 
     def render_interface(stream)
-      super
+      if public?
+        stream << %{
+          /**
+            #{defgroup}
+
+            @brief Value type wrapper around plain C string
+
+            This type represents a (paper thin) wrapper around the plain C string with proper value semantics.
+
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << %{
-        /**
-          #{defgroup}
-
-          @brief Value type wrapper around plain C string
-
-          This type represents a (paper thin) wrapper around the plain C string with proper value semantics.
-
-          @since 2.0
-        */
         typedef #{element.lvalue} #{signature};
       }
     end

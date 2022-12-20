@@ -35,32 +35,43 @@ module AutoC
     end
 
     def render_interface(stream)
-      stream << %{
-        /**
-          #{defgroup}
-          @brief Value type wrapper of the C union
-        */
-      }
-      stream << %{
-        /**
-          #{ingroup}
+      if public?
+        stream << %{
+          /**
+            #{defgroup}
+            @brief Value type wrapper of the C union
+          */
+        }
+        stream << %{
+          /**
+            #{ingroup}
 
-          @brief Box tag set
+            @brief Box tag set
 
-          Use @ref #{identifier(:tag)} to query current box contents. Empty box is always tagged as 0.
+            Use @ref #{identifier(:tag)} to query current box contents. Empty box is always tagged as 0.
 
-          @since 2.0
-        */
-      }
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << 'typedef enum {'
       i = 0; stream << (variants.collect { |name, type| "#{identifier(name)} = #{i+=1}" }).join(',')
       stream << "} #{tag_};"
-      stream << %{
-        /**
-          #{ingroup}
-          @brief Opaque struct holding state of the box
-        */
-      }
+      if public?
+        stream << %{
+          /**
+            #{ingroup}
+
+            @brief Opaque struct holding state of the box
+
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << 'typedef struct {union {'
         variants.each { |name, type| stream << field_declaration(type, name) }
       stream << "} variant; /**< @private */ #{tag_} tag; /**< @private */} #{signature};"

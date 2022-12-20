@@ -29,28 +29,40 @@ module AutoC
 
     def render_interface(stream)
       stream << %{
-        /**
-          #{defgroup}
+        /** @private */
+        typedef struct #{node} #{node};
+      }
+      if public?
+        stream << %{
+          /**
+            #{defgroup}
+  
+            @brief Singly linked list of elements of type #{element}
+  
+            For iteration over the list elements refer to @ref #{range}.
+  
+            @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
+  
+            @since 2.0
+          */
+        }
+        stream << %{
+          /**
+            #{ingroup}
 
-          @brief Singly linked list of elements of type #{element}
+            @brief Opaque structure holding state of the list
 
-          For iteration over the list elements refer to @ref #{range}.
-
-          @see C++ [std::forward_list<T>](https://en.cppreference.com/w/cpp/container/forward_list)
-
-          @since 2.0
-        */
-        typedef struct #{signature} #{signature};
-        typedef struct #{node} #{node}; /**< @private */
-        /**
-          #{ingroup}
-          @brief Opaque structure holding state of the list
-          @since 2.0
-        */
-        struct #{signature} {
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
+      stream << %{
+        typedef struct {
           #{node}* front; /**< @private */
           #{'size_t size; /**< @private */' if @maintain_size}
-        };
+        } #{signature};
         /** @private */
         struct #{node} {
           #{element} element;
@@ -300,12 +312,18 @@ module AutoC
   class List::Range < ForwardRange
 
     def render_interface(stream)
+      if public?
+        stream << %{
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the list's range
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << %{
-        /**
-          #{ingroup}
-          @brief Opaque structure holding state of the list's range
-          @since 2.0
-        */
         typedef struct {
           #{iterable.node}* front; /**< @private */
         } #{signature};
