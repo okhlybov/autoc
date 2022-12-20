@@ -268,7 +268,7 @@ module AutoC
         header %{
           @brief Get a number of elements in the range
 
-          @param[in] self range to query
+          @param[in] range range to query
           @return a number of elements
 
           This function returns a number of elements between the range's front and back positions inclusively.
@@ -408,8 +408,8 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          #{iterable.element.lvalue} front; /** @private */
-          #{iterable.element.lvalue} back; /** @private */
+          #{iterable.element.lvalue} front; /**< @private */
+          #{iterable.element.lvalue} back; /**< @private */
         } #{signature};
       }
     end
