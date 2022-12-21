@@ -35,8 +35,15 @@ module AutoC
       constant? ? "const #{_}" : _
     end
   
-    def call(value) = reference? ? "&(#{value})" : value.to_s
-  
+    def call(value)
+      value = value.to_s
+      if reference?
+        # Manually collapse references &*xyz -> xyz for the sake of source code readability
+        value[0] =='*' ? value[1..-1] : "&#{value}"
+      else
+        value
+      end
+    end
   end # Value
   
   
