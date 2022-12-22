@@ -11,7 +11,9 @@ using AutoC::STD::Coercions
 # Full-fledged value type equipped with dynamic memory management
 # useful for testing & documentation purposes
 class GenericValue < AutoC::Composite
+
   def initialize(type, visibility: :public) = super
+
   def render_interface(stream)
     super
     stream << %{
@@ -23,60 +25,66 @@ class GenericValue < AutoC::Composite
       } #{signature};
     }
   end
-  private def configure
+
+  def rvalue = @rv ||= AutoC::Value.new(self, reference: true)
+  
+  def lvalue = @lv ||= AutoC::Value.new(self, reference: true)
+  
+  def const_rvalue = @crv ||= AutoC::Value.new(self, constant: true)
+  
+  def const_lvalue = @clv ||= AutoC::Value.new(self, constant: true, reference: true)
+
+private
+  
+  def configure
     super
     method(:void, :set, { target: lvalue, value: :int.const_rvalue }, instance: :custom_create).configure do
       code %{
         #{default_create.(target)};
-        *self->value = value;
+        *target->value = value;
       }
     end
     method(:int, :get, { target: const_rvalue }).configure do
       code %{
-        assert(self);
-        return *self->value;
+        return *target.value;
       }
     end
     default_create.configure do
       code %{
-        assert(self);
-        self->value = #{memory.allocate('int')};
-        *self->value = 0;
+        assert(target);
+        target->value = #{memory.allocate('int')};
+        *target->value = 0;
       }
     end
     destroy.configure do
         code %{
-        assert(self);
-        #{memory.free('self->value')};
+        assert(target);
+        #{memory.free('target->value')};
       }
     end
     copy.configure do
       code %{
-        assert(self);
-        assert(source);
-        #{default_create}(self);
-        *self->value = *source->value;
+        assert(target);
+        #{default_create}(target);
+        *target->value = *source.value;
       }
     end
     equal.configure do
       code %{
-        assert(self);
-        assert(other);
-        return *self->value == *other->value;
+        return *left.value == *right.value;
       }
     end
     compare.configure do
       code %{
-        assert(self);
-        assert(other);
-        return *self->value < *other->value ? -1 : (*self->value > *other->value ? +1 : 0);
+        return *left.value < *right.value ? -1 : (*left.value > *right.value ? +1 : 0);
       }
     end
     hash_code.configure do
       code %{
-        assert(self);
-        return *self->value;
+
+        return *target.value;
       }
     end
   end
+
 end
