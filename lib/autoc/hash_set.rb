@@ -62,7 +62,6 @@ module AutoC
       super
       method(:void, :create_capacity, { target: lvalue, capacity: :size_t.rvalue }).configure do
         code %{
-          size_t mask = 0;
           unsigned char bits = 0;
           assert(target);
           target->size = 0;
@@ -122,16 +121,19 @@ module AutoC
       remove.configure do
         code %{
           int c;
+          #{bucket.lvalue} b;
           assert(target);
-          #{bucket.lvalue} b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
-          if(c = #{bucket.remove.('*b', value)}) --target->size;
+          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
+          c = #{bucket.remove.('*b', value)};
+          if(c) --target->size;
           return c;
         }
       end
       put.configure do
         code %{
+          #{bucket.lvalue} b;
           assert(target);
-          #{bucket.lvalue} b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
+          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
           if(!#{bucket.find_first.('*b', value)}) {
             #{_expand.(target, 0)};
             #{bucket.push_front.('*b', value)};
@@ -142,8 +144,9 @@ module AutoC
       end
       push.configure do
         code %{
+          #{bucket.lvalue} b;
           assert(target);
-          #{bucket.lvalue} b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
+          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
           if(#{bucket._replace_first.('*b', value)}) {
             return 1;
           } else {
@@ -190,8 +193,9 @@ module AutoC
       end
       contains.configure do
         code %{
+          #{bucket.const_lvalue} b;
           assert(target);
-          #{bucket.const_lvalue} b = #{_find_bucket.(target, value)};
+          b = #{_find_bucket.(target, value)};
           return #{bucket.contains.('*b', value)};
         }
       end

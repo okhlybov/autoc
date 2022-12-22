@@ -181,7 +181,7 @@ module AutoC
       destroy_elements = "for(index = 0; index < #{size}(target); ++index) {#{element.destroy.("#{storage(:target)}[index]")};}" if element.destructible?
       destroy.configure do
         code %{
-          size_t index;
+          #{'size_t index;' if element.destructible?}
           assert(target);
           #{destroy_elements}
           #{memory.free(storage(:target))};
