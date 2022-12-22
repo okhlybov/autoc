@@ -234,6 +234,7 @@ module AutoC
           assert(target);
           assert(#{check.(target, index)});
           e = (#{element.lvalue})#{view.(target, index)};
+          #{element.destroy.('*e') if element.destructible?};
           #{element.copy.('*e', value)};
         }
       end
