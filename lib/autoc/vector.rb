@@ -76,7 +76,7 @@ module AutoC
             return -#{ascend}(left, right);
           }
           #{sort.prototype} {
-            qsort(#{storage(:target)}, #{size.('*target')}, sizeof(#{element}), ascending ? #{ascend} : #{descend});
+            qsort(#{storage(:target)}, #{size.('*target')}, sizeof(#{element}), direction > 0 ? #{ascend} : #{descend});
           }
         }
       end
@@ -237,15 +237,15 @@ module AutoC
           #{element.copy.('*e', value)};
         }
       end
-      method(:void, :sort, { target: rvalue, ascending: :int.const_rvalue }, constraint:-> { orderable? }, abstract: true).configure do
+      method(:void, :sort, { target: rvalue, direction: :int.const_rvalue }, constraint:-> { orderable? }, abstract: true).configure do
         header %{
           @brief Sort vector's values
 
           @param[in] target vector to sort
-          @param[in] ascending sorting order
+          @param[in] direction sorting direction
 
           This function performs in-place sorting of the contained elements.
-          If `ascending` is non-zero, the elements are placed in ascending (lowest to highset) order,
+          If `direction` is greater than zero, the elements are placed in ascending (lowest to highset) order,
           otherwise the elements are placed in descending (highest to lowest) order.
 
           The sorting process does not reallocate memory nor does it call elements' copy constructors.
