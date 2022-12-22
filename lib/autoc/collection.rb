@@ -45,7 +45,7 @@ module AutoC
     # For container to be hashable a hashable element type is required
     def hashable? = super && element.hashable?
   
-    def tag = "#{signature}<#{element}>"
+    def type_tag = @type_tag ||= "#{signature}<#{element}>"
 
   private
 

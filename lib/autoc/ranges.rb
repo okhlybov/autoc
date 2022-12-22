@@ -29,7 +29,7 @@ module AutoC
       dependencies << (@iterable = iterable) << INFO
     end
 
-    def tag = @tag ||= "#{iterable.tag}::Range"
+    def type_tag = @type_tag ||= "#{iterable.type_tag}::Range"
 
   private
 

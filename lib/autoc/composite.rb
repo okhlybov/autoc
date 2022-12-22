@@ -77,9 +77,9 @@ module AutoC
 
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
-    def tag = signature
+    def type_tag = signature
 
-    def defgroup = @defgroup ||= (public? ? :@public : :@internal).to_s + " @defgroup #{signature} #{tag}"
+    def defgroup = @defgroup ||= (public? ? :@public : :@internal).to_s + " @defgroup #{signature} #{type_tag}"
 
     def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
 
