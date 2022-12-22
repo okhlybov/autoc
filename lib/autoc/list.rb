@@ -31,6 +31,8 @@ module AutoC
       @node_p = "#{node}".lvalue
     end
 
+    def maintain_size? = @maintain_size
+
     def render_interface(stream)
       stream << %{
         /** @private */
@@ -65,7 +67,7 @@ module AutoC
       stream << %{
         typedef struct {
           #{node_p} front; /**< @private */
-          #{'size_t size; /**< @private */' if @maintain_size}
+          #{'size_t size; /**< @private */' if maintain_size?}
         } #{signature};
         /** @private */
         struct #{node} {
@@ -98,7 +100,7 @@ module AutoC
           assert(!#{empty.(target)});
           node = target->front; assert(node);
           target->front = target->front->next;
-          #{'--target->size;' if @maintain_size}
+          #{'--target->size;' if maintain_size?}
           #{memory.free(:node)};
         }
       end
@@ -109,7 +111,7 @@ module AutoC
           assert(!#{empty.(target)});
           node = target->front; assert(node);
           target->front = node->next;
-          #{'--target->size;' if @maintain_size}
+          #{'--target->size;' if maintain_size?}
           return node;
         }
       end
@@ -119,7 +121,7 @@ module AutoC
           assert(target);
           node->next = target->front;
           target->front = node;
-          #{'++target->size;' if @maintain_size}
+          #{'++target->size;' if maintain_size?}
         }
       end
       method(element.const_lvalue, :view_front, { target: const_rvalue }).configure do
@@ -229,7 +231,7 @@ module AutoC
           node = #{memory.allocate(node)};
           node->next = target->front;
           target->front = node;
-          #{'++target->size;' if @maintain_size}
+          #{'++target->size;' if maintain_size?}
           #{element.copy.('node->element', value)};
         }
         header %{
@@ -263,7 +265,7 @@ module AutoC
                 this_node = target->front = node->next;
               }
               removed = 1;
-              #{'--target->size;' if @maintain_size}
+              #{'--target->size;' if maintain_size?}
               #{element.destroy.('node->element') if element.destructible?};
               #{memory.free(:node)};
               node = this_node;
@@ -296,7 +298,7 @@ module AutoC
         inline_code %{
           assert(target);
           target->front = NULL;
-          #{'target->size = 0;' if @maintain_size}
+          #{'target->size = 0;' if maintain_size?}
         }
       end
       destroy.configure do
@@ -324,7 +326,7 @@ module AutoC
           return target->front == NULL;
         }
       end
-      if @maintain_size
+      if maintain_size?
         size.configure do
           inline_code %{
             assert(target);
