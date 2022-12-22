@@ -67,7 +67,7 @@ module AutoC
           target->size = 0;
           /* fix capacity to become the power of 2, encompassing original value */
           if(capacity % 2 == 0) --capacity;
-          while(capacity >> 1) ++bits;
+          while(capacity >>= 1) ++bits;
           capacity = 1 << (bits+1);
           target->hash_mask = capacity-1; /* fast bucket location for value: hash_code(value) & hash_mask */
           #{buckets.custom_create.('target->buckets', capacity)};
