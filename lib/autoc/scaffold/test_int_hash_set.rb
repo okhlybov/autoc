@@ -4,6 +4,19 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 
 	###
 
+	def render_forward_declarations(stream)
+		super
+		stream << %{
+			#include <stdio.h>
+			void #{dump}(#{const_rvalue} target) {
+				for(#{range} r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+					printf("%d ", #{range.take_front}(&r));
+				}
+				printf("\\n");
+			}
+		}
+	end
+
 	setup %{
 		#{self} t;
 	}
@@ -16,6 +29,53 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		#{create}(&t);
 		TEST_TRUE( #{empty}(&t) );
 		TEST_EQUAL( #{size}(&t), 0 );
+	}
+
+	test :iterate_0, %{
+		#{create}(&t);
+		#{range} r = #{range.new}(&t);
+		TEST_TRUE( #{range.empty}(&r) );
+	}
+
+	test :iterate_1, %{
+		#{create}(&t);
+		TEST_EQUAL( #{size}(&t), 0 );
+		#{put}(&t, -3);
+		TEST_EQUAL( #{size}(&t), 1 );
+		#{range} r = #{range.new}(&t);
+		TEST_FALSE( #{range.empty}(&r) );
+		TEST_EQUAL( #{range.take_front}(&r), -3 );
+		#{range.pop_front}(&r);
+		TEST_TRUE( #{range.empty}(&r) );
+	}
+
+	###
+
+	setup %{
+		#{self} t;
+		#{create}(&t);
+		for(int i = 0; i < 3; ++i) {
+			#{put}(&t, i*11);
+		}
+	}
+
+	cleanup %{
+		#{destroy}(&t);
+	}
+
+	test :iterate_3, %{
+		TEST_EQUAL( #{size}(&t), 3);
+		#{range} r = #{range.new}(&t);
+		TEST_FALSE( #{range.empty}(&r) );
+		#{range.take_front}(&r);
+		#{range.pop_front}(&r);
+		TEST_FALSE( #{range.empty}(&r) );
+		#{range.take_front}(&r);
+		#{range.pop_front}(&r);
+		TEST_FALSE( #{range.empty}(&r) );
+		#{range.take_front}(&r);
+		#{range.pop_front}(&r);
+		TEST_TRUE( #{range.empty}(&r) );
 	}
 
 	###
@@ -238,14 +298,17 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 	}
 
 	test :join, %{
+		/* 1,2,3 */
 		TEST_TRUE( #{put}(&r, 1) );
 		TEST_TRUE( #{put}(&r, 2) );
 		TEST_TRUE( #{put}(&r, 3) );
+		/* 1,2 */
 		TEST_TRUE( #{put}(&t1, 1) );
 		TEST_TRUE( #{put}(&t1, 2) );
+		/* 1,3 */
 		TEST_TRUE( #{put}(&t2, 1) );
 		TEST_TRUE( #{put}(&t2, 3) );
-		#{join}(&t1, &t2);
+		#{join}(&t1, &t2); /* 1,2 | 1,3 -> 1,2,3 */
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
 		TEST_FALSE( #{equal}(&r, &t2) );
