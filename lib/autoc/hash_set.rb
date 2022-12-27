@@ -247,18 +247,26 @@ module AutoC
 
     def configure
       super
-      method(:void, :_next_bucket, { range: rvalue, initial: :int.rvalue } ).configure do
+      method(:void, :_advance, { range: rvalue } ).configure do
         code %{
           assert(range);
-          do {
-            if(initial) {
-              #{iterable.bucket.const_lvalue} b = #{iterable.buckets.range.view_front.('range->buckets')};
-              range->bucket = #{iterable.bucket.range.new.('*b')};
-            } else initial = 0;
+          while(1) {
             if(#{iterable.bucket.range.empty.('range->bucket')}) {
+              /* current bucket's range is empty - iterate forward to the next one */
               #{iterable.buckets.range.pop_front.('range->buckets')};
-            } else break;
-          } while(! #{iterable.buckets.range.empty.('range->buckets')});
+              if(#{iterable.buckets.range.empty.('range->buckets')}) {
+                /* all buckets are iterated through, bucket range is also empty - end of set */
+                break;
+              } else {
+                /* advance to the new (possibly empty) bucket */
+                #{iterable.bucket.const_lvalue} b = #{iterable.buckets.range.view_front.('range->buckets')};
+                range->bucket = #{iterable.bucket.range.new.('*b')};
+              }
+            } else {
+              /* current bucket's range is not empty - no need to proceed */
+              break;
+            }
+          }
         }
       end
       custom_create.configure do
@@ -266,7 +274,11 @@ module AutoC
           assert(range);
           assert(iterable);
           range->buckets = #{_iterable.buckets.range.new.('iterable->buckets')};
-          #{_next_bucket.(range, 1)};
+          /* get the first bucket's range regardless of its emptiness status */
+          #{_iterable.bucket.const_lvalue} b = #{_iterable.buckets.range.view_front.('range->buckets')};
+          range->bucket = #{_iterable.bucket.range.new.('*b')};
+          /* actually advance to the first non-empty bucket */
+          #{_advance.(range)};
         }
       end
       empty.configure do
@@ -279,7 +291,7 @@ module AutoC
         code %{
           assert(range);
           #{iterable.bucket.range.pop_front.('range->bucket')};
-          if(#{iterable.bucket.range.empty.('range->bucket')}) #{_next_bucket.(range, 0)};
+          #{_advance.(range)};
         }
       end
       view_front.configure do

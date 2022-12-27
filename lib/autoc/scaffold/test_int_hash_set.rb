@@ -67,13 +67,10 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		TEST_EQUAL( #{size}(&t), 3);
 		#{range} r = #{range.new}(&t);
 		TEST_FALSE( #{range.empty}(&r) );
-		#{range.take_front}(&r);
 		#{range.pop_front}(&r);
 		TEST_FALSE( #{range.empty}(&r) );
-		#{range.take_front}(&r);
 		#{range.pop_front}(&r);
 		TEST_FALSE( #{range.empty}(&r) );
-		#{range.take_front}(&r);
 		#{range.pop_front}(&r);
 		TEST_TRUE( #{range.empty}(&r) );
 	}
