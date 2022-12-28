@@ -276,7 +276,7 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 	###
 
 	setup %{
-		#{self} t1, t2, r;
+		#{self} t1, t2, r, t;
 		#{create}(&t1);
 		#{create}(&t2);
 		#{create}(&r);
@@ -286,12 +286,15 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		#{destroy}(&t1);
 		#{destroy}(&t2);
 		#{destroy}(&r);
+		#{destroy}(&t);
 	}
 
 	test :join_empty, %{
+		#{create_join}(&t, &t1, &t2);
 		#{join}(&t1, &t2);
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&r, &t2) );
+		TEST_TRUE( #{equal}(&r, &t) );
 	}
 
 	test :join, %{
@@ -305,73 +308,134 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		/* 1,3 */
 		TEST_TRUE( #{put}(&t2, 1) );
 		TEST_TRUE( #{put}(&t2, 3) );
+		#{create_join}(&t, &t1, &t2);
 		#{join}(&t1, &t2); /* 1,2 | 1,3 -> 1,2,3 */
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
 		TEST_FALSE( #{equal}(&r, &t2) );
 		TEST_FALSE( #{equal}(&t2, &r) );
+		TEST_TRUE( #{equal}(&t, &r) );
 	}
 
 	test :subtract, %{
+		/* 0,2 */
 		TEST_TRUE( #{put}(&r, 0) );
 		TEST_TRUE( #{put}(&r, 2) );
+		/* 0,1,2 */
 		TEST_TRUE( #{put}(&t1, 0) );
 		TEST_TRUE( #{put}(&t1, 1) );
 		TEST_TRUE( #{put}(&t1, 2) );
+		/* 1,3 */
 		TEST_TRUE( #{put}(&t2, 1) );
 		TEST_TRUE( #{put}(&t2, 3) );
+		#{create_difference}(&t, &t1, &t2); /* 0,1,2 - 1,3 -> 0,2 */
 		#{subtract}(&t1, &t2);
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
 		TEST_FALSE( #{equal}(&r, &t2) );
 		TEST_FALSE( #{equal}(&t2, &r) );
+		TEST_TRUE( #{equal}(&t, &t1) );
 	}
 
 	test :intersect_disjoint, %{
+		/* 1,2,3 */
 		TEST_TRUE( #{put}(&t1, 1) );
 		TEST_TRUE( #{put}(&t1, 2) );
 		TEST_TRUE( #{put}(&t1, 3) );
+		/* -1,-2,-3 */
 		TEST_TRUE( #{put}(&t2, -1) );
 		TEST_TRUE( #{put}(&t2, -2) );
 		TEST_TRUE( #{put}(&t2, -3) );
+		#{create_intersection}(&t, &t1, &t2);
 		#{intersect}(&t1, &t2);
+		TEST_TRUE( #{empty}(&t1) );
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
+		TEST_TRUE( #{equal}(&t, &r) );
+		TEST_TRUE( #{empty}(&t) );
 	}
 
 	test :intersect_equal, %{
+		/* 1,2,3 */
 		TEST_TRUE( #{put}(&t1, 1) );
 		TEST_TRUE( #{put}(&t1, 2) );
 		TEST_TRUE( #{put}(&t1, 3) );
-		TEST_TRUE( #{put}(&t2, 1) );
-		TEST_TRUE( #{put}(&t2, 2) );
+		/* 1,2,3 */
 		TEST_TRUE( #{put}(&t2, 3) );
+		TEST_TRUE( #{put}(&t2, 2) );
+		TEST_TRUE( #{put}(&t2, 1) );
+		/* 1,2,3 */
 		TEST_TRUE( #{put}(&r, 3) );
 		TEST_TRUE( #{put}(&r, 2) );
 		TEST_TRUE( #{put}(&r, 1) );
-		#{intersect}(&t1, &t2);
+		#{create_intersection}(&t, &t1, &t2);
+		#{intersect}(&t1, &t2); /* 1,2,3 & 1,2,3 -> 1,2,3 */
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
 		TEST_TRUE( #{equal}(&r, &t2) );
 		TEST_TRUE( #{equal}(&t2, &r) );
 		TEST_TRUE( #{equal}(&t1, &t2) );
 		TEST_TRUE( #{equal}(&t2, &t1) );
+		TEST_TRUE( #{equal}(&t, &r) );
 	}
 
 	test :intersect, %{
+		/* 0,1,2,3 */
 		TEST_TRUE( #{put}(&t1, 1) );
 		TEST_TRUE( #{put}(&t1, 2) );
 		TEST_TRUE( #{put}(&t1, 3) );
+		/* 0,-1,-2,-3 */
 		TEST_TRUE( #{put}(&t2, -1) );
 		TEST_TRUE( #{put}(&t2, -2) );
 		TEST_TRUE( #{put}(&t2, -3) );
 		TEST_TRUE( #{put}(&t1, 0) );
 		TEST_TRUE( #{put}(&t2, 0) );
 		TEST_TRUE( #{put}(&r, 0) );
-		#{intersect}(&t1, &t2);
+		#{create_intersection}(&t, &t1, &t2);
+		#{intersect}(&t1, &t2); /* 0,1,2,3  &  0,-1,-2,-3 -> 0 */
 		TEST_TRUE( #{equal}(&r, &t1) );
 		TEST_TRUE( #{equal}(&t1, &r) );
 		TEST_FALSE( #{equal}(&r, &t2) );
 		TEST_FALSE( #{equal}(&t2, &r) );
+		TEST_TRUE( #{equal}(&r, &t) );
 	}
+
+	test :disjoin_disjoint, %{
+		/* 1,2 */
+		TEST_TRUE( #{put}(&t1, 1) );
+		TEST_TRUE( #{put}(&t1, 2) );
+		/* 3,4 */
+		TEST_TRUE( #{put}(&t2, 4) );
+		TEST_TRUE( #{put}(&t2, 3) );
+		/* 1,2,3,4 */
+		TEST_TRUE( #{put}(&r, 3) );
+		TEST_TRUE( #{put}(&r, 1) );
+		TEST_TRUE( #{put}(&r, 2) );
+		TEST_TRUE( #{put}(&r, 4) );
+		#{create_disjunction}(&t, &t2, &t1);
+		#{disjoin}(&t1, &t2);
+		TEST_TRUE( #{equal}(&r, &t1) ); /* 1,2 ^ 3,4 -> 1,2,3,4 */
+		TEST_TRUE( #{equal}(&r, &t) );
+	}
+
+	test :disjoin, %{
+		/* 1,2,-3 */
+		TEST_TRUE( #{put}(&t1, -3) );
+		TEST_TRUE( #{put}(&t1, 1) );
+		TEST_TRUE( #{put}(&t1, 2) );
+		/* 3,4, -3 */
+		TEST_TRUE( #{put}(&t2, 4) );
+		TEST_TRUE( #{put}(&t2, 3) );
+		TEST_TRUE( #{put}(&t2, -3) );
+		/* 1,2,3,4 */
+		TEST_TRUE( #{put}(&r, 3) );
+		TEST_TRUE( #{put}(&r, 1) );
+		TEST_TRUE( #{put}(&r, 2) );
+		TEST_TRUE( #{put}(&r, 4) );
+		#{create_disjunction}(&t, &t2, &t1);
+		#{disjoin}(&t1, &t2);
+		TEST_TRUE( #{equal}(&r, &t1) ); /* 1,2, -3 ^ 3,4, -3 -> 1,2,3,4 */
+		TEST_TRUE( #{equal}(&r, &t) );
+	}
+
 end

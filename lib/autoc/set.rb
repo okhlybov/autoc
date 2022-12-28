@@ -74,131 +74,249 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :disjoint, { left: const_rvalue, right: const_rvalue }, constraint:-> { element.comparable? }).configure do
-        code %{
-          #{range} r;
-          #{element.const_lvalue} e;
-          assert(left);
-          assert(right);
-          for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            e = #{range.view_front.(:r)};
-            if(#{contains.(right, '*e')}) return 0;
-          }
-          for(r = #{range.new.(right)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            e = #{range.view_front.(:r)};
-            if(#{contains.(left, '*e')}) return 0;
-          }
-          return 1;
-        }
-        header %{
-          @brief Scan two sets for common elements
-
-          @param[in] left set to check
-          @param[in] right set to check
-          @return non-zero value if sets share no common elements and zero value otherwise
-
-          This function returns non-zero value if the specified sets are disjoint (mutually exclusive) that is they share no common elements and zero value otherwise.
-
-          @since 2.0
-        }
-      end
-      method(:void, :join, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
-        code %{
-          #{range} r;
-          #{element.const_lvalue} e;
-          assert(target);
-          assert(source);
-          for(r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            e = #{range.view_front.(:r)};
-            #{put.(target, '*e')};
-          }
-        }
-        header %{
-          @brief Join sets
-
-          @param[in] target set to merge to
-          @param[in] source set to get elements from
-
-          This function copies all (new) elements from `source` set to `target` set.
-          This is effectively a set join operation _target | source -> target_.
-
-          @since 2.0
-        }
-      end
-      method(:void, :subtract, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
-        code %{
-          #{range} r;
-          #{element.const_lvalue} e;
-          assert(target);
-          assert(source);
-          for(r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            e = #{range.view_front.(:r)};
-            #{remove.(target, '*e')};
-          }
-        }
-        header %{
-          @brief Set substraction
-
-          @param[in] target set to subtract from
-          @param[in] source set to get elements for subtraction
-
-          This function removes all elements from `target` set which are contained in `source` set.
-          This is effectively a set subtraction operation _target \\ source -> target_.
-
-          @since 2.0
-        }
-      end
-      method(:void, :intersect, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
-        code %{
-          #{type} t;
-          assert(target);
-          assert(source);
-          #{copy.(:t, target)};
-          #{subtract.(:t, source)};
-          #{subtract.(target, :t)};
-          #{destroy.(:t)};
-        }
-        header %{
-          @brief Set intersection
-
-          @param[in] target set to retain elements
-          @param[in] source set to get elements for consideration
-
-          This function retains elements in `target` set which are also contained in `source` set.
-          This is effectively a set intersection operation _target & source -> target_.
-
-          @since 2.0
-        }
-      end
-      method(:void, :disjoin, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
-        code %{
-          #{type} t;
-          assert(target);
-          assert(source);
-          #{copy.(:t, target)};
-          #{intersect.(:t, source)};
-          #{join.(target, source)};
-          #{subtract.(target, :t)};
-          #{destroy.(:t)};
-        }
-        header %{
-          @brief Set difference
-
-          @param[in] target set to retain elements
-          @param[in] source set to get elements for consideration
-
-          This function collects elements in `target` which are contained in either `target` set or `source` set, but not in both.
-          This is effectively a set symmetric difference operation _target ^ source -> target_.
-
-          @since 2.0
-        }
-      end
       equal.configure do
         code %{
           assert(left);
           assert(right);
           return #{subset.(left, right)} && #{subset.(right, left)};
         }
+      end
+      unless @omit_set_operations
+        method(:int, :disjoint, { left: const_rvalue, right: const_rvalue }, constraint:-> { element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(left);
+            assert(right);
+            for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(#{contains.(right, '*e')}) return 0;
+            }
+            for(r = #{range.new.(right)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(#{contains.(left, '*e')}) return 0;
+            }
+            return 1;
+          }
+          header %{
+            @brief Scan two sets for common elements
+
+            @param[in] left set to check
+            @param[in] right set to check
+            @return non-zero value if sets share no common elements and zero value otherwise
+
+            This function returns non-zero value if the specified sets are disjoint that is they share no common elements and zero value otherwise.
+
+            @since 2.0
+          }
+        end
+        method(:void, :join, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(source);
+            for(r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              #{put.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Join sets
+
+            @param[in] target set to merge to
+            @param[in] source set to get elements from
+
+            This function copies all (new) elements from `source` set to `target` set.
+            This is effectively a set join operation _target | source -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :create_join, { target: lvalue, left: const_rvalue, right: const_rvalue }, constraint:-> { default_constructible? && element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(left);
+            assert(right);
+            #{default_create.(target)}; /* TODO create a set with specified capacity right away */
+            for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              #{put.(target, '*e')};
+            }
+            for(r = #{range.new.(right)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              #{put.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Join sets into new set
+
+            @param[out] target set to merge set into
+            @param[in] left set to merge
+            @param[in] right set to merge
+
+            This function creates a new `target` set which contains copies of elements from both source sets.
+            This is effectively a set join operation _left | right -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :subtract, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(source);
+            for(r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              #{remove.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Set substraction
+
+            @param[in] target set to subtract from
+            @param[in] source set to get elements for subtraction
+
+            This function removes all elements from `target` set which are contained in `source` set.
+            This is effectively a set subtraction operation _target \\ source -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :create_difference, { target: lvalue, left: const_rvalue, right: const_rvalue }, constraint:-> { default_constructible? && element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(left);
+            assert(right);
+            #{default_create.(target)};
+            for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(!#{contains.(right, '*e')}) #{put.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Perform sets substraction into new set
+
+            @param[out] target set to contain difference
+            @param[in] left set to subtract from
+            @param[in] right set to subtract
+
+            This function creates new set and populates it with the copies of values from `left` set not contained in `right` set.
+            This is effectively a set subtraction operation _left \\ right -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :intersect, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
+          code %{
+            #{type} t;
+            assert(target);
+            assert(source);
+            #{copy.(:t, target)};
+            #{subtract.(:t, source)};
+            #{subtract.(target, :t)};
+            #{destroy.(:t)};
+          }
+          header %{
+            @brief Set intersection
+
+            @param[in] target set to retain elements
+            @param[in] source set to get elements for consideration
+
+            This function retains elements in `target` set which are also contained in `source` set.
+            This is effectively a set intersection operation _target & source -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :create_intersection, { target: lvalue, left: const_rvalue, right: const_rvalue }, constraint:-> { default_constructible? && element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(left);
+            assert(right);
+            #{default_create.(target)};
+            for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(#{contains.(right, '*e')}) #{put.(target, '*e')};
+            }
+            for(r = #{range.new.(right)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(#{contains.(left, '*e')}) #{put.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Perform sets intersection into new set
+
+            @param[out] target set to contain intersection
+            @param[in] left set to get elements from
+            @param[in] right set to get elements from
+
+            This function creates a new set which contains copies of the elements shared by both source sets.
+            This is effectively a set intersection operation left & right -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :disjoin, { target: rvalue, source: const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
+          code %{
+            #{type} t;
+            assert(target);
+            assert(source);
+            #{copy.(:t, target)};
+            #{intersect.(:t, source)};
+            #{join.(target, source)};
+            #{subtract.(target, :t)};
+            #{destroy.(:t)};
+          }
+          header %{
+            @brief Set symmetric difference
+
+            @param[in] target set to retain elements
+            @param[in] source set to get elements for consideration
+
+            This function collects elements in `target` which are contained in either `target` set or `source` set, but not in both.
+            This is effectively a set symmetric difference operation _target ^ source -> target_.
+
+            @since 2.0
+          }
+        end
+        method(:void, :create_disjunction, { target: lvalue, left: const_rvalue, right: const_rvalue }, constraint:-> { default_constructible? && element.copyable? && element.comparable? }).configure do
+          code %{
+            #{range} r;
+            #{element.const_lvalue} e;
+            assert(target);
+            assert(left);
+            assert(right);
+            #{default_create.(target)};
+            for(r = #{range.new.(left)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(!#{contains.(right, '*e')}) #{put.(target, '*e')};
+            }
+            for(r = #{range.new.(right)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+              e = #{range.view_front.(:r)};
+              if(!#{contains.(left, '*e')}) #{put.(target, '*e')};
+            }
+          }
+          header %{
+            @brief Perform symmetric sets difference into new set
+
+            @param[out] target set to contain difference
+            @param[in] left set to get elements from
+            @param[in] right set to get elements from
+
+            This function creates a new set which contains copies of elements which are contained in either `target` set or `source` set, but not in both.
+            This is effectively a set symmetric difference operation left ^ right -> target_.
+
+            @since 2.0
+          }
+        end
       end
     end
 
