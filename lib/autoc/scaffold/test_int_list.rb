@@ -11,6 +11,7 @@ require 'autoc/list'
 
 		setup %{
 			#{self} t;
+			#{create}(&t);
 		}
 
 		cleanup %{
@@ -18,9 +19,25 @@ require 'autoc/list'
 		}
 
 		test :create, %{
-			#{create}(&t);
 			TEST_TRUE( #{empty}(&t) );
 			TEST_EQUAL( #{size}(&t), 0 );
+		}
+
+		test :copy_empty, %{
+			#{self} r;
+			#{copy}(&r, &t);
+			TEST_TRUE( #{equal}(&r, &t) );
+			#{destroy}(&r);
+		}
+
+		test :copy, %{
+			#{self} r;
+			#{push_front}(&t, 1);
+			#{push_front}(&t, 2);
+			#{push_front}(&t, 3);
+			#{copy}(&r, &t);
+			TEST_TRUE( #{equal}(&r, &t) );
+			#{destroy}(&r);
 		}
 
 		###

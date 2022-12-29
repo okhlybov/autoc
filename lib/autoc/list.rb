@@ -309,15 +309,18 @@ module AutoC
       end
       copy.configure do
         code %{
+          size_t i;
           #{range} r;
+          #{element.const_lvalue}* t;
           assert(target);
           assert(source);
           #{default_create.(target)};
-          for(r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
-            #{element.const_lvalue} e = #{range.view_front.(:r)};
-            #{push_front.(target, '*e')};
+          t = #{memory.allocate(element.const_lvalue, size.(source))};
+          for(i = 0, r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+            t[i++] = #{range.view_front.(:r)};
           }
-          /* FIXME this code yields a reversed list TODO */
+          while(i > 0) #{push_front.(target, '*t[(i--)-1]')}; /* put elements in reverse order id the list itself is a LIFO structure */
+          #{memory.free(:t)};
         }
       end
       empty.configure do
