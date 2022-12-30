@@ -9,7 +9,8 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 		stream << %{
 			#include <stdio.h>
 			void #{dump}(#{const_rvalue} target) {
-				for(#{range} r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+				#{range} r;
+				for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
 					printf("%d ", #{range.take_front}(&r));
 				}
 				printf("\\n");
@@ -52,9 +53,10 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 	###
 
 	setup %{
+		int i;
 		#{self} t;
 		#{create}(&t);
-		for(int i = 0; i < 3; ++i) {
+		for(i = 0; i < 3; ++i) {
 			#{put}(&t, i*11);
 		}
 	}
