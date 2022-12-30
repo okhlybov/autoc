@@ -112,7 +112,7 @@ module AutoC
         parameters, # TODO force parameter types coercion
         inline:,
         visibility: (visibility.nil? ? self.visibility : visibility), # Method's visibility property can be borrowed from the type itself
-        requirement: constraint,
+        constraint: constraint,
         **kws
       )
       raise "##{instance} method redefinition is not allowed" if @methods.has_key?(instance)

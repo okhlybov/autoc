@@ -89,12 +89,12 @@ module AutoC
 
     attr_writer :inline
 
-    def initialize(result, name, parameters, inline: false, visibility: :public, requirement: true, abstract: false)
+    def initialize(result, name, parameters, inline: false, visibility: :public, constraint: true, abstract: false)
       @name = name.to_s
       @result = result
       @inline = inline
       @visibility = visibility
-      @requirement = requirement
+      @constraint = constraint
       @abstract = abstract
       @parameters = Parameters.new(self)
       if parameters.is_a?(Hash)
@@ -135,7 +135,7 @@ module AutoC
 
     def abstract? = @abstract == true
   
-    def live? = (@requirement.is_a?(Proc) ? @requirement.() : @requirement) == true
+    def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
     
     def signature = '%s(%s)' % [result.signature, parameters.to_a.collect(&:signature).join(',')]
   
