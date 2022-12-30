@@ -89,13 +89,14 @@ module AutoC
 
     attr_writer :inline
 
-    def initialize(result, name, parameters, inline: false, visibility: :public, constraint: true, abstract: false)
+    def initialize(result, name, parameters, inline: false, visibility: :public, constraint: true, variadic: false, abstract: false)
       @name = name.to_s
       @result = result
       @inline = inline
       @visibility = visibility
       @constraint = constraint
       @abstract = abstract
+      @variadic = variadic
       @parameters = Parameters.new(self)
       if parameters.is_a?(Hash)
         parameters.each do |name, descriptor|
@@ -135,11 +136,13 @@ module AutoC
 
     def abstract? = @abstract == true
   
+    def variadic? = @variadic == true
+
     def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
     
-    def signature = '%s(%s)' % [result.signature, parameters.to_a.collect(&:signature).join(',')]
+    def signature = '%s(%s)' % [result.signature, (parameters.to_a.collect(&:signature) << (variadic? ? '...' : nil)).compact.join(',')]
   
-    def prototype = '%s %s(%s)' % [result.signature, name, parameters.to_a.collect(&:declaration).join(',')]
+    def prototype = '%s %s(%s)' % [result.signature, name, (parameters.to_a.collect(&:declaration) << (variadic? ? '...' : nil)).compact.join(',')]
   
     def definition = '%s {%s}' % [prototype, @code]
   
