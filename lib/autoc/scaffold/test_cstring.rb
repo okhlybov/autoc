@@ -18,9 +18,25 @@ CString = type_test(AutoC::CString,  :CString) do
     TEST_TRUE( #{empty}(s) );
   }
 
-  test :create_non_nempty, %{
+  test :create_non_empty, %{
     #{custom_create.(:s, %{"hello"})};
     TEST_EQUAL( #{size.(:s)}, 5 );
+  }
+
+  test :format_empty, %{
+    TEST_TRUE( #{create_format.(:s, %{""})} );
+    TEST_TRUE( #{empty}(s) );
+  }
+
+  test :format_empty_params, %{
+    TEST_TRUE( #{create_format.(:s, %{"hello"})} );
+    TEST_TRUE( #{equal}(s, "hello") );
+    TEST_FALSE( #{empty}(s) );
+  }
+  
+  test :format_int, %{
+    TEST_TRUE( #{create_format.(:s, %{"hello%d"}, -3)} );
+    TEST_TRUE( #{equal}("hello-3", s) );
   }
 
   test :equal_cstr, %{

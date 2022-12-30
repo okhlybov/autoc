@@ -57,6 +57,18 @@ module AutoC
 
     def storage(target) = target # Return C pointer to contiguous storage
 
+    def render_implementation(stream)
+      stream << %{
+        #include <stdarg.h>
+        #include <stdlib.h>
+        /* overridable internal buffer size (in chars, not bytes) for s*printf() operations */
+        #ifndef AUTOC_BUFFER_SIZE
+          #define AUTOC_BUFFER_SIZE 1024
+        #endif
+      }
+      super
+    end
+
   private
 
     def configure
@@ -85,6 +97,58 @@ module AutoC
           *target = #{memory.allocate(element, 'size+1', atomic: true)}; assert(*target);
           memcpy(*target, source, size*sizeof(#{element}));
           (*target)[size] = '\\0';
+        }
+      end
+      method(:int, :create_format, { target: lvalue, format: const_rvalue }, variadic: true ).configure do
+        code %{
+          int r;
+          va_list args;
+          #if __STDC_VERSION__ >= 199901L || defined(_MSC_VER) || defined(HAVE_VSNPRINTF)
+            va_start(args, format);
+            r = vsnprintf(NULL, 0, format, args);
+            va_end(args);
+            if(r < 0) return 0;
+            *target = #{memory.allocate(element, 'r+1', atomic: true)}; assert(*target);
+            va_start(args, format);
+            r = vsnprintf(*target, r+1, format, args);
+            va_end(args);
+            return r >= 0;
+          #else
+            #warning this code employs bare sprintf() with preallocated temporary buffer of AUTOC_BUFFER_SIZE chars; expect execution bail outs upon exceeding this limit
+            va_start(args, format);
+            #{element.lvalue} t = #{memory.allocate(element, :AUTOC_BUFFER_SIZE, atomic: true)}; assert(t);
+            r = vsprintf(t, format, args);
+            if(r >= 0) {
+              if(r > AUTOC_BUFFER_SIZE-1) {
+                /*
+                  the output spilled out of the preallocated buffer -
+                  perfer to bail out right away rather than to get likely heap corruption
+                */
+                abort();
+              }
+              /* prefer precision over performance and make a copy instead of returning a (possibly excessive) buffer */
+              #{default_create.(target, :t)};
+            }
+            /* FIXME handle the case of simultaneous (r < 0 && buffer overrun) */
+            #{memory.free(:t)};
+            va_end(args);
+            return r >= 0;
+          #endif
+        }
+        header %{
+          @brief Create formatted string
+
+          @param[out] target string to be created
+          @param[in] format format template
+          @param[in] ... format parameters
+
+          @result non-zero value on successful construction and zero value otherwise
+
+          This function employs a standard C function from the s*printf() family to create new formatted string.
+
+          @note No `*target` is modified on function failure.
+
+          @since 2.0
         }
       end
       destroy.configure do
