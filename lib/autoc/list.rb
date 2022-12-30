@@ -319,7 +319,7 @@ module AutoC
           for(i = 0, r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
             t[i++] = #{range.view_front.(:r)};
           }
-          while(i > 0) #{push_front.(target, '*t[(i--)-1]')}; /* put elements in reverse order id the list itself is a LIFO structure */
+          while(i > 0) #{push_front.(target, '*t[(i--)-1]')}; /* put elements in reverse order since the list itself is a LIFO structure */
           #{memory.free(:t)};
         }
       end
