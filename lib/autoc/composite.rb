@@ -26,12 +26,14 @@ module AutoC
 
     attr_reader :visibility
 
-    def initialize(signature, visibility: :public, decorator: nil)
+    def initialize(signature, visibility: :public, decorator: nil, allocator: nil, hasher: nil)
       super(signature)
       @methods = {}
+      @hasher = hasher
       @decorator = decorator
+      @allocator = allocator
       @visibility = visibility
-      dependencies << DEFINITIONS << ASSERT_H << memory << hasher
+      dependencies << DEFINITIONS << ASSERT_H << self.memory << self.hasher
     end
 
     def self.new(*args, **kws, &block)
@@ -39,12 +41,6 @@ module AutoC
       obj.send(:configure)
       obj
     end
-
-    def self.decorator=(decorator)
-      @@decorator = decorator
-    end
-
-    def self.decorator = @@decorator
 
     def to_value = Value.new(self)
 
@@ -68,8 +64,6 @@ module AutoC
 
     def public? = @visibility == :public
 
-    #def internal? = @visibility == :internal
-
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
     def type_tag = signature
@@ -78,9 +72,25 @@ module AutoC
 
     def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
 
-    def memory = Allocator.instance # Using standard malloc() & free() by default
+    def memory = (@allocator.nil? ? Composite.allocator : @allocator)
 
-    def hasher = Hasher.instance
+    def hasher = (@hasher.nil? ? Composite.hasher : @hasher)
+
+    def self.decorator=(decorator) @decorator = decorator end
+
+    def self.decorator = @decorator
+
+    def self.allocator=(allocator) @allocator = allocator end
+
+    def self.allocator = @allocator
+
+    self.allocator = Allocator.instance # Standard C malloc() & free() memory handler
+
+    def self.hasher=(hasher) @hasher = hasher end
+
+    def self.hasher = @hasher
+
+    self.hasher = Hasher.instance # Default cycle-xor hasher
 
     # Pluggable CamelCase identifier decorator
     CAMEL_CASE_DECORATOR = -> (type, symbol, abbreviate: false, **kws) {
@@ -115,7 +125,7 @@ module AutoC
       _ && !type.prefix.start_with?('_') ? Regexp.last_match(1) + id : id
     }
 
-    @@decorator = CAMEL_CASE_DECORATOR
+    self.decorator = CAMEL_CASE_DECORATOR
 
   private
     
@@ -287,10 +297,6 @@ module AutoC
     end
 
   end # Method
-
-
-  class Composite::Decorator
-  end # Decorator
 
 
   Composite::DEFINITIONS = Code.new interface: %{
