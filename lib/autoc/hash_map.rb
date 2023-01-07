@@ -16,9 +16,9 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def node = @node ||= Node.new(identifier(:_N), { index: index, element: element }, visibility: :internal )
+    def node = @node ||= Node.new(identifier(:_node, abbreviate: true), { index: index, element: element }, visibility: :internal )
 
-    def set = @set ||= Set.new(identifier(:_S), node, visibility: :internal)
+    def set = @set ||= Set.new(identifier(:_set, abbreviate: true), node, visibility: :internal)
 
     def initialize(*args, **kws)
       super

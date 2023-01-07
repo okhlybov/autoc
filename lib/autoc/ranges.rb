@@ -25,7 +25,7 @@ module AutoC
     def to_value = @v ||= Value.new(self)
 
     def initialize(iterable, visibility:)
-      super(iterable.identifier(visibility == :internal ? :_R : :range), visibility:)
+      super(iterable.identifier(:range, abbreviate: visibility == :internal), visibility:)
       dependencies << (@iterable = iterable) << INFO
     end
 

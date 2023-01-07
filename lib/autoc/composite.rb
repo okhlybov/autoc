@@ -26,9 +26,10 @@ module AutoC
 
     attr_reader :visibility
 
-    def initialize(signature, visibility: :public)
+    def initialize(signature, visibility: :public, decorator: nil)
       super(signature)
       @methods = {}
+      @decorator = decorator
       @visibility = visibility
       dependencies << DEFINITIONS << ASSERT_H << memory << hasher
     end
@@ -38,6 +39,12 @@ module AutoC
       obj.send(:configure)
       obj
     end
+
+    def self.decorator=(decorator)
+      @@decorator = decorator
+    end
+
+    def self.decorator = @@decorator
 
     def to_value = Value.new(self)
 
@@ -57,23 +64,11 @@ module AutoC
     def inspect = "#{signature} <#{self.class}>"
 
     # Decorate identifier with type-specific prefix
-    def identifier(id)
-      fn = id.to_s.sub(/[!?]$/, '') # Strip trailing !?
-      # Check for leading underscore
-      _ =
-        if /^(_+)(.*)/ =~ fn
-          fn = Regexp.last_match(2)
-          true
-        else
-          false
-        end
-      # Convert _separated_names to the CamelCase
-      id = prefix + fn.split('_').collect{ |s| s[0].upcase << s[1..-1] }.join
-      # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-      _ && !prefix.start_with?('_') ? Regexp.last_match(1) + id : id
-    end
+    def identifier(id, **kws) = (@decorator.nil? ? Composite.decorator : @decorator).(self, id, **kws)
 
     def public? = @visibility == :public
+
+    #def internal? = @visibility == :internal
 
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
@@ -86,6 +81,41 @@ module AutoC
     def memory = Allocator.instance # Using standard malloc() & free() by default
 
     def hasher = Hasher.instance
+
+    # Pluggable CamelCase identifier decorator
+    CAMEL_CASE_DECORATOR = -> (type, symbol, abbreviate: false, **kws) {
+      id = symbol.to_s.sub(/[!?]$/, '') # Strip trailing !?
+      _ = # Check for leading underscore
+        if /^(_+)(.*)/ =~ id
+          id = Regexp.last_match(2) # Chop leading underscore
+          true
+        else
+          false
+        end
+      id = id[0] if abbreviate
+      # Convert _separated_names to the CamelCase
+      id = type.prefix + id.split('_').collect{ |s| s[0].upcase << s[1..-1] }.join
+      # Carry over the method name's leading underscore only if the prefix is not in turn underscored
+      _ && !type.prefix.start_with?('_') ? Regexp.last_match(1) + id : id
+    }
+
+    # Pluggable _snake_case identifier decorator
+    SNAKE_CASE_DECORATOR = -> (type, symbol, abbreviate: false, **kws) {
+      id = symbol.to_s.sub(/[!?]$/, '') # Strip trailing !?
+      # Check for leading underscore
+      _ =
+        if /^(_+)(.*)/ =~ id
+          id = Regexp.last_match(2)
+          true
+        else
+          false
+        end
+      id = abbreviate ? "#{type.prefix}#{id[0]}" : "#{type.prefix}_#{id}"
+      # Carry over the method name's leading underscore only if the prefix is not in turn underscored
+      _ && !type.prefix.start_with?('_') ? Regexp.last_match(1) + id : id
+    }
+
+    @@decorator = CAMEL_CASE_DECORATOR
 
   private
     
@@ -257,6 +287,10 @@ module AutoC
     end
 
   end # Method
+
+
+  class Composite::Decorator
+  end # Decorator
 
 
   Composite::DEFINITIONS = Code.new interface: %{

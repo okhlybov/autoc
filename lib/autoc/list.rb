@@ -26,7 +26,7 @@ module AutoC
     #  false: computing #size function (slow, O(N))
     def initialize(*args, maintain_size: true, **kws)
       super(*args, **kws)
-      @node = identifier(:_N)
+      @node = identifier(:_node, abbreviate: true)
       @maintain_size = maintain_size
       @node_p = "#{node}".lvalue
     end
@@ -264,12 +264,11 @@ module AutoC
               } else {
                 this_node = target->front = node->next;
               }
-              removed = 1;
               #{'--target->size;' if maintain_size?}
               #{element.destroy.('node->element') if element.destructible?};
               #{memory.free(:node)};
               node = this_node;
-              if(removed) break;
+              removed = 1;
             } else {
               prev_node = node;
               node = node->next;

@@ -5,14 +5,11 @@ require 'autoc/std'
 require 'autoc/composite'
 
 
-using AutoC::STD::Coercions
-
-
 # Full-fledged value type equipped with dynamic memory management
 # useful for testing & documentation purposes
 class GenericValue < AutoC::Composite
 
-  def initialize(type, visibility: :public) = super
+  using AutoC::STD::Coercions
 
   def render_interface(stream)
     super
@@ -81,7 +78,6 @@ private
     end
     hash_code.configure do
       code %{
-
         return *target.value;
       }
     end

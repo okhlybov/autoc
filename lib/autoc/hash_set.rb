@@ -16,9 +16,9 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def bucket = @bucket ||= List.new(identifier(:_L), element, maintain_size: false, visibility: :internal)
+    def bucket = @bucket ||= List.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
 
-    def buckets = @buckets ||= Vector.new(identifier(:_V), bucket, visibility: :internal)
+    def buckets = @buckets ||= Vector.new(identifier(:_vector, abbreviate: true), bucket, visibility: :internal)
 
     def initialize(*args, **kws)
       super

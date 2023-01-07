@@ -41,7 +41,7 @@ def type_test(cls, *opts, **kws, &code)
     end
     def test(name, code)
       s = name.to_s
-      @test_names << [name, func_name = eval("test#{s[0,1].upcase}#{s[1..-1]}")]
+      @test_names << [name, func_name = identifier("test_#{name}")]
       @tests << %{
         static void #{func_name}(void) {
           #{@setup_code}
@@ -138,7 +138,12 @@ end
 
 $tests = []
 
+require 'autoc/composite'
+
+#AutoC::Composite.decorator = AutoC::Composite::SNAKE_CASE_DECORATOR
+
 require_relative 'generic_value'
+
 Value = GenericValue.new(:Value)
 
 Dir[File.join(File.dirname(__FILE__), 'test_*.rb')].each { |t| require t }
