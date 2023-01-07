@@ -35,7 +35,7 @@ module AutoC
           #define _AUTOC_RANDOMIZE_SEED
           #define AUTOC_HASHER_SEED _autoc_hasher_seed
           AUTOC_EXTERN size_t _autoc_hasher_seed;
-          AUTOC_EXTERN void _autoc_hasher_randomize_seed(); /* invoke default seed randomizer */
+          AUTOC_EXTERN void _autoc_hasher_randomize_seed(void); /* invoke default seed randomizer */
         #elif ~(~AUTOC_HASHER_SEED + 1) == 1 /* if macro value is unspecified on the command line it is implicitly set to 1 */
           #undef AUTOC_HASHER_SEED
           #define AUTOC_HASHER_SEED 0 /* set seed's default value */
@@ -50,18 +50,18 @@ module AutoC
           #include <time.h>
           size_t _autoc_hasher_seed = 0; /* fallback default until _autoc_hasher_randomize_seed() is called */
           #if defined(__cplusplus)
-            extern "C" void _autoc_hasher_randomize_seed();
+            extern "C" void _autoc_hasher_randomize_seed(void);
           #elif defined(__GNUC__) || defined(__clang__)
-            void _autoc_hasher_randomize_seed()  __attribute__((__constructor__));
+            void _autoc_hasher_randomize_seed(void)  __attribute__((__constructor__));
           #elif defined(__POCC__)
-            void __cdecl _autoc_hasher_randomize_seed();
+            void __cdecl _autoc_hasher_randomize_seed(void);
             #pragma startup _autoc_hasher_randomize_seed
           #elif defined(_MSC_VER)
             #pragma message("WARNING: _autoc_hasher_randomize_seed() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
           #else
             #warning _autoc_hasher_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
           #endif
-          void _autoc_hasher_randomize_seed() {
+          void _autoc_hasher_randomize_seed(void) {
             #ifdef _MSC_VER
               unsigned r;
               rand_s(&r);
