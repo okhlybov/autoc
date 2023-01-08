@@ -4,8 +4,8 @@
 require 'autoc/std'
 require 'autoc/type'
 require 'autoc/module'
-require 'autoc/memory'
 require 'autoc/hashers'
+require 'autoc/allocators'
 require 'autoc/function'
 
 
