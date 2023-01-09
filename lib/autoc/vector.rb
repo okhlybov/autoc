@@ -67,7 +67,7 @@ module AutoC
     end
 
     def render_implementation(stream)
-      if element.comparable?
+      if element.orderable?
         stream << %{
           static int #{ascend}(const void* left, const void* right) {
             return #{element.compare.("(*(#{element.lvalue})left)", "(*(#{element.lvalue})right)")};
