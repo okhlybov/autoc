@@ -19,16 +19,16 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    attr_reader :node, :node_p
+    attr_reader :_node, :_node_p
 
     # maintain_size:
     #  true: managed size field (extra memory consumption)
     #  false: computing #size function (slow, O(N))
     def initialize(*args, maintain_size: true, **kws)
       super(*args, **kws)
-      @node = identifier(:_node, abbreviate: true)
+      @_node = identifier(:_node, abbreviate: true)
       @maintain_size = maintain_size
-      @node_p = "#{node}".lvalue
+      @_node_p = "#{_node}".lvalue
     end
 
     def maintain_size? = @maintain_size
@@ -36,7 +36,7 @@ module AutoC
     def render_interface(stream)
       stream << %{
         /** @private */
-        typedef struct #{node} #{node};
+        typedef struct #{_node} #{_node};
       }
       if public?
         stream << %{
@@ -66,13 +66,13 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          #{node_p} front; /**< @private */
+          #{_node_p} front; /**< @private */
           #{'size_t size; /**< @private */' if maintain_size?}
         } #{signature};
         /** @private */
-        struct #{node} {
+        struct #{_node} {
           #{element} element;
-          #{node_p} next;
+          #{_node_p} next;
         };
       }
     end
@@ -96,7 +96,7 @@ module AutoC
       method(:void, :_pop_front, { target: rvalue }, visibility: :internal).configure do
         # Destroy frontal node but keep the element intact
         code %{
-          #{node_p} node;
+          #{_node_p} node;
           assert(!#{empty.(target)});
           node = target->front; assert(node);
           target->front = target->front->next;
@@ -104,10 +104,10 @@ module AutoC
           #{memory.free(:node)};
         }
       end
-      method(node_p, :_pull_node, { target: rvalue }, visibility: :internal).configure do
+      method(_node_p, :_pull_node, { target: rvalue }, visibility: :internal).configure do
         # Cut & return frontal node
         code %{
-          #{node_p} node;
+          #{_node_p} node;
           assert(!#{empty.(target)});
           node = target->front; assert(node);
           target->front = node->next;
@@ -115,7 +115,7 @@ module AutoC
           return node;
         }
       end
-      method(:void, :_push_node, { target: rvalue, node: node_p }, visibility: :internal).configure do
+      method(:void, :_push_node, { target: rvalue, node: _node_p }, visibility: :internal).configure do
         # Push exising node with intact payload
         code %{
           assert(target);
@@ -226,9 +226,9 @@ module AutoC
       end
       method(:void, :push_front, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? }).configure do
         code %{
-          #{node_p} node;
+          #{_node_p} node;
           assert(target);
-          node = #{memory.allocate(node)};
+          node = #{memory.allocate(_node)};
           node->next = target->front;
           target->front = node;
           #{'++target->size;' if maintain_size?}
@@ -250,15 +250,15 @@ module AutoC
       end
       method(:int, :remove, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
         code %{
-          #{node_p} node;
-          #{node_p} prev_node;
+          #{_node_p} node;
+          #{_node_p} prev_node;
           int removed = 0;
           assert(target);
           node = target->front;
           prev_node = NULL;
           while(node) {
-            if(#{element.equal.('node->element', :value)}) {
-              #{node}* this_node;
+            if(#{element.equal.('node->element', value)}) {
+              #{_node_p} this_node;
               if(prev_node) {
                 this_node = prev_node->next = node->next;
               } else {
@@ -366,7 +366,7 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          #{iterable.node_p} front; /**< @private */
+          #{iterable._node_p} front; /**< @private */
         } #{signature};
       }
     end

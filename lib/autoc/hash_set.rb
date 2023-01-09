@@ -16,13 +16,13 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def bucket = @bucket ||= List.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
+    def _bucket = @_bucket ||= List.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
 
-    def buckets = @buckets ||= Vector.new(identifier(:_vector, abbreviate: true), bucket, visibility: :internal)
+    def _buckets = @_buckets ||= Vector.new(identifier(:_vector, abbreviate: true), _bucket, visibility: :internal)
 
     def initialize(*args, **kws)
       super
-      dependencies << buckets << bucket
+      dependencies << _buckets
     end
 
     def render_interface(stream)
@@ -49,7 +49,7 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          #{buckets} buckets; /**< @private */
+          #{_buckets} buckets; /**< @private */
           size_t size; /**< @private */
           size_t hash_mask; /**< @private */
         } #{signature};
@@ -65,38 +65,38 @@ module AutoC
           unsigned char bits = 0;
           assert(target);
           target->size = 0;
-          /* fix capacity to become the power of 2, encompassing original value */
+          /* fix capacity to become the ceiling to the nearest power of two */
           if(capacity % 2 == 0) --capacity;
           while(capacity >>= 1) ++bits;
           capacity = 1 << (bits+1);
           target->hash_mask = capacity-1; /* fast bucket location for value: hash_code(value) & hash_mask */
-          #{buckets.custom_create.('target->buckets', capacity)};
-          assert(#{buckets.size.('target->buckets')} % 2 == 0);
+          #{_buckets.custom_create.('target->buckets', capacity)};
+          assert(#{_buckets.size.('target->buckets')} % 2 == 0);
         }
       end
-      method(bucket.const_lvalue, :_find_bucket, { target: const_rvalue, value: element.const_rvalue }, visibility: :internal).configure do
+      method(_bucket.const_lvalue, :_find_bucket, { target: const_rvalue, value: element.const_rvalue }, visibility: :internal).configure do
         # Find slot based on the value hash code
-        dependencies << buckets.view
+        dependencies << _buckets.view
         inline_code %{
-          return #{buckets.view.('target->buckets', element.hash_code.(value) + '&target->hash_mask')};
+          return #{_buckets.view.('target->buckets', element.hash_code.(value) + '&target->hash_mask')};
         }
       end
       method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :internal).configure do
         code %{
           #{type} set;
-          #{buckets.range} r;
+          #{_buckets.range} r;
           assert(target);
           /* capacity threshold == 1.0 */
-          if(force || target->size >= #{buckets.size.('target->buckets')}) {
-            #{create_capacity.(:set, buckets.size.('target->buckets') + '*2')};
+          if(force || target->size >= #{_buckets.size.('target->buckets')}) {
+            #{create_capacity.(:set, _buckets.size.('target->buckets') + '*2')};
             /* move elements to newly allocated set */
-            for(r = #{buckets.range.new.('target->buckets')}; !#{buckets.range.empty.(:r)}; #{buckets.range.pop_front.(:r)}) {
-              #{bucket.lvalue} src = (#{bucket.lvalue})#{buckets.range.view_front.(:r)};
-              while(!#{bucket.empty.('*src')}) {
+            for(r = #{_buckets.range.new.('target->buckets')}; !#{_buckets.range.empty.(:r)}; #{_buckets.range.pop_front.(:r)}) {
+              #{_bucket.lvalue} src = (#{_bucket.lvalue})#{_buckets.range.view_front.(:r)};
+              while(!#{_bucket.empty.('*src')}) {
                 /* direct node relocation from original to new list bypassing node reallocation & payload copying */
-                #{bucket.node_p} node = #{bucket._pull_node.('*src')};
-                #{bucket.lvalue} dst = (#{bucket.lvalue})#{_find_bucket.(target, 'node->element')};
-                #{bucket._push_node.('*dst', '*node')};
+                #{_bucket._node_p} node = #{_bucket._pull_node.('*src')};
+                #{_bucket.lvalue} dst = (#{_bucket.lvalue})#{_find_bucket.(target, 'node->element')};
+                #{_bucket._push_node.('*dst', '*node')};
               }
             }
             set.size = target->size; /* assume all elements have been moved into new set */
@@ -121,22 +121,22 @@ module AutoC
       remove.configure do
         code %{
           int c;
-          #{bucket.lvalue} b;
+          #{_bucket.lvalue} b;
           assert(target);
-          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
-          c = #{bucket.remove.('*b', value)};
+          b = (#{_bucket.lvalue})#{_find_bucket.(target, value)};
+          c = #{_bucket.remove.('*b', value)};
           if(c) --target->size;
           return c;
         }
       end
       put.configure do
         code %{
-          #{bucket.lvalue} b;
+          #{_bucket.lvalue} b;
           assert(target);
-          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
-          if(!#{bucket.find_first.('*b', value)}) {
+          b = (#{_bucket.lvalue})#{_find_bucket.(target, value)};
+          if(!#{_bucket.find_first.('*b', value)}) {
             #{_expand.(target, 0)};
-            #{bucket.push_front.('*b', value)};
+            #{_bucket.push_front.('*b', value)};
             ++target->size;
             return 1;
           } else return 0;
@@ -144,15 +144,15 @@ module AutoC
       end
       push.configure do
         code %{
-          #{bucket.lvalue} b;
+          #{_bucket.lvalue} b;
           assert(target);
-          b = (#{bucket.lvalue})#{_find_bucket.(target, value)};
-          if(#{bucket._replace_first.('*b', value)}) {
+          b = (#{_bucket.lvalue})#{_find_bucket.(target, value)};
+          if(#{_bucket._replace_first.('*b', value)}) {
             return 1;
           } else {
             /* add brand new value */
             #{_expand.(target, 0)};
-            #{bucket.push_front.('*b', value)};
+            #{_bucket.push_front.('*b', value)};
             ++target->size;
             return 0;
           }
@@ -166,15 +166,15 @@ module AutoC
       end
       find_first.configure do
         code %{
-          #{bucket.const_lvalue} b = #{_find_bucket.(target, value)};
-          return #{bucket.find_first.('*b', value)};
+          #{_bucket.const_lvalue} b = #{_find_bucket.(target, value)};
+          return #{_bucket.find_first.('*b', value)};
         }
       end
       copy.configure do
         code %{
           assert(target);
           assert(source);
-          #{buckets.copy.('target->buckets', 'source->buckets')};
+          #{_buckets.copy.('target->buckets', 'source->buckets')};
           target->hash_mask = source->hash_mask;
           target->size = source->size;
         }
@@ -193,16 +193,16 @@ module AutoC
       end
       contains.configure do
         code %{
-          #{bucket.const_lvalue} b;
+          #{_bucket.const_lvalue} b;
           assert(target);
           b = #{_find_bucket.(target, value)};
-          return #{bucket.contains.('*b', value)};
+          return #{_bucket.contains.('*b', value)};
         }
       end
       destroy.configure do
         code %{
           assert(target);
-          #{buckets.destroy.('target->buckets')};
+          #{_buckets.destroy.('target->buckets')};
         }
       end
       hash_code.configure do
@@ -237,11 +237,15 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          #{iterable.buckets.range} buckets; /**< @private */
-          #{iterable.bucket.range} bucket; /**< @private */
+          #{_buckets} buckets; /**< @private */
+          #{_bucket} bucket; /**< @private */
         } #{signature};
       }
     end
+
+    def _bucket = @_bucket ||= iterable._bucket.range
+
+    def _buckets = @_buckets ||= iterable._buckets.range
 
   private
 
@@ -251,16 +255,16 @@ module AutoC
         code %{
           assert(range);
           while(1) {
-            if(#{iterable.bucket.range.empty.('range->bucket')}) {
+            if(#{_bucket.empty.('range->bucket')}) {
               /* current bucket's range is empty - iterate forward to the next one */
-              #{iterable.buckets.range.pop_front.('range->buckets')};
-              if(#{iterable.buckets.range.empty.('range->buckets')}) {
+              #{_buckets.pop_front.('range->buckets')};
+              if(#{_buckets.empty.('range->buckets')}) {
                 /* all buckets are iterated through, bucket range is also empty - end of set */
                 break;
               } else {
                 /* advance to the new (possibly empty) bucket */
-                #{iterable.bucket.const_lvalue} b = #{iterable.buckets.range.view_front.('range->buckets')};
-                range->bucket = #{iterable.bucket.range.new.('*b')};
+                #{iterable._bucket.const_lvalue} b = #{_buckets.view_front.('range->buckets')};
+                range->bucket = #{_bucket.new.('*b')};
               }
             } else {
               /* current bucket's range is not empty - no need to proceed */
@@ -273,10 +277,10 @@ module AutoC
         code %{
           assert(range);
           assert(iterable);
-          range->buckets = #{_iterable.buckets.range.new.('iterable->buckets')};
+          range->buckets = #{_buckets.new.('iterable->buckets')};
           /* get the first bucket's range regardless of its emptiness status */
-          #{_iterable.bucket.const_lvalue} b = #{_iterable.buckets.range.view_front.('range->buckets')};
-          range->bucket = #{_iterable.bucket.range.new.('*b')};
+          #{_iterable._bucket.const_lvalue} b = #{_buckets.view_front.('range->buckets')};
+          range->bucket = #{_bucket.new.('*b')};
           /* actually advance to the first non-empty bucket */
           #{_advance.(range)};
         }
@@ -284,13 +288,13 @@ module AutoC
       empty.configure do
         code %{
           assert(range);
-          return #{iterable.bucket.range.empty.('range->bucket')};
+          return #{_bucket.empty.('range->bucket')};
         }
       end
       pop_front.configure do
         code %{
           assert(range);
-          #{iterable.bucket.range.pop_front.('range->bucket')};
+          #{_bucket.pop_front.('range->bucket')};
           #{_advance.(range)};
         }
       end
@@ -298,7 +302,7 @@ module AutoC
         code %{
           assert(range);
           assert(!#{empty.(range)});
-          return #{iterable.bucket.range.view_front.('range->bucket')};
+          return #{_bucket.view_front.('range->bucket')};
         }
       end
     end
