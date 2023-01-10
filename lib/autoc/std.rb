@@ -121,10 +121,14 @@ module AutoC::STD
   DOUBLE_T = Primitive.new 'double_t', header: MATH_H
 
 
-  COMPLEX = Primitive.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
-  FLOAT_COMPLEX = Primitive.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
-  DOUBLE_COMPLEX = Primitive.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
-  LONG_DOUBLE_COMPLEX = Primitive.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/, header: COMPLEX_H
+  class Complex < Primitive
+    def hash_code = @hash_code ||= -> (target) { "((size_t)(crealf(#{target}))^(size_t)(cimagf(#{target})))" } # TODO use tgmath
+  end # Complex
+
+  COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
+  FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
+  DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
+  LONG_DOUBLE_COMPLEX = Complex.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/, header: COMPLEX_H
 
 
   INTPTR_T = Primitive.new 'intptr_t', header: INTTYPES_H
