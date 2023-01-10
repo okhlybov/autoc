@@ -101,6 +101,7 @@ module AutoC
             node.index = index;
             node.element = value;
             #{_set._bucket.push_front.('*b', :node)};
+            ++target->set.size; /* bypassing set's element manipulation functions incurs manual size management */
           }
         }
       end
