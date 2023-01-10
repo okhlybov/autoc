@@ -533,6 +533,60 @@ module AutoC
   end # ContiguousRange
 
 
+  class AssociativeRange < ForwardRange
+
+  private
+
+    def configure
+      super
+      method(iterable.index.const_lvalue, :view_index_front, { range: const_rvalue }).configure do
+        header %{
+          @brief Get a view of the front index
+
+          @param[in] range range to retrieve element from
+          @return a view of an index at the range's front position
+
+          This function is used to get a constant reference (in form of the C pointer) to the index associated with element at the range's front position.
+          Refer to @ref #{type.take_index_front} to get an independent copy of that index.
+  
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+  
+          @note Range must not be empty (see @ref #{type.empty}).
+
+          @since 2.0
+        }
+      end
+      method(iterable.element, :take_index_front, { range: const_rvalue }, constraint:-> { iterable.index.copyable? && iterable.element.copyable? }).configure do
+        dependencies << empty << view_index_front
+        inline_code %{
+          #{iterable.index} result;
+          #{iterable.index.const_lvalue} e;
+          assert(!#{empty.(range)});
+          e = #{view_index_front.(range)};
+          #{iterable.index.copy.(:result, '*e')};
+          return result;
+        }
+        header %{
+          @brief Get a copy of the front index associated with element
+
+          @param[in] range range to retrieve element from
+          @return a *copy* of index at the range's front position
+
+          This function is used to get a *copy* of the index associated with element at the range's front position.
+          Refer to @ref #{type.view_index_front} to get a view of the index without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
+
+          @note Range must not be empty (see @ref #{type.empty}).
+
+          @since 2.0
+        }
+      end
+    end
+
+  end # AssociativeRange
+
+
   Range::INFO = Code.new interface: %{
     /**
       @page Range

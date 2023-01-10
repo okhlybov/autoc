@@ -100,7 +100,7 @@ module AutoC
           return r;
         }
       end
-      method(:void, :set, { target: rvalue, index: index.const_rvalue, value: element.const_rvalue }, inline: true, constraint:-> { element.copyable? } ).configure do
+      method(:void, :set, { target: rvalue, index: index.const_rvalue, value: element.const_rvalue }, constraint:-> { index.copyable? && element.copyable? } ).configure do
         header %{
           @brief Set specific element
 
