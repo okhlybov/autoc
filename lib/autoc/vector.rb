@@ -18,7 +18,9 @@ module AutoC
 
     include Sequential
 
-    def range = @range ||= Range.new(self, visibility: visibility, parallel: @parallel)
+    def _range_class = Range
+
+    def range = @range ||= _range_class.new(self, visibility: visibility, parallel: @parallel)
 
     def initialize(type, element, parallel: nil, **kws)
       super(type, element, :size_t, **kws)
