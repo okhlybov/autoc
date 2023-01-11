@@ -17,9 +17,11 @@ module AutoC
 
     include Sequential
 
-    def range = @range ||= Range.new(self, visibility: visibility)
+    def _range_class = Range
 
-    attr_reader :_node, :_node_p
+    def range = @range ||= _range_class.new(self, visibility: visibility)
+
+    attr_reader :_node, :_node_p, :_node_pp
 
     # maintain_size:
     #  true: managed size field (extra memory consumption)
@@ -27,8 +29,9 @@ module AutoC
     def initialize(*args, maintain_size: true, **kws)
       super(*args, **kws)
       @_node = identifier(:_node, abbreviate: true)
+      @_node_p = _node.lvalue
+      @_node_pp = "#{_node}*".lvalue
       @maintain_size = maintain_size
-      @_node_p = "#{_node}".lvalue
     end
 
     def maintain_size? = @maintain_size
@@ -93,34 +96,66 @@ module AutoC
             return 0;
         }
       end
+      # Code template for locating the list node satisfying custom equality condition
+      def _locate_node_equal(eq)
+        %{
+          #{_node_p} curr;
+          #{_node_p} prev;
+          assert(target);
+          assert(prev_p);
+          assert(curr_p);
+          prev = NULL;
+          curr = target->front;
+          while(curr) {
+            if(#{eq}) {
+              #ifndef NDEBUG
+                if(prev)
+                  assert(prev->next == curr);
+                else
+                  assert(target->front == curr);
+              #endif
+              *prev_p = prev;
+              *curr_p = curr;
+              return 1;
+            }
+            prev = curr;
+            curr = curr->next;
+          }
+          return 0;
+        }
+      end
+      method(:int, :_locate_node, { target: const_rvalue, value: element.const_rvalue, prev_p: _node_pp, curr_p: _node_pp }, constraint:-> { element.comparable? }).configure do
+        # Locate node satisfying default element equality condition, return this and previous nodes
+        code _locate_node_equal(element.equal.('curr->element', value))
+      end
       method(:void, :_pop_front, { target: rvalue }, visibility: :internal).configure do
         # Destroy frontal node but keep the element intact
         code %{
-          #{_node_p} node;
+          #{_node_p} curr;
           assert(!#{empty.(target)});
-          node = target->front; assert(node);
+          curr = target->front; assert(curr);
           target->front = target->front->next;
           #{'--target->size;' if maintain_size?}
-          #{memory.free(:node)};
+          #{memory.free(:curr)};
         }
       end
       method(_node_p, :_pull_node, { target: rvalue }, visibility: :internal).configure do
         # Cut & return frontal node
         code %{
-          #{_node_p} node;
+          #{_node_p} curr;
           assert(!#{empty.(target)});
-          node = target->front; assert(node);
-          target->front = node->next;
+          curr = target->front; assert(curr);
+          target->front = curr->next;
           #{'--target->size;' if maintain_size?}
-          return node;
+          return curr;
         }
       end
-      method(:void, :_push_node, { target: rvalue, node: _node_p }, visibility: :internal).configure do
+      method(:void, :_push_node, { target: rvalue, curr: _node_p }, visibility: :internal).configure do
         # Push exising node with intact payload
         code %{
           assert(target);
-          node->next = target->front;
-          target->front = node;
+          curr->next = target->front;
+          target->front = curr;
           #{'++target->size;' if maintain_size?}
         }
       end
@@ -226,13 +261,13 @@ module AutoC
       end
       method(:void, :push_front, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? }).configure do
         code %{
-          #{_node_p} node;
+          #{_node_p} curr;
           assert(target);
-          node = #{memory.allocate(_node)};
-          node->next = target->front;
-          target->front = node;
+          curr = #{memory.allocate(_node)};
+          curr->next = target->front;
+          target->front = curr;
           #{'++target->size;' if maintain_size?}
-          #{element.copy.('node->element', value)};
+          #{element.copy.('curr->element', value)};
         }
         header %{
           @brief Put element
@@ -248,33 +283,23 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :remove, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
+      method(:int, :remove_first, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
         code %{
-          #{_node_p} node;
-          #{_node_p} prev_node;
-          int removed = 0;
+          #{_node_p} curr;
+          #{_node_p} prev;
           assert(target);
-          node = target->front;
-          prev_node = NULL;
-          while(node) {
-            if(#{element.equal.('node->element', value)}) {
-              #{_node_p} this_node;
-              if(prev_node) {
-                this_node = prev_node->next = node->next;
-              } else {
-                this_node = target->front = node->next;
-              }
-              #{'--target->size;' if maintain_size?}
-              #{element.destroy.('node->element') if element.destructible?};
-              #{memory.free(:node)};
-              node = this_node;
-              removed = 1;
+          if(#{_locate_node.(target, value, :prev, :curr)}) {
+            assert(curr);
+            if(prev) {
+              prev->next = curr->next;
             } else {
-              prev_node = node;
-              node = node->next;
+              target->front = curr->next;
             }
-          }
-          return removed;
+            #{element.destroy.('curr->element') if element.destructible?};
+            #{memory.free(:curr)};
+            #{'--target->size;' if maintain_size?}
+            return 1;
+          } else return 0;
         }
         header %{
           @brief Remove element
