@@ -14,11 +14,17 @@ module AutoC
 
   class HashMap < Association
 
-    def range = @range ||= Range.new(self, visibility: visibility)
+    def _range_class = Range
 
-    def _node = @_node ||= Record.new(identifier(:_node, abbreviate: true), { index: index, element: element }, visibility: :internal)
+    def _node_class = Record
 
-    def _set = @_set ||= HashSet.new(identifier(:_set, set_operations: false, abbreviate: true), _node, visibility: :internal)
+    def _set_class = HashMap::HashSet
+
+    def range = @range ||= _range_class.new(self, visibility: visibility)
+
+    def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, visibility: :internal)
+
+    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, visibility: :internal)
 
     def orderable? = _set.orderable?
 
@@ -176,6 +182,22 @@ module AutoC
     end
 
   end # HashMap
+
+
+  class HashMap::HashSet < HashSet
+    def _bucket_class = HashMap::HashSetList
+  end # HashSet
+
+
+  class HashMap::HashSetList < List
+  
+  private
+
+    def configure
+      super
+    end
+
+  end # List
 
 
   class HashMap::Range < AssociativeRange
