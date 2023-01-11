@@ -41,6 +41,41 @@ require 'autoc/list'
 		}
 
 		###
+
+		setup %{
+			#{self} t;
+			#{create}(&t);
+			#{push_front}(&t, 1);
+			#{push_front}(&t, 2);
+			#{push_front}(&t, 3);
+		}
+
+		cleanup %{
+			#{destroy}(&t);
+		}
+
+		test :remove_none, %{
+			TEST_FALSE( #{remove_first.(:t, 4)} );
+			TEST_EQUAL( #{size.(:t)}, 3 );
+		}
+
+		test :remove_front, %{
+			TEST_TRUE( #{remove_first.(:t, 3)} );
+			TEST_EQUAL( #{size.(:t)}, 2 );
+			TEST_EQUAL( #{take_front.(:t)}, 2 );
+		}
+
+		test :remove_back, %{
+			TEST_TRUE( #{remove_first.(:t, 1)} );
+			TEST_EQUAL( #{size.(:t)}, 2 );
+		}
+
+		test :remove_middle, %{
+			TEST_TRUE( #{remove_first.(:t, 2)} );
+			TEST_EQUAL( #{size.(:t)}, 2 );
+		}
+
+		###
 		
 		setup %{
 			int i, c = 3;
