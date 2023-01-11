@@ -14,11 +14,15 @@ module AutoC
 
   class HashSet < Set
 
+    def _bucket_class = List
+
+    def _buckets_class = Vector
+
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def _bucket = @_bucket ||= List.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
+    def _bucket = @_bucket ||= _bucket_class.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
 
-    def _buckets = @_buckets ||= Vector.new(identifier(:_vector, abbreviate: true), _bucket, visibility: :internal)
+    def _buckets = @_buckets ||= _buckets_class.new(identifier(:_vector, abbreviate: true), _bucket, visibility: :internal)
 
     def initialize(*args, **kws)
       super
@@ -74,12 +78,16 @@ module AutoC
           assert(#{_buckets.size.('target->buckets')} % 2 == 0);
         }
       end
+      def _find_bucket_hash(hash)
+        %{
+          assert(target);
+          return #{_buckets.view.('target->buckets', "#{hash} & target->hash_mask")};
+        }
+      end
       method(_bucket.const_lvalue, :_find_bucket, { target: const_rvalue, value: element.const_rvalue }, visibility: :internal).configure do
         # Find slot based on the value hash code
         dependencies << _buckets.view
-        inline_code %{
-          return #{_buckets.view.('target->buckets', element.hash_code.(value) + '&target->hash_mask')};
-        }
+        inline_code _find_bucket_hash(element.hash_code.(value))
       end
       method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :internal).configure do
         code %{
@@ -124,7 +132,7 @@ module AutoC
           #{_bucket.lvalue} b;
           assert(target);
           b = (#{_bucket.lvalue})#{_find_bucket.(target, value)};
-          c = #{_bucket.remove.('*b', value)};
+          c = #{_bucket.remove_first.('*b', value)};
           if(c) --target->size;
           return c;
         }
