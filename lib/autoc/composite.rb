@@ -315,10 +315,11 @@ module AutoC
         #if defined(__cplusplus)
           #define AUTOC_INLINE extern "C" inline
         #else
-          #if __STDC_VERSION__ >= 199901L
+          #if __STDC_VERSION__ >= 199901L && !defined(__LCC__)
             #define AUTOC_INLINE extern inline
           #else
-            #define AUTOC_INLINE static __inline__
+            #define _AUTOC_STATIC_INLINE
+            #define AUTOC_INLINE static __inline
           #endif
         #endif
       #endif
@@ -332,7 +333,7 @@ module AutoC
     },
     definitions: %{
       /* force generation the external object code for inline functions for C99+ */
-      #if !defined(__cplusplus) && __STDC_VERSION__ >= 199901L
+      #ifndef _AUTOC_STATIC_INLINE
         #define _AUTOC_EXTERN(x) extern x;
       #else
         #define _AUTOC_EXTERN(x)
