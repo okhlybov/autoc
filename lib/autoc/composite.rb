@@ -299,7 +299,7 @@ module AutoC
     def render_implementation(stream)
       if live?
         if inline?
-          stream << '_AUTOC_EXTERN(' << prototype << ');'
+          stream << '_AUTOC_EXTERN( ' << prototype << " )\n"
         else
           render_function_definition(stream)
         end
@@ -333,7 +333,7 @@ module AutoC
     definitions: %{
       /* force generation the external object code for inline functions for C99+ */
       #if !defined(__cplusplus) && __STDC_VERSION__ >= 199901L
-        #define _AUTOC_EXTERN(x) extern x
+        #define _AUTOC_EXTERN(x) extern x;
       #else
         #define _AUTOC_EXTERN(x)
       #endif
