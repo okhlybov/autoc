@@ -296,29 +296,49 @@ module AutoC
       stream << (inline? ? 'AUTOC_INLINE ' : 'AUTOC_EXTERN ')
     end
 
+    def render_implementation(stream)
+      if live?
+        if inline?
+          stream << '_AUTOC_EXTERN(' << prototype << ');'
+        else
+          render_function_definition(stream)
+        end
+      end
+    end
+
   end # Method
 
 
-  Composite::DEFINITIONS = Code.new interface: %{
-    #ifndef AUTOC_INLINE
-      #if defined(__cplusplus)
-        #define AUTOC_INLINE extern "C" inline
-      #else
-        #if __STDC_VERSION__ >= 199901L
-          #define AUTOC_INLINE inline
+  Composite::DEFINITIONS = Code.new(
+    interface: %{
+      #ifndef AUTOC_INLINE
+        #if defined(__cplusplus)
+          #define AUTOC_INLINE extern "C" inline
         #else
-          #define AUTOC_INLINE static
+          #if __STDC_VERSION__ >= 199901L
+            #define AUTOC_INLINE extern inline
+          #else
+            #define AUTOC_INLINE static __inline__
+          #endif
         #endif
       #endif
-    #endif
-    #ifndef AUTOC_EXTERN
-      #ifdef __cplusplus
-        #define AUTOC_EXTERN extern "C"
-      #else
-        #define AUTOC_EXTERN extern
+      #ifndef AUTOC_EXTERN
+        #ifdef __cplusplus
+          #define AUTOC_EXTERN extern "C"
+        #else
+          #define AUTOC_EXTERN extern
+        #endif
       #endif
-    #endif
-  }
+    },
+    definitions: %{
+      /* force generation the external object code for inline functions for C99+ */
+      #if !defined(__cplusplus) && __STDC_VERSION__ >= 199901L
+        #define _AUTOC_EXTERN(x) extern x
+      #else
+        #define _AUTOC_EXTERN(x)
+      #endif
+    }
+  )
 
 
 end

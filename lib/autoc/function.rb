@@ -223,13 +223,7 @@ module AutoC
 
     # Render non-inline function definition regardless of function's visibility status
     def render_implementation(stream)
-      if live?
-        if inline?
-          stream << prototype << ';' # Force generation of the C99 externally-visible definition of inline function
-        else
-          render_function_definition(stream)
-        end
-      end
+      render_function_definition(stream) if live? && !inline?
     end
 
   end # Function
