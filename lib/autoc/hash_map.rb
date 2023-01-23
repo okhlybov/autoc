@@ -100,11 +100,11 @@ module AutoC
             #{_node.custom_create.('*node', index, value)}; /* override node's contents in-place */
           } else {
             #{_node} node;
-            #{_set._bucket.lvalue} b = (#{_set._bucket.lvalue})#{_set._find_index_bucket.('target->set', index)};
+            #{_set._slot.lvalue} s = (#{_set._slot.lvalue})#{_set._find_index_slot.('target->set', index)};
             /* construct temporary node as POD value; actual copying will be performed by the list itself */
             node.index = index;
             node.element = value;
-            #{_set._bucket.push_front.('*b', :node)};
+            #{_set._slot.push_front.('*s', :node)};
             ++target->set.size; /* bypassing set's element manipulation functions incurs manual size management */
           }
         }
@@ -184,7 +184,7 @@ module AutoC
 
   class HashMap::HashSet < HashSet
 
-    def _bucket_class = HashMap::List
+    def _slot_class = HashMap::List
 
     attr_reader :_index
 
@@ -198,26 +198,26 @@ module AutoC
 
     def configure
       super
-      method(_bucket.const_lvalue, :_find_index_bucket, { target: const_rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
+      method(_slot.const_lvalue, :_find_index_slot, { target: const_rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
         # Find slot based on the index hash code only bypassing element
-        dependencies << _find_bucket
-        inline_code _find_bucket_hash(_index.hash_code.(index))
+        dependencies << _find_slot
+        inline_code _find_slot_hash(_index.hash_code.(index))
       end
       method(element.lvalue, :_find_index_node, { target: const_rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
         code %{
-          #{_bucket._node_p} curr;
-          #{_bucket._node_p} prev;
-          #{_bucket.const_lvalue} b = #{_find_index_bucket.(target, index)};
-          return #{_bucket._find_index_node.('*b', index, :prev, :curr)} ? &curr->element : NULL;
+          #{_slot._node_p} curr;
+          #{_slot._node_p} prev;
+          #{_slot.const_lvalue} s = #{_find_index_slot.(target, index)};
+          return #{_slot._find_index_node.('*s', index, :prev, :curr)} ? &curr->element : NULL;
         }
       end
       method(:int, :_remove_index_node, { target: rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
         code %{
           int c;
-          #{_bucket._node_p} curr;
-          #{_bucket._node_p} prev;
-          #{_bucket.lvalue} b = (#{_bucket.lvalue})#{_find_index_bucket.(target, index)};
-          if(c = #{_bucket._remove_index_node.('*b', index)}) --target->size;
+          #{_slot._node_p} curr;
+          #{_slot._node_p} prev;
+          #{_slot.lvalue} s = (#{_slot.lvalue})#{_find_index_slot.(target, index)};
+          if(c = #{_slot._remove_index_node.('*s', index)}) --target->size;
           return c;
         }
       end
