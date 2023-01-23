@@ -22,9 +22,9 @@ module AutoC
 
     def range = @range ||= _range_class.new(self, visibility: visibility)
 
-    def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, visibility: :internal)
+    def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, _master: self, visibility: :internal)
 
-    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, visibility: :internal)
+    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, _master: self, visibility: :internal)
 
     def orderable? = _set.orderable?
 
@@ -62,28 +62,26 @@ module AutoC
       }
     end
 
-    def _bucket_range = @_bucket_range ||= _set._bucket.range
-
   private
 
     def configure
       super
-      method(_set._bucket.lvalue, :_find_set_bucket, { target: const_rvalue, value: index.const_rvalue }, inline: true, visibility: :internal).configure do
+      method(:int, :remove, { target: rvalue, index: index.const_rvalue }, constraint:-> { index.comparable? }).configure do
         code %{
-          /* this code must stay coherent with #{_set._find_bucket}() but use custom hasher which considers index only */
-          return (#{_set._bucket.lvalue})#{_set._buckets.view.('target->set.buckets', index.hash_code.(value)+'&target->set.hash_mask')};
+          assert(target);
+          return #{_set._remove_index_node.('target->set', index)};
         }
-      end
-      method(_node.lvalue, :_find_node, { target: const_rvalue, value: index.const_rvalue }, visibility: :internal).configure do
-        code %{
-          #{_bucket_range} r;
-          #{_set._bucket.const_lvalue} b = #{_find_set_bucket.(target, value)};
-          for(r = #{_bucket_range.new.('*b')}; !#{_bucket_range.empty.(:r)}; #{_bucket_range.pop_front.(:r)}) {
-            #{_node.const_lvalue} node = #{_bucket_range.view_front.(:r)};
-            /* use custom equality testing to bypass the #{_node.equal}()'s element treatment */
-            if(#{index.equal.('node->index', value)}) return (#{_node.lvalue})node;
-          }
-          return NULL;
+        header %{
+          @brief Remove element associated with index
+
+          @param[in] target map to process
+          @param[in] index index to look for
+          @return non-zero value on successful removal and zero value otherwise
+
+          This function removes and destroys index and associated element if any.
+          The function returns zero value if `target` contains no such association.
+
+          @since 2.0
         }
       end
       default_create.configure do
@@ -97,12 +95,12 @@ module AutoC
           #{_node.lvalue} node;
           assert(target);
           assert(target);
-          if(node = #{_find_node.(target, index)}) {
+          if(node = #{_set._find_index_node.('target->set', index)}) {
             #{_node.destroy.('*node') if _node.destructible?};
             #{_node.custom_create.('*node', index, value)}; /* override node's contents in-place */
           } else {
             #{_node} node;
-            #{_set._bucket.lvalue} b = #{_find_set_bucket.(target, index)};
+            #{_set._bucket.lvalue} b = (#{_set._bucket.lvalue})#{_set._find_index_bucket.('target->set', index)};
             /* construct temporary node as POD value; actual copying will be performed by the list itself */
             node.index = index;
             node.element = value;
@@ -158,13 +156,13 @@ module AutoC
       check.configure do
         code %{
           assert(target);
-          return #{_find_node.(target, index)} != NULL;
+          return #{_set._find_index_node.('target->set', index)} != NULL;
         }
       end
       view.configure do
         code %{
           assert(target);
-          #{_node.lvalue} node = #{_find_node.(target, index)};
+          #{_node.lvalue} node = #{_set._find_index_node.('target->set', index)};
           return node ? &node->element : NULL;
         }
       end
@@ -185,16 +183,70 @@ module AutoC
 
 
   class HashMap::HashSet < HashSet
-    def _bucket_class = HashMap::HashSetList
-  end # HashSet
 
+    def _bucket_class = HashMap::List
 
-  class HashMap::HashSetList < List
-  
+    attr_reader :_index
+
+    def initialize(*args, **kws)
+      super
+      _map = _master # this set is a subcomponent of the map
+      @_index = _map.index
+    end
+
   private
 
     def configure
       super
+      method(_bucket.const_lvalue, :_find_index_bucket, { target: const_rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
+        # Find slot based on the index hash code only bypassing element
+        dependencies << _find_bucket
+        inline_code _find_bucket_hash(_index.hash_code.(index))
+      end
+      method(element.lvalue, :_find_index_node, { target: const_rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
+        code %{
+          #{_bucket._node_p} curr;
+          #{_bucket._node_p} prev;
+          #{_bucket.const_lvalue} b = #{_find_index_bucket.(target, index)};
+          return #{_bucket._find_index_node.('*b', index, :prev, :curr)} ? &curr->element : NULL;
+        }
+      end
+      method(:int, :_remove_index_node, { target: rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
+        code %{
+          int c;
+          #{_bucket._node_p} curr;
+          #{_bucket._node_p} prev;
+          #{_bucket.lvalue} b = (#{_bucket.lvalue})#{_find_index_bucket.(target, index)};
+          if(c = #{_bucket._remove_index_node.('*b', index)}) --target->size;
+          return c;
+        }
+      end
+    end
+
+  end # HashSet
+
+
+  class HashMap::List < List
+
+    attr_reader :_index
+  
+    def initialize(*args, **kws)
+      super
+      _map = _master._master # this list is a subcomponent of a set which is in turn a subcomponent of the map
+      @_index = _map.index
+    end
+
+  private
+
+    def configure
+      super
+      method(:int, :_find_index_node, { target: const_rvalue, index: _index.const_rvalue, prev_p: _node_pp, curr_p: _node_pp }, constraint:-> { _index.comparable? }).configure do
+        # Locate node satisfying default element equality condition, return this and previous nodes
+        code _locate_node_equal(_index.equal.('curr->element.index', index))
+      end
+      method(:int, :_remove_index_node, { target: rvalue, index: _index.const_rvalue }, constraint:-> { _index.comparable? }).configure do
+        code _remove_first(_find_index_node.(target, index, :prev, :curr))
+      end
     end
 
   end # List
