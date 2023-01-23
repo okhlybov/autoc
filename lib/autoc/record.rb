@@ -24,8 +24,8 @@ module AutoC
     def hashable? = fields.values.all? { |t| t.hashable? }
     def orderable? = false
   
-    def initialize(type, fields, visibility: :public, profile: :blackbox)
-      super(type, visibility:)
+    def initialize(type, fields, visibility: :public, profile: :blackbox, **kws)
+      super(type, visibility:, **kws)
       setup_profile(profile)
       setup_fields(fields)
     end
