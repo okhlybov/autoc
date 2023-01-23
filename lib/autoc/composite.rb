@@ -26,7 +26,9 @@ module AutoC
 
     attr_reader :visibility
 
-    def initialize(signature, visibility: :public, decorator: nil, allocator: nil, hasher: nil)
+    attr_reader :_master # Internal reference to the containing type if this type is used as implementing type
+
+    def initialize(signature, visibility: :public, decorator: nil, allocator: nil, hasher: nil, _master: nil)
       super(signature)
       @methods = {}
       @hasher = hasher
@@ -34,6 +36,7 @@ module AutoC
       @allocator = allocator
       @visibility = visibility
       dependencies << DEFINITIONS << ASSERT_H << self.memory << self.hasher
+      @_master = _master
     end
 
     def self.new(*args, **kws, &block)

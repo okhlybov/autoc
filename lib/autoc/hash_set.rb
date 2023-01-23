@@ -20,9 +20,9 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def _bucket = @_bucket ||= _bucket_class.new(identifier(:_list, abbreviate: true), element, maintain_size: false, visibility: :internal)
+    def _bucket = @_bucket ||= _bucket_class.new(identifier(:_list, abbreviate: true), element, _master: self, maintain_size: false, visibility: :internal)
 
-    def _buckets = @_buckets ||= _buckets_class.new(identifier(:_vector, abbreviate: true), _bucket, visibility: :internal)
+    def _buckets = @_buckets ||= _buckets_class.new(identifier(:_vector, abbreviate: true), _bucket, _master: self, visibility: :internal)
 
     def initialize(*args, **kws)
       super
@@ -132,8 +132,7 @@ module AutoC
           #{_bucket.lvalue} b;
           assert(target);
           b = (#{_bucket.lvalue})#{_find_bucket.(target, value)};
-          c = #{_bucket.remove_first.('*b', value)};
-          if(c) --target->size;
+          if(c = #{_bucket.remove_first.('*b', value)}) --target->size;
           return c;
         }
       end
