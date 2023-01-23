@@ -33,13 +33,13 @@ module AutoC
           assert(left);
           assert(right);
           if(#{size.(left)} == #{size.(right)}) {
-            #{range} rl, rr;
+            #{range} lr, rr;
             for(
-              rl = #{range.new.(left)}, rr = #{range.new.(right)};
-              !#{range.empty.(:rl)} && !#{range.empty.(:rr)};
-              #{range.pop_front.(:rl)}, #{range.pop_front.(:rr)}
+              lr = #{range.new.(left)}, rr = #{range.new.(right)};
+              !#{range.empty.(:lr)} && !#{range.empty.(:rr)};
+              #{range.pop_front.(:lr)}, #{range.pop_front.(:rr)}
             ) {
-              #{element.const_lvalue} le = #{range.view_front.(:rl)};
+              #{element.const_lvalue} le = #{range.view_front.(:lr)};
               #{element.const_lvalue} re = #{range.view_front.(:rr)};
               if(!#{element.equal.('*le', '*re')}) return 0;
             }
@@ -51,18 +51,18 @@ module AutoC
       compare.configure do
         code %{
           size_t remaining, ls, rs;
-          #{range} rl, rr;
+          #{range} lr, rr;
           assert(left);
           assert(right);
           ls = #{size.(left)}; 
           rs = #{size.(right)};
           /* comparing common parts */
           for(
-            rl = #{range.new.(left)}, rr = #{range.new.(right)}, remaining = ls < rs ? ls : rs; /* min(ls, rs) */
+            lr = #{range.new.(left)}, rr = #{range.new.(right)}, remaining = ls < rs ? ls : rs; /* min(ls, rs) */
             remaining > 0;
-            #{range.pop_front.(:rl)}, #{range.pop_front.(:rr)}, --remaining
+            #{range.pop_front.(:lr)}, #{range.pop_front.(:rr)}, --remaining
           ) {
-            #{element.const_lvalue} le = #{range.view_front.(:rl)};
+            #{element.const_lvalue} le = #{range.view_front.(:lr)};
             #{element.const_lvalue} re = #{range.view_front.(:rr)};
             int c = #{element.compare.('*le', '*re')};
             if(c != 0) {
