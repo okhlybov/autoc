@@ -283,12 +283,12 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :remove_first, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
-        code %{
+      def _remove_first(locator)
+        %{
           #{_node_p} curr;
           #{_node_p} prev;
           assert(target);
-          if(#{_locate_node.(target, value, :prev, :curr)}) {
+          if(#{locator}) {
             assert(curr);
             if(prev) {
               prev->next = curr->next;
@@ -299,8 +299,12 @@ module AutoC
             #{memory.free(:curr)};
             #{'--target->size;' if maintain_size?}
             return 1;
-          } else return 0;
+          }
+          return 0;
         }
+      end
+      method(:int, :remove_first, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.comparable? }).configure do
+        code _remove_first(_locate_node.(target, value, :prev, :curr))
         header %{
           @brief Remove element
 
