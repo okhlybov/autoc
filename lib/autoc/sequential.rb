@@ -41,7 +41,7 @@ module AutoC
             ) {
               #{element.const_lvalue} le = #{range.view_front.(:lr)};
               #{element.const_lvalue} re = #{range.view_front.(:rr)};
-              if(!#{element.equal.('*le', '*re')}) return 0;
+              if(!(#{element.equal.('*le', '*re')})) return 0;
             }
             return 1;
           }

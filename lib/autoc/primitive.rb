@@ -13,9 +13,9 @@ module AutoC
   
     def custom_create = @custom_create ||= -> (target, source) { copy.(target, source) }
   
-    def copy = @copy ||= -> (target, source) { "(#{target} = #{source})" }
+    def copy = @copy ||= -> (target, source) { "#{target} = #{source}" }
   
-    def equal = @equal ||= -> (lt, rt) { "(#{lt} == #{rt})" }
+    def equal = @equal ||= -> (lt, rt) { "#{lt} == #{rt}" }
 
     def compare = @compare ||= -> (lt, rt) { "(#{lt} == #{rt} ? 0 : (#{lt} > #{rt} ? +1 : -1))" }
   

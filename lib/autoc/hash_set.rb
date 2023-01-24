@@ -132,7 +132,8 @@ module AutoC
           #{_slot.lvalue} s;
           assert(target);
           s = (#{_slot.lvalue})#{_find_slot.(target, value)};
-          if(c = #{_slot.remove_first.('*s', value)}) --target->size;
+          c = #{_slot.remove_first.('*s', value)};
+          if(c) --target->size;
           return c;
         }
       end
@@ -282,12 +283,13 @@ module AutoC
       end
       custom_create.configure do
         code %{
+          #{_iterable._slot.const_lvalue} s;
           assert(range);
           assert(iterable);
           range->bin = #{_bin.new.('iterable->bin')};
           /* get the first slot's range regardless of its emptiness status */
-          #{_iterable._slot.const_lvalue} b = #{_bin.view_front.('range->bin')};
-          range->slot = #{_slot.new.('*b')};
+          s = #{_bin.view_front.('range->bin')};
+          range->slot = #{_slot.new.('*s')};
           /* actually advance to the first non-empty slot */
           #{_advance.(range)};
         }

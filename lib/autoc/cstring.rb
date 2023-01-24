@@ -57,11 +57,11 @@ module AutoC
 
     def storage(target) = target # Return C pointer to contiguous storage
 
-    def render_implementation(stream)
+    def render_forward_declarations(stream)
       stream << %{
-        #include <stdarg.h>
         #include <stdlib.h>
-        /* overridable internal buffer size (in chars, not bytes) for s*printf() operations */
+        #include <stdarg.h>
+        /* overridable internal buffer size (in chars, not bytes) for *sprintf() operations */
         #ifndef AUTOC_BUFFER_SIZE
           #define AUTOC_BUFFER_SIZE 1024
         #endif
@@ -103,7 +103,7 @@ module AutoC
         code %{
           int r;
           va_list args;
-          #if __STDC_VERSION__ >= 199901L || defined(_MSC_VER) || defined(HAVE_VSNPRINTF)
+          #if defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L || (defined(_MSC_VER) && _MSC_VER >= 1900)
             va_start(args, format);
             r = vsnprintf(NULL, 0, format, args);
             va_end(args);

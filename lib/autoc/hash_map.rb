@@ -95,7 +95,8 @@ module AutoC
           #{_node.lvalue} node;
           assert(target);
           assert(target);
-          if(node = #{_set._find_index_node.('target->set', index)}) {
+          node = #{_set._find_index_node.('target->set', index)};
+          if(node) {
             #{_node.destroy.('*node') if _node.destructible?};
             #{_node.custom_create.('*node', index, value)}; /* override node's contents in-place */
           } else {
@@ -161,8 +162,9 @@ module AutoC
       end
       view.configure do
         code %{
+          #{_node.lvalue} node;
           assert(target);
-          #{_node.lvalue} node = #{_set._find_index_node.('target->set', index)};
+          node = #{_set._find_index_node.('target->set', index)};
           return node ? &node->element : NULL;
         }
       end
@@ -214,10 +216,9 @@ module AutoC
       method(:int, :_remove_index_node, { target: rvalue, index: _index.const_rvalue }, visibility: :internal).configure do
         code %{
           int c;
-          #{_slot._node_p} curr;
-          #{_slot._node_p} prev;
           #{_slot.lvalue} s = (#{_slot.lvalue})#{_find_index_slot.(target, index)};
-          if(c = #{_slot._remove_index_node.('*s', index)}) --target->size;
+          c = #{_slot._remove_index_node.('*s', index)};
+          if(c) --target->size;
           return c;
         }
       end
