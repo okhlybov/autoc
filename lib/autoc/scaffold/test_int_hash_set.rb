@@ -6,6 +6,11 @@ type_test(AutoC::HashSet, :IntHashSet, :int) do
 
 	def render_forward_declarations(stream)
 		super
+		stream << "void #{dump}(#{const_rvalue} target);"
+	end
+
+	def render_implementation(stream)
+		super
 		stream << %{
 			#include <stdio.h>
 			void #{dump}(#{const_rvalue} target) {

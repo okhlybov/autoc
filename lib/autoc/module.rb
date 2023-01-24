@@ -46,7 +46,9 @@ module AutoC
 
     attr_reader :name
 
-    attr_reader :source_count
+    attr_accessor :source_count
+
+    attr_accessor :source_threshold
 
     def initialize(name) = @name = name
 
@@ -70,12 +72,8 @@ module AutoC
 
     private def distribute_entities
       header.entities.merge(total_entities)
-      if @source_count.nil?
-        if @source_complexity_threshold.nil?
-          @source_count = 1
-        else
-          @source_count = (total_entities.sum(&:complexity).to_f / @source_complexity_threshold).ceil
-        end
+      if source_count.nil?
+        @source_count = source_threshold.nil? ? 1 : (total_entities.sum(&:complexity).to_f / source_threshold).ceil
       end
       total_entities.each do |e|
         sources.sort! { |lt, rt| lt.complexity <=> rt.complexity }
@@ -157,7 +155,7 @@ module AutoC
       s = stream
       render_prologue(s)
       total_entities = ::Set.new
-      entities.each { |e| total_entities.merge(e.total_dependencies) }
+      entities.each { |e| total_entities.merge(e.total_references) }
       total_entities.to_a.sort.each { |e| e.forward_declarations.each { |x| s << x } }
       entities.to_a.sort.each { |e| e.implementation.each { |x| s << x } }
     ensure
