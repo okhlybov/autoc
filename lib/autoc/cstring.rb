@@ -103,7 +103,7 @@ module AutoC
         code %{
           int r;
           va_list args;
-          #if defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L || (defined(_MSC_VER) && _MSC_VER >= 1900)
+          #if defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L || defined(__clang__) || defined(__INTEL_COMPILER) || (defined(_MSC_VER) && _MSC_VER >= 1900)
             va_start(args, format);
             r = vsnprintf(NULL, 0, format, args);
             va_end(args);
