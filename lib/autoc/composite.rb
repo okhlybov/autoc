@@ -300,13 +300,7 @@ module AutoC
     end
 
     def render_implementation(stream)
-      if live?
-        if inline?
-          stream << '_AUTOC_EXTERN( ' << prototype << " )\n"
-        else
-          render_function_definition(stream)
-        end
-      end
+      render_function_definition(stream) if live? && !inline?
     end
 
   end # Method
@@ -316,14 +310,13 @@ module AutoC
     interface: %{
       #ifndef AUTOC_INLINE
         #if defined(__cplusplus)
-          #define AUTOC_INLINE extern "C" inline
+          #define AUTOC_INLINE inline
+        #elif defined(__clang__)
+          #define AUTOC_INLINE static __inline __attribute__((unused))
+        #elif __STDC_VERSION__ >= 199901L || defined(__LCC__)
+          #define AUTOC_INLINE static inline
         #else
-          #if __STDC_VERSION__ >= 199901L && !defined(__LCC__)
-            #define AUTOC_INLINE extern inline
-          #else
-            #define _AUTOC_STATIC_INLINE
-            #define AUTOC_INLINE static __inline
-          #endif
+          #define AUTOC_INLINE static __inline
         #endif
       #endif
       #ifndef AUTOC_EXTERN
@@ -332,14 +325,6 @@ module AutoC
         #else
           #define AUTOC_EXTERN extern
         #endif
-      #endif
-    },
-    definitions: %{
-      /* force generation the external object code for inline functions for C99+ */
-      #ifndef _AUTOC_STATIC_INLINE
-        #define _AUTOC_EXTERN(x) extern x;
-      #else
-        #define _AUTOC_EXTERN(x)
       #endif
     }
   )
