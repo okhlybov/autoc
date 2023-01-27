@@ -103,7 +103,7 @@ module AutoC
         code %{
           int r;
           va_list args;
-          #if defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L || defined(__clang__) || defined(__INTEL_COMPILER) || (defined(_MSC_VER) && _MSC_VER >= 1900)
+          #if defined(HAVE_VSNPRINTF) || __STDC_VERSION__ >= 199901L || __cplusplus > 199711L || (defined(_MSC_VER) && _MSC_VER >= 1900) || defined(__POCC__)
             va_start(args, format);
             r = vsnprintf(NULL, 0, format, args);
             va_end(args);
@@ -114,7 +114,11 @@ module AutoC
             va_end(args);
             return r >= 0;
           #else
-            #warning this code employs bare sprintf() with preallocated temporary buffer of AUTOC_BUFFER_SIZE chars; expect execution bail outs upon exceeding this limit
+            #if defined(_MSC_VER)
+              #pragma message("WARNING: this code employs bare sprintf() with preallocated temporary buffer of AUTOC_BUFFER_SIZE chars; expect execution bail outs upon exceeding this limit")
+            #else
+              #warning("this code employs bare sprintf() with preallocated temporary buffer of AUTOC_BUFFER_SIZE chars; expect execution bail outs upon exceeding this limit")
+            #endif
             va_start(args, format);
             #{element.lvalue} t = #{memory.allocate(element, :AUTOC_BUFFER_SIZE, atomic: true)}; assert(t);
             r = vsprintf(t, format, args);

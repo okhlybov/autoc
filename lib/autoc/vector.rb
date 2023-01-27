@@ -71,10 +71,18 @@ module AutoC
     def render_implementation(stream)
       if element.orderable?
         stream << %{
-          static int #{ascend}(const void* left, const void* right) {
+          static int
+          #ifdef __POCC__
+            __cdecl
+          #endif
+          #{ascend}(const void* left, const void* right) {
             return #{element.compare.("(*(#{element.lvalue})left)", "(*(#{element.lvalue})right)")};
           }
-          static int #{descend}(const void* left, const void* right) {
+          static int
+          #ifdef __POCC__
+            __cdecl
+          #endif
+          #{descend}(const void* left, const void* right) {
             return -#{ascend}(left, right);
           }
           #{sort.prototype} {

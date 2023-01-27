@@ -313,7 +313,7 @@ module AutoC
           #define AUTOC_INLINE inline
         #elif defined(__clang__)
           #define AUTOC_INLINE static __inline __attribute__((unused))
-        #elif __STDC_VERSION__ >= 199901L || defined(__LCC__)
+        #elif __STDC_VERSION__ >= 199901L
           #define AUTOC_INLINE static inline
         #else
           #define AUTOC_INLINE static __inline
