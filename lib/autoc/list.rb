@@ -124,7 +124,7 @@ module AutoC
           return 0;
         }
       end
-      method(:int, :_locate_node, { target: const_rvalue, value: element.const_rvalue, prev_p: _node_pp, curr_p: _node_pp }, constraint:-> { element.comparable? }).configure do
+      method(:int, :_locate_node, { target: const_rvalue, value: element.const_rvalue, prev_p: _node_pp, curr_p: _node_pp }, visibility: :internal, constraint:-> { element.comparable? }).configure do
         # Locate node satisfying default element equality condition, return this and previous nodes
         code _locate_node_equal(element.equal.('curr->element', value))
       end
