@@ -60,6 +60,7 @@ module AutoC
       distribute_entities
       header.render
       sources.each(&:render)
+      self
     end
 
     def total_entities
@@ -82,7 +83,7 @@ module AutoC
     end
 
     def self.render(name, &code)
-      m = Module.new(name)
+      m = self.new(name)
       yield(m) if block_given?
       m.render
     end

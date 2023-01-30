@@ -168,7 +168,11 @@ Value = GenericValue.new(:Value)
 
 Dir[File.join(File.dirname(__FILE__), 'test_*.rb')].each { |t| require t }
 
-AutoC::Module.render(:tests) do |m|
+require 'autoc/cmake'
+
+x = AutoC::Module.render(:tests) do |m|
   m << $suite
   $tests.each { |t| $suite.dependencies << t }
 end
+
+AutoC::CMake.render(x)
