@@ -72,7 +72,7 @@ module AutoC
           /* fix capacity to become the ceiling to the nearest power of two */
           if(capacity % 2 == 0) --capacity;
           while(capacity >>= 1) ++bits;
-          capacity = 1 << (bits+1);
+          capacity = (size_t)1 << (bits+1);
           target->hash_mask = capacity-1; /* fast slot location for value: hash_code(value) & hash_mask */
           #{_bin.custom_create.('target->bin', capacity)};
           assert(#{_bin.size.('target->bin')} % 2 == 0);
