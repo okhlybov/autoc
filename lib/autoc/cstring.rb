@@ -59,7 +59,8 @@ module AutoC
 
     def render_forward_declarations(stream)
       stream << %{
-        #include <stdlib.h>
+        #include <stdio.h>
+        #include <malloc.h>
         #include <stdarg.h>
         /* overridable internal buffer size (in chars, not bytes) for *sprintf() operations */
         #ifndef AUTOC_BUFFER_SIZE
