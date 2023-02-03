@@ -7,3 +7,6 @@ def docs = require_relative 'scaffold/docs'
 
 # Generated test suite
 def tests = require_relative 'scaffold/tests'
+
+# Generate skeleton project
+def project = require_relative 'scaffold/project'
