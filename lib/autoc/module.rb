@@ -8,20 +8,19 @@ require 'autoc'
 module AutoC
 
 
-  # :nodoc:
-  module EntityContainer
-
-    def entities = @entities ||= ::Set.new
-
-    def <<(entity)
-      entities << entity
-      self
-    end
-
-  end # EntityContainer
-
-
   class Module
+
+    # :nodoc:
+    module EntityContainer
+
+      def entities = @entities ||= ::Set.new
+
+      def <<(entity)
+        entities << entity
+        self
+      end
+
+    end # EntityContainer
 
     # :nodoc:
     class Builder < ::Array
@@ -56,10 +55,13 @@ module AutoC
 
     def sources = @sources ||= (1..source_count).collect { |i| Source.new(self, i) }
 
+    def digests = @digests ||= State.new(self).read
+
     def render
       distribute_entities
       header.render
       sources.each(&:render)
+      State.new(self).collect.write
       self
     end
 
@@ -91,9 +93,116 @@ module AutoC
   end # Module
 
 
+  # :nodoc:
+  class Module::State < ::Hash
+
+    attr_reader :module
+
+    def file_name = @file_name ||= "#{self.module.name}.state"
+
+    def initialize(m)
+      super
+      @module = m
+    end
+
+    def collect
+      self[self.module.header.file_name] = self.module.header.digest
+      self.module.sources.each { |source| self[source.file_name] = source.digest }
+      self
+    end
+
+    def read
+      if File.exists?(file_name)
+        # It's OK not to have this file but if it exists it must have proper contents
+        io = File.open(file_name, 'rt', chomp: true)
+        begin
+          hash = {}
+          io.readlines.each do |x|
+            raise 'improper state file format' if (/\s*([^\s]+)\s+\*(.*)/ =~ x).nil?
+            hash[$2] = $1
+          end
+          update(hash)
+        ensure
+          io.close
+        end
+      end
+      self
+    end
+
+    def write
+      io = File.open(file_name, 'wt')
+      begin
+        begin
+          each { |file_name, digest| io << "#{digest} *#{file_name}\n" }
+        ensure
+          io.close
+        end
+      rescue
+        File.unlink(file_name) # Delete improperly rendered state file
+        raise
+      end
+      self
+    end
+
+  end # State
+
+
+  # :nodoc:
+  class Module::StreamFile < File
+
+    def digest = @digest.hexdigest
+
+    def initialize(*args, **kws)
+      super(*args, **kws)
+      @digest = Digest::MD5.new
+    end
+
+    def <<(data)
+      super(data)
+      @digest.update(data)
+      self
+    end
+
+  end # StreamFile
+
+
+  # :nodoc:
+  module Module::SmartRenderer
+
+    # def render_contents(stream)
+
+    attr_reader :digest
+
+    def render
+      io = stream
+      _file_name = io.path # Memorize temporary file name
+      begin
+        begin
+          render_contents(io)
+          @digest = io.digest
+        ensure
+          io.close
+        end
+      rescue
+        File.unlink(_file_name) # Remove improperly rendered temporary file
+        raise
+      else
+        if !File.exists?(file_name) || self.module.digests[file_name] != digest
+          File.rename(_file_name, file_name) # Rendered temporary has different digest - replace original permanent file with it
+        else
+          File.unlink(_file_name) # New temporary has the same digest as permanent - no need to replace the latter, delete the temporary instead
+        end
+      end
+    end
+
+  end # SmartRenderer
+
+
   class Module::Header
 
-    include EntityContainer
+    include Module::EntityContainer
+
+    include Module::SmartRenderer
 
     attr_reader :module
 
@@ -103,17 +212,13 @@ module AutoC
 
     def initialize(m) = @module = m
 
-    def render
-      s = stream
-      render_prologue(s)
-      entities.to_a.sort.each { |e| e.interface.each { |x| s << x } }
-      render_epilogue(s)
-    ensure
-      s.close
-      @stream = nil
-    end
-
   private
+
+    def render_contents(stream)
+      render_prologue(stream)
+      entities.to_a.sort.each { |e| e.interface.each { |x| stream << x } }
+      render_epilogue(stream)
+    end
 
     def render_prologue(stream)
       stream << %{
@@ -129,14 +234,16 @@ module AutoC
       }
     end
 
-    def stream = @stream ||= File.new(file_name, 'w')
+    def stream = @stream ||= Module::StreamFile.new(file_name+'~', 'wt')
 
   end # Header
 
 
   class Module::Source
 
-    include EntityContainer
+    include Module::EntityContainer
+
+    include Module::SmartRenderer
 
     attr_reader :module
 
@@ -152,24 +259,20 @@ module AutoC
       @index = index
     end
 
-    def render
-      s = stream
-      render_prologue(s)
-      total_entities = ::Set.new
-      entities.each { |e| total_entities.merge(e.total_references) }
-      total_entities.to_a.sort.each { |e| e.forward_declarations.each { |x| s << x } }
-      entities.to_a.sort.each { |e| e.implementation.each { |x| s << x } }
-    ensure
-      s.close
-      @stream = nil
-    end
-
     def <<(entity)
       @complexity += entity.complexity unless entities.include?(entity)
       super
     end
 
   private
+
+    def render_contents(stream)
+      render_prologue(stream)
+      total_entities = ::Set.new
+      entities.each { |e| total_entities.merge(e.total_references) }
+      total_entities.to_a.sort.each { |e| e.forward_declarations.each { |x| stream << x } }
+      entities.to_a.sort.each { |e| e.implementation.each { |x| stream << x } }
+    end
 
     def render_prologue(stream)
       stream << %{
@@ -178,7 +281,7 @@ module AutoC
       }
     end
 
-    def stream = @stream ||= File.new(file_name, 'w')
+    def stream = @stream ||= Module::StreamFile.new(file_name+'~', 'wt')
 
   end # Source
 
