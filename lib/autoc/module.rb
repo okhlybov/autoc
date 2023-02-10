@@ -114,7 +114,7 @@ module AutoC
     end
 
     def read
-      if File.exists?(file_name)
+      if File.exist?(file_name)
         # It's OK not to have this file but if it exists it must have proper contents
         io = File.open(file_name, 'rt', chomp: true)
         begin
@@ -189,7 +189,7 @@ module AutoC
         File.unlink(_file_name) # Remove improperly rendered temporary file
         raise
       else
-        if !File.exists?(file_name) || self.module.digests[file_name] != digest
+        if !File.exist?(file_name) || self.module.digests[file_name] != digest
           File.rename(_file_name, file_name) # Rendered temporary has different digest - replace original permanent file with it
         else
           File.unlink(_file_name) # New temporary has the same digest as permanent - no need to replace the latter, delete the temporary instead
