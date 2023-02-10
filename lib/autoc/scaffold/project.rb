@@ -24,8 +24,9 @@ project(#{project})
 cmake_minimum_required(VERSION 3.0)
 
 set(AUTOC_MODULE_NAME _${PROJECT_NAME})
+set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rb)
 
-find_program(Ruby_EXECUTABLE ruby REQUIRED)
+find_package(Ruby 3.0)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
@@ -33,9 +34,9 @@ include(AutoC)
 
 add_autoc_module(
   ${AUTOC_MODULE_NAME}
-  DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-  MAIN_DEPENDENCY ${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.rb
-  COMMAND ${Ruby_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.rb
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  MAIN_DEPENDENCY ${AUTOC_MODULE_SOURCE}
+  COMMAND ${Ruby_EXECUTABLE} ${AUTOC_MODULE_SOURCE}
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c)
@@ -47,13 +48,16 @@ end
 ###
 def project_rb(project)
 <<END
-require 'autoc/cmake'
 require 'autoc/module'
 require 'autoc/cstring'
 
-AutoC::CMake.render(AutoC::Module.render(:_#{project}) do |m|
+m = AutoC::Module.render(:_#{project}) do |m|
   m << AutoC::CString.new
-end)
+end
+
+require 'autoc/cmake'
+
+AutoC::CMake.render(m)
 END
 end
 
