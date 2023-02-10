@@ -102,6 +102,26 @@ valgrind tests
 ```
 
 
+### Create CMake project from template
+
+Create named CMake-enabled skeleton project `runme` in the current directory
+
+```shell
+ruby -r autoc/scaffold -e project runme
+```
+
+Configure the project `runme`
+
+```shell
+cmake .
+```
+
+Build the project `runme`
+
+```shell
+cmake --build .
+```
+
 ## Assorted related stuff
 
 https://github.com/tylov/STC
