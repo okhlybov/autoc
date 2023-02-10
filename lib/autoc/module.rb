@@ -2,6 +2,8 @@
 
 
 require 'set'
+require 'digest'
+
 require 'autoc'
 
 
