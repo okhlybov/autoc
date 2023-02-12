@@ -51,7 +51,10 @@ module AutoC
 
     def configure
       super
-      method(:int, :empty, { target: const_rvalue }).configure do
+      method(:int, :empty, { target: const_rvalue })
+      method(:size_t, :size, { target: const_rvalue })
+      # Separate certain methods creation from documenting due to mutual dependency
+      empty.configure do
         header %{
           @brief Check container for emptiness
 
@@ -63,7 +66,7 @@ module AutoC
           @since 2.0
         }
       end
-      method(:size_t, :size, { target: const_rvalue }).configure do
+      size.configure do
         header %{
           @brief Return number of contained elements
 

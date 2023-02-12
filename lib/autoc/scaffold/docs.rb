@@ -1,6 +1,5 @@
 require 'autoc'
-require 'autoc/list'
-require 'autoc/vector'
+require 'autoc/module'
 
 main = AutoC::Code.new interface: %{
   /**
@@ -90,10 +89,23 @@ class Docs < AutoC::Module
   end
 end
 
+require 'autoc/cstring'
+require 'autoc/list'
+require 'autoc/vector'
+require 'autoc/hash_set'
+require 'autoc/hash_map'
+require 'autoc/box'
+require 'autoc/record'
+
 m = Docs.new(:autoc)
+
 m << main
+m << AutoC::CString.new
 m << AutoC::Vector.new(:Vector, T)
 m << AutoC::List.new(:List, T)
-#m << AutoC::HashMap.new(:HashMap, K, T)
-#m << AutoC::HashSet.new(:HashSet, T)
+m << AutoC::HashMap.new(:HashMap, K, T)
+m << AutoC::HashSet.new(:HashSet, T)
+m << AutoC::Box.new(:Box, { contents: T })
+m << AutoC::Record.new(:Record, { contents: T })
+
 m.render

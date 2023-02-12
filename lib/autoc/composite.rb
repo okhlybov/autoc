@@ -165,6 +165,20 @@ module AutoC
     end
 
     def configure
+      method(:void, :destroy, { target: lvalue }, constraint: -> { destructible? }).configure do
+        header %{
+          @brief Destroy existing value
+
+          @param[out] target value to be destroyed
+
+          This function destroys the value previously constructed with any constructor.
+          It involves freeing allocated memory and destroying the constituent values with the respective destructors.
+
+          It is an error to use the value after call to this function (`*target` is considered to contain garbage afterwards).
+
+          @since 2.0
+        }
+      end
       method(:void, :create, { target: lvalue }, instance: :default_create, constraint: -> { default_constructible? }).configure do
         header %{
           @brief Create a new value
@@ -176,20 +190,6 @@ module AutoC
           Previous contents of `*target` is overwritten.
 
           Once constructed, the value is to be destroyed with @ref #{destroy}.
-
-          @since 2.0
-        }
-      end
-      method(:void, :destroy, { target: lvalue }, constraint: -> { destructible? }).configure do
-        header %{
-          @brief Destroy existing value
-
-          @param[out] target value to be destroyed
-
-          This function destroys the value previously constructed with any constructor.
-          It involves freeing allocated memory and destroying the constituent values with the respective destructors.
-
-          It is an error to use the value after call to this function (`*target` is considered to contain garbage afterwards).
 
           @since 2.0
         }

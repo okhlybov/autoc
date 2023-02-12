@@ -306,7 +306,7 @@ module AutoC
               @param[in] value value to put
   
               This function is used to put a copy of the value into the box.
-              The previously contained value is destroyed with respective destructor;
+              Previously contained value is destroyed with respective destructor.
   
               After call to this function the value type may be obtained with @ref #{identifier(:tag)}.
 

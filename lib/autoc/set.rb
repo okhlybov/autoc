@@ -24,7 +24,7 @@ module AutoC
         header %{
           @brief Put a value
 
-          @param[in] self set to put into
+          @param[in] target set to put into
           @param[in] value value to put
           @return non-zero value on successful put and zero value and zero value otherwise
           
@@ -38,11 +38,11 @@ module AutoC
           @since 2.0
         }
       end
-      method(:int, :push, { target: rvalue, value: element.const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
+      method(:int, :push, { target: rvalue,  value: element.const_rvalue }, constraint:-> { element.copyable? && element.comparable? }).configure do
         header %{
           @brief Force put a value
 
-          @param[in] self set to put into
+          @param[in] target set to put into
           @param[in] value value to put
           @return non-zero value if a value was replaced or zero value if a new value was inserted
 

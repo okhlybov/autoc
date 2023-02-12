@@ -159,7 +159,9 @@ module AutoC
           #{'++target->size;' if maintain_size?}
         }
       end
-      method(element.const_lvalue, :view_front, { target: const_rvalue }).configure do
+      method(element.const_lvalue, :view_front, { target: const_rvalue })
+      method(element, :take_front, { target: const_rvalue }, constraint:-> { element.copyable? })
+      view_front.configure do
         dependencies << empty
         inline_code %{
           assert(!#{empty.(target)});
@@ -175,6 +177,32 @@ module AutoC
           Refer to @ref #{take_front} to get an independent copy of that element.
 
           It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+
+          @note List must not be empty (see @ref #{empty}).
+
+          @since 2.0
+        }
+      end
+      take_front.configure do
+        code %{
+          #{element} result;
+          #{element.const_lvalue} e;
+          assert(target);
+          assert(!#{empty.(target)});
+          e = #{view_front.(target)};
+          #{element.copy.(:result, '*e')};
+          return result;
+        }
+        header %{
+          @brief Get front element
+
+          @param[in] target list to get element from
+          @return a *copy* of a front element
+
+          This function is used to get a *copy* of the front value contained in `target`.
+          Refer to @ref #{view_front} to get a view of that element without making an independent copy.
+
+          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
           @note List must not be empty (see @ref #{empty}).
 
@@ -198,32 +226,6 @@ module AutoC
 
           This function removes front element from the list and returns it.
           Note that contrary to @ref #{take_front} no copy operation is performed - it is the contained value itself that is returned.
-
-          @note List must not be empty (see @ref #{empty}).
-
-          @since 2.0
-        }
-      end
-      method(element, :take_front, { target: const_rvalue }, constraint:-> { element.copyable? }).configure do
-        code %{
-          #{element} result;
-          #{element.const_lvalue} e;
-          assert(target);
-          assert(!#{empty.(target)});
-          e = #{view_front.(target)};
-          #{element.copy.(:result, '*e')};
-          return result;
-        }
-        header %{
-          @brief Get front element
-
-          @param[in] target list to get element from
-          @return a *copy* of a front element
-
-          This function is used to get a *copy* of the front value contained in `target`.
-          Refer to @ref #{view_front} to get a view of that element without making an independent copy.
-
-          This function requires the element type to be *copyable* (i.e. to have a well-defined copy operation).
 
           @note List must not be empty (see @ref #{empty}).
 

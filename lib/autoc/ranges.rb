@@ -177,6 +177,18 @@ module AutoC
     def configure
       super
       copy.configure do
+        header %{
+          @brief Create a copy of the range state
+
+          @param[out] target range to be created
+          @param[in]  source range to be cloned
+
+          This function is meant to an independent copy (a clone) of `*source` range in place of `*target`.
+
+          Previous contents of `*target` is overwritten.
+
+          @since 2.0
+        }
         inline_code %{
           assert(target);
           assert(source);
