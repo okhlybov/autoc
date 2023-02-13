@@ -1,8 +1,8 @@
 project(docs)
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.18)
 
-find_package(Ruby REQUIRED VERSION 3.0)
+find_package(Ruby 3.0 REQUIRED)
 find_package(Doxygen REQUIRED)
 
 add_custom_target(create COMMAND ${Ruby_EXECUTABLE} -I${CMAKE_CURRENT_LIST_DIR}/../lib -r autoc/scaffold -e docs)
