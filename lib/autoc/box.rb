@@ -136,7 +136,7 @@ module AutoC
           @param[in] target box to query
           @return tag of currently contained element
 
-          This function returns a tag of currently contained element (@see @ref #{tag_}) or zero value if the box is empty (i.e. contains nothing).
+          This function returns a tag of currently contained element (@ref #{tag_}) or zero value if the box is empty (i.e. contains nothing).
 
           @since 2.0
         }
@@ -255,7 +255,7 @@ module AutoC
             @brief Get a view of contained value
 
             @param[in] target box to query
-            @return a view of the value
+            @return a view of the value of type #{type}
 
             This function is used to get a constant reference (in form of the C pointer) to value contained in `target`.
 
@@ -280,7 +280,7 @@ module AutoC
               @brief Get a copy of contained value
   
               @param[in] target box to query
-              @return a copy of the value
+              @return a copy of the value of type #{type}
   
               This function is used to get a copy of the value contained in `target`.
   
@@ -303,7 +303,7 @@ module AutoC
               @brief Put value to box
   
               @param[in] target box to set
-              @param[in] value value to put
+              @param[in] value value of type #{type} to put
   
               This function is used to put a copy of the value into the box.
               Previously contained value is destroyed with respective destructor.

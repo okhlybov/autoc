@@ -41,15 +41,33 @@ module AutoC
             @since 2.0
           */
         }
-        stream << %{
-          /**
-            #{ingroup}
+        if @opaque
+          stream << %{
+            /**
+              #{ingroup}
 
-            @brief Opaque struct holding state of the record
+              @brief Opaque struct holding state of the record
 
-            @since 2.0
-          */
-        }
+              @since 2.0
+            */
+          }
+        else
+          stream << %{
+            /**
+              #{ingroup}
+
+              @brief Open struct holding state of the record
+
+              The struct's fields are directly acessible.
+              However, care must be taken when modifying the struct's contents directly
+              as it may break the contract(s) of certain (namely, hash- and tree-based) containers.
+
+              For the safety reasons these fields should be generally treated read-only.
+
+              @since 2.0
+            */
+          }
+        end
       else
         stream << PRIVATE
       end
@@ -94,7 +112,7 @@ module AutoC
     # @private
     def field_declaration(type, name)
       s = "#{type} #{field_variable(name)};"
-      s += '/**< @private */' if @opaque
+      s += @opaque ? '/**< @private */' : "/**< @brief Field of type #{type} */"
       s
     end
 
@@ -102,12 +120,14 @@ module AutoC
       super
       ### set
         params = []
+        docs = []
         args = { target: lvalue }
         fields.each do |name, type|
           formal = "_#{name}".to_sym
           value = type.const_rvalue
           params << [name, Parameter.new(value, formal)]
           args[formal] = value
+          docs << "@param[in] #{formal} `#{name}` field initializer of type @ref #{type}"
         end
         method(:void, :set, args, instance: :custom_create).configure do
           _code = 'assert(target);'
@@ -119,8 +139,11 @@ module AutoC
             @brief Initialize record
 
             @param[in] target record to create
+            #{docs.join("\n")}
 
             This function initializes new record's fields with copies of respective arguments.
+
+            Previous contents of `*target` is overwritten.
 
             @since 2.0
           }

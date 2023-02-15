@@ -418,6 +418,17 @@ module AutoC
       else
         stream << PRIVATE
       end
+      if public?
+        stream << %{
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the contiguous container's range
+            @since 2.0
+          */
+        }
+      else
+        stream << PRIVATE
+      end
       stream << %{
         typedef struct {
           #{iterable.element.lvalue} front; /**< @private */
@@ -568,7 +579,7 @@ module AutoC
           @since 2.0
         }
       end
-      method(iterable.element, :take_index_front, { range: const_rvalue }, constraint:-> { iterable.index.copyable? && iterable.element.copyable? }).configure do
+      method(iterable.index, :take_index_front, { range: const_rvalue }, constraint:-> { iterable.index.copyable? && iterable.element.copyable? }).configure do
         dependencies << empty << view_index_front
         inline_code %{
           #{iterable.index} result;

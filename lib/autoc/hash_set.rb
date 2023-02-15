@@ -72,10 +72,25 @@ module AutoC
           /* fix capacity to become the ceiling to the nearest power of two */
           if(capacity % 2 == 0) --capacity;
           while(capacity >>= 1) ++bits;
-          capacity = (size_t)1 << (bits+1);
+          capacity = (size_t)1 << (bits+1); assert(capacity > 0);
           target->hash_mask = capacity-1; /* fast slot location for value: hash_code(value) & hash_mask */
           #{_bin.custom_create.('target->bin', capacity)};
           assert(#{_bin.size.('target->bin')} % 2 == 0);
+        }
+        header %{
+          @brief Create set with specified capacity
+
+          @param[out] target set to create
+          @param[in] capacity initial capacity of the set
+
+          This function creates a new set which should be suffice to contain specific number of elements.
+
+          While the input capacity may be arbitrary the resulting one will be rounded up to the nearest power of two.
+
+          This function may be useful when the (approximate) number of elements this set is about to contain is known in advance
+          in order to avoid expensive storage reallocation & elements rehashing operations during the set's lifetime.
+
+          @since 2.0
         }
       end
       def _find_slot_hash(hash)

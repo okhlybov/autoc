@@ -180,6 +180,19 @@ module AutoC
             #{memory.free(:old_elements)};
           }
         }
+        header %{
+          @brief Resize vector
+
+          @param[out] target vector to be resized
+          @param[in] new_size new size of new vector
+
+          This function sets new size for existing vector, expanding or shrinking it - whatever is applicable.
+
+          When expanding, new elements are default initialized.
+          When shrinking, excessive elements are destroyed with the respective destructor.
+
+          @since 2.0
+        }
       end
       default_create.configure do
         inline_code %{
