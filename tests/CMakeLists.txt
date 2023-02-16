@@ -2,7 +2,12 @@ project(test LANGUAGES C)
 
 cmake_minimum_required(VERSION 3.18)
 
-find_package(Ruby 3.0 REQUIRED)
+find_package(Ruby 3.0)
+
+if(NOT Ruby_FOUND)
+  message(STATUS "Attempting to locate Ruby executable manually")
+  find_program(Ruby ruby REQUIRED)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/../cmake)
 
