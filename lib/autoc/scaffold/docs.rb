@@ -107,7 +107,7 @@ m << AutoC::Vector.new(:Vector, T)
 m << AutoC::List.new(:List, T)
 m << AutoC::HashSet.new(:HashSet, T)
 m << AutoC::HashMap.new(:HashMap, T, K)
-m << AutoC::Box.new(:Box, { contents: T })
-m << AutoC::Record.new(:Record, { contents: T }, profile: :glassbox)
+m << AutoC::Box.new(:Box, { t: T, k: K })
+m << AutoC::Record.new(:Record, { t: T, k: K })
 
 m.render

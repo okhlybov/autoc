@@ -36,6 +36,8 @@ module AutoC
 
     # For associative container to be hashable both hashable element and index types are required
     def hashable? = super && index.hashable?
+
+    def type_tag = @type_tag ||= "#{signature}<#{element},#{index}>"
   
   private
 

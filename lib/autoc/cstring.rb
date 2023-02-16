@@ -70,6 +70,8 @@ module AutoC
       super
     end
 
+    def type_tag = @type_tag ||= "#{signature}<#{element}>"
+
   private
 
     def configure

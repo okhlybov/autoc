@@ -95,6 +95,8 @@ module AutoC
 
     def storage(target) = "#{target}->elements" # Return C pointer to contiguous storage
 
+    def type_tag = @type_tag ||= "#{signature}<#{element}>"
+
   private
 
     def configure
