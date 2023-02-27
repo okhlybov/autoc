@@ -1,7 +1,6 @@
 # Reinvention of the C wheel, automatized
 
-This project presents is a collection of [Ruby](https://www.ruby-lang.org) modules related to automagic C source code generation.
-
+This project provides a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic C source code generation.
 
 ## Qickstart
 
@@ -10,7 +9,6 @@ Install the `autoc` Ruby package from [RubyGems](https://rubygems.org)
 ```shell
 gem install autoc
 ```
-
 
 ### Generate documentation
 
@@ -28,12 +26,10 @@ doxygen .
 
 Explore the rendered HTML documentation starting at `html/index.html`
 
-
 ### Run sample project
 
-Create auto code descriptor in Ruby
+Create auto code descriptor in Ruby `sample.rb`
 
-`sample.rb`
 ```ruby
 require 'autoc/hash_set'
 AutoC::Module.render(:sample) do |m|
@@ -47,9 +43,8 @@ Generate C code into `sample_auto.[ch]`
 ruby sample.rb
 ```
 
-Create C sample code
+Create sample C code `sample.c`
 
-`sample.c`
 ```c
 #include <stdio.h>
 #include "sample_auto.h"
@@ -80,7 +75,6 @@ Test sample with [Valgrind](https://valgrind.org)
 valgrind sample
 ```
 
-
 ### Run test suite
 
 Generate C test suite into `tests_auto.[ch]`
@@ -101,10 +95,9 @@ Witness the test suite run time correctness
 valgrind tests
 ```
 
-
 ### Create CMake project from template
 
-Create named CMake-enabled skeleton project `runme` in the current directory
+Create named CMake-powered skeleton project `runme` in the current directory
 
 ```shell
 ruby -r autoc/scaffold -e project runme
@@ -122,19 +115,17 @@ Build the project `runme`
 cmake --build .
 ```
 
-## Assorted related stuff
-
-https://github.com/tylov/STC
-
-
 ## Licensing & availability
 
-This code is distributed under the terms of 2-clause BSD license.
+This code is distributed under terms of the 2-clause BSD license.
 
 The project's home page is [GitHub](https://github.com/okhlybov/autoc).
 
 The released ruby gems are published in [RubyGems](https://rubygems.org/gems/autoc).
 
+## Assorted related stuff
+
+https://github.com/tylov/STC
 
 ---
 
