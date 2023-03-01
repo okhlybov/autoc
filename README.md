@@ -1,10 +1,17 @@
 # Reinvention of the C wheel, automatized
 
-This project provides a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic C source code generation.
+This project provides a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic
+C source code generation.
 
-Specifically, it provides a means of generating strongly-typed general purpose C data containers (vectors, lists, maps etc.)
-similar to those provided by the C++'s [STL template containers](https://en.cppreference.com/w/cpp/container)
+Specifically, it provides a means of generating strongly-typed general purpose C data containers
+(vectors, lists, maps etc.) similar to those provided by
+the C++'s [STL template containers](https://en.cppreference.com/w/cpp/container)
 but implemented in ***pure ANSI C language***.
+
+Unlike similar attempts to introduce type-generic data containers to the C language which
+are typically the macro libraries, the AutoC is an ***explicit source code generator***
+with 100% of provided functionality is implemented as (inline or extern) C functions
+making the code explicit, browseable and debuggable.
 
 ## Qickstart
 

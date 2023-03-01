@@ -265,7 +265,7 @@ module AutoC
           @param[in] right set to get elements from
 
           This function creates a new set which contains copies of the elements shared by both source sets.
-          This is effectively a set intersection operation left & right -> target_.
+          This is effectively a set intersection operation _left & right -> target_.
 
           @since 2.0
         }
@@ -318,7 +318,7 @@ module AutoC
           @param[in] right set to get elements from
 
           This function creates a new set which contains copies of elements which are contained in either `target` set or `source` set, but not in both.
-          This is effectively a set symmetric difference operation left ^ right -> target_.
+          This is effectively a set symmetric difference operation _left ^ right -> target_.
 
           @since 2.0
         }
