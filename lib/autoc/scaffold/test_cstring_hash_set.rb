@@ -1,4 +1,5 @@
 require 'autoc/hash_set'
+
 require_relative 'test_cstring'
 
 type_test(AutoC::HashSet, :CStringHashSet, CString) do

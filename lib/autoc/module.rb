@@ -12,7 +12,7 @@ module AutoC
 
   class Module
 
-    # :nodoc:
+    # @private
     module EntityContainer
 
       def entities = @entities ||= ::Set.new
@@ -24,7 +24,7 @@ module AutoC
 
     end # EntityContainer
 
-    # :nodoc:
+    # @private
     class Builder < ::Array
 
       attr_reader :complexity
@@ -95,7 +95,7 @@ module AutoC
   end # Module
 
 
-  # :nodoc:
+  # @private
   class Module::State < ::Hash
 
     attr_reader :module
@@ -149,7 +149,7 @@ module AutoC
   end # State
 
 
-  # :nodoc:
+  # @private
   class Module::StreamFile < File
 
     def digest = @digest.hexdigest
@@ -168,7 +168,7 @@ module AutoC
   end # StreamFile
 
 
-  # :nodoc:
+  # @private
   module Module::SmartRenderer
 
     # def render_contents(stream)
@@ -375,7 +375,7 @@ module AutoC
   Entity::ReferenceSet = ::Set
 
 
-  # :nodoc:
+  # @private
   class Entity::DependencySet < ::Set
 
     def initialize(entity)

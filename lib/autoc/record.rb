@@ -76,6 +76,8 @@ module AutoC
       stream << "} #{signature};"
     end
 
+    def type_tag = @type_tag ||= "#{signature}<#{fields.values.join(',')}>"
+
   private
 
     # @private

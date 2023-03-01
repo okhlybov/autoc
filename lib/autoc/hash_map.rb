@@ -274,7 +274,7 @@ module AutoC
       }
     end
 
-    # :nodoc:
+    # @private
     def _range = @range ||= _iterable._set.range
 
   private

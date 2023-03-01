@@ -9,7 +9,7 @@ require 'autoc/primitive'
 module AutoC
 
 
-  # :nodoc:
+  # @private
   class Value
 
     attr_reader :type
@@ -47,7 +47,7 @@ module AutoC
   end # Value
   
   
-  # :nodoc:
+  # @private
   # Function parameter
   class Parameter
   
@@ -229,7 +229,7 @@ module AutoC
   end # Function
 
 
-  # :nodoc:
+  # @private
   # Named parameter list for the function
   class Function::Parameters < ::Hash
     def initialize(function)

@@ -9,7 +9,7 @@ require 'autoc/association'
 module AutoC
 
 
-  # Value type string wrapper around plain C string
+  # Value type string wrapper of the plain C string
   class CString < Association
 
     include STD
@@ -40,9 +40,9 @@ module AutoC
           /**
             #{defgroup}
 
-            @brief Value type wrapper around plain C string
+            @brief Value type wrapper of the plain C string
 
-            This type represents a (paper thin) wrapper around the plain C string with proper value semantics.
+            This type represents a (paper thin) wrapper around the plain C string (char *) with proper value semantics.
 
             @since 2.0
           */

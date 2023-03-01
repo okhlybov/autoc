@@ -65,6 +65,7 @@ main = AutoC::Code.new interface: %{
 
 require_relative 'generic_value'
 
+# @private
 class DocsValue < GenericValue
   attr_reader :description
   def initialize(type, desc)
@@ -73,9 +74,12 @@ class DocsValue < GenericValue
   end
 end
 
-T = DocsValue.new(:T, 'A generic value type')
-K = DocsValue.new(:K, 'A generic hashable value type')
+A = DocsValue.new(:A, 'Generic value type')
+B = DocsValue.new(:B, 'Generic value type')
+T = DocsValue.new(:T, 'Generic value type')
+K = DocsValue.new(:K, 'Generic hashable value type')
 
+# @private
 class Docs < AutoC::Module
   def initialize(*args, **kws)
     super
@@ -107,7 +111,7 @@ m << AutoC::Vector.new(:Vector, T)
 m << AutoC::List.new(:List, T)
 m << AutoC::HashSet.new(:HashSet, T)
 m << AutoC::HashMap.new(:HashMap, T, K)
-m << AutoC::Box.new(:Box, { t: T, k: K })
-m << AutoC::Record.new(:Record, { t: T, k: K })
+m << AutoC::Box.new(:Box, { a: A, b: B })
+m << AutoC::Record.new(:Record, { a: A, b: B })
 
 m.render

@@ -2,6 +2,10 @@
 
 This project provides a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic C source code generation.
 
+Specifically, it provides a means of generating strongly-typed general purpose C data containers (vectors, lists, maps etc.)
+similar to those provided by the C++'s [STL template containers](https://en.cppreference.com/w/cpp/container)
+but implemented in ***pure ANSI C language***.
+
 ## Qickstart
 
 Install the `autoc` Ruby package from [RubyGems](https://rubygems.org)
@@ -31,6 +35,7 @@ Explore the rendered HTML documentation starting at `html/index.html`
 Create auto code descriptor in Ruby `sample.rb`
 
 ```ruby
+require 'autoc/module'
 require 'autoc/hash_set'
 AutoC::Module.render(:sample) do |m|
   m << AutoC::HashSet.new(:IntSet, :int)
@@ -117,15 +122,18 @@ cmake --build .
 
 ## Licensing & availability
 
-This code is distributed under terms of the 2-clause BSD license.
+This code is distributed under terms of the [2-clause BSD license](LICENSE).
 
 The project's home page is [GitHub](https://github.com/okhlybov/autoc).
 
 The released ruby gems are published in [RubyGems](https://rubygems.org/gems/autoc).
 
+The condensed description of the changes is in the [Change Log](CHANGES.md).
+
+
 ## Assorted related stuff
 
-https://github.com/tylov/STC
+- [STC](https://github.com/tylov/STC)
 
 ---
 
