@@ -277,7 +277,7 @@ module AutoC
     end
 
     # @private
-    def _range = @range ||= _iterable._set.range
+    def _range = _iterable._set.range
 
   private
   

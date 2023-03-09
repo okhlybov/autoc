@@ -100,7 +100,7 @@ module AutoC
 
     attr_reader :module
 
-    def file_name = @file_name ||= "#{self.module.name}.state"
+    def file_name = "#{self.module.name}.state"
 
     def initialize(m)
       super
@@ -210,7 +210,7 @@ module AutoC
 
     def file_name = @file_name ||= "#{self.module.name}_auto.h"
 
-    def tag = @tag ||=  "#{self.module.name}_auto_h".upcase
+    def tag = "#{self.module.name}_auto_h".upcase
 
     def initialize(m) = @module = m
 
@@ -253,7 +253,7 @@ module AutoC
 
     attr_reader :index
 
-    def file_name = @file_name ||= self.module.source_count < 2 ? "#{self.module.name}_auto.c" : "#{self.module.name}_auto#{index}.c"
+    def file_name = self.module.source_count < 2 ? "#{self.module.name}_auto.c" : "#{self.module.name}_auto#{index}.c"
 
     def initialize(m, index)
       @module = m

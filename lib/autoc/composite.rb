@@ -71,9 +71,9 @@ module AutoC
 
     def type_tag = signature
 
-    def defgroup = @defgroup ||= (public? ? :@public : :@internal).to_s + " @defgroup #{signature} #{type_tag}"
+    def defgroup = (public? ? :@public : :@internal).to_s + " @defgroup #{signature} #{type_tag}"
 
-    def ingroup = @ingroup ||= (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
+    def ingroup = (public? ? :@public : :@internal).to_s + " @ingroup #{signature}"
 
     def memory = (@allocator.nil? ? Composite.allocator : @allocator)
 

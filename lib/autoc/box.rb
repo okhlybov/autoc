@@ -77,7 +77,7 @@ module AutoC
       stream << "} variant; /**< @private */ #{tag_} tag; /**< @private */} #{signature};"
     end
 
-    def type_tag = @type_tag ||= "#{signature}<#{variants.values.join(',')}>"
+    def type_tag = "#{signature}<#{variants.values.join(',')}>"
 
   private
 

@@ -13,7 +13,7 @@ class CMake
 
   attr_reader :module
 
-  def file_name = @file_name ||= "#{self.module.name}.cmake"
+  def file_name = "#{self.module.name}.cmake"
 
   def initialize(m) = @module = m
 

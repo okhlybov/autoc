@@ -34,7 +34,7 @@ module AutoC
         stream << %{
           /**
             #{defgroup}
-            
+
             @brief Unordered collection of unique elements of type #{element}
 
             For iteration over the set elements refer to @ref #{range}.
@@ -268,9 +268,9 @@ module AutoC
       }
     end
 
-    def _slot = @_slot ||= iterable._slot.range
+    def _slot = iterable._slot.range
 
-    def _bin = @_bin ||= iterable._bin.range
+    def _bin = iterable._bin.range
 
   private
 
