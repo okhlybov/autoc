@@ -385,6 +385,7 @@ module AutoC
 
     def render_interface(stream)
       if public?
+        render_type_description(stream)
         stream << %{
           /**
             #{ingroup}

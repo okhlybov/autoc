@@ -38,7 +38,8 @@ module AutoC
         stream << %{
           /**
             #{defgroup}
-            @brief Hash-based unordered collection of {#{index}->#{element}} pairs
+            
+            @brief Unordered collection of elements of type #{element} associated with unique index of type #{index}.
 
             For iteration over the set elements refer to @ref #{range}.
 
@@ -257,6 +258,7 @@ module AutoC
 
     def render_interface(stream)
       if public?
+        render_type_description(stream)
         stream << %{
           /**
             #{ingroup}

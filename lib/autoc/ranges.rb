@@ -31,6 +31,31 @@ module AutoC
 
     def type_tag = @type_tag ||= "#{iterable.type_tag}::Range"
 
+    def brief = "@brief Range (iterator) for type #{iterable.type_tag}"
+
+    def render_type_description(stream)
+      stream << %{
+        /**
+          #{defgroup}
+
+          #{brief}
+
+          Range is means of traversing though the container contents in a sequential manner.
+          It is basically an extension of iterator.
+
+          It can be used the following way:
+
+          @code{.c}
+          for(#{signature} r = #{new}(&it); !#{empty}(&r); #{pop_front}(&r)) { ... }
+          @endcode
+
+          @see @ref Range
+
+          @since 2.0
+        */
+      }
+    end
+
   private
 
     alias _iterable iterable # Use _iterable.() within method bodies as it is shadowed by the commonly used iterable function parameter
@@ -377,7 +402,7 @@ module AutoC
             /**
               #{defgroup}
 
-              @brief #{tag}
+              #{brief}
 
               This is the range for contiguous data structures (vectors, strings etc.)
 
@@ -397,7 +422,7 @@ module AutoC
             /**
               #{defgroup}
 
-              @brief #{tag}
+              #{brief}
 
               This is the range for contiguous data structures (vectors, strings etc.)
 

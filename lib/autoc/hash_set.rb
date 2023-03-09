@@ -34,7 +34,8 @@ module AutoC
         stream << %{
           /**
             #{defgroup}
-            @brief Hash-based unordered collection of unique elements of type #{element}
+            
+            @brief Unordered collection of unique elements of type #{element}
 
             For iteration over the set elements refer to @ref #{range}.
 
@@ -248,6 +249,7 @@ module AutoC
 
     def render_interface(stream)
       if public?
+        render_type_description(stream)
         stream << %{
           /**
             #{ingroup}
