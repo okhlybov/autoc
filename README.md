@@ -23,13 +23,13 @@ gem install autoc
 
 ### Generate documentation
 
-Generate reference documentation of the C interfaces in file `auto.h`
+Generate a sample header `auto.h` with inline documentation
 
 ```shell
 ruby -r autoc/scaffold -e docs
 ```
 
-Extract documentation with [Doxygen](https://www.doxygen.nl)
+Extract the documentation with [Doxygen](https://www.doxygen.nl)
 
 ```shell
 doxygen .
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   IntSetPut(&set, 1);
   IntSetPut(&set, -1);
   printf("size = %d\\n", IntSetSize(&set));
-  for(IntSetRange r = IntSetGetRange(&set); !IntSetRangeEmpty(&r); IntSetRangePopFront(&r)) {
+  for(IntSetRange r = IntSetRangeNew(&set); !IntSetRangeEmpty(&r); IntSetRangePopFront(&r)) {
     printf("%d\\n", IntSetRangeTakeFront(&r));
   }
   IntSetDestroy(&set);
@@ -109,19 +109,19 @@ valgrind tests
 
 ### Create CMake project from template
 
-Create named CMake-powered skeleton project `runme` in the current directory
+Create CMake-powered skeleton project named `runme` in the current directory
 
 ```shell
 ruby -r autoc/scaffold -e project runme
 ```
 
-Configure the project `runme`
+Configure the generated project
 
 ```shell
 cmake .
 ```
 
-Build the project `runme`
+Build the generated project
 
 ```shell
 cmake --build .

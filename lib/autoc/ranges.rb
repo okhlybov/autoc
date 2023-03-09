@@ -656,7 +656,7 @@ module AutoC
       @code{.c}
       List list;
       ...
-      for(ListRange r = ListGetRange(&list); !ListRangeEmpty(&r); ListRangePopFront(&r)) {
+      for(ListRange r = ListRangeNew(&list); !ListRangeEmpty(&r); ListRangePopFront(&r)) {
         ... = ListRangeTakeFront(&r);
       }
       @endcode

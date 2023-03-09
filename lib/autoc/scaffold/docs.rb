@@ -46,7 +46,7 @@ main = AutoC::Code.new interface: %{
       IntSetPut(&set, 0);
       IntSetPut(&set, 1);
       printf("size = %d\\n", IntSetSize(&set));
-      for(IntSetRange r = IntSetGetRange(&set); !IntSetRangeEmpty(&r); IntSetRangePopFront(&r)) {
+      for(IntSetRange r = IntSetRangeNew(&set); !IntSetRangeEmpty(&r); IntSetRangePopFront(&r)) {
         printf("%d\\n", IntSetRangeTakeFront(&r));
       }
       IntSetDestroy(&set);
