@@ -276,7 +276,7 @@ module AutoC
 
     def configure
       super
-      method(:void, :_advance, { range: rvalue } ).configure do
+      method(:void, :_advance, { range: rvalue }, visibility: :internal ).configure do
         code %{
           assert(range);
           while(1) {
