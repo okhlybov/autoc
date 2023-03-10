@@ -2,5 +2,6 @@ doc
 tmp
 build
 .idea
+.yardoc
 *_auto*.c
 *_auto*.h

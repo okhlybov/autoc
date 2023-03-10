@@ -1,6 +1,6 @@
 # Reinvention of the C wheel, automatized
 
-This project provides a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic
+The project AutoC ships a collection of [Ruby](https://www.ruby-lang.org) classes related to automagic
 C source code generation.
 
 Specifically, it provides a means of generating strongly-typed general purpose C data containers
@@ -23,7 +23,7 @@ gem install autoc
 
 ### Generate documentation
 
-Generate a sample header `auto.h` with inline documentation
+Generate a documentation header `auto.h` with reference of what can be provided by the AutoC
 
 ```shell
 ruby -r autoc/scaffold -e docs
@@ -129,13 +129,13 @@ cmake --build .
 
 ## Licensing & availability
 
-This code is distributed under terms of the [2-clause BSD license](LICENSE).
+This code is distributed under terms of the 2-clause BSD {file:LICENSE}.
 
 The project's home page is [GitHub](https://github.com/okhlybov/autoc).
 
 The released ruby gems are published in [RubyGems](https://rubygems.org/gems/autoc).
 
-The condensed description of the changes is in the [Change Log](CHANGES.md).
+The condensed description of the changes is in the {file:CHANGES.md}.
 
 
 ## Assorted related stuff
