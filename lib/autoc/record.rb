@@ -125,13 +125,13 @@ module AutoC
         docs = []
         args = { target: lvalue }
         fields.each do |name, type|
-          formal = "_#{name}".to_sym
+          formal = "#{name}".to_sym
           value = type.const_rvalue
           params << [name, Parameter.new(value, formal)]
           args[formal] = value
           docs << "@param[in] #{formal} `#{name}` field initializer of type @ref #{type}"
         end
-        method(:void, :set, args, instance: :custom_create).configure do
+        method(:void, :create_set, args, instance: :custom_create).configure do
           _code = 'assert(target);'
           params.each do |field, parameter|
             _code += parameter.value.type.copy.("target->#{field}", parameter) + ';'
@@ -141,7 +141,6 @@ module AutoC
             @brief Initialize record
 
             @param[in] target record to create
-            #{docs.join("\n")}
 
             This function initializes new record's fields with copies of respective arguments.
 
@@ -180,7 +179,66 @@ module AutoC
           return result;
         }
         hash_code.configure { code _code }
-        # TODO field accessors
+      ###
+      unless @omit_accessors
+        fields.each do |name, type|
+          method(type.const_lvalue, "view_#{name}",  { target: const_lvalue }, inline: true ).configure do
+            code %{
+              assert(target);
+              return &target->#{name};
+            }
+          header %{
+            @brief Get a view of the field #{name}
+
+            @param[in] target record to query
+            @return a view of the value of type #{type} contained in field #{name}
+
+            This function is used to get a constant reference (in form of the C pointer) to the value in field #{name} contained in `target`.
+
+            @since 2.0
+          }
+          end
+          if type.copyable?
+            method(type, "get_#{name}",  { target: const_rvalue } ).configure do
+              code %{
+                #{type} result;
+                assert(target);
+                #{type.copy.(:result, "target->#{name}")};
+                return result;
+              }
+            header %{
+              @brief Get a copy of the value of field #{name}
+
+              @param[in] target record to query
+              @return a copy of the value of type #{type} contained in field #{name}
+
+              This function is used to get a copy the value in field #{name} contained in `target`.
+
+              @since 2.0
+            }
+            end
+            method(:void, "set_#{name}",  { target: rvalue, name.to_sym => type.const_rvalue } ).configure do
+              code %{
+                assert(target);
+                #{type.destroy.("target->#{name}") if type.destructible?};
+                #{type.copy.("target->#{name}", name)};
+              }
+            header %{
+              @brief Set value of field #{name}
+
+              @param[in] target record to modify
+              @param[in] #{name} value to initalize field with
+
+              This function sets the field #{name} to contain a copy of specified value.
+
+              Previous field's contents is destroyed the respective destructor.
+
+              @since 2.0
+            }
+            end
+          end
+        end
+      end
   end
 
   end # Record
