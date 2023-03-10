@@ -26,9 +26,8 @@ module AutoC
     def copyable? = variants.values.all? { |t| t.copyable? }
     def hashable? = variants.values.all? { |t| t.hashable? }
 
-    def initialize(type, variants, visibility: :public, profile: :blackbox)
+    def initialize(type, variants, visibility: :public)
       super(type, visibility:)
-      setup_profile(profile)
       setup_variants(variants)
       @tag_ = "#{signature}_";
       @default = 'abort();'
@@ -85,21 +84,6 @@ module AutoC
     def setup_variants(variants)
       @variants = variants.transform_values { |type| type.to_type }
       self.variants.each_value { |type| dependencies << type }
-    end
-
-    # @private
-    def setup_profile(profile)
-      case profile
-      when :blackbox
-        #@inline_methods = false
-        @omit_accessors = false
-        @opaque = true
-      when :glassbox
-        #@inline_methods = true
-        @omit_accessors = true
-        @opaque = false
-      else raise "unsupported profile #{profile}"
-      end
     end
 
     # @private
@@ -254,7 +238,7 @@ module AutoC
             return &target->variant.#{name};
           }
           header %{
-            @brief Get a view of contained value
+            @brief Get a view of contained value of type #{type}
 
             @param[in] target box to query
             @return a view of the value of type #{type}
@@ -279,7 +263,7 @@ module AutoC
               return result;
             }
             header %{
-              @brief Get a copy of contained value
+              @brief Get a copy of contained value of type #{type}
   
               @param[in] target box to query
               @return a copy of the value of type #{type}
@@ -302,7 +286,7 @@ module AutoC
               target->tag = #{identifier(name)};
             }
             header %{
-              @brief Put value to box
+              @brief Put value of type #{type} into box
   
               @param[in] target box to set
               @param[in] value value of type #{type} to put
