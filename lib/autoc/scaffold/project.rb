@@ -21,12 +21,10 @@ def cmakelists_txt(project)
 <<END
 project(#{project})
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.15)
 
 set(AUTOC_MODULE_NAME _${PROJECT_NAME})
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rb)
-
-find_package(Ruby 3.0)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 

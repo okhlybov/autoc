@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.15)
 
+find_package(Ruby 3.2)
+
+if(NOT Ruby_FOUND)
+  message(STATUS "Attempting to locate default Ruby executable")
+  find_program(Ruby ruby REQUIRED)
+endif()
+
 function(add_autoc_module module)
   set(args DIRECTORY MAIN_DEPENDENCY)
   set(listArgs COMMAND DEPENDS)

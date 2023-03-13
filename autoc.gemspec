@@ -1,9 +1,7 @@
-$: << 'lib'
-
-require 'autoc'
+$: << 'lib'; require 'autoc'
 
 Gem::Specification.new do |s|
-  s.required_ruby_version = '>= 3.0.0'
+  s.required_ruby_version = '>= 3.2.0'
   s.name        = 'autoc'
   s.version     = AutoC::VERSION
   s.licenses    = ['BSD-2-Clause']
