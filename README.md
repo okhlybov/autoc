@@ -21,7 +21,7 @@ Install the `autoc` Ruby package from [RubyGems](https://rubygems.org)
 gem install autoc
 ```
 
-### Generate documentation
+### Extract sample documentation
 
 Generate a documentation header `auto.h` with reference of what can be provided by the AutoC
 
@@ -37,7 +37,7 @@ doxygen .
 
 Explore the rendered HTML documentation starting at `html/index.html`
 
-### Run sample project
+### Build & run sample project
 
 Create auto code descriptor in Ruby `sample.rb`
 
@@ -87,7 +87,7 @@ Test sample with [Valgrind](https://valgrind.org)
 valgrind sample
 ```
 
-### Run test suite
+### Build & run test suite
 
 Generate C test suite into `tests_auto.[ch]`
 

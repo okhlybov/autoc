@@ -18,12 +18,13 @@ class CMake
   def initialize(m) = @module = m
 
   def render
+    m = self.module
     sources = self.module.sources.collect { |s| "${CMAKE_CURRENT_SOURCE_DIR}/#{s.file_name}" } .join(' ')
     stream = %{
-      set(#{self.module.name}_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/#{self.module.header.file_name})
-      set(#{self.module.name}_SOURCES #{sources})
-      add_library(#{self.module.name} OBJECT ${#{self.module.name}_SOURCES})
-      target_include_directories(#{self.module.name} INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+      set(#{m.name}_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/#{m.header.file_name})
+      set(#{m.name}_SOURCES #{sources})
+      add_library(#{m.name} OBJECT ${#{m.name}_SOURCES})
+      target_include_directories(#{m.name} INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
     }
     unless Digest::MD5.digest(stream) == (Digest::MD5.digest(File.read(file_name)) rescue nil)
       File.write(file_name, stream)

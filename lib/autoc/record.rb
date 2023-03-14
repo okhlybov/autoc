@@ -227,7 +227,7 @@ module AutoC
               @brief Set value of field #{name}
 
               @param[in] target record to modify
-              @param[in] #{name} value to initalize field with
+              @param[in] #{name} value to initalize field #{name} with
 
               This function sets the field #{name} to contain a copy of specified value.
 
