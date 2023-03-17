@@ -51,7 +51,12 @@ module AutoC
 
     attr_accessor :source_threshold
 
-    def initialize(name) = @name = name
+    def stateful? = @stateful == true
+
+    def initialize(name, stateful: true)
+      @name = name
+      @stateful = stateful
+    end
 
     def header = @header ||= Header.new(self)
 
@@ -63,7 +68,7 @@ module AutoC
       distribute_entities
       header.render
       sources.each(&:render)
-      State.new(self).collect.write
+      State.new(self).collect.write if stateful?
       self
     end
 
@@ -86,8 +91,8 @@ module AutoC
       end
     end
 
-    def self.render(name, &code)
-      m = self.new(name)
+    def self.render(name, **, &code)
+      m = self.new(name, **)
       yield(m) if block_given?
       m.render
     end
@@ -114,7 +119,7 @@ module AutoC
     end
 
     def read
-      if File.exist?(file_name)
+      if self.module.stateful? && File.exist?(file_name)
         # It's OK not to have this file but if it exists it must have proper contents
         io = File.open(file_name, 'rt', chomp: true)
         begin
