@@ -19,9 +19,9 @@ end
 ###
 def cmakelists_txt(project)
 <<END
-project(#{project})
-
 cmake_minimum_required(VERSION 3.15)
+
+project(#{project})
 
 set(AUTOC_MODULE_NAME _${PROJECT_NAME})
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.rb)
