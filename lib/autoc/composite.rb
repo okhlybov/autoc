@@ -148,6 +148,8 @@ module AutoC
 
     # Create a new type-bound function (aka method)
     def method(result, name, parameters, inline: false, visibility: nil, constraint: true, instance: name, **kws)
+      name = name.to_sym
+      instance = instance.to_sym
       method = method_class.new(
         self,
         result,
