@@ -170,7 +170,7 @@ Dir[File.join(File.dirname(__FILE__), 'test_*.rb')].each { |t| require t }
 
 require 'autoc/cmake'
 
-x = AutoC::Module.render(:tests) do |m|
+x = AutoC::Module.render(:tests, stateful: false) do |m|
   m << $suite
   m.source_threshold = 100*1024 # Split module code into a set of TUs with ~100 Kb in size
   $tests.each { |t| $suite.dependencies << t }
