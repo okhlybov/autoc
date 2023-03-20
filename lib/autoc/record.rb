@@ -217,17 +217,17 @@ module AutoC
               @since 2.0
             }
             end
-            method(:void, "set_#{name}",  { target: rvalue, name.to_sym => type.const_rvalue } ).configure do
+            method(:void, "set_#{name}",  { target: rvalue, value: type.const_rvalue } ).configure do
               code %{
                 assert(target);
                 #{type.destroy.("target->#{name}") if type.destructible?};
-                #{type.copy.("target->#{name}", name)};
+                #{type.copy.("target->#{name}", value)};
               }
             header %{
               @brief Set value of field #{name}
 
               @param[in] target record to modify
-              @param[in] #{name} value to initalize field #{name} with
+              @param[in] value value to initalize field #{name} with
 
               This function sets the field #{name} to contain a copy of specified value.
 
@@ -239,7 +239,7 @@ module AutoC
           end
         end
       end
-  end
+    end
 
   end # Record
 
