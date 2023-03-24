@@ -62,7 +62,7 @@ module AutoC
 
     def configure
       super
-      method(:void, :create, { range: lvalue, iterable: iterable.const_rvalue }, instance: :custom_create).configure do
+      method(:void, :create, { range: lvalue, iterable: iterable.const_rvalue }, instance: :custom_create, constraint:-> { custom_constructible? }).configure do
         header %{
           @brief Create a new range for the specified iterable
 

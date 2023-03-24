@@ -131,7 +131,7 @@ module AutoC
           args[formal] = value
           docs << "@param[in] #{formal} `#{name}` field initializer of type @ref #{type}"
         end
-        method(:void, :create_set, args, instance: :custom_create).configure do
+        method(:void, :create_set, args, instance: :custom_create, constraint:-> { custom_constructible? }).configure do
           _code = 'assert(target);'
           params.each do |field, parameter|
             _code += parameter.value.type.copy.("target->#{field}", parameter) + ';'

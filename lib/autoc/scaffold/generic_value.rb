@@ -35,7 +35,7 @@ private
   
   def configure
     super
-    method(:void, :set, { target: lvalue, value: :int.const_rvalue }, instance: :custom_create).configure do
+    method(:void, :set, { target: lvalue, value: :int.const_rvalue }, instance: :custom_create, constraint:-> { custom_constructible? }).configure do
       code %{
         #{default_create.(target)};
         *target->value = value;

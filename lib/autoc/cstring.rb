@@ -76,7 +76,7 @@ module AutoC
 
     def configure
       super
-      method(:void, :create, { target: lvalue, source: const_rvalue }, instance: :custom_create).configure do
+      method(:void, :create, { target: lvalue, source: const_rvalue }, instance: :custom_create, constraint:-> { custom_constructible? }).configure do
         header %{
           @brief Create string
 
