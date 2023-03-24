@@ -1,3 +1,7 @@
+# 2.0.2
+
+- Fix missing constraint checks in custom constructors.
+
 # 2.0.1
 
 - Introduce switch for incremental module generation mode.
