@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 
+require 'autoc/std'
 require 'autoc/record'
 require 'autoc/hash_set'
 require 'autoc/association'

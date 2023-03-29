@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 
-require 'autoc/vector'
-require 'autoc/list'
+require 'autoc/std'
 require 'autoc/set'
+require 'autoc/list'
+require 'autoc/vector'
 
 
 module AutoC

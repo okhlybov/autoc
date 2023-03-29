@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 
+require 'autoc/std'
 require 'autoc/ranges'
 require 'autoc/sequential'
 require 'autoc/association'
