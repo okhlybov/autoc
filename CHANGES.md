@@ -1,5 +1,7 @@
 # 2.0.2
 
+- Introduce private visibility specifier for functions.
+
 - Fix missing constraint checks in custom constructors.
 
 # 2.0.1

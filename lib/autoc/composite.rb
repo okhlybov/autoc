@@ -67,6 +67,10 @@ module AutoC
 
     def public? = @visibility == :public
 
+    def private? = @visibility == :private
+
+    def internal? = @visibility == :internal
+
     def respond_to_missing?(meth, include_private = false) = @methods.has_key?(meth) ? true : super
 
     def type_tag = signature
@@ -295,6 +299,8 @@ module AutoC
             #{@header}
           */
         }
+      else
+        stream << "\n/** @private */\n"
       end
     end
 

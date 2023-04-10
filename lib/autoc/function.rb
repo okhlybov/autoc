@@ -134,15 +134,19 @@ module AutoC
   
     def public? = @visibility == :public
 
+    def private? = @visibility == :private
+
+    def internal? = @visibility == :internal
+    
     def abstract? = @abstract == true
   
     def variadic? = @variadic == true
 
     def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
     
-    def signature = '%s(%s)' % [result.signature, (parameters.to_a.collect(&:signature) << (variadic? ? '...' : nil)).compact.join(',')]
+    def signature = '%s(%s)' % [result, (parameters.to_a.collect(&:signature) << (variadic? ? '...' : nil)).compact.join(',')]
   
-    def prototype = '%s %s(%s)' % [result.signature, name, (parameters.to_a.collect(&:declaration) << (variadic? ? '...' : nil)).compact.join(',')]
+    def prototype = '%s %s(%s)' % [result, name, (parameters.to_a.collect(&:declaration) << (variadic? ? '...' : nil)).compact.join(',')]
   
     def definition = '%s {%s}' % [prototype, @code]
   
@@ -183,9 +187,13 @@ module AutoC
 
     # Render the commentary block preceding the function declaration, both inline or external
     def render_function_header(stream)
-      stream << %{
-        /* #{@header} */
-      } unless @header.nil?
+      if public?
+        stream << %{
+          /* #{@header} */
+        } unless @header.nil?
+      else
+        stream << "\n/** @private */\n"
+      end
     end
 
     # Render full function declaration statement including the commentary block
@@ -211,14 +219,14 @@ module AutoC
     end
 
     # Render function's public interface
-    # Only public functions are rendered
+    # Render non-internal function declarations
     def render_interface(stream)
-      render_function_declaration(stream) if live? && public?
+      render_function_declaration(stream) if live? && (public? || private?)
     end
 
     # Render function's interface for non-public functions which should not appear in the public interface
     def render_forward_declarations(stream)
-      render_function_declaration(stream) if live? && !public?
+      render_function_declaration(stream) if live? && !(public? || private?)
     end
 
     # Render non-inline function definition regardless of function's visibility status

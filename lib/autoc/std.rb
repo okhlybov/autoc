@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 
-require 'set'
 require 'autoc/module'
 require 'autoc/primitive'
 
