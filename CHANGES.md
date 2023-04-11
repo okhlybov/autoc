@@ -4,6 +4,8 @@
 
 - Fix missing constraint checks in custom constructors.
 
+- Documentation tags streamlining.
+
 # 2.0.1
 
 - Introduce switch for incremental module generation mode.

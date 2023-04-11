@@ -55,7 +55,7 @@ module AutoC
           #if defined(__cplusplus)
             extern "C" void _autoc_hasher_randomize_seed(void);
           #elif defined(__GNUC__) || defined(__clang__)
-            void _autoc_hasher_randomize_seed(void)  __attribute__((__constructor__));
+            void _autoc_hasher_randomize_seed(void) __attribute__((__constructor__));
           #elif defined(__POCC__)
             #pragma startup _autoc_hasher_randomize_seed
           #elif defined(_MSC_VER) || defined(__POCC__)

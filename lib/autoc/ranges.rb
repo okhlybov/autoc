@@ -440,8 +440,6 @@ module AutoC
             */
           }
         end
-      else
-        stream << PRIVATE
       end
       if public?
         stream << %{

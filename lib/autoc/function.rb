@@ -4,6 +4,7 @@
 require 'autoc/type'
 require 'autoc/module'
 require 'autoc/primitive'
+require 'autoc/composite'
 
 
 module AutoC
@@ -192,7 +193,7 @@ module AutoC
           /* #{@header} */
         } unless @header.nil?
       else
-        stream << "\n/** @private */\n"
+        stream << Composite::PRIVATE
       end
     end
 
@@ -200,7 +201,7 @@ module AutoC
     # For inline functions this also renders a function body effectively making this also a function definition
     # The declaration comes into either public interface of forward declaration block depending on the function's visibility status
     def render_function_declaration(stream)
-      render_function_header(stream)
+      render_function_header(stream) if @render_interface
       render_declaration_specifier(stream)
       if inline?
         render_function_definition(stream)
@@ -220,17 +221,21 @@ module AutoC
 
     # Render function's public interface
     # Render non-internal function declarations
+    # @render_interface is used internally to distinguish header-time rendering from source-time rendering
     def render_interface(stream)
+      @render_interface = true
       render_function_declaration(stream) if live? && (public? || private?)
     end
 
     # Render function's interface for non-public functions which should not appear in the public interface
     def render_forward_declarations(stream)
+      @render_interface = false
       render_function_declaration(stream) if live? && !(public? || private?)
     end
 
     # Render non-inline function definition regardless of function's visibility status
     def render_implementation(stream)
+      @render_interface = false
       render_function_definition(stream) if live? && !inline?
     end
 

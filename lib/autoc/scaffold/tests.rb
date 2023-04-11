@@ -29,7 +29,7 @@ def type_test(cls, *opts, **kws, &code)
   t = Class.new(cls) do
     attr_reader :tests
     def initialize(*args, **kws)
-      super
+      super(*args, visibility: :public, **kws)
       @tests = []
       @test_names = []
       dependencies << $common
@@ -160,11 +160,11 @@ $tests = []
 
 require 'autoc/composite'
 
-#AutoC::Composite.decorator = AutoC::Composite::SNAKE_CASE_DECORATOR
+#AutoC::Composite.decorator = AutoC::Composite::Decorator::SNAKE_CASE
 
 require_relative 'generic_value'
 
-Value = GenericValue.new(:Value)
+Value = GenericValue.new(:Value, visibility: :public)
 
 Dir[File.join(File.dirname(__FILE__), 'test_*.rb')].each { |t| require t }
 

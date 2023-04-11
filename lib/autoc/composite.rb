@@ -18,7 +18,7 @@ module AutoC
   # @abstract
   class Composite < Type
 
-    PRIVATE = '/** @private */'
+    PRIVATE = "\n/** @private */\n"
 
     include STD
 
@@ -300,7 +300,7 @@ module AutoC
           */
         }
       else
-        stream << "\n/** @private */\n"
+        stream << Composite::PRIVATE
       end
     end
 
