@@ -32,7 +32,8 @@ module AutoC
     def to_s = signature
 
     def signature
-      _ = reference? ? "#{type.signature}*" : type.signature
+      t = type.signature rescue type.to_s
+      _ = reference? ? "#{t}*" : t
       constant? ? "const #{_}" : _
     end
   
@@ -57,7 +58,7 @@ module AutoC
     attr_reader :name
   
     def initialize(value, name)
-      @value = value.to_value
+      @value = value.to_value rescue Value.new(value)
       @name = name.to_sym
     end
   
@@ -152,6 +153,8 @@ module AutoC
     def definition = '%s {%s}' % [prototype, @code]
   
     def parameter(name) = @values[name]
+
+    def binding(*args, **kws) = Binding.new(self, args, **kws)
 
     def call(*arguments)
       xs = []
@@ -255,6 +258,34 @@ module AutoC
       super
     end
   end # Parameters
+
+
+  # Entity representing function call
+  # References function itself as well as passed arguments as entity's dependencies
+  class Function::Binding
+
+    include Entity
+
+    attr_reader :function, :arguments
+
+    def initialize(function, arguments = [], register: :dependencies)
+      @function = function
+      @arguments = arguments
+      set = case register
+        when nil then nil
+        when :dependencies then self.dependencies
+        when :references then self.references
+        else raise
+      end
+      unless set.nil?
+        arguments.each { |x| set << x if x.is_a?(AutoC::Entity) }
+        set << function
+      end
+    end
+
+    def to_s = function.(*arguments)
+
+  end # Binding
 
 
 end
