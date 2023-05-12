@@ -122,9 +122,8 @@ module AutoC
             unsigned r;
             rand_s(&r);
             return r;
-          #elif __cplusplus > 199711L
-            std::random_device r;
-            return r();
+          #elif __cplusplus >= 201103L
+            return std::random_device()();
           #elif _POSIX_C_SOURCE >= 199309L
             struct timespec ts;
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
