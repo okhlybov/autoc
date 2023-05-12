@@ -9,6 +9,7 @@ require 'autoc/primitive'
 module AutoC::STD
 
 
+  # @private
   module PrimitiveCoercions
     def to_type = Primitive.adopt(self)
     def to_value = to_type.to_value
@@ -61,6 +62,7 @@ module AutoC::STD
 
 
   MATH_H = AutoC::SystemHeader.new 'math.h'
+  LIMITS_H = AutoC::SystemHeader.new 'limits.h'
   ASSERT_H = AutoC::SystemHeader.new 'assert.h'
   STDDEF_H = AutoC::SystemHeader.new 'stddef.h'
   MALLOC_H = AutoC::SystemHeader.new 'malloc.h'

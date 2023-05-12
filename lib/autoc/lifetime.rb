@@ -10,7 +10,7 @@ module AutoC
 
     include Entity
 
-    def initialize = dependencies << Composite::DEFINITIONS
+    def initialize = dependencies << Module::DEFINITIONS
 
     def <<(entity) = references << entity
 
@@ -36,7 +36,7 @@ module AutoC
       @type = type.to_type
       @automatic = name.nil?
       @name = automatic? ? "_#{type}#{@@index+=1}" : name
-      dependencies << self.type << Composite::DEFINITIONS
+      dependencies << self.type << Module::DEFINITIONS
     end
 
     def render_interface(stream)

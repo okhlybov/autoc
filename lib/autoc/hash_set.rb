@@ -5,6 +5,7 @@ require 'autoc/std'
 require 'autoc/set'
 require 'autoc/list'
 require 'autoc/vector'
+require 'autoc/randoms'
 
 
 module AutoC
@@ -27,7 +28,7 @@ module AutoC
 
     def initialize(*args, **kws)
       super
-      dependencies << _bin
+      dependencies << _bin << Seed.instance
     end
 
     def render_interface(stream)
@@ -233,10 +234,10 @@ module AutoC
       hash_code.configure do
         code %{
           #{range} r;
-          size_t hash;
-          for(hash = AUTOC_HASHER_SEED, r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+          size_t hash; /* default incremental hasher is applicable to ordered collections only */
+          for(hash = AUTOC_SEED, r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
             #{element.const_lvalue} e = #{range.view_front.(:r)};
-            hash ^= #{element.hash_code.('*e')}; /* default incremental hasher is applicable to ordered collections only */
+            hash ^= #{element.hash_code.('*e')};
           }
           return hash;
         }

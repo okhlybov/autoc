@@ -2,6 +2,7 @@
 
 
 require 'autoc/std'
+require 'autoc/randoms'
 require 'autoc/composite'
 
 
@@ -29,6 +30,7 @@ module AutoC
     def initialize(type, variants, visibility: :public)
       super(type, visibility:)
       setup_variants(variants)
+      dependencies << Seed.instance
       @tag_ = "#{signature}_";
       @default = 'abort();'
     end
@@ -215,7 +217,7 @@ module AutoC
       ### hash_code
         _code = %$
           assert(target);
-          if(!target->tag) return AUTOC_HASHER_SEED;
+          if(!target->tag) return AUTOC_SEED;
           switch(target->tag) {
         $
         variants.each do |name, type|
