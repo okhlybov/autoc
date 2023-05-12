@@ -122,8 +122,9 @@ module AutoC
             #else
               #warning("this code employs bare sprintf() with preallocated temporary buffer of AUTOC_BUFFER_SIZE chars; expect execution bail outs upon exceeding this limit")
             #endif
+            #{element.lvalue} t;
             va_start(args, format);
-            #{element.lvalue} t = #{memory.allocate(element, :AUTOC_BUFFER_SIZE, atomic: true)}; assert(t);
+            t = #{memory.allocate(element, :AUTOC_BUFFER_SIZE, atomic: true)}; assert(t);
             r = vsprintf(t, format, args);
             if(r >= 0) {
               if(r > AUTOC_BUFFER_SIZE-1) {
