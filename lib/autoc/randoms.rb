@@ -95,6 +95,11 @@ module AutoC
       stream << %{
         /**
           @brief Default seeder built upon a system timer
+
+          The exact quality depends on the target platform.
+          It is not meant to be cryptographically viable.
+
+          @since 2.1
         */
         AUTOC_EXTERN autoc_seed_t autoc_seeder_next(void);
       }
@@ -103,6 +108,9 @@ module AutoC
     def render_implementation(stream)
       super
       stream << %{
+        #ifdef __cplusplus
+          #include <random>
+        #endif
         #include <time.h>
         autoc_seed_t autoc_seeder_next(void) {
           #if defined(__POCC__)
@@ -114,6 +122,9 @@ module AutoC
             unsigned r;
             rand_s(&r);
             return r;
+          #elif __cplusplus > 199711L
+            std::random_device r;
+            return r();
           #elif _POSIX_C_SOURCE >= 199309L
             struct timespec ts;
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
