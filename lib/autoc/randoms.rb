@@ -46,20 +46,14 @@ module AutoC
           #elif defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
             void _autoc_seed_randomize(void) __attribute__((__constructor__));
           #elif defined(__POCC__)
+            void __cdecl _autoc_seed_randomize(void);
             #pragma startup _autoc_seed_randomize
           #elif defined(_MSC_VER)
             #pragma message("WARNING: _autoc_seed_randomize() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
           #else
             #warning _autoc_seed_randomize() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
           #endif
-          #ifdef __POCC__
-            #include <stdlib.h>
-          #endif
-          void
-          #ifdef __POCC__
-            __cdecl
-          #endif
-          _autoc_seed_randomize(void) {
+          void _autoc_seed_randomize(void) {
             _autoc_seed = #{self.class.seeder.next};
           }
           #ifdef __cplusplus
@@ -174,7 +168,7 @@ module AutoC
       # https://en.wikipedia.org/wiki/Lehmer_random_number_generator
       stream << %{
         autoc_random_t autoc_prng_next(autoc_random_t* state) {
-          /* basic Lehmer PRNG */
+          /* Park-Miller PRNG */
           #if __cplusplus >= 201103L || __STDC_VERSION__ >= 199901L || defined(HAVE_LONG_LONG)
             /* suitable for machines with types wider than autoc_random_t avaliable */
             typedef unsigned long long int ull_t;
