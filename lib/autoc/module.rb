@@ -458,3 +458,8 @@ module AutoC
 
 
 end
+
+
+### On predefined C/C++ macros
+
+# https://github.com/cpredef/predef
