@@ -10,8 +10,6 @@ module AutoC
   # Basic xor-shift incremental hasher
   class Hasher
 
-    include STD
-    
     include Singleton
 
     include Entity
@@ -26,7 +24,7 @@ module AutoC
 
     def result(hasher) = hasher
     
-    def initialize = dependencies << LIMITS_H << STDDEF_H << Seed.instance
+    def initialize = dependencies << STD::LIMITS_H << STD::STDDEF_H << Random::Seed.instance
 
   end # Hasher
 

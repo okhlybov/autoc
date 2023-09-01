@@ -4,30 +4,27 @@ require 'autoc/module'
 require 'autoc/composite'
 
 
-module AutoC
+module AutoC::Random
 
 
+  # Class representing global random seed state
   class Seed
 
     include Singleton
 
-    include Entity
-
-    def self.seeder = @seeder
-
-    def self.seeder=(s) @seeder = s end
+    include AutoC::Entity
 
     def initialize
-      dependencies << Module::DEFINITIONS << Random::DEFINITIONS
-      references << self.class.seeder
+      references << AutoC::Random.seeder
+      dependencies << DEFINITIONS << AutoC::Module::DEFINITIONS << AutoC::STD::ASSERT_H
     end
 
     def render_interface(stream)
       super
       stream << %{
         #ifndef AUTOC_SEED
-          #define _AUTOC_RANDOMIZE_SEED
-          #define AUTOC_SEED _autoc_seed /**< @brief Statically initialized (random) seed value */
+          #define _AUTOC_RANDOMIZE_SEED /* when defined the seed is initialized with a random value */
+          #define AUTOC_SEED _autoc_seed
           AUTOC_EXTERN autoc_random_t _autoc_seed; /**< @private */
         #elif ~(~AUTOC_SEED + 1) == 1 /* if macro value is unspecified on the command line it is implicitly set to 1 */
           #undef AUTOC_SEED
@@ -42,24 +39,25 @@ module AutoC
         #ifdef _AUTOC_RANDOMIZE_SEED
           autoc_random_t _autoc_seed = 1;
           #if defined(__cplusplus)
-            extern "C" void _autoc_seed_randomize(void);
+            extern "C" void _autoc_randomize_seed(void);
           #elif defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
-            void _autoc_seed_randomize(void) __attribute__((__constructor__));
+            void _autoc_randomize_seed(void) __attribute__((__constructor__));
           #elif defined(__POCC__)
-            void __cdecl _autoc_seed_randomize(void);
-            #pragma startup _autoc_seed_randomize
+            void __cdecl _autoc_randomize_seed(void);
+            #pragma startup _autoc_randomize_seed
           #elif defined(_MSC_VER)
-            #pragma message("WARNING: _autoc_seed_randomize() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
+            #pragma message("WARNING: _autoc_randomize_seed() will not be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
           #else
-            #warning _autoc_seed_randomize() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
+            #warning _autoc_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed
           #endif
-          void _autoc_seed_randomize(void) {
-            _autoc_seed = #{self.class.seeder.next};
+          void _autoc_randomize_seed(void) {
+            _autoc_seed = #{AutoC::Random.seeder.generate(nil)};
+            assert(_autoc_seed != 0);
           }
           #ifdef __cplusplus
-            static struct _hasher {
-              _hasher() {_autoc_seed_randomize();}
-            } _hasher;
+            static struct _seeder {
+              _seeder() { _autoc_randomize_seed(); }
+            } _seeder;
           #endif
 
         #endif
@@ -69,48 +67,52 @@ module AutoC
   end # Seed
 
 
-  module Random
-    DEFINITIONS = Code.new interface: %{
-      typedef unsigned int autoc_random_t;
-    }
-  end
+  DEFINITIONS = AutoC::Code.new interface: %{
+    /**
+      @brief Random number type
+      @since 2.1
+    */
+    typedef unsigned long int autoc_random_t;
+  }
 
 
+  # Default random seed generator
   class Seeder
 
     include Singleton
 
-    include Entity
+    include AutoC::Entity
 
-    def initialize = dependencies << Random::DEFINITIONS
+    def initialize = dependencies << AutoC::Module::DEFINITIONS << DEFINITIONS << AutoC::STD::STDLIB_H
 
-    def next = 'autoc_seeder_next()'
+    def generate(*args) = args.empty? ? 'autoc_random_seed_next' : 'autoc_random_seed_next()'
 
     def render_interface(stream)
       super
       stream << %{
         /**
-          @brief Default random value seeder
+          @brief Generate a random seed value with default seeder
 
           The exact quality depends on the target platform.
           Its purpose is to be useful when no specific properties for the seeds are required.
-
           As a consequence is not meant to be cryptographically viable.
 
           @since 2.1
         */
-        AUTOC_EXTERN autoc_random_t autoc_seeder_next(void);
+        AUTOC_EXTERN autoc_random_t #{generate}(void);
       }
     end
 
     def render_implementation(stream)
       super
+      # TODO ensure the seed is a full 32 bit random value
+      # Ex. std::random_device()() yield unsigned int which might be 16 bit type
       stream << %{
         #if __cplusplus >= 201103L
           #include <random>
         #endif
         #include <time.h>
-        autoc_random_t autoc_seeder_next(void) {
+        autoc_random_t #{generate}(void) {
           #if defined(__POCC__)
             /* Pelles C check comes first as it might set _MSC_VER as well */
             unsigned r;
@@ -138,28 +140,39 @@ module AutoC
   end # Seeder
 
 
-  Seed.seeder = Seeder.instance
+  def self.seeder = @seeder
+  def self.seeder=(s) @seeder = s end
+  
+  
+  self.seeder = Seeder.instance
 
 
-  class PRNG
+  # Default pseudo-random number generator
+  class Generator
   
     include Singleton
 
-    include Entity
+    include AutoC::Entity
 
-    def initialize = dependencies << Module::DEFINITIONS << Random::DEFINITIONS
+    def initialize = dependencies << AutoC::Module::DEFINITIONS << DEFINITIONS << AutoC::STD::ASSERT_H
 
-    def to_s = :autoc_random_t
+    def to_s = type
+
+    def type = :autoc_random_t
+
+    def state_type = type
+
+    def generate(state = nil)  = state.nil? ? 'autoc_random_next' : "autoc_random_next(&(#{state}))"
 
     def render_interface(stream)
       super
       stream << %{
         /**
-          @brief Default pseudo-random number generator
+          @brief Generate a random value with default pseudo-random number generator
 
           @since 2.1
         */
-        AUTOC_EXTERN autoc_random_t autoc_prng_next(autoc_random_t* state);
+        AUTOC_EXTERN #{type} autoc_random_next(#{state_type}* state);
       }
     end
 
@@ -167,8 +180,9 @@ module AutoC
       super
       # https://en.wikipedia.org/wiki/Lehmer_random_number_generator
       stream << %{
-        autoc_random_t autoc_prng_next(autoc_random_t* state) {
+        #{type} #{generate}(#{state_type}* state) {
           /* Park-Miller PRNG */
+          assert(*state != 0); /* zero state breaks the LCG type generator */
           #if __cplusplus >= 201103L || __STDC_VERSION__ >= 199901L || defined(HAVE_LONG_LONG)
             /* suitable for machines with types wider than autoc_random_t avaliable */
             typedef unsigned long long int ull_t;
@@ -178,10 +192,10 @@ module AutoC
             return *state = x;
           #else
             /* fallback implementation for any 32-bit machine */
-            const autoc_random_t A = 48271;
-            autoc_random_t low  = (*state & 0x7fff) * A;
-            autoc_random_t high = (*state >> 15)    * A;
-            autoc_random_t x = low + ((high & 0xffff) << 15) + (high >> 16);
+            const #{type} A = 48271;
+            #{type} low  = (*state & 0x7fff) * A;
+            #{type} high = (*state >> 15)    * A;
+            #{type} x = low + ((high & 0xffff) << 15) + (high >> 16);
             x = (x & 0x7fffffff) + (x >> 31);
             return *state = x;
           #endif
@@ -189,7 +203,13 @@ module AutoC
       }
     end
 
-  end # PRNG
+  end # Generator
+
+
+  def self.generator = @generator
+  def self.generator=(g) @generator = g end
+
+  self.generator = Generator.instance
 
 
 end
