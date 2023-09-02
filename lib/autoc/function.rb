@@ -41,7 +41,7 @@ module AutoC
       value = value.to_s
       if reference?
         # Manually collapse references &*xyz -> xyz for the sake of source code readability
-        value[0] =='*' ? value[1..-1] : "&#{value}"
+        value[0] == '*' ? value[1..-1] : "&#{value}"
       else
         value
       end
