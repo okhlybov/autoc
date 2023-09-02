@@ -96,7 +96,7 @@ module AutoC
           }
         }
       end
-      method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, constraint:-> { index.comparable? },  visibility: :internal).configure do
+      method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
         code %{
           assert(left);
           assert(right);
@@ -111,7 +111,7 @@ module AutoC
           }
         }
       end
-      method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, constraint:-> { index.comparable? }, visibility: :internal).configure do
+      method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :internal).configure do
         code %{
           if(node) {
             const int c = #{_index.compare.(index, 'node->index')};
@@ -185,7 +185,7 @@ module AutoC
           return (node = #{_lookup.('*target->root', index)}) ? &node->element : NULL;
         }
       end
-      method(:void, :_insert, { node: _node_pp, new_node: _node_p }).configure do
+      method(:void, :_insert, { node: _node_pp, new_node: _node_p }, visibility: :internal).configure do
         code %{
           assert(node);
           assert(new_node);
@@ -209,8 +209,12 @@ module AutoC
           if(insert) {
             node = #{memory.allocate(_node)}; assert(node);
             node->left = node->right = NULL;
-            #{rng.state_type} state = (#{rng.state_type})node;
-            node->priority = #{rng.generate(:state)}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
+            union {
+              #{rng.state_type} state;
+              #{_node_p} node;
+            } t;
+            t.node = node; /* reinterpret bits of node pointer value to yield initial state for PRNG */
+            node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
           } else {
             #{_index.destroy.('node->index') if _index.destructible?};
             #{_element.destroy.('node->element') if _element.destructible?};
@@ -264,6 +268,7 @@ module AutoC
       stream << %{
         typedef struct {
           //#{iterable._node_p} front; /**< @private */
+          int z;
         } #{signature};
       }
     end
