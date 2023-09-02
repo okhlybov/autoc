@@ -83,61 +83,42 @@ module AutoC
 
     def configure
       super
-      method(_node_p, :_create_node, { index: index.const_rvalue, element: element.const_rvalue, priority: rng.type.const_rvalue, left: _node_p, right: _node_p }, constraint:-> { index.copyable? && element.copyable? }, visibility: :internal).configure do
+      method(:void, :_merge, { node: _node_pp, left: _node_p, right: _node_p }, visibility: :internal).configure do
         code %{
-          #{_node_p} node = #{memory.allocate(_node)}; assert(node);
-          #{_index.copy.('node->index', index)};
-          #{_element.copy.('node->element', element)};
-          node->left = left;
-          node->right = right;
-          node->priority = priority;
-          //node->priority = #{rng.generate("*(#{rng.state_type}*)node")}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
-          return node;
-        }
-      end
-      method(:void, :_destroy_node, { node: _node_p }, visibility: :internal).configure do
-        code %{
-          assert(node);
-          #{index.destroy.('node->index') if index.destructible?};
-          #{element.destroy.('node->element') if element.destructible?};
-          #{memory.free(:node)};
-        }
-      end
-      method(_node_p, :_merge, { left: _node_p, right: _node_p }, visibility: :internal).configure do
-        code %{
-          assert(left || right);
-          if(!left) return right;
-          if(!right) return left;
-          if(left->priority > right->priority) {
-            #{_node_p} new_right = #{_merge.('*left->right', '*right')};
-            return #{_create_node.('left->index', 'left->element', 'left->priority', '*left->left', '*new_right')};
+          if(!left || !right) {
+            *node = left ? left : right;
+          } else if(left->priority > right->priority) {
+            #{_merge.('left->right', '*left->right', '*right')};
+            *node = left;
           } else {
-            #{_node_p} new_left = #{_merge.('*left', '*right->left')};
-            return #{_create_node.('right->index', 'right->element', 'right->priority', '*new_left', '*right->right')};
+            #{_merge.('right->left', '*left', '*right->left')};
+            *node = right;
           }
         }
       end
-      method(:void, :_split, { node: _node_p, index: index.const_rvalue, out_left: _node_pp, out_right: _node_pp }, constraint:-> { index.comparable? },  visibility: :internal).configure do
+      method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, constraint:-> { index.comparable? },  visibility: :internal).configure do
         code %{
-          #{_node_p} new_node = NULL;
-          assert(node);
-          assert(out_left);
-          assert(out_right);
-          if(#{_index.compare.('node->index', index)} > 0) {
-            if(!node->left) {
-              *out_left = NULL;
-            } else {
-              #{_split.('*node->left', index, out_left, 'new_node')};
-              *out_right = #{_create_node.('node->index', 'node->element', 'node->priority', '*new_node', '*node->right')};
-            }
+          assert(left);
+          assert(right);
+          if(!node) {
+            *left = *right = NULL;
+          } else if(#{_index.compare.(index, 'node->index')} < 0) {
+            #{_split.('*node->left', index, left, 'node->left')};
+            *right = node;
           } else {
-            if(!node->right) {
-              *out_right = NULL;
-            } else {
-              #{_split.('*node->right', index, 'new_node', out_right)};
-              *out_left = #{_create_node.('node->index', 'node->element', 'node->priority', '*node->left', '*new_node')};
-            }
+            #{_split.('*node->right', index, 'node->right', right)};
+            *left = node;
           }
+        }
+      end
+      method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, constraint:-> { index.comparable? }, visibility: :internal).configure do
+        code %{
+          if(node) {
+            const int c = #{_index.compare.(index, 'node->index')};
+            if(!c) return node;
+            else if(c < 0) return #{_lookup.('*node->left', index)};
+            else return #{_lookup.('*node->right', index)};
+          } else return NULL;
         }
       end
       default_create.configure do
@@ -146,24 +127,45 @@ module AutoC
           target->root = NULL;
         }
       end
+      method(:void, :_dispose, { node: _node_p }, visibility: :internal).configure do
+        code %{
+          if(node) {
+            #{_dispose.('*node->left')};
+            #{_dispose.('*node->right')};
+            #{index.destroy.('node->index') if index.destructible?};
+            #{element.destroy.('node->element') if element.destructible?};
+            #{memory.free(:node)};
+          }
+        }
+      end
       destroy.configure do
         code %{
-          // TODO
+          assert(target);
+          #{_dispose.('*target->root')};
         }
       end
       empty.configure do
         code %{
-          // TODO
+          assert(target);
+          return target->root == NULL;
+        }
+      end
+      method(:size_t, :_count, { node: _node_p }, visibility: :internal).configure do
+        code %{
+          if(!node) return 0;
+          else return 1 + #{_count.('*node->left')} + #{_count.('*node->right')};
         }
       end
       size.configure do
         code %{
-          // TODO
+          assert(target);
+          return #{_count.('*target->root')};
         }
       end
       check.configure do
         code %{
-          // TODO
+          assert(target);
+          return #{_lookup.('*target->root', index)} != NULL;
         }
       end
       find_first.configure do
@@ -178,12 +180,44 @@ module AutoC
       end
       view.configure do
         code %{
-          // TODO
+          #{_node_p} node;
+          assert(target);
+          return (node = #{_lookup.('*target->root', index)}) ? &node->element : NULL;
+        }
+      end
+      method(:void, :_insert, { node: _node_pp, new_node: _node_p }).configure do
+        code %{
+          assert(node);
+          assert(new_node);
+          if(*node) {
+            if(new_node->priority > (*node)->priority) {
+              #{_split.('**node', 'new_node->index', 'new_node->left', 'new_node->right')};
+              *node = new_node;
+            } else {
+              #{_node_p} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? (*node)->left : (*node)->right;
+              #{_insert.('next_node', new_node)};
+            }
+          } else *node = new_node;
         }
       end
       set.configure do
         code %{
-          // TODO
+          int insert;
+          #{_node_p} node;
+          assert(target);
+          insert = (node = #{_lookup.('*target->root', index)}) == NULL;
+          if(insert) {
+            node = #{memory.allocate(_node)}; assert(node);
+            node->left = node->right = NULL;
+            #{rng.state_type} state = (#{rng.state_type})node;
+            node->priority = #{rng.generate(:state)}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
+          } else {
+            #{_index.destroy.('node->index') if _index.destructible?};
+            #{_element.destroy.('node->element') if _element.destructible?};
+          }
+          #{_index.copy.('node->index', index)};
+          #{_element.copy.('node->element', value)};
+          if(insert) #{_insert.('target->root', '*node')};
         }
       end
       copy.configure do
@@ -211,7 +245,7 @@ module AutoC
 
   end # Treap
 
-  
+
   class Treap::Range < ForwardRange
 
     def render_interface(stream)
