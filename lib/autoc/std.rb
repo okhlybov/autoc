@@ -147,4 +147,23 @@ module AutoC::STD
   end
 
 
+  STACK_ALLOCATE = AutoC::Code.new interface: %{
+    #ifdef __has_builtin
+      #if __has_builtin(__builtin_alloca)
+        #define _AUTOC_ALLOCA __builtin_alloca
+      #endif
+    #elif defined(_MSC_VER)
+      #define _AUTOC_ALLOCA _alloca
+    #elif defined(HAVE_ALLOCA)
+      #define _AUTOC_ALLOCA alloca
+    #endif
+    #if defined(_AUTOC_ALLOCA)
+      #define _AUTOC_STACK_ALLOCATE(type, count) (type*)_AUTOC_ALLOCA(sizeof(type)*(count))
+    #else
+      #error missing any suitable implementation of alloca()
+    #endif
+  }
+  STACK_ALLOCATE.dependencies << MALLOC_H
+
+
 end
