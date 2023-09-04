@@ -91,7 +91,7 @@ module AutoC
 
     attr_writer :inline
 
-    def initialize(result, name, parameters, inline: false, visibility: :public, constraint: true, variadic: false, abstract: false)
+    def initialize(result, name, parameters, inline: false, visibility: :public, constraint: true, variadic: false, abstract: false, macro: false)
       @name = name.to_s
       @result = result
       @inline = inline
@@ -99,6 +99,7 @@ module AutoC
       @constraint = constraint
       @abstract = abstract
       @variadic = variadic
+      @macro = macro
       @parameters = Parameters.new(self)
       if parameters.is_a?(Hash)
         parameters.each do |name, descriptor|
@@ -124,6 +125,11 @@ module AutoC
       code(code)
     end
   
+    def macro_code(code)
+      @macro = true
+      code(code)
+    end
+
     def to_s = name
 
     def header(header) = @header = header
@@ -144,6 +150,8 @@ module AutoC
   
     def variadic? = @variadic == true
 
+    def macro? = @macro == true
+
     def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
     
     def signature = '%s(%s)' % [result, (parameters.to_a.collect(&:signature) << (variadic? ? '...' : nil)).compact.join(',')]
@@ -152,6 +160,10 @@ module AutoC
   
     def definition = '%s {%s}' % [prototype, @code]
   
+    def macro_definition
+      "\n#define %s(%s) %s\n" % [name, parameters.to_a.collect(&:name).compact.join(','), @code.gsub(/\n/, " \\\n")]
+    end
+
     def parameter(name) = @values[name]
 
     def binding(*args, **kws) = Binding.new(self, args, **kws)
@@ -205,18 +217,22 @@ module AutoC
     # The declaration comes into either public interface of forward declaration block depending on the function's visibility status
     def render_function_declaration(stream)
       render_function_header(stream) if @render_interface
-      render_declaration_specifier(stream)
-      if inline?
-        render_function_definition(stream)
+      if macro?
+        stream << macro_definition
       else
-        stream << prototype << ';'
+        render_declaration_specifier(stream)
+        if inline?
+          render_function_definition(stream)
+        else
+          stream << prototype << ';'
+        end
       end
     end
 
     # Render function definition, both inline or extern
     # This code never gets into public interface
     def render_function_definition(stream)
-      unless abstract?
+      unless abstract? || macro?
         raise("missing function definition for #{name}()") if @code.nil?
         stream << definition
       end
@@ -239,7 +255,7 @@ module AutoC
     # Render non-inline function definition regardless of function's visibility status
     def render_implementation(stream)
       @render_interface = false
-      render_function_definition(stream) if live? && !inline?
+      render_function_definition(stream) if live? && !inline? && !macro?
     end
 
   end # Function
