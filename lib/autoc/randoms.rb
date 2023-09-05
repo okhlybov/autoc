@@ -182,7 +182,6 @@ module AutoC::Random
       stream << %{
         #{type} #{generate}(#{state_type}* state) {
           /* Park-Miller PRNG */
-          assert(*state != 0); /* zero state breaks the LCG type generator */
           #if __cplusplus >= 201103L || __STDC_VERSION__ >= 199901L || defined(HAVE_LONG_LONG)
             /* suitable for machines with types wider than autoc_random_t avaliable */
             typedef unsigned long long int ull_t;
@@ -197,6 +196,7 @@ module AutoC::Random
             #{type} high = (*state >> 15)    * A;
             #{type} x = low + ((high & 0xffff) << 15) + (high >> 16);
             x = (x & 0x7fffffff) + (x >> 31);
+            assert(*state != 0); /* zero state breaks the LCG type generator */
             return *state = x;
           #endif
         }
