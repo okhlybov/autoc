@@ -211,16 +211,18 @@ module AutoC
           if(insert) {
             node = #{memory.allocate(_node)}; assert(node);
             node->left = node->right = NULL;
+            #{_index.copy.('node->index', index)};
+            #{_element.copy.('node->element', value)};
             t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
             #{_insert.(target, 'target->root', '*node', 1)};
             ++target->size;
           } else {
             #{_index.destroy.('node->index') if _index.destructible?};
+            #{_index.copy.('node->index', index)};
             #{_element.destroy.('node->element') if _element.destructible?};
+            #{_element.copy.('node->element', value)};
           }
-          #{_index.copy.('node->index', index)};
-          #{_element.copy.('node->element', value)};
         }
       end
       copy.configure do
