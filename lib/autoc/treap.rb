@@ -31,7 +31,7 @@ module AutoC
       @_node = identifier(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
-      dependencies << (@rng = rng)
+      dependencies << (@rng = rng) << STD::MATH_H
     end
 
     def render_interface(stream)
@@ -64,6 +64,7 @@ module AutoC
       stream << %{
         typedef struct {
           #{_node_p} root; /**< @private */
+          size_t size, depth; /**< @private */
         } #{signature};
         /** @private */
         struct #{_node} {
@@ -111,7 +112,7 @@ module AutoC
           }
         }
       end
-      method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :internal).configure do
+      method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :private).configure do
         code %{
           if(node) {
             const int c = #{_index.compare.(index, 'node->index')};
@@ -123,8 +124,9 @@ module AutoC
       end
       default_create.configure do
         code %{
+          #{type} t = {NULL, 0, 0};
           assert(target);
-          target->root = NULL;
+          *target = t;
         }
       end
       method(:void, :_dispose, { node: _node_p }, visibility: :internal).configure do
@@ -150,32 +152,27 @@ module AutoC
           return target->root == NULL;
         }
       end
-      method(:size_t, :_count, { node: _node_p }, visibility: :internal).configure do
-        code %{
-          if(!node) return 0;
-          else return 1 + #{_count.('*node->left')} + #{_count.('*node->right')};
-        }
-      end
       size.configure do
-        code %{
+        inline_code %{
           assert(target);
-          return #{_count.('*target->root')};
+          return target->size;
         }
       end
       check.configure do
-        code %{
+        dependencies << _lookup
+        inline_code %{
           assert(target);
           return #{_lookup.('*target->root', index)} != NULL;
         }
       end
       find_first.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       contains.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       view.configure do
@@ -185,17 +182,18 @@ module AutoC
           return (node = #{_lookup.('*target->root', index)}) ? &node->element : NULL;
         }
       end
-      method(:void, :_insert, { node: _node_pp, new_node: _node_p }, visibility: :internal).configure do
+      method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
         code %{
           assert(node);
           assert(new_node);
+          if(target->depth < depth) target->depth = depth;
           if(*node) {
             if(new_node->priority > (*node)->priority) {
               #{_split.('**node', 'new_node->index', 'new_node->left', 'new_node->right')};
               *node = new_node;
             } else {
               #{_node_p} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? (*node)->left : (*node)->right;
-              #{_insert.('next_node', new_node)};
+              #{_insert.(target, 'next_node', new_node, 'depth+1')};
             }
           } else *node = new_node;
         }
@@ -204,44 +202,45 @@ module AutoC
         code %{
           int insert;
           #{_node_p} node;
+          union {
+            #{rng.state_type} state;
+            #{_node_p} node;
+          } t;
           assert(target);
           insert = (node = #{_lookup.('*target->root', index)}) == NULL;
           if(insert) {
             node = #{memory.allocate(_node)}; assert(node);
             node->left = node->right = NULL;
-            union {
-              #{rng.state_type} state;
-              #{_node_p} node;
-            } t;
-            t.node = node; /* reinterpret bits of node pointer value to yield initial state for PRNG */
+            t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
+            #{_insert.(target, 'target->root', '*node', 1)};
+            ++target->size;
           } else {
             #{_index.destroy.('node->index') if _index.destructible?};
             #{_element.destroy.('node->element') if _element.destructible?};
           }
           #{_index.copy.('node->index', index)};
           #{_element.copy.('node->element', value)};
-          if(insert) #{_insert.('target->root', '*node')};
         }
       end
       copy.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       equal.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       compare.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       hash_code.configure do
         code %{
-          // TODO
+          /* TODO */
         }
       end
       
@@ -250,7 +249,14 @@ module AutoC
   end # Treap
 
 
-  class Treap::Range < ForwardRange
+  class Treap::Range < BidirectionalRange
+
+    def copyable? = false
+
+    def initialize(*args, **kws)
+      super
+      dependencies << STD::STACK_ALLOCATE
+    end
 
     def render_interface(stream)
       if public?
@@ -258,8 +264,8 @@ module AutoC
         stream << %{
           /**
             #{ingroup}
-            @brief Opaque structure holding state of the list's range
-            @since 2.0
+            @brief Opaque structure holding state of the treap's range
+            @since 2.1
           */
         }
       else
@@ -267,8 +273,10 @@ module AutoC
       end
       stream << %{
         typedef struct {
-          //#{iterable._node_p} front; /**< @private */
-          int z;
+          #{iterable.const_rvalue} iterable; /**< @private */
+          #{iterable._node_pp} front; /**< @private */
+          #{iterable._node_pp} back; /**< @private */
+          int front_index, back_index; /**< @private */
         } #{signature};
       }
     end
@@ -277,26 +285,62 @@ module AutoC
 
     def configure
       super
-      custom_create.configure do
-        inline_code %{
-          // TODO
+      method(self, :new_, { iterable: _iterable.const_rvalue, front_storage: _iterable._node_pp, back_storage: _iterable._node_pp }, visibility: :private).configure do
+        code %{
+          #{type} range;
+          #{_iterable._node_p} node;
+          range.iterable = iterable;
+          range.front = front_storage;
+          range.back = back_storage;
+          range.front_index = range.back_index = -1;
+          node = iterable->root;
+          while(node) {
+            range.front[++range.front_index] = node;
+            node = node->left;
+          }
+          node = iterable->root;
+          while(node) {
+            range.back[++range.back_index] = node;
+            node = node->right;
+          }
+          return range;
         }
+      end
+      new.configure do
+        macro_code %{#{new_}(iterable, _AUTOC_STACK_ALLOCATE(#{_iterable._node_p}, (iterable)->depth), _AUTOC_STACK_ALLOCATE(#{_iterable._node_p}, (iterable)->depth))}
+      end
+      custom_create.configure do
+        macro_code %{*(range) = #{new}(iterable)}
       end
       empty.configure do
         inline_code %{
-          // TODO
+          return 0;/* TODO */
         }
       end
       pop_front.configure do
         dependencies << empty
         inline_code %{
-          // TODO
+          /* TODO */
+        }
+      end
+      pop_back.configure do
+        dependencies << empty
+        inline_code %{
+          /* TODO */
         }
       end
       view_front.configure do
         dependencies << empty
         inline_code %{
-          // TODO
+          assert(!#{empty.(range)});
+          return &range->front[range->front_index]->element;
+        }
+      end
+      view_back.configure do
+        dependencies << empty
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->back[range->back_index]->element;
         }
       end
     end
