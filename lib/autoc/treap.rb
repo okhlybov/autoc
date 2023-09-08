@@ -31,7 +31,7 @@ module AutoC
       @_node = identifier(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
-      dependencies << (@rng = rng) << STD::MATH_H
+      dependencies << (@rng = rng) << STD::MATH_H << STD::STDIO_H
     end
 
     def render_interface(stream)
@@ -114,6 +114,7 @@ module AutoC
       end
       method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :private).configure do
         code %{
+          /* FIXME get rid of recursion */
           if(node) {
             const int c = #{_index.compare.(index, 'node->index')};
             if(!c) return node;
@@ -184,6 +185,8 @@ module AutoC
       end
       method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
         code %{
+#if 0
+          /* FIXME treap balancing insertion does not work properly and is thus disabled */
           assert(node);
           assert(new_node);
           if(target->depth < depth) target->depth = depth;
@@ -196,6 +199,20 @@ module AutoC
               #{_insert.(target, 'next_node', new_node, 'depth+1')};
             }
           } else *node = new_node;
+#else
+            assert(node);
+            assert(new_node);
+            if(target->depth < depth) target->depth = depth;
+            if(!(*node)) *node = new_node;
+            else {
+              #{_node_pp} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? &(*node)->left : &(*node)->right;
+              if(next_node) {
+                #{_insert.(target, '*next_node', new_node, 'depth+1')};
+              } else {
+                *next_node = new_node;
+              }
+            }
+#endif
         }
       end
       set.configure do
@@ -218,8 +235,6 @@ module AutoC
             #{_insert.(target, 'target->root', '*node', 1)};
             ++target->size;
           } else {
-            #{_index.destroy.('node->index') if _index.destructible?};
-            #{_index.copy.('node->index', index)};
             #{_element.destroy.('node->element') if _element.destructible?};
             #{_element.copy.('node->element', value)};
           }
@@ -245,7 +260,29 @@ module AutoC
           /* TODO */
         }
       end
-      
+      method(:void, :_write_node, { node: _node_p, f: 'FILE*' }, visibility: :internal).configure do
+        code %{
+          if(node) {
+            if(node->left) {
+              fprintf(f, "%d -> %d [color=blue]\\n", node->index, node->left->index);
+              #{_write_node}(node->left, f);
+            }
+            if(node->right) {
+              fprintf(f, "%d -> %d [color=red]\\n", node->index, node->right->index);
+              #{_write_node}(node->right, f);
+            }
+          }
+        }
+      end
+      method(:void, :dump_dot, { target: const_rvalue, file: 'char*'}, visibility: :private).configure do
+        code %{
+          FILE* f = fopen(file, "wt");
+          fputs("digraph {\\n", f);
+          #{_write_node}(target->root, f);
+          fputs("}\\n", f);
+          fclose(f);
+        }
+      end
     end
 
   end # Treap
@@ -276,9 +313,9 @@ module AutoC
       stream << %{
         typedef struct {
           #{iterable.const_rvalue} iterable; /**< @private */
-          #{iterable._node_pp} front; /**< @private */
-          #{iterable._node_pp} back; /**< @private */
-          int front_index, back_index; /**< @private */
+          #{iterable._node_pp} fronts; /**< @private */
+          #{iterable._node_pp} backs; /**< @private */
+          int front, back, front_ascend, back_ascend; /**< @private */
         } #{signature};
       }
     end
@@ -290,20 +327,22 @@ module AutoC
       method(self, :new_, { iterable: _iterable.const_rvalue, front_storage: _iterable._node_pp, back_storage: _iterable._node_pp }, visibility: :private).configure do
         code %{
           #{type} range;
-          #{_iterable._node_p} node;
+          #{_iterable._node_p} next;
           range.iterable = iterable;
-          range.front = front_storage;
-          range.back = back_storage;
-          range.front_index = range.back_index = -1;
-          node = iterable->root;
-          while(node) {
-            range.front[++range.front_index] = node;
-            node = node->left;
-          }
-          node = iterable->root;
-          while(node) {
-            range.back[++range.back_index] = node;
-            node = node->right;
+          range.fronts = front_storage;
+          range.backs = back_storage;
+          range.front = range.back = -1;
+          if(iterable->root) {
+            next = iterable->root;
+            while(next) {
+              range.fronts[++range.front] = next;
+              next = next->left;
+            }
+            next = iterable->root;
+            while(next) {
+              range.backs[++range.back] = next;
+              next = next->right;
+            }
           }
           return range;
         }
@@ -316,33 +355,70 @@ module AutoC
       end
       empty.configure do
         inline_code %{
-          return 0;/* TODO */
+          assert(range);
+          return range->front < 0 || range->back < 0;
         }
       end
       pop_front.configure do
         dependencies << empty
         inline_code %{
-          /* TODO */
+          #{_iterable._node_p} next;
+          assert(!#{empty.(range)});
+          if(range->fronts[range->front] == range->backs[range->back]) range->front = -1;
+          if(range->front < 0) return;
+          next = range->fronts[range->front];
+          if(next->right) {
+            --range->front;
+            next = next->right;
+            while(next) {
+              range->fronts[++range->front] = next;
+              next = next->left;
+            }
+          } else --range->front;
         }
       end
       pop_back.configure do
         dependencies << empty
         inline_code %{
-          /* TODO */
+          #{_iterable._node_p} next;
+          assert(!#{empty.(range)});
+          if(range->fronts[range->front] == range->backs[range->back]) range->back = -1;
+          if(range->back < 0) return;
+          next = range->backs[range->back];
+          if(next->left) {
+            --range->back;
+            next = next->left;
+            while(next) {
+              range->backs[++range->back] = next;
+              next = next->right;
+            }
+          } else --range->back;
         }
       end
       view_front.configure do
         dependencies << empty
         inline_code %{
           assert(!#{empty.(range)});
-          return &range->front[range->front_index]->element;
+          return &range->fronts[range->front]->element;
         }
       end
       view_back.configure do
         dependencies << empty
         inline_code %{
           assert(!#{empty.(range)});
-          return &range->back[range->back_index]->element;
+          return &range->backs[range->back]->element;
+        }
+      end
+      method(iterable.index.const_lvalue, :view_index_front, { range: const_rvalue }).configure do
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->fronts[range->front]->index;
+        }
+      end
+      method(iterable.index.const_lvalue, :view_index_back, { range: const_rvalue }).configure do
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->backs[range->back]->index;
         }
       end
     end
