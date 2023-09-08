@@ -64,6 +64,7 @@ module AutoC::STD
   MATH_H = AutoC::SystemHeader.new 'math.h'
   LIMITS_H = AutoC::SystemHeader.new 'limits.h'
   ASSERT_H = AutoC::SystemHeader.new 'assert.h'
+  STDIO_H = AutoC::SystemHeader.new 'stdio.h'
   STDDEF_H = AutoC::SystemHeader.new 'stddef.h'
   MALLOC_H = AutoC::SystemHeader.new 'malloc.h'
   STRING_H = AutoC::SystemHeader.new 'string.h'
