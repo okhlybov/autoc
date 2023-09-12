@@ -2,6 +2,9 @@
 
 # https://habr.com/en/articles/101818/
 # http://e-maxx.ru/algo/treap
+# https://algorithmica.org/ru/treap
+
+# Trees visualizer : https://people.ksp.sk/~kuko/bak/index.html
 
 require 'autoc/std'
 require 'autoc/ranges'
@@ -97,6 +100,19 @@ module AutoC
           }
         }
       end
+      method(_node_p, :_merge2, { left: _node_p, right: _node_p, depth: :size_t.lvalue }, visibility: :internal).configure do
+        code %{
+          if(!left) return right; else if(!right) return left;
+          ++(*depth);
+          if(left->priority > right->priority) {
+            left->right = #{_merge2}(left->right, right, depth);
+            return left;
+          } else {
+            right->left = #{_merge2}(left, right->left, depth);
+            return right;
+          }
+        }
+      end
       method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
         code %{
           assert(left);
@@ -112,11 +128,32 @@ module AutoC
           }
         }
       end
+      method(:void, :_split2, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
+        code %{
+          #{_node_p} l;
+          #{_node_p} r;
+          assert(left);
+          assert(right);
+          if(!node) {
+            *left = *right = NULL;
+          } else if(#{_index.compare.(index, 'node->index')} < 0) {
+            #{_split2}(node->right, index, &l, &r);
+            node->right = l;
+            *left = node;
+            *right = r;
+          } else {
+            #{_split2}(node->left, index, &l, &r);
+            node->left = r;
+            *left = l;
+            *right = node;
+          }
+        }
+      end
       method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :private).configure do
         code %{
           /* FIXME get rid of recursion */
           if(node) {
-            const int c = #{_index.compare.(index, 'node->index')};
+            const int c = #{_index.compare.('node->index', index)};
             if(!c) return node;
             else if(c < 0) return #{_lookup.('*node->left', index)};
             else return #{_lookup.('*node->right', index)};
@@ -183,6 +220,18 @@ module AutoC
           return (node = #{_lookup.('*target->root', index)}) ? &node->element : NULL;
         }
       end
+      method(:void , :_insert2, { target: rvalue, new_node: _node_p }, visibility: :internal).configure do
+        code %{
+          #{_node_p} l;
+          #{_node_p} r;
+          #{_node_p} rr;
+          size_t ld = 1, rd = 1;
+          assert(target);
+          #{_split2}(target->root, new_node->index, &l, &r);
+          target->root = #{_merge2}(l, #{_merge2}(new_node, r, &rd), &ld);
+          target->depth = ld < rd ? rd : ld;
+        }
+      end
       method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
         code %{
 #if 0
@@ -232,7 +281,8 @@ module AutoC
             #{_element.copy.('node->element', value)};
             t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
-            #{_insert.(target, 'target->root', '*node', 1)};
+            #{_insert2}(target, node);
+            //#{_insert.(target, 'target->root', '*node', 1)};
             ++target->size;
           } else {
             #{_element.destroy.('node->element') if _element.destructible?};
