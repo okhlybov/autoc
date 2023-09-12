@@ -92,17 +92,17 @@ module AutoC
           if(!left || !right) {
             *node = left ? left : right;
           } else if(left->priority > right->priority) {
-            #{_merge.('left->right', '*left->right', '*right')};
+            #{_merge}(&left->right, left->right, right);
             *node = left;
           } else {
-            #{_merge.('right->left', '*left', '*right->left')};
+            #{_merge}(&right->left, left, right->left);
             *node = right;
           }
         }
       end
       method(_node_p, :_merge2, { left: _node_p, right: _node_p, depth: :size_t.lvalue }, visibility: :internal).configure do
         code %{
-          if(!left) return right; else if(!right) return left;
+          if(!left || !right) return !right ? left : right;
           ++(*depth);
           if(left->priority > right->priority) {
             left->right = #{_merge2}(left->right, right, depth);
@@ -120,10 +120,10 @@ module AutoC
           if(!node) {
             *left = *right = NULL;
           } else if(#{_index.compare.(index, 'node->index')} < 0) {
-            #{_split.('*node->left', index, left, 'node->left')};
+            #{_split}(node->left, index, left, &node->left);
             *right = node;
           } else {
-            #{_split.('*node->right', index, 'node->right', right)};
+            #{_split}(node->right, index, &node->right, right);
             *left = node;
           }
         }
@@ -136,7 +136,7 @@ module AutoC
           assert(right);
           if(!node) {
             *left = *right = NULL;
-          } else if(#{_index.compare.(index, 'node->index')} < 0) {
+          } else if(#{_index.compare.('node->index', index)} < 0) {
             #{_split2}(node->right, index, &l, &r);
             node->right = l;
             *left = node;
@@ -155,8 +155,8 @@ module AutoC
           if(node) {
             const int c = #{_index.compare.('node->index', index)};
             if(!c) return node;
-            else if(c < 0) return #{_lookup.('*node->left', index)};
-            else return #{_lookup.('*node->right', index)};
+            else if(c < 0) return #{_lookup}(node->left, index);
+            else return #{_lookup}(node->right, index);
           } else return NULL;
         }
       end
@@ -170,8 +170,8 @@ module AutoC
       method(:void, :_dispose, { node: _node_p }, visibility: :internal).configure do
         code %{
           if(node) {
-            #{_dispose.('*node->left')};
-            #{_dispose.('*node->right')};
+            #{_dispose}(node->left);
+            #{_dispose}(node->right);
             #{index.destroy.('node->index') if index.destructible?};
             #{element.destroy.('node->element') if element.destructible?};
             #{memory.free(:node)};
@@ -181,7 +181,7 @@ module AutoC
       destroy.configure do
         code %{
           assert(target);
-          #{_dispose.('*target->root')};
+          #{_dispose}(target->root);
         }
       end
       empty.configure do
@@ -200,7 +200,7 @@ module AutoC
         dependencies << _lookup
         inline_code %{
           assert(target);
-          return #{_lookup.('*target->root', index)} != NULL;
+          return #{_lookup}(target->root, index) != NULL;
         }
       end
       find_first.configure do
@@ -217,18 +217,18 @@ module AutoC
         code %{
           #{_node_p} node;
           assert(target);
-          return (node = #{_lookup.('*target->root', index)}) ? &node->element : NULL;
+          return (node = #{_lookup}(target->root, index)) ? &node->element : NULL;
         }
       end
       method(:void , :_insert2, { target: rvalue, new_node: _node_p }, visibility: :internal).configure do
         code %{
           #{_node_p} l;
           #{_node_p} r;
-          #{_node_p} rr;
           size_t ld = 1, rd = 1;
           assert(target);
           #{_split2}(target->root, new_node->index, &l, &r);
           target->root = #{_merge2}(l, #{_merge2}(new_node, r, &rd), &ld);
+          //target->root = #{_merge2}(#{_merge2}(l, new_node, &ld), r, &rd);
           target->depth = ld < rd ? rd : ld;
         }
       end
@@ -256,7 +256,7 @@ module AutoC
             else {
               #{_node_pp} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? &(*node)->left : &(*node)->right;
               if(next_node) {
-                #{_insert.(target, '*next_node', new_node, 'depth+1')};
+                #{_insert}(target, next_node, new_node, depth+1);
               } else {
                 *next_node = new_node;
               }
@@ -281,8 +281,8 @@ module AutoC
             #{_element.copy.('node->element', value)};
             t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
-            #{_insert2}(target, node);
-            //#{_insert.(target, 'target->root', '*node', 1)};
+            //#{_insert2}(target, node);
+            #{_insert}(target, &target->root, node, 1);
             ++target->size;
           } else {
             #{_element.destroy.('node->element') if _element.destructible?};
