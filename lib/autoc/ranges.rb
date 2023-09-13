@@ -633,6 +633,174 @@ module AutoC
   end # AssociativeRange
 
 
+  class TreeRange < BidirectionalRange
+  
+    def copyable? = false
+
+    def initialize(*args, **kws)
+      super
+      dependencies << STD::STACK_ALLOCATE
+    end
+
+    def render_interface(stream)
+      if public?
+        render_type_description(stream)
+        stream << %{
+          /**
+            #{ingroup}
+            @brief Opaque structure holding state of the binary tree's range
+            @since 2.1
+          */
+        }
+      else
+        stream << PRIVATE
+      end
+      stream << %{
+        typedef struct {
+          #{iterable.const_rvalue} iterable; /**< @private */
+          #{iterable._node_pp} fronts; /**< @private */
+          #{iterable._node_pp} backs; /**< @private */
+          int front, back, front_ascend, back_ascend; /**< @private */
+        } #{signature};
+      }
+    end
+
+  private
+
+    def configure
+      super
+      method(self, :new_, { iterable: _iterable.const_rvalue, front_storage: _iterable._node_pp, back_storage: _iterable._node_pp }, visibility: :private).configure do
+        code %{
+          #{type} range;
+          #{_iterable._node_p} node;
+          range.iterable = iterable;
+          range.fronts = front_storage;
+          range.backs = back_storage;
+          range.front = range.back = -1;
+          if(iterable->root) {
+            node = iterable->root;
+            while(node) {
+              range.fronts[++range.front] = node;
+              node = node->left;
+            }
+            node = iterable->root;
+            while(node) {
+              range.backs[++range.back] = node;
+              node = node->right;
+            }
+          }
+          return range;
+        }
+      end
+      new.configure do
+        macro_code %{#{new_}(iterable, _AUTOC_STACK_ALLOCATE(#{_iterable._node_p}, (iterable)->depth), _AUTOC_STACK_ALLOCATE(#{_iterable._node_p}, (iterable)->depth))}
+      end
+      custom_create.configure do
+        macro_code %{*(range) = #{new}(iterable)}
+      end
+      empty.configure do
+        inline_code %{
+          assert(range);
+          return range->front < 0 || range->back < 0;
+        }
+      end
+      pop_front.configure do
+        dependencies << empty
+        inline_code %{
+          #{_iterable._node_p} node;
+          assert(!#{empty.(range)});
+          if(range->fronts[range->front] == range->backs[range->back]) range->front = -1;
+          if(range->front < 0) return;
+          node = range->fronts[range->front];
+          if(node->right) {
+            --range->front;
+            node = node->right;
+            while(node) {
+              range->fronts[++range->front] = node;
+              node = node->left;
+            }
+          } else --range->front;
+        }
+      end
+      pop_back.configure do
+        dependencies << empty
+        inline_code %{
+          #{_iterable._node_p} node;
+          assert(!#{empty.(range)});
+          if(range->fronts[range->front] == range->backs[range->back]) range->back = -1;
+          if(range->back < 0) return;
+          node = range->backs[range->back];
+          if(node->left) {
+            --range->back;
+            node = node->left;
+            while(node) {
+              range->backs[++range->back] = node;
+              node = node->right;
+            }
+          } else --range->back;
+        }
+      end
+      view_front.configure do
+        dependencies << empty
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->fronts[range->front]->element;
+        }
+      end
+      view_back.configure do
+        dependencies << empty
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->backs[range->back]->element;
+        }
+      end
+      method(iterable.index.const_lvalue, :view_index_front, { range: const_rvalue }).configure do
+        header %{
+          @brief Get a view of the front index
+
+          @param[in] range range to retrieve element from
+          @return a view of an index at the range's front position
+
+          This function is used to get a constant reference (in form of the C pointer) to the index associated with element at the range's front position.
+          Refer to @ref #{type.take_index_front} to get an independent copy of that index.
+  
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+  
+          @note Range must not be empty (see @ref #{type.empty}).
+
+          @since 2.1
+        }
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->fronts[range->front]->index;
+        }
+      end
+      method(iterable.index.const_lvalue, :view_index_back, { range: const_rvalue }).configure do
+        header %{
+          @brief Get a view of the back index
+
+          @param[in] range range to retrieve element from
+          @return a view of an index at the range's back position
+
+          This function is used to get a constant reference (in form of the C pointer) to the index associated with element at the range's back position.
+          Refer to @ref #{type.take_index_back} to get an independent copy of that index.
+  
+          It is generally not safe to bypass the constness and to alter the value in place (although no one prevents to).
+  
+          @note Range must not be empty (see @ref #{type.empty}).
+
+          @since 2.1
+        }
+        inline_code %{
+          assert(!#{empty.(range)});
+          return &range->backs[range->back]->index;
+        }
+      end
+    end
+  
+  end # TreeRange
+
+
   Range::INFO = Code.new interface: %{
     /**
       @page Range
