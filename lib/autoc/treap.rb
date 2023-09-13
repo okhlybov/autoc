@@ -102,19 +102,6 @@ module AutoC
           }
         }
       end
-      method(_node_p, :_merge2, { left: _node_p, right: _node_p, depth: :size_t.lvalue }, visibility: :internal).configure do
-        code %{
-          if(!left || !right) return !right ? left : right;
-          ++(*depth);
-          if(left->priority > right->priority) {
-            left->right = #{_merge2}(left->right, right, depth);
-            return left;
-          } else {
-            right->left = #{_merge2}(left, right->left, depth);
-            return right;
-          }
-        }
-      end
       method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
         code %{
           assert(left);
@@ -127,27 +114,6 @@ module AutoC
           } else {
             #{_split}(node->right, index, &node->right, right);
             *left = node;
-          }
-        }
-      end
-      method(:void, :_split2, { node: _node_p, index: index.const_rvalue, out_left: _node_pp, out_right: _node_pp }, visibility: :internal).configure do
-        code %{
-          #{_node_p} left;
-          #{_node_p} right;
-          assert(out_left);
-          assert(out_right);
-          if(!node) {
-            *out_left = *out_right = NULL;
-          } else if(#{_index.compare.('node->index', index)} < 0) {
-            #{_split2}(node->right, index, &left, &right);
-            node->right = left;
-            *out_left = node;
-            *out_right = right;
-          } else {
-            #{_split2}(node->left, index, &left, &right);
-            node->left = right;
-            *out_left = left;
-            *out_right = node;
           }
         }
       end
@@ -222,18 +188,6 @@ module AutoC
           return (node = #{_lookup}(target->root, index)) ? &node->element : NULL;
         }
       end
-      method(:void , :_insert2, { target: rvalue, new_node: _node_p }, visibility: :internal).configure do
-        # Source: http://opentrains.mipt.ru/zksh/files/zksh2015/lectures/zksh_cartesian.pdf
-        code %{
-          #{_node_p} left;
-          #{_node_p} right;
-          size_t depth1 = 0, depth2 = 0;
-          assert(target);
-          #{_split2}(target->root, new_node->index, &left, &right);
-          target->root = #{_merge2}(left, #{_merge2}(new_node, right, &depth1), &depth2);
-          target->depth = depth1 < depth2 ? depth2 : depth1;
-        }
-      end
       method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
         # Source: http://e-maxx.ru/algo/treap
         code %{
@@ -269,7 +223,6 @@ module AutoC
             #{_element.copy.('node->element', value)};
             t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
-            //#{_insert2}(target, node);
             #{_insert}(target, &target->root, node, 1);
             ++target->size;
           } else {
