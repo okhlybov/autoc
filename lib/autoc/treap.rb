@@ -3,6 +3,7 @@
 # https://habr.com/en/articles/101818/
 # http://e-maxx.ru/algo/treap
 # https://algorithmica.org/ru/treap
+# http://opentrains.mipt.ru/zksh/files/zksh2015/lectures/zksh_cartesian.pdf
 
 # Trees visualizer : https://people.ksp.sk/~kuko/bak/index.html
 
@@ -34,7 +35,8 @@ module AutoC
       @_node = identifier(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
-      dependencies << (@rng = rng) << STD::MATH_H << STD::STDIO_H
+      dependencies << (@rng = rng) << STD::STDIO_H
+      @emit_maintenance_code = true
     end
 
     def render_interface(stream)
@@ -128,36 +130,36 @@ module AutoC
           }
         }
       end
-      method(:void, :_split2, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
+      method(:void, :_split2, { node: _node_p, index: index.const_rvalue, out_left: _node_pp, out_right: _node_pp }, visibility: :internal).configure do
         code %{
-          #{_node_p} l;
-          #{_node_p} r;
-          assert(left);
-          assert(right);
+          #{_node_p} left;
+          #{_node_p} right;
+          assert(out_left);
+          assert(out_right);
           if(!node) {
-            *left = *right = NULL;
+            *out_left = *out_right = NULL;
           } else if(#{_index.compare.('node->index', index)} < 0) {
-            #{_split2}(node->right, index, &l, &r);
-            node->right = l;
-            *left = node;
-            *right = r;
+            #{_split2}(node->right, index, &left, &right);
+            node->right = left;
+            *out_left = node;
+            *out_right = right;
           } else {
-            #{_split2}(node->left, index, &l, &r);
-            node->left = r;
-            *left = l;
-            *right = node;
+            #{_split2}(node->left, index, &left, &right);
+            node->left = right;
+            *out_left = left;
+            *out_right = node;
           }
         }
       end
       method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :private).configure do
         code %{
-          /* FIXME get rid of recursion */
-          if(node) {
-            const int c = #{_index.compare.('node->index', index)};
+          while(node) {
+            const int c = #{_index.compare.(index, 'node->index')};
             if(!c) return node;
-            else if(c < 0) return #{_lookup}(node->left, index);
-            else return #{_lookup}(node->right, index);
-          } else return NULL;
+            else if(c < 0) node = node->left;
+            else node = node->right;
+          }
+          return NULL;
         }
       end
       default_create.configure do
@@ -221,47 +223,32 @@ module AutoC
         }
       end
       method(:void , :_insert2, { target: rvalue, new_node: _node_p }, visibility: :internal).configure do
+        # Source: http://opentrains.mipt.ru/zksh/files/zksh2015/lectures/zksh_cartesian.pdf
         code %{
-          #{_node_p} l;
-          #{_node_p} r;
-          size_t ld = 1, rd = 1;
+          #{_node_p} left;
+          #{_node_p} right;
+          size_t depth1 = 0, depth2 = 0;
           assert(target);
-          #{_split2}(target->root, new_node->index, &l, &r);
-          target->root = #{_merge2}(l, #{_merge2}(new_node, r, &rd), &ld);
-          //target->root = #{_merge2}(#{_merge2}(l, new_node, &ld), r, &rd);
-          target->depth = ld < rd ? rd : ld;
+          #{_split2}(target->root, new_node->index, &left, &right);
+          target->root = #{_merge2}(left, #{_merge2}(new_node, right, &depth1), &depth2);
+          target->depth = depth1 < depth2 ? depth2 : depth1;
         }
       end
       method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
+        # Source: http://e-maxx.ru/algo/treap
         code %{
-#if 0
-          /* FIXME treap balancing insertion does not work properly and is thus disabled */
-          assert(node);
-          assert(new_node);
-          if(target->depth < depth) target->depth = depth;
-          if(*node) {
-            if(new_node->priority > (*node)->priority) {
-              #{_split.('**node', 'new_node->index', 'new_node->left', 'new_node->right')};
-              *node = new_node;
-            } else {
-              #{_node_p} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? (*node)->left : (*node)->right;
-              #{_insert.(target, 'next_node', new_node, 'depth+1')};
-            }
-          } else *node = new_node;
-#else
             assert(node);
             assert(new_node);
-            if(target->depth < depth) target->depth = depth;
+            if(target->depth < depth) target->depth = depth; /* maintaining maximum attained tree depth for allocating range's buffer memory */
             if(!(*node)) *node = new_node;
             else {
               #{_node_pp} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? &(*node)->left : &(*node)->right;
               if(next_node) {
-                #{_insert}(target, next_node, new_node, depth+1);
+                #{_insert}(target, next_node, new_node, depth + 1);
               } else {
                 *next_node = new_node;
               }
             }
-#endif
         }
       end
       set.configure do
@@ -273,8 +260,9 @@ module AutoC
             #{_node_p} node;
           } t;
           assert(target);
-          insert = (node = #{_lookup.('*target->root', index)}) == NULL;
+          insert = (node = #{_lookup}(target->root, index)) == NULL; /* FIXME get rid of preliminary index search run */
           if(insert) {
+            /* {index->element} association is absent - add new node */
             node = #{memory.allocate(_node)}; assert(node);
             node->left = node->right = NULL;
             #{_index.copy.('node->index', index)};
@@ -285,6 +273,7 @@ module AutoC
             #{_insert}(target, &target->root, node, 1);
             ++target->size;
           } else {
+            /* {index->element} association is present - just replace the element */
             #{_element.destroy.('node->element') if _element.destructible?};
             #{_element.copy.('node->element', value)};
           }
@@ -310,21 +299,22 @@ module AutoC
           /* TODO */
         }
       end
-      method(:void, :_write_node, { node: _node_p, f: 'FILE*' }, visibility: :internal).configure do
+      method(:void, :_write_node, { node: _node_p, f: 'FILE*' }, constraint:-> { @emit_maintenance_code }, visibility: :internal).configure do
         code %{
+          /* this code assumes the index type is compatible with int */
           if(node) {
             if(node->left) {
-              fprintf(f, "%d -> %d [color=blue]\\n", node->index, node->left->index);
+              fprintf(f, "%d -> %d [color=blue]\\n", node->index, (int)node->left->index);
               #{_write_node}(node->left, f);
             }
             if(node->right) {
-              fprintf(f, "%d -> %d [color=red]\\n", node->index, node->right->index);
+              fprintf(f, "%d -> %d [color=red]\\n", node->index, (int)node->right->index);
               #{_write_node}(node->right, f);
             }
           }
         }
       end
-      method(:void, :dump_dot, { target: const_rvalue, file: 'char*'}, visibility: :private).configure do
+      method(:void, :dump_dot, { target: const_rvalue, file: 'char*'}, constraint:-> { @emit_maintenance_code }, visibility: :private).configure do
         code %{
           FILE* f = fopen(file, "wt");
           fputs("digraph {\\n", f);
@@ -377,21 +367,21 @@ module AutoC
       method(self, :new_, { iterable: _iterable.const_rvalue, front_storage: _iterable._node_pp, back_storage: _iterable._node_pp }, visibility: :private).configure do
         code %{
           #{type} range;
-          #{_iterable._node_p} next;
+          #{_iterable._node_p} node;
           range.iterable = iterable;
           range.fronts = front_storage;
           range.backs = back_storage;
           range.front = range.back = -1;
           if(iterable->root) {
-            next = iterable->root;
-            while(next) {
-              range.fronts[++range.front] = next;
-              next = next->left;
+            node = iterable->root;
+            while(node) {
+              range.fronts[++range.front] = node;
+              node = node->left;
             }
-            next = iterable->root;
-            while(next) {
-              range.backs[++range.back] = next;
-              next = next->right;
+            node = iterable->root;
+            while(node) {
+              range.backs[++range.back] = node;
+              node = node->right;
             }
           }
           return range;
@@ -412,17 +402,17 @@ module AutoC
       pop_front.configure do
         dependencies << empty
         inline_code %{
-          #{_iterable._node_p} next;
+          #{_iterable._node_p} node;
           assert(!#{empty.(range)});
           if(range->fronts[range->front] == range->backs[range->back]) range->front = -1;
           if(range->front < 0) return;
-          next = range->fronts[range->front];
-          if(next->right) {
+          node = range->fronts[range->front];
+          if(node->right) {
             --range->front;
-            next = next->right;
-            while(next) {
-              range->fronts[++range->front] = next;
-              next = next->left;
+            node = node->right;
+            while(node) {
+              range->fronts[++range->front] = node;
+              node = node->left;
             }
           } else --range->front;
         }
@@ -430,17 +420,17 @@ module AutoC
       pop_back.configure do
         dependencies << empty
         inline_code %{
-          #{_iterable._node_p} next;
+          #{_iterable._node_p} node;
           assert(!#{empty.(range)});
           if(range->fronts[range->front] == range->backs[range->back]) range->back = -1;
           if(range->back < 0) return;
-          next = range->backs[range->back];
-          if(next->left) {
+          node = range->backs[range->back];
+          if(node->left) {
             --range->back;
-            next = next->left;
-            while(next) {
-              range->backs[++range->back] = next;
-              next = next->right;
+            node = node->left;
+            while(node) {
+              range->backs[++range->back] = node;
+              node = node->right;
             }
           } else --range->back;
         }
