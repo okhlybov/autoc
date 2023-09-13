@@ -36,7 +36,6 @@ module AutoC
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
       dependencies << (@rng = rng) << STD::STDIO_H
-      @emit_maintenance_code = true
     end
 
     def render_interface(stream)
@@ -89,17 +88,18 @@ module AutoC
 
     def configure
       super
-      method(:void, :_merge, { node: _node_pp, left: _node_p, right: _node_p }, visibility: :internal).configure do
+      method(:int, :_merge, { node: _node_pp, left: _node_p, right: _node_p, result: :int }, visibility: :internal).configure do
         code %{
           if(!left || !right) {
             *node = left ? left : right;
           } else if(left->priority > right->priority) {
-            #{_merge}(&left->right, left->right, right);
+            result = #{_merge}(&left->right, left->right, right, result);
             *node = left;
           } else {
-            #{_merge}(&right->left, left, right->left);
+            result = #{_merge}(&right->left, left, right->left, result);
             *node = right;
           }
+          return result;
         }
       end
       method(:void, :_split, { node: _node_p, index: index.const_rvalue, left: _node_pp, right: _node_pp }, visibility: :internal).configure do
@@ -135,14 +135,20 @@ module AutoC
           *target = t;
         }
       end
+      method(:void, :_destroy_node, { node: _node_p }, visibility: :internal).configure do
+        code %{
+          assert(node);
+          #{index.destroy.('node->index') if index.destructible?};
+          #{element.destroy.('node->element') if element.destructible?};
+          #{memory.free(:node)};
+        }
+      end
       method(:void, :_dispose, { node: _node_p }, visibility: :internal).configure do
         code %{
           if(node) {
             #{_dispose}(node->left);
             #{_dispose}(node->right);
-            #{index.destroy.('node->index') if index.destructible?};
-            #{element.destroy.('node->element') if element.destructible?};
-            #{memory.free(:node)};
+            #{_destroy_node}(node);
           }
         }
       end
@@ -188,24 +194,52 @@ module AutoC
           return (node = #{_lookup}(target->root, index)) ? &node->element : NULL;
         }
       end
-      method(:void, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
-        # Source: http://e-maxx.ru/algo/treap
+      method(:size_t, :_insert, { target: rvalue, node: _node_pp, new_node: _node_p, depth: :size_t }, visibility: :internal).configure do
         code %{
+            assert(target);
             assert(node);
             assert(new_node);
-            if(target->depth < depth) target->depth = depth; /* maintaining maximum attained tree depth for allocating range's buffer memory */
-            if(!(*node)) *node = new_node;
+            if(!*node) *node = new_node;
             else {
               #{_node_pp} next_node = #{index.compare.('new_node->index', '(*node)->index')} < 0 ? &(*node)->left : &(*node)->right;
               if(next_node) {
-                #{_insert}(target, next_node, new_node, depth + 1);
+                return #{_insert}(target, next_node, new_node, depth + 1);
               } else {
                 *next_node = new_node;
               }
             }
+            return depth;
         }
       end
-      set.configure do
+      method(:int, :_erase, { node: _node_pp, index: index.const_rvalue, result: :int }, visibility: :internal).configure do
+        code %{
+          assert(node);
+          if(*node) {
+            const int c = #{_index.compare.(index, '(*node)->index')};
+            if(!c) {
+              int result;
+              #{_node_p} dead_node = *node;
+              result = #{_merge}(node, (*node)->left, (*node)->right, 1);
+              #{_destroy_node}(dead_node);
+              return result;
+            } else {
+              return #{_erase}(c < 0 ? &(*node)->left : &(*node)->right, index, result);
+            }
+          } else return result;
+        }
+      end
+      method(:int, :remove, { target: rvalue, index: index.const_rvalue }).configure do
+        header %{
+          TODO
+        }
+        code %{
+          int remove;
+          assert(target);
+          if(remove = #{_erase}(&target->root, index, 0)) --target->size;
+          return remove;
+        }
+      end
+        set.configure do
         code %{
           int insert;
           #{_node_p} node;
@@ -216,6 +250,7 @@ module AutoC
           assert(target);
           insert = (node = #{_lookup}(target->root, index)) == NULL; /* FIXME get rid of preliminary index search run */
           if(insert) {
+            size_t depth;
             /* {index->element} association is absent - add new node */
             node = #{memory.allocate(_node)}; assert(node);
             node->left = node->right = NULL;
@@ -223,7 +258,8 @@ module AutoC
             #{_element.copy.('node->element', value)};
             t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
-            #{_insert}(target, &target->root, node, 1);
+            depth = #{_insert}(target, &target->root, node, 1);
+            if(target->depth < depth) target->depth = depth; /* maintain maximum attained tree depth for for the range buffers allocation */
             ++target->size;
           } else {
             /* {index->element} association is present - just replace the element */
