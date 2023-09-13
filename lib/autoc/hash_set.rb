@@ -28,7 +28,7 @@ module AutoC
 
     def initialize(*args, **kws)
       super
-      dependencies << _bin << Seed.instance
+      dependencies << _bin << AutoC::Random.seed
     end
 
     def render_interface(stream)

@@ -30,7 +30,7 @@ module AutoC
     def initialize(type, variants, visibility: :public)
       super(type, visibility:)
       setup_variants(variants)
-      dependencies << Seed.instance
+      dependencies << AutoC::Random.seed
       @tag_ = "#{signature}_";
       @default = 'abort();'
     end

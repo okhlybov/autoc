@@ -67,6 +67,9 @@ module AutoC::Random
   end # Seed
 
 
+  def self.seed = Seed.instance
+
+
   DEFINITIONS = AutoC::Code.new interface: %{
     /**
       @brief Random number type

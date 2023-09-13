@@ -24,7 +24,7 @@ module AutoC
 
     def result(hasher) = hasher
     
-    def initialize = dependencies << STD::LIMITS_H << STD::STDDEF_H << Random::Seed.instance
+    def initialize = dependencies << STD::LIMITS_H << STD::STDDEF_H << AutoC::Random.seed
 
   end # Hasher
 
