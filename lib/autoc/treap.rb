@@ -30,6 +30,8 @@ module AutoC
 
     attr_reader :_node, :_node_p, :_node_pp
 
+    def orderable? = false
+
     def initialize(*args, rng: Random.generator, **opts)
       super(*args, **opts)
       @_node = identifier(:_node, abbreviate: true)
@@ -120,7 +122,7 @@ module AutoC
       method(_node_p, :_lookup, { node: _node_p, index: index.const_rvalue }, visibility: :private).configure do
         code %{
           while(node) {
-            const int c = #{_index.compare.(index, 'node->index')};
+            int c = #{_index.compare.(index, 'node->index')};
             if(!c) return node;
             else if(c < 0) node = node->left;
             else node = node->right;
@@ -159,7 +161,7 @@ module AutoC
         }
       end
       empty.configure do
-        code %{
+        inline_code %{
           assert(target);
           return target->root == NULL;
         }
@@ -179,16 +181,25 @@ module AutoC
       end
       find_first.configure do
         code %{
-          /* TODO */
+          #{range} r;
+          assert(target);
+          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element.const_lvalue} e = #{range.view_front.(:r)};
+            if(#{element.compare.(value, '*e')}) return e;
+          }
+          return NULL;
         }
       end
       contains.configure do
-        code %{
-          /* TODO */
+        dependencies << find_first
+        inline_code %{
+          assert(target);
+          return #{find_first}(target, value) != NULL;
         }
       end
       view.configure do
-        code %{
+        dependencies << _lookup
+        inline_code %{
           #{_node_p} node;
           assert(target);
           return (node = #{_lookup}(target->root, index)) ? &node->element : NULL;
@@ -215,7 +226,7 @@ module AutoC
         code %{
           assert(node);
           if(*node) {
-            const int c = #{_index.compare.(index, '(*node)->index')};
+            int c = #{_index.compare.(index, '(*node)->index')};
             if(!c) {
               int result;
               #{_node_p} dead_node = *node;
@@ -235,7 +246,7 @@ module AutoC
         code %{
           int remove;
           assert(target);
-          if(remove = #{_erase}(&target->root, index, 0)) --target->size;
+          if((remove = #{_erase}(&target->root, index, 0))) --target->size;
           return remove;
         }
       end
@@ -245,7 +256,7 @@ module AutoC
           #{_node_p} node;
           union {
             #{rng.state_type} state;
-            #{_node_p} node;
+            #{_node_p} pointer;
           } t;
           assert(target);
           insert = (node = #{_lookup}(target->root, index)) == NULL; /* FIXME get rid of preliminary index search run */
@@ -256,7 +267,7 @@ module AutoC
             node->left = node->right = NULL;
             #{_index.copy.('node->index', index)};
             #{_element.copy.('node->element', value)};
-            t.node = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
+            t.pointer = node; /* reinterpret bits of the node pointer's value to yield initial state for PRNG */
             node->priority = #{rng.generate('t.state')}; /* use single cycle of PRNG to convert deterministic node address into a random priority */
             depth = #{_insert}(target, &target->root, node, 1);
             if(target->depth < depth) target->depth = depth; /* maintain maximum attained tree depth for for the range buffers allocation */
@@ -270,22 +281,49 @@ module AutoC
       end
       copy.configure do
         code %{
-          /* TODO */
+          /* FIXME optimize */
+          #{range} r;
+          assert(target);
+          assert(source);
+          #{default_create}(target);
+          for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{set}(target, *#{range.view_index_front}(&r), *#{range.view_front}(&r));
+          }
         }
       end
       equal.configure do
         code %{
-          /* TODO */
-        }
-      end
-      compare.configure do
-        code %{
-          /* TODO */
+          assert(left);
+          assert(right);
+          if(#{size}(left) == #{size}(right)) {
+            #{range} lt, rt;
+            for(lt = #{range.new}(left), rt = #{range.new}(right); !#{range.empty}(&lt) && !#{range.empty}(&rt); #{range.pop_front}(&lt), #{range.pop_front}(&rt)) {
+              #{index.const_lvalue} li = #{range.view_index_front}(&lt);
+              #{index.const_lvalue} ri = #{range.view_index_front}(&rt);
+              #{element.const_lvalue} le = #{range.view_front}(&lt);
+              #{element.const_lvalue} re = #{range.view_front}(&rt);
+              if(!#{index.equal.('*li', '*ri')} || !#{element.equal.('*le', '*re')}) return 0;
+            }
+            return 1;
+          } else return 0;
         }
       end
       hash_code.configure do
         code %{
-          /* TODO */
+          #{range} r;
+          #{hasher.to_s} hash;
+          size_t result;
+          assert(target);
+          #{hasher.create(:hash)};
+          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{index.const_lvalue} i = #{range.view_index_front.(:r)};
+            #{element.const_lvalue} e = #{range.view_front.(:r)};
+            #{hasher.update(:hash, index.hash_code.('*i'))};
+            #{hasher.update(:hash, element.hash_code.('*e'))};
+          }
+          result = #{hasher.result(:hash)};
+          #{hasher.destroy(:hash)};
+          return result;
         }
       end
       method(:void, :_write_node, { node: _node_p, f: 'FILE*' }, constraint:-> { @emit_maintenance_code }, visibility: :internal).configure do
