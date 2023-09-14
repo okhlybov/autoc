@@ -633,7 +633,7 @@ module AutoC
   end # AssociativeRange
 
 
-  class TreeRange < BidirectionalRange
+  class TreeSetRange < BidirectionalRange
   
     def copyable? = false
 
@@ -706,7 +706,7 @@ module AutoC
       end
       pop_front.configure do
         dependencies << empty
-        inline_code %{
+        code %{
           #{_iterable._node_p} node;
           assert(!#{empty.(range)});
           if(range->fronts[range->front] == range->backs[range->back]) range->front = -1;
@@ -724,7 +724,7 @@ module AutoC
       end
       pop_back.configure do
         dependencies << empty
-        inline_code %{
+        code %{
           #{_iterable._node_p} node;
           assert(!#{empty.(range)});
           if(range->fronts[range->front] == range->backs[range->back]) range->back = -1;
@@ -754,6 +754,17 @@ module AutoC
           return &range->backs[range->back]->element;
         }
       end
+    end
+  
+  end # TreeSetRange
+
+
+  class TreeMapRange < TreeSetRange
+
+  private
+
+    def configure
+      super
       method(iterable.index.const_lvalue, :view_index_front, { range: const_rvalue }).configure do
         header %{
           @brief Get a view of the front index
@@ -798,7 +809,7 @@ module AutoC
       end
     end
   
-  end # TreeRange
+  end # TreeMapRange
 
 
   Range::INFO = Code.new interface: %{

@@ -1,11 +1,5 @@
 # frozen_string_literal: true
 
-# https://habr.com/en/articles/101818/
-# http://e-maxx.ru/algo/treap
-# https://algorithmica.org/ru/treap
-# http://opentrains.mipt.ru/zksh/files/zksh2015/lectures/zksh_cartesian.pdf
-
-# Trees visualizer : https://people.ksp.sk/~kuko/bak/index.html
 
 require 'autoc/std'
 require 'autoc/ranges'
@@ -19,8 +13,8 @@ module AutoC
   using STD::Coercions
 
 
-  # Generator for treap (binary tree family) data structure
-  class Treap < Association
+  # Generator for treap (binary tree family) map data structure
+  class TreapMap < Association
 
     def _range_class = Range
 
@@ -52,7 +46,7 @@ module AutoC
             
             @brief Ordered collection of elements of type #{element} associated with unique index of type #{index}.
 
-            For iteration over the set elements refer to @ref #{range}.
+            For iteration over the index & elements refer to @ref #{range}.
 
             @see https://en.wikipedia.org/wiki/Treap
 
@@ -60,7 +54,7 @@ module AutoC
           */
           /**
             #{ingroup}
-            @brief Opaque structure holding state of the hash map
+            @brief Opaque structure holding state of the map
             @since 2.1
           */
         }
@@ -281,7 +275,7 @@ module AutoC
       end
       copy.configure do
         code %{
-          /* FIXME optimize */
+          /* FIXME ordered insertion optimizations */
           #{range} r;
           assert(target);
           assert(source);
@@ -326,36 +320,12 @@ module AutoC
           return result;
         }
       end
-      method(:void, :_write_node, { node: _node_p, f: 'FILE*' }, constraint:-> { @emit_maintenance_code }, visibility: :internal).configure do
-        code %{
-          /* this code assumes the index type is compatible with int */
-          if(node) {
-            if(node->left) {
-              fprintf(f, "%d -> %d [color=blue]\\n", node->index, (int)node->left->index);
-              #{_write_node}(node->left, f);
-            }
-            if(node->right) {
-              fprintf(f, "%d -> %d [color=red]\\n", node->index, (int)node->right->index);
-              #{_write_node}(node->right, f);
-            }
-          }
-        }
-      end
-      method(:void, :dump_dot, { target: const_rvalue, file: 'char*'}, constraint:-> { @emit_maintenance_code }, visibility: :private).configure do
-        code %{
-          FILE* f = fopen(file, "wt");
-          fputs("digraph {\\n", f);
-          #{_write_node}(target->root, f);
-          fputs("}\\n", f);
-          fclose(f);
-        }
-      end
     end
 
-  end # Treap
+  end # TreapMap
 
 
-  Treap::Range = TreeRange # Range
+  TreapMap::Range = TreeMapRange # Range
 
 
 end
