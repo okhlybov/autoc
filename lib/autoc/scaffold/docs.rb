@@ -98,7 +98,9 @@ require 'autoc/cstring'
 require 'autoc/list'
 require 'autoc/vector'
 require 'autoc/hash_set'
+require 'autoc/treap_set'
 require 'autoc/hash_map'
+require 'autoc/treap_map'
 
 require 'autoc/box'
 require 'autoc/record'
@@ -110,7 +112,9 @@ m << AutoC::CString.new
 m << AutoC::Vector.new(:Vector, T)
 m << AutoC::List.new(:List, T)
 m << AutoC::HashSet.new(:HashSet, T)
+m << AutoC::TreapSet.new(:TreapSet, T)
 m << AutoC::HashMap.new(:HashMap, T, K)
+m << AutoC::TreapMap.new(:TreapMap, T, K)
 m << AutoC::Box.new(:Box, { a: A, b: B })
 m << AutoC::Record.new(:Record, { a: A, b: B })
 

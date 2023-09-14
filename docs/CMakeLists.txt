@@ -1,6 +1,6 @@
-project(docs)
-
 cmake_minimum_required(VERSION 3.18)
+
+project(docs)
 
 find_package(Doxygen REQUIRED)
 

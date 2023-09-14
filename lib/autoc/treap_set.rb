@@ -43,7 +43,7 @@ module AutoC
           /**
             #{defgroup}
             
-            @brief Ordered collection of qniue elements of type #{element}.
+            @brief Ordered collection of unique elements of type #{element}.
 
             For iteration over the set elements refer to @ref #{range}.
 
@@ -63,7 +63,8 @@ module AutoC
       stream << %{
         typedef struct {
           #{_node_p} root; /**< @private */
-          size_t size, depth; /**< @private */
+          size_t size; /**< @private */
+          size_t depth; /**< @private */
         } #{signature};
         /** @private */
         struct #{_node} {
