@@ -281,7 +281,9 @@ module AutoC
           assert(source);
           #{default_create}(target);
           for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{set}(target, *#{range.view_index_front}(&r), *#{range.view_front}(&r));
+            #{index.const_lvalue} i = #{range.view_index_front}(&r);
+            #{element.const_lvalue} e = #{range.view_front}(&r);
+            #{set.(target, '*i', '*e')};
           }
         }
       end

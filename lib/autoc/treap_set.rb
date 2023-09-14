@@ -284,7 +284,8 @@ module AutoC
           assert(source);
           #{default_create}(target);
           for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{put}(target, *#{range.view_front}(&r));
+            #{element.const_lvalue} e = #{range.view_front}(&r);
+            #{put.(target, '*e')};
           }
         }
       end
