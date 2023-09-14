@@ -80,6 +80,17 @@ module AutoC
 
           @since 2.0
         }
+        code %{
+          #{range} r;
+          assert(target);
+          assert(other);
+          if(#{size.(target)} > #{size.(other)}) return 0; /* larger set can't be a subset of a smaller one */
+          for(r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+            #{element.const_lvalue} e = #{range.view_front.(:r)};
+            if(!#{contains.(other, '*e')}) return 0;
+          }
+          return 1;
+        }
       end
       equal.configure do
         code %{
