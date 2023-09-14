@@ -165,12 +165,10 @@ module AutoC
       find_first.configure do
         code %{
           #{range} r;
+          #{_node_p} node;
           assert(target);
-          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_lvalue} e = #{range.view_front.(:r)};
-            if(#{element.compare.(value, '*e')}) return e;
-          }
-          return NULL;
+          node = #{_lookup}(target->root, value);
+          return node ? &node->element : NULL;
         }
       end
       contains.configure do
