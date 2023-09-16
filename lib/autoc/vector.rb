@@ -111,6 +111,11 @@ module AutoC
           }
         }
       end
+      method(:void, :_dispose, { target: lvalue }, visibility: :internal).configure do
+        inline_code %{
+          #{memory.free(storage(:target))};
+        }
+      end
       method(:void, :create_size, { target: lvalue, size: :size_t.const_rvalue }, instance: :custom_create, constraint:-> { custom_constructible? && element.default_constructible? }).configure do
         code %{
           size_t index;
@@ -210,7 +215,7 @@ module AutoC
           #{'size_t index;' if element.destructible?}
           assert(target);
           #{destroy_elements}
-          #{memory.free(storage(:target))};
+          #{_dispose}(target);
         }
       end
       copy.configure do

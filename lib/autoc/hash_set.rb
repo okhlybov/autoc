@@ -109,25 +109,28 @@ module AutoC
       end
       method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :internal).configure do
         code %{
-          #{type} set;
+          #{type} expanded;
           #{_bin.range} r;
           assert(target);
           /* capacity threshold == 1.0 */
           if(force || target->size >= #{_bin.size.('target->bin')}) {
-            #{create_capacity.(:set, _bin.size.('target->bin') + '*2')};
+            #{create_capacity.(:expanded, _bin.size.('target->bin') + '<<1')};
             /* move elements to newly allocated set */
             for(r = #{_bin.range.new.('target->bin')}; !#{_bin.range.empty.(:r)}; #{_bin.range.pop_front.(:r)}) {
-              #{_slot.lvalue} src = (#{_slot.lvalue})#{_bin.range.view_front.(:r)};
-              while(!#{_slot.empty.('*src')}) {
-                /* direct node relocation from original to new list bypassing node reallocation & payload copying */
-                #{_slot._node_p} node = #{_slot._pull_node.('*src')};
-                #{_slot.lvalue} dst = (#{_slot.lvalue})#{_find_slot.(target, 'node->element')};
-                #{_slot._push_node.('*dst', '*node')};
+              #{_slot.const_lvalue} target_slot;
+              target_slot = #{_bin.range.view_front.(:r)};
+              if(!#{_slot.empty.('*target_slot')}) {
+                #{_slot.element.const_lvalue} e;
+                #{_slot.const_lvalue} expanded_slot;
+                e = #{_slot.view_front}(target_slot); /* only one of elements needs to be examined as all elements share the same hash code */
+                expanded_slot = #{_find_slot.(expanded, '*e')}; /* a slot in expanded bin which is about to adopt the the target slot */
+                assert(#{_slot.empty}(expanded_slot));
+                *(#{_slot.lvalue})expanded_slot = *target_slot; /* direct move the slot's state */
               }
             }
-            set.size = target->size; /* assume all elements have been moved into new set */
-            #{destroy.(target)};
-            *target = set;
+            expanded.size = target->size; /* assume all elements have been moved into new set */
+            #{_bin._dispose.('target->bin')}; /* prevent elements' destructors from being called as all elements have already been moved to the new bin */
+            *target = expanded;
           }
         }
       end
@@ -146,11 +149,11 @@ module AutoC
         code %{
           #{_slot.lvalue} s;
           assert(target);
-          s = (#{_slot.lvalue})#{_find_slot.(target, value)};
+          s = (#{_slot.lvalue})#{_find_slot.(target, value)}; assert(s);
           if(!#{_slot.find_first.('*s', value)}) {
-            #{_expand.(target, 0)};
             #{_slot.push_front.('*s', value)};
             ++target->size;
+            #{_expand.(target, 0)};
             return 1;
           } else return 0;
         }
@@ -164,9 +167,9 @@ module AutoC
             return 1;
           } else {
             /* add brand new value */
-            #{_expand.(target, 0)};
             #{_slot.push_front.('*s', value)};
             ++target->size;
+            #{_expand.(target, 0)};
             return 0;
           }
         }

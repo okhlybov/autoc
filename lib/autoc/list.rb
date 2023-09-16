@@ -266,7 +266,7 @@ module AutoC
         code %{
           #{_node_p} curr;
           assert(target);
-          curr = #{memory.allocate(_node)};
+          curr = #{memory.allocate(_node)}; assert(curr);
           curr->next = target->front;
           target->front = curr;
           #{'++target->size;' if maintain_size?}
@@ -346,7 +346,7 @@ module AutoC
           assert(target);
           assert(source);
           #{default_create.(target)};
-          t = #{memory.allocate(element.const_lvalue, size.(source))};
+          t = #{memory.allocate(element.const_lvalue, size.(source))}; assert(t);
           for(i = 0, r = #{range.new.(source)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
             t[i++] = #{range.view_front.(:r)};
           }
