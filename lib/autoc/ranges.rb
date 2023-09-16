@@ -660,7 +660,8 @@ module AutoC
           #{iterable.const_rvalue} iterable; /**< @private */
           #{iterable._node_pp} fronts; /**< @private */
           #{iterable._node_pp} backs; /**< @private */
-          int front, back, front_ascend, back_ascend; /**< @private */
+          int front; /**< @private */
+          int back; /**< @private */
         } #{signature};
       }
     end
