@@ -29,6 +29,7 @@ module AutoC
     def initialize(*args, **kws)
       super
       dependencies << _bin << AutoC::Random.seed
+      @dump_stats = true
     end
 
     def render_interface(stream)
@@ -232,11 +233,35 @@ module AutoC
           return hash;
         }
       end
+      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @dump_stats }, visibility: :private).configure do
+        dependencies << AutoC::STD::STDIO_H
+        code %{
+          size_t busy_slots, bin_slots, max_slot_size;
+          #{_bin.range} br;
+          assert(target);
+          assert(stream);
+          fprintf(stream, "#{type}<#{element}> (#{type.class}<#{element.class}>) @%p\\n", target);
+          fprintf(stream, "\\tsize = %zd elements\\n", #{size}(target));
+          fprintf(stream, "\\tbin size = %zd slots\\n", #{_bin.size}(&target->bin));
+          busy_slots = max_slot_size = 0;
+          bin_slots = #{_bin.size}(&target->bin);
+          for(br = #{_bin.range.new}(&target->bin); !#{_bin.range.empty}(&br); #{_bin.range.pop_front}(&br)) {
+            size_t size;
+            #{_slot.const_lvalue} s;
+            s = #{_bin.range.view_front}(&br);
+            size = #{_slot.size}(s);
+            if(size > max_slot_size) max_slot_size = size;
+            if(!#{_slot.empty}(s)) ++busy_slots;
+          }
+          fprintf(stream, "\\tbin utilization = %zd/%zd or %.02f%% of slots\\n", busy_slots, bin_slots, 100.0*busy_slots/bin_slots);
+          fprintf(stream, "\\tmaximum slot size = %zd elements\\n", max_slot_size);
+        }
+      end
     end
 
   end # HashSet
 
-
+ 
   class HashSet::Range < ForwardRange
 
     def render_interface(stream)
