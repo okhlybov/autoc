@@ -29,4 +29,10 @@ module AutoC
   end # Hasher
 
 
+  XXHASH_H = AutoC::Code.new interface: %{
+    #define XXH_INLINE_ALL
+    #include "xxhash.h"
+  }
+
+
 end
