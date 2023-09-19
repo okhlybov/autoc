@@ -255,8 +255,7 @@ module AutoC
           }
           fprintf(stream, "\\tbin utilization = %zd/%zd or %.02f%% of slots\\n", busy_slots, bin_slots, 100.0*busy_slots/bin_slots);
           fprintf(stream, "\\tmaximum slot size = %zd elements\\n", max_slot_size);
-          unsigned slot_size[max_slot_size+1];
-          for(int i = 0; i <= max_slot_size; ++i) slot_size[i] = 0;
+          unsigned* slot_size = (unsigned*)calloc(max_slot_size+1, sizeof(unsigned)); assert(slot_size);
           for(r = #{_bin.range.new}(&target->bin); !#{_bin.range.empty}(&r); #{_bin.range.pop_front}(&r)) {
             #{_slot.const_lvalue} s = #{_bin.range.view_front}(&r);
             ++slot_size[#{_slot.size}(s)];
@@ -265,6 +264,7 @@ module AutoC
           for(int i = 1; i <= max_slot_size; ++i) {
             fprintf(stream, "\\t\\t%d element(s) - %d or %.02f%% of nonempty slots\\n", i, slot_size[i], 100.0*slot_size[i]/busy_slots);
           }
+          free(slot_size);
         }
       end
     end
