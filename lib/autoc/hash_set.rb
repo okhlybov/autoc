@@ -108,7 +108,7 @@ module AutoC
         dependencies << _bin.view
         inline_code _find_slot_hash(element.hash_code.(value))
       end
-      method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :internal).configure do
+      method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :private).configure do
         code %{
           #{type} expanded;
           #{_bin.range} r;
@@ -123,10 +123,14 @@ module AutoC
               if(!#{_slot.empty.('*target_slot')}) {
                 #{_slot.element.const_lvalue} e;
                 #{_slot.const_lvalue} expanded_slot;
+                #{_slot._node_p} back_node;
                 e = #{_slot.view_front}(target_slot); /* only one of elements needs to be examined as all elements share the same hash code */
-                expanded_slot = #{_find_slot.(expanded, '*e')}; /* a slot in expanded bin which is about to adopt the the target slot */
-                assert(#{_slot.empty}(expanded_slot));
-                *(#{_slot.lvalue})expanded_slot = *target_slot; /* direct move the slot's state */
+                expanded_slot = #{_find_slot}(&expanded, e); /* a slot in expanded bin which is about to adopt the the target slot */
+                if(back_node = #{_slot._node_back}(expanded_slot)) {
+                  back_node->next = target_slot->front; /* attach target slot to the new list */
+                } else {
+                  *(#{_slot.lvalue})expanded_slot = *target_slot; /* direct move the slot's state */
+                }
               }
             }
             expanded.size = target->size; /* assume all elements have been moved into new set */
@@ -272,6 +276,20 @@ module AutoC
   end # HashSet
 
  
+  class HashSet::List < AutoC::List
+    def configure
+      super
+      method(_node_p, :_node_back, { target: const_rvalue}, visibility: :internal).configure do
+        code %{
+          #{_node_p} node = target->front;
+          if(node) while(node->next) node = node->next; /* iterate to the list's last node */
+          return node;
+        }
+      end
+    end
+  end # List
+
+
   class HashSet::Range < ForwardRange
 
     def render_interface(stream)
