@@ -136,7 +136,7 @@ module AutoC
           assert(!#{empty.(target)});
           curr = target->front; assert(curr);
           target->front = target->front->next;
-          #{'--target->size;' if maintain_size?}
+          #{'--target->size' if maintain_size?};
           #{memory.free(:curr)};
         }
       end
@@ -147,7 +147,7 @@ module AutoC
           assert(!#{empty.(target)});
           curr = target->front; assert(curr);
           target->front = curr->next;
-          #{'--target->size;' if maintain_size?}
+          #{'--target->size' if maintain_size?};
           return curr;
         }
       end
@@ -157,12 +157,10 @@ module AutoC
           assert(target);
           curr->next = target->front;
           target->front = curr;
-          #{'++target->size;' if maintain_size?}
+          #{'++target->size' if maintain_size?};
         }
       end
-      method(element.const_lvalue, :view_front, { target: const_rvalue })
-      method(element, :take_front, { target: const_rvalue }, constraint:-> { element.copyable? })
-      view_front.configure do
+      method(element.const_lvalue, :view_front, { target: const_rvalue }).configure do
         dependencies << empty
         inline_code %{
           assert(!#{empty.(target)});
@@ -184,7 +182,7 @@ module AutoC
           @since 2.0
         }
       end
-      take_front.configure do
+      method(element, :take_front, { target: const_rvalue }, constraint:-> { element.copyable? }).configure do
         code %{
           #{element} result;
           #{element.const_lvalue} e;
@@ -269,7 +267,7 @@ module AutoC
           curr = #{memory.allocate(_node)}; assert(curr);
           curr->next = target->front;
           target->front = curr;
-          #{'++target->size;' if maintain_size?}
+          #{'++target->size' if maintain_size?};
           #{element.copy.('curr->element', value)};
         }
         header %{
@@ -300,7 +298,7 @@ module AutoC
             }
             #{element.destroy.('curr->element') if element.destructible?};
             #{memory.free(:curr)};
-            #{'--target->size;' if maintain_size?}
+            #{'--target->size' if maintain_size?};
             return 1;
           }
           return 0;
@@ -329,7 +327,7 @@ module AutoC
         inline_code %{
           assert(target);
           target->front = NULL;
-          #{'target->size = 0;' if maintain_size?}
+          #{'target->size = 0' if maintain_size?};
         }
       end
       destroy.configure do
