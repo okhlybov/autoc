@@ -125,7 +125,7 @@ module AutoC
                 #{_slot.const_lvalue} expanded_slot;
                 #{_slot._node_p} back_node;
                 e = #{_slot.view_front}(target_slot); /* only one of elements needs to be examined as all elements share the same hash code */
-                expanded_slot = #{_find_slot}(&expanded, e); /* a slot in expanded bin which is about to adopt the the target slot */
+                expanded_slot = #{_find_slot.('expanded', '*e')}; /* a slot in expanded bin which is about to adopt the the target slot */
                 if(back_node = #{_slot._node_back}(expanded_slot)) {
                   back_node->next = target_slot->front; /* attach target slot to the new list */
                 } else {
