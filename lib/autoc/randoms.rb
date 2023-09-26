@@ -117,11 +117,11 @@ module AutoC::Random
         #include <time.h>
         autoc_random_t #{generate}(void) {
           #if defined(__POCC__)
-            /* Pelles C check comes first as it might set _MSC_VER as well */
+            /* Pelles C check comes first as it might define _MSC_VER as well */
             unsigned r;
             _rand_s(&r);
             return r;
-          #elif defined(_MSC_VER)
+          #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)) /* Intel compilers define _MSC_VER on Windows yet their CRTs seem to lack rand_s() */
             unsigned r;
             rand_s(&r);
             return r;
@@ -191,7 +191,6 @@ module AutoC::Random
             ull_t product = (ull_t)*state * 48271;
             ull_t x = (product & 0x7fffffff) + (product >> 31);
             x = (x & 0x7fffffff) + (x >> 31);
-            return *state = x;
           #else
             /* fallback implementation for any 32-bit machine */
             const #{type} A = 48271;
@@ -199,10 +198,10 @@ module AutoC::Random
             #{type} high = (*state >> 15)    * A;
             #{type} x = low + ((high & 0xffff) << 15) + (high >> 16);
             x = (x & 0x7fffffff) + (x >> 31);
-            assert(*state != 0); /* zero state breaks the LCG type generator */
-            return *state = x;
           #endif
-        }
+        assert(*state != 0); /* zero state breaks the LCG type generator */
+        return *state = x;
+      }
       }
     end
 
