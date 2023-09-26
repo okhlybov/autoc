@@ -116,25 +116,22 @@ module AutoC
           /* capacity threshold == 1.0 */
           if(force || target->size >= #{_bin.size.('target->bin')}) {
             #{create_capacity.(:expanded, _bin.size.('target->bin') + '<<1')};
-            /* move elements to newly allocated set */
+            /* move nodes to the newly allocated set */
             for(r = #{_bin.range.new.('target->bin')}; !#{_bin.range.empty.(:r)}; #{_bin.range.pop_front.(:r)}) {
-              #{_slot.const_lvalue} target_slot;
-              target_slot = #{_bin.range.view_front.(:r)};
-              if(!#{_slot.empty.('*target_slot')}) {
-                #{_slot.element.const_lvalue} e;
-                #{_slot.const_lvalue} expanded_slot;
-                #{_slot._node_p} back_node;
-                e = #{_slot.view_front}(target_slot); /* only one of elements needs to be examined as all elements share the same hash code */
-                expanded_slot = #{_find_slot.('expanded', '*e')}; /* a slot in expanded bin which is about to adopt the the target slot */
-                if(back_node = #{_slot._node_back}(expanded_slot)) {
-                  back_node->next = target_slot->front; /* attach target slot to the new list */
-                } else {
-                  *(#{_slot.lvalue})expanded_slot = *target_slot; /* direct move the slot's state */
+                #{_slot._node_p} node = #{_bin.range.view_front.(:r)}->front;
+                while(node) {
+                  #{_slot.lvalue} slot;
+                  #{_slot._node_p} next_node;
+                  next_node = node->next; /* remember the following node as the current will be modified in place */
+                  slot = (#{_slot.lvalue})#{_find_slot.('expanded', 'node->element')}; /* a slot in expanded bin which is about to adopt the the original slot */
+                  /* manually replant the node to a new extended bin's slot */
+                  node->next = slot->front;
+                  slot->front = node;
+                  node = next_node;
                 }
-              }
             }
             expanded.size = target->size; /* assume all elements have been moved into new set */
-            #{_bin._dispose.('target->bin')}; /* prevent elements' destructors from being called as all elements have already been moved to the new bin */
+            #{_bin._dispose.('target->bin')}; /* prevent elements' destructors from being called as all nodes have already been moved to a new bin */
             *target = expanded;
           }
         }
@@ -145,8 +142,7 @@ module AutoC
           #{_slot.lvalue} s;
           assert(target);
           s = (#{_slot.lvalue})#{_find_slot.(target, value)};
-          c = #{_slot.remove_first.('*s', value)};
-          if(c) --target->size;
+          if(c = #{_slot.remove_first.('*s', value)}) --target->size;
           return c;
         }
       end
@@ -276,20 +272,6 @@ module AutoC
   end # HashSet
 
  
-  class HashSet::List < AutoC::List
-    def configure
-      super
-      method(_node_p, :_node_back, { target: const_rvalue}, visibility: :internal).configure do
-        code %{
-          #{_node_p} node = target->front;
-          if(node) while(node->next) node = node->next; /* iterate to the list's last node */
-          return node;
-        }
-      end
-    end
-  end # List
-
-
   class HashSet::Range < ForwardRange
 
     def render_interface(stream)
