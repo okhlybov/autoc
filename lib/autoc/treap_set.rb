@@ -30,7 +30,7 @@ module AutoC
       @_node = identifier(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
-      dependencies << (@rng = rng) << STD::STDIO_H
+      dependencies << (@rng = rng)
     end
 
     def render_interface(stream)
