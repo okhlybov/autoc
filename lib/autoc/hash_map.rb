@@ -105,8 +105,8 @@ module AutoC
             #{_node} node;
             #{_set._slot.lvalue} s = (#{_set._slot.lvalue})#{_set._find_index_slot.('target->set', index)};
             /* construct temporary node as POD value; actual copying will be performed by the list itself */
-            node.index = index;
-            node.element = value;
+            node.index = #{index.to_value_argument};
+            node.element = #{value.to_value_argument};
             #{_set._slot.push_front.('*s', :node)};
             ++target->set.size; /* bypassing set's element manipulation functions incurs manual size management */
           }
