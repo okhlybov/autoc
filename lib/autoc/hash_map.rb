@@ -109,7 +109,9 @@ module AutoC
             node.index = #{index.to_value_argument};
             node.element = #{value.to_value_argument};
             #{_set._slot.push_front.('*s', :node)};
-            ++target->set.size; /* bypassing set's element manipulation functions incurs manual size management */
+            /* bypassing set's element manipulation functions incurs manual size management */
+            ++target->set.size;
+            #{_set.expand}(&target->set, 0);
           }
         }
       end
