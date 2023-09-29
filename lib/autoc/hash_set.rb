@@ -26,10 +26,10 @@ module AutoC
 
     def _bin = @_bin ||= _bin_class.new(identifier(:_vector, abbreviate: true), _slot, _master: self, visibility: :internal)
 
-    def initialize(*args, **kws)
-      super
+    def initialize(*args, auxillaries: false, **kws)
+      super(*args, **kws)
       dependencies << _bin << AutoC::Random.seed
-      @dump_stats = true
+      @auxillaries = auxillaries
     end
 
     def render_interface(stream)
@@ -233,7 +233,7 @@ module AutoC
           return hash;
         }
       end
-      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @dump_stats }, visibility: :private).configure do
+      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
         dependencies << AutoC::STD::STDIO_H
         code %{
           size_t busy_slots, bin_slots, max_slot_size;

@@ -25,12 +25,13 @@ module AutoC
 
     def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, _master: self, visibility: :internal)
 
-    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, _master: self, visibility: :internal)
+    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, _master: self, auxillaries: @auxillaries, visibility: :internal)
 
     def orderable? = _set.orderable?
 
-    def initialize(*args, **kws)
-      super
+    def initialize(*args, auxillaries: false, **kws)
+      @auxillaries = auxillaries
+      super(*args, **kws)
       dependencies << _set
     end
 
@@ -179,6 +180,14 @@ module AutoC
             if(#{element.equal.('*e', value)}) return e;
           }
           return NULL;
+        }
+      end
+      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
+        dependencies << AutoC::STD::STDIO_H
+        code %{
+          assert(target);
+          assert(stream);
+          #{_set.dump_stats}(&target->set, stream);
         }
       end
     end
