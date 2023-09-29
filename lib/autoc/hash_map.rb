@@ -25,7 +25,7 @@ module AutoC
 
     def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, _master: self, visibility: :internal)
 
-    def _set = @_set ||= _set_class.new(identifier(:_set, set_operations: false, abbreviate: true), _node, _master: self, auxillaries: @auxillaries, visibility: :internal)
+    def _set = @_set ||= _set_class.new(identifier(:_set, abbreviate: true), _node, _master: self, set_operations: false, auxillaries: @auxillaries, visibility: :internal)
 
     def orderable? = _set.orderable?
 
