@@ -142,7 +142,7 @@ module AutoC
           #{_slot.lvalue} s;
           assert(target);
           s = (#{_slot.lvalue})#{_find_slot.(target, value)};
-          if(c = #{_slot.remove_first.('*s', value)}) --target->size;
+          if((c = #{_slot.remove_first.('*s', value)})) --target->size;
           return c;
         }
       end
