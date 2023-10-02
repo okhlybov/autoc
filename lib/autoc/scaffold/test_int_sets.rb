@@ -1,7 +1,27 @@
 require 'autoc/hash_set'
 require 'autoc/treap_set'
+require 'autoc/intrusive_hash_set'
 
-[[AutoC::HashSet, :IntHashSet], [AutoC::TreapSet, :IntTreapSet]].each do |type, name|
+class IntrusiveIntHashSet < AutoC::IntrusiveHashSet
+  def configure
+    super
+    mark.code %{
+      switch(state) {
+        case #{_EMPTY}: *element = INT_MAX; break;
+        case #{_DELETED}: *element = INT_MIN; break;
+      }
+    }
+    marked.code %{
+      switch(*element) {
+        case INT_MAX: return #{_EMPTY};
+        case INT_MIN: return #{_DELETED};
+        default: return 0;
+      }
+    }
+  end
+end
+
+[[AutoC::HashSet, :IntHashSet], [AutoC::TreapSet, :IntTreapSet], [IntrusiveIntHashSet, :IntrusiveIntHashSet]].each do |type, name|
 	type_test(type, name, :int) do
 
 		###

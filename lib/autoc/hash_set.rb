@@ -40,6 +40,8 @@ module AutoC
 
             @brief Unordered collection of unique elements of type #{element}
 
+            This implementation employs separate chaining technique.
+
             For iteration over the set elements refer to @ref #{range}.
 
             @see C++ [std::unordered_set<T>](https://en.cppreference.com/w/cpp/container/unordered_set)
