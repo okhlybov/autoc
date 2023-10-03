@@ -184,12 +184,12 @@ module AutoC
           return NULL;
         }
       end
-      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
+      method(:void, :print_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
         dependencies << AutoC::STD::STDIO_H
         code %{
           assert(target);
           assert(stream);
-          #{_set.dump_stats}(&target->set, stream);
+          #{_set.print_stats}(&target->set, stream);
         }
       end
     end

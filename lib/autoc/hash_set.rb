@@ -235,7 +235,7 @@ module AutoC
           return hash;
         }
       end
-      method(:void, :dump_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
+      method(:void, :print_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
         dependencies << AutoC::STD::STDIO_H
         code %{
           size_t busy_slots, bin_slots, max_slot_size;
