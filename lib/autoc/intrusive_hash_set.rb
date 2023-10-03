@@ -11,15 +11,17 @@ module AutoC
   using STD::Coercions
 
 
+  # @abstract
   class IntrusiveHashSet < Set
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
     attr_reader :load_factor
 
-    def initialize(*args, load_factor: 0.75, **kws)
+    def initialize(*args, load_factor: 0.75, auxillaries: false, **kws)
       super(*args, **kws)
       @load_factor = load_factor
+      @auxillaries = auxillaries
     end
 
     def render_interface(stream)
@@ -74,10 +76,10 @@ module AutoC
     def configure
       super
       method(:void, :mark, { element: element.lvalue, state: :int }, visibility: :internal)
-      method(:int, :marked, { element: element.lvalue }, visibility: :internal)
+      method(:int, :marked, { element: element.const_lvalue }, visibility: :internal)
       method(:void, :create_capacity, { target: lvalue, capacity: :size_t.rvalue }).configure do
         code %{
-          size_t index;
+          size_t slot;
           unsigned char bits = 0;
           assert(target);
           /* fix capacity to become the ceiling to the nearest power of two */
@@ -87,7 +89,7 @@ module AutoC
           target->size = 0;
           target->capacity = capacity; /* fast slot location for value: hash_code(value) & (capacity-1) */
           target->elements = (#{element.lvalue})#{memory.allocate(element, :capacity)}; assert(target->elements);
-          for(index = 0; index < target->capacity; ++index) #{mark}(target->elements + index, #{_EMPTY});
+          for(slot = 0; slot < target->capacity; ++slot) #{mark}(target->elements + slot, #{_EMPTY});
         }
         header %{
           @brief Create set with specified capacity
@@ -120,11 +122,13 @@ module AutoC
       method(:void, :adopt, { target: rvalue, element: element.const_rvalue }, visibility: :internal).configure do
         code %{
           size_t slot;
+          #{_element.lvalue} e;
           assert(target);
+          assert(target->size <= target->capacity);
           slot = #{slot.(target, element)};
           /* looking for the first slot that is marked either empty or deleted */
-          while(!#{marked}(target->elements + slot)) slot = #{next_slot}(target, slot);
-          *(target->elements + slot) = #{element.to_value_argument};
+          while(!#{marked}(e = target->elements + slot)) slot = #{next_slot}(target, slot);
+          *e = #{element.to_value_argument};
         }
       end
       method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :private).configure do
@@ -133,13 +137,14 @@ module AutoC
           assert(target->capacity*#{load_factor} <= target->capacity); /* guarding againt accidental shrinking */
           if(force || target->size > target->capacity*#{load_factor}) {
             size_t slot;
-            size_t source_capacity = target->capacity;
+            size_t source_capacity = target->capacity, source_size = target->size;
             #{element.lvalue} source_elements = target->elements;
             #{create_capacity}(target, source_capacity << 1);
             for(slot = 0; slot < source_capacity; ++slot) {
               #{element.lvalue} e = source_elements + slot;
               if(!#{marked}(e)) #{adopt.(target, '*e')};
             }
+            target->size = source_size; /* restore the size since create_capacity() resets it to zero */
             #{memory.free(:source_elements)};
           }
         }
@@ -148,15 +153,16 @@ module AutoC
         code %{
           #{element} element;
           assert(target);
-          #{element.copy.(:element, value)}; /* make a copy right here since adopt() won't do this */
-          ++target->size; /* bump up size prior possible expansion to ensure the storage has a free slot for the new element */
-          #{_expand}(target, 0);
+          #{element.copy.(:element, value)}; /* make a copy right away since adopt() won't do this by itself */
           #{adopt.(target, :element)};
+          ++target->size;
+          #{_expand}(target, 0);
         }
       end
       put.configure do
         code %{
           assert(target);
+          assert(!#{marked.(value)});
           if(!#{find_first}(target, value)) {
             #{put_force}(target, value);
             return 1;
@@ -167,6 +173,7 @@ module AutoC
         code %{
           #{element.lvalue} e;
           assert(target);
+          assert(!#{marked.(value)});
           if((e = (#{element.lvalue})#{find_first}(target, value))) {
             #{element.destroy.('*e') if element.destructible?};
             #{element.copy.('*e', value)};
@@ -185,6 +192,7 @@ module AutoC
           if((e = (#{element.lvalue})#{find_first}(target, value))) {
             #{element.destroy.('*e') if element.destructible?};
             #{mark}(e, #{_DELETED});
+            --target->size;
             return 1;
           } else return 0;
         }
@@ -202,9 +210,9 @@ module AutoC
           size_t slot;
           assert(target);
           slot = #{slot.(target, value)};
-          /* state == 0 signifies real value */
-          while((state = #{marked}(target->elements + slot)) != #{_EMPTY}) {
-            if(!state && !#{element.equal.('*(target->elements + slot)', value)}) return target->elements + slot;
+          /* zero state signifies real value, deleted state means slot gets skipped, empty state means end of search */
+          while((state = #{marked}(e = target->elements + slot)) != #{_EMPTY}) {
+            if(!state && #{element.equal.('*e', value)}) return e;
             slot = #{next_slot}(target, slot);
           }
           return NULL;
@@ -257,6 +265,45 @@ module AutoC
           return hash;
         }
       end
+      # Return number of equality test operations performed to find element or -1 on failure
+      # NOTE this method must stay in sync with #find_first
+      method(:int, :count_eops, { target: const_rvalue, value: element.const_rvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
+        code %{
+          #{element.lvalue} e;
+          int state, ops = 1;
+          size_t slot;
+          assert(target);
+          slot = #{slot.(target, value)};
+          /* zero state signifies real value, deleted state means slot gets skipped, empty state means end of search */
+          while((state = #{marked}(e = target->elements + slot)) != #{_EMPTY}) {
+            if(!state && #{element.equal.('*e', value)}) return ops;
+            slot = #{next_slot}(target, slot);
+            ++ops;
+          }
+          return -1;
+        }
+      end
+      method(:void, :print_stats, { target: const_rvalue, stream: 'FILE*' }, constraint:-> { @auxillaries }, visibility: :private).configure do
+        dependencies << AutoC::STD::STDIO_H
+        code %{
+          int eops = 0, max_eops = 0;
+          #{range} r;
+          assert(target);
+          assert(stream);
+          fprintf(stream, "#{type}<#{element}> (#{type.class}<#{element.class}>) @%p\\n", target);
+          fprintf(stream, "\\tsize = %zd elements\\n", target->size);
+          fprintf(stream, "\\tcapacity = %zd slots\\n", target->capacity);
+          fprintf(stream, "\\tslots utilization = %.02f%%\\n", 100.0*target->size/target->capacity);
+          fprintf(stream, "\\tbuilt in load factor = #{load_factor}\\n");
+          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            int e = #{count_eops}(target, *#{range.view_front}(&r)); assert(e >= 0);
+            if(max_eops < e) max_eops = e;
+            eops += e;
+          }
+          fprintf(stream, "\\taverage lookup complexity = %.02f equality tests\\n", (double)eops/target->size);
+          fprintf(stream, "\\tmaximum lookup complexity = %d equality tests\\n", max_eops);
+        }
+      end
     end
 
   end # IntrusiveHashSet
@@ -281,7 +328,7 @@ module AutoC
         typedef struct {
           #{iterable.element.lvalue} elements; /**< @private */
           size_t capacity; /**< @private */
-          size_t slot; /**< @private */
+          ptrdiff_t slot; /**< @private */
         } #{signature};
       }
     end
@@ -296,7 +343,7 @@ module AutoC
           assert(iterable);
           range->elements = iterable->elements;
           range->capacity = iterable->capacity;
-          range->slot = 0;
+          range->slot = -1;
           #{pop_front}(range);
         }
       end
@@ -308,8 +355,7 @@ module AutoC
       end
       pop_front.configure do
         code %{
-          assert(!#{empty}(range));
-          while(#{iterable.marked}(range->elements + range->slot) && range->slot < range->capacity) ++range->slot;
+          do ++range->slot; while(!#{empty}(range) && #{iterable.marked}(range->elements + range->slot));
         }
       end
       view_front.configure do
