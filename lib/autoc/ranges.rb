@@ -782,6 +782,7 @@ module AutoC
 
           @since 2.1
         }
+        dependencies << empty
         inline_code %{
           assert(!#{empty.(range)});
           return &range->fronts[range->front]->index;
@@ -803,6 +804,7 @@ module AutoC
 
           @since 2.1
         }
+        dependencies << empty
         inline_code %{
           assert(!#{empty.(range)});
           return &range->backs[range->back]->index;

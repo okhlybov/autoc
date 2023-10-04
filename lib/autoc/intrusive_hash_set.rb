@@ -384,11 +384,13 @@ module AutoC
         }
       end
       pop_front.configure do
+        dependencies << empty
         code %{
           do ++range->slot; while(!#{empty}(range) && #{iterable.marked}(range->slots + range->slot));
         }
       end
       view_front.configure do
+        dependencies << empty
         code %{
           assert(!#{empty}(range));
           return &(range->slots + range->slot)->element;

@@ -423,12 +423,14 @@ module AutoC
         }
       end
       view_front.configure do
+        dependencies << empty
         code %{
           assert(!#{empty}(range));
           return &(range->slots + range->slot)->element;
         }
       end
       view_index_front.configure do
+        dependencies << empty
         code %{
           assert(!#{empty}(range));
           return &(range->slots + range->slot)->index;
