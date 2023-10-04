@@ -16,6 +16,8 @@ module AutoC
   # Generator for treap (binary tree family) map data structure
   class TreapMap < Association
 
+    def orderable? = false
+
     def _range_class = Range
 
     def range = @range ||= _range_class.new(self, visibility: visibility)
@@ -23,8 +25,6 @@ module AutoC
     attr_reader :rng
 
     attr_reader :_node, :_node_p, :_node_pp
-
-    def orderable? = false
 
     def initialize(*args, rng: Random.generator, **opts)
       super(*args, **opts)
@@ -178,7 +178,7 @@ module AutoC
           #{range} r;
           assert(target);
           for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            #{element.const_lvalue} e = #{range.view_front.(:r)};
+            #{element.const_lvalue} e = #{range.view_front}(&r);
             if(#{element.equal.(value, '*e')}) return e;
           }
           return NULL;
@@ -244,7 +244,7 @@ module AutoC
           return remove;
         }
       end
-        set.configure do
+      set.configure do
         code %{
           int insert;
           #{_node_p} node;
