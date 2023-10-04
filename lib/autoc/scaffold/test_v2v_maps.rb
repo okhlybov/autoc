@@ -1,7 +1,27 @@
 require 'autoc/hash_map'
 require 'autoc/treap_map'
+require 'autoc/intrusive_hash_map'
 
-[[AutoC::HashMap, :V2VHashMap], [AutoC::TreapMap, :V2VTreapMap]].each do |type, name|
+class V2IntrusiveHashMap < AutoC::IntrusiveHashMap
+  def configure
+    super
+    mark.code %{
+      switch(state) {
+        case #{_EMPTY}: slot->index.value = (int*)1; break;
+        case #{_DELETED}: slot->index.value =(int*)2; break;
+      }
+    }
+    marked.code %{
+      switch((size_t)slot->index.value) {
+        case 1: return #{_EMPTY};
+        case 2: return #{_DELETED};
+        default: return 0;
+      }
+    }
+  end
+end
+
+[[AutoC::HashMap, :V2HashMap], [AutoC::TreapMap, :V2TreapMap], [V2IntrusiveHashMap, :V2IntrusiveHashMap]].each do |type, name|
   type_test(type, name, Value, Value) do
 
     ###
