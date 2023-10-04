@@ -73,3 +73,18 @@ FileUtils.copy_entry(File.dirname(__FILE__)+'/../../../cmake', 'cmake')
 File.write('CMakeLists.txt', cmakelists_txt(project))
 File.write("#{project}.rb", project_rb(project))
 File.write("#{project}.c", project_c(project))
+
+File.write("#{project}.code-workspace",
+%^
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build"
+  }
+}
+^)
