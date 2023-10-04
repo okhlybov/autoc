@@ -117,7 +117,7 @@ module AutoC
           @since 2.1
         }
       end
-      method(:size_t, :first_slot, { target: const_rvalue, slot: _slot_p }, visibility: :internal ).configure do
+      method(:size_t, :first_slot, { target: const_rvalue, slot: _slot_p }, visibility: :internal).configure do
         inline_code %{
           assert(target);
           return #{_element.hash_code.('slot->element')} & (target->capacity-1);
@@ -129,7 +129,7 @@ module AutoC
           return (slot+1) & (target->capacity-1); /* linear probing */
         }
       end
-      method(_slot_p, :find_first_slot, { target: const_rvalue, value: element.const_rvalue }, visibility: :internal).configure do
+      method(_slot_p, :_lookup, { target: const_rvalue, value: element.const_rvalue }, visibility: :private).configure do
         code %{
           int state;
           size_t slot;
@@ -192,7 +192,7 @@ module AutoC
           #endif
           assert(!#{marked.(:the_slot)});
           assert(target);
-          if(!#{find_first_slot}(target, value)) {
+          if(!#{_lookup}(target, value)) {
             #{put_force}(target, value);
             return 1;
           } else return 0;
@@ -206,7 +206,7 @@ module AutoC
           #endif
           assert(!#{marked.(:the_slot)});
           assert(target);
-          if(slot = #{find_first_slot}(target, value)) {
+          if(slot = #{_lookup}(target, value)) {
             #{element.destroy.('slot->element') if element.destructible?};
             #{element.copy.('slot->element', value)};
             return 1;
@@ -220,7 +220,7 @@ module AutoC
         code %{
           #{_slot_p} slot;
           assert(target);
-          if(slot = #{find_first_slot}(target, value)) {
+          if(slot = #{_lookup}(target, value)) {
             #{element.destroy.('slot->element') if element.destructible?};
             #{mark}(slot, #{_DELETED});
             --target->size;
@@ -236,7 +236,7 @@ module AutoC
       end
       find_first.configure do
         code %{
-          #{_slot_p} slot = #{find_first_slot}(target, value);
+          #{_slot_p} slot = #{_lookup}(target, value);
           return slot ? &slot->element : NULL;
         }
       end
@@ -267,11 +267,19 @@ module AutoC
           return #{find_first}(target, value) != NULL;
         }
       end
-      destroy_slots_contents = "{ size_t slot; for(slot = 0; slot < target->capacity; ++slot) #{element.destroy.('(target->slots + slot)->element')} };" if element.destructible?
+      destroy_slots_code = %{
+        {
+          #{range} r;
+          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{element.lvalue} e = (#{element.lvalue})#{range.view_front}(&r);
+            #{element.destroy.('*e')};
+          }
+        }
+      } if element.destructible?
       destroy.configure do
         code %{
           assert(target);
-          #{destroy_slots_contents}
+          #{destroy_slots_code}
           #{memory.free('target->slots')};
         }
       end
@@ -279,7 +287,7 @@ module AutoC
         code %{
           #{range} r;
           size_t hash; /* default incremental hasher is applicable to ordered collections only */
-          for(hash = AUTOC_SEED, r = #{range.new.(target)}; !#{range.empty.(:r)}; #{range.pop_front.(:r)}) {
+          for(hash = AUTOC_SEED, r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
             #{element.const_lvalue} e = #{range.view_front.(:r)};
             hash ^= #{element.hash_code.('*e')};
           }
@@ -287,7 +295,7 @@ module AutoC
         }
       end
       # Return number of equality test operations performed to find element or -1 on failure
-      # NOTE this method must stay in sync with #find_first
+      # NOTE this method must stay in sync with #lookup
       method(:int, :count_eops, { target: const_rvalue, value: element.const_rvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
         code %{
           int state, ops = 1;
