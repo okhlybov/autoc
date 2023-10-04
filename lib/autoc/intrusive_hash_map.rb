@@ -285,7 +285,7 @@ module AutoC
         dependencies << _lookup
         inline_code %{
           assert(target);
-          return #{_lookup}(target, value) != NULL;
+          return #{find_first}(target, value) != NULL;
         }
       end
       view.configure do
