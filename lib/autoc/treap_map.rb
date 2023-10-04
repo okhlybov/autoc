@@ -44,7 +44,7 @@ module AutoC
           /**
             #{defgroup}
             
-            @brief Ordered collection of elements of type #{element} associated with unique index of type #{index}.
+            @brief Ordered collection of elements of type #{element} associated with unique index of type #{index}
 
             For iteration over the index & elements refer to @ref #{range}.
 
