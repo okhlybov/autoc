@@ -7,12 +7,12 @@ class IntrusiveIntHashSet < AutoC::IntrusiveHashSet
     super
     mark.code %{
       switch(state) {
-        case #{_EMPTY}: *element = INT_MAX; break;
-        case #{_DELETED}: *element = INT_MIN; break;
+        case #{_EMPTY}: slot->element = INT_MAX; break;
+        case #{_DELETED}: slot->element = INT_MIN; break;
       }
     }
     marked.code %{
-      switch(*element) {
+      switch(slot->element) {
         case INT_MAX: return #{_EMPTY};
         case INT_MIN: return #{_DELETED};
         default: return 0;
