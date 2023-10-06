@@ -192,6 +192,11 @@ module AutoC
           #{_expand}(target, 0);
         }
       end
+      method(:void, :set_, { target: rvalue, index: index.const_lvalue, element: element.const_lvalue }, visibility: :internal).configure do
+        inline_code %{
+          #{set.(target, index, element)};
+        }
+      end
       set.configure do
         code %{
           #ifndef NDEBUG
@@ -266,7 +271,9 @@ module AutoC
           assert(target);
           assert(source);
           #{create_capacity}(target, source->capacity);
-          for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) #{set}(target, *#{range.view_index_front}(&r), *#{range.view_front}(&r));
+          for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{set_}(target, #{range.view_index_front}(&r), #{range.view_front}(&r));
+          }
         }
       end
       empty.configure do
@@ -329,7 +336,7 @@ module AutoC
       end
       # Return number of equality test operations performed to find element or -1 on failure
       # NOTE this method must stay in sync with #lookup
-      method(:int, :count_eops, { target: const_rvalue, index: index.const_rvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
+      method(:int, :count_eops, { target: const_rvalue, index: index.const_lvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
         code %{
           int state, ops = 1;
           size_t slot;
@@ -337,7 +344,7 @@ module AutoC
           #{_slot} the_slot;
           assert(target);
           the_slot.index = #{index.to_value_argument}; /* skipping .element since it is not used in the lookup process */
-          slot = #{first_slot}(target, the_slot);
+          slot = #{first_slot}(target, &the_slot);
           /* zero state signifies real value, deleted state means slot gets skipped, empty state means end of search */
           while((state = #{marked}(next_slot = target->slots + slot)) != #{_EMPTY}) {
             if(!state && #{_index.equal.('next_slot->index', index)}) return ops;
@@ -360,7 +367,7 @@ module AutoC
           fprintf(stream, "\\tslots utilization = %.02f%%\\n", 100.0*target->size/target->capacity);
           fprintf(stream, "\\tbuilt in load factor = #{load_factor}\\n");
           for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            int e = #{count_eops}(target, *#{range.view_front}(&r)); assert(e >= 0);
+            int e = #{count_eops}(target, #{range.view_index_front}(&r)); assert(e >= 0);
             if(max_eops < e) max_eops = e;
             eops += e;
           }

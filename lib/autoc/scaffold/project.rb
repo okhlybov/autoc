@@ -88,3 +88,7 @@ File.write("#{project}.code-workspace",
   }
 }
 ^)
+
+require 'rbconfig'
+p $LOAD_PATH
+pp RbConfig::CONFIG
