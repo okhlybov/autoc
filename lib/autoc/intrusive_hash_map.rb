@@ -266,7 +266,7 @@ module AutoC
           assert(target);
           assert(source);
           #{create_capacity}(target, source->capacity);
-          for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) #{set}(target, *#{range.view_front}(&r), *#{range.view_index_front}(&r));
+          for(r = #{range.new}(source); !#{range.empty}(&r); #{range.pop_front}(&r)) #{set}(target, *#{range.view_index_front}(&r), *#{range.view_front}(&r));
         }
       end
       empty.configure do
