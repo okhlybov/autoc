@@ -1,7 +1,6 @@
 require 'singleton'
 require 'autoc/std'
 require 'autoc/module'
-require 'autoc/composite'
 
 
 module AutoC::Random
