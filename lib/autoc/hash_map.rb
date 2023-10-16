@@ -69,6 +69,11 @@ module AutoC
 
     def configure
       super
+      method(:void, :_expand, { target: lvalue, force: :int.const_rvalue }, visibility: :private).configure do
+        code %{
+          #{_set.expand}(&target->set, force);
+        }
+      end
       method(:int, :remove, { target: rvalue, index: index.const_rvalue }, constraint:-> { index.comparable? }).configure do
         code %{
           assert(target);

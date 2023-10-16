@@ -367,12 +367,24 @@ module AutoC
           fprintf(stream, "\\tslots utilization = %.02f%%\\n", 100.0*target->size/target->capacity);
           fprintf(stream, "\\tbuilt in load factor = #{load_factor}\\n");
           for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
-            int e = #{count_eops}(target, #{range.view_index_front}(&r)); assert(e >= 0);
+            #{index.const_lvalue} x = #{range.view_index_front}(&r);
+            int e = #{count_eops.(target, '*x')}; assert(e >= 0);
             if(max_eops < e) max_eops = e;
             eops += e;
           }
           fprintf(stream, "\\taverage lookup complexity = %.02f equality tests\\n", (double)eops/target->size);
           fprintf(stream, "\\tmaximum lookup complexity = %d equality tests\\n", max_eops);
+          fprintf(stream, "\\tlookup complexity histogram:\\n");
+          unsigned* eop_count = (unsigned*)calloc(max_eops+1, sizeof(unsigned)); assert(eop_count);
+          for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
+            #{index.const_lvalue} x = #{range.view_index_front}(&r);
+            int e = #{count_eops.(target, '*x')}; assert(e >= 0);
+            ++eop_count[e];
+          }
+          for(int i = 1; i <= max_eops; ++i) {
+            fprintf(stream, "\\t\\t%d equality test(s) - for %d or %.02f%% of elements\\n", i, eop_count[i], 100.0*eop_count[i]/target->size);
+          }
+          free(eop_count);
         }
       end
     end
