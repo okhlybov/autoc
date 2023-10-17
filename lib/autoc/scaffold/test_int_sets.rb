@@ -5,19 +5,10 @@ require 'autoc/intrusive_hash_set'
 class IntrusiveIntHashSet < AutoC::IntrusiveHashSet
   def configure
     super
-    mark.code %{
-      switch(state) {
-        case #{_EMPTY}: slot->element = INT_MAX; break;
-        case #{_DELETED}: slot->element = INT_MIN; break;
-      }
-    }
-    marked.code %{
-      switch(slot->element) {
-        case INT_MAX: return #{_EMPTY};
-        case INT_MIN: return #{_DELETED};
-        default: return 0;
-      }
-    }
+		tag_empty.code %{slot->element = INT_MAX;}
+		tag_deleted.code %{slot->element = INT_MIN;}
+		is_empty.code %{return slot->element == INT_MAX;}
+		is_deleted.code %{return slot->element == INT_MIN;}
   end
 end
 
@@ -35,7 +26,7 @@ end
 			super
 			stream << %{
 				#include <stdio.h>
-				void #{dump}(#{const_rvalue} target) {
+				void #{dump1}(#{const_rvalue} target) {
 					#{range} r;
 					for(r = #{range.new}(target); !#{range.empty}(&r); #{range.pop_front}(&r)) {
 						printf("%d ", #{range.take_front}(&r));

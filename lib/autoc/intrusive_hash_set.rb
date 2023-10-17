@@ -68,25 +68,17 @@ module AutoC
       }
     end
 
-    def render_forward_declarations(stream)
-      stream << %{
-        #define #{_EMPTY} 1
-        #define #{_DELETED} 2
-      }
-      super
-    end
-
-    def _EMPTY = identifier(:_EMPTY)
-    def _DELETED = identifier(:_DELETED)
-
     def _element = element
 
   private
 
     def configure
       super
-      method(:void, :mark, { slot: _slot_p, state: :int }, visibility: :internal)
-      method(:int, :marked, { slot: _slot_p }, visibility: :internal)
+      method(:void, :tag_empty, { slot: _slot_p }, visibility: :internal)
+      method(:int, :is_empty, { slot: _slot_p }, visibility: :internal)
+      method(:void, :tag_deleted, { slot: _slot_p }, visibility: :internal)
+      method(:int, :is_deleted, { slot: _slot_p }, visibility: :internal)
+      method(:int, :tagged, { slot: _slot_p }, visibility: :internal).inline_code %{return #{is_empty}(slot) || #{is_deleted}(slot);}
       method(:void, :create_capacity, { target: lvalue, capacity: :size_t.rvalue }).configure do
         code %{
           size_t slot;
@@ -99,7 +91,7 @@ module AutoC
           target->size = 0;
           target->capacity = capacity; /* fast slot location for value: hash_code(value) & (capacity-1) */
           target->slots = (#{_slot_p})#{memory.allocate(_slot, :capacity)}; assert(target->slots);
-          for(slot = 0; slot < target->capacity; ++slot) #{mark}(target->slots + slot, #{_EMPTY});
+          for(slot = 0; slot < target->capacity; ++slot) #{tag_empty}(target->slots + slot);
         }
         header %{
           @brief Create set with specified capacity
@@ -134,12 +126,12 @@ module AutoC
           int state;
           size_t slot;
           #{_slot_p} next_slot;
-          #{_slot} the_slot = { #{value.to_value_argument} };
+          #{_slot} slot_ = { #{value.to_value_argument} };
           assert(target);
-          slot = #{first_slot.(target, :the_slot)};
+          slot = #{first_slot.(target, :slot_)};
           /* zero state signifies real value, deleted state means slot gets skipped, empty state means end of search */
-          while((state = #{marked}(next_slot = target->slots + slot)) != #{_EMPTY}) {
-            if(!state && #{element.equal.('next_slot->element', value)}) return next_slot;
+          while(!#{is_empty}(next_slot = target->slots + slot)) {
+            if(!#{is_deleted}(next_slot) && #{element.equal.('next_slot->element', value)}) return next_slot;
             slot = #{next_slot}(target, slot);
           }
           return NULL;
@@ -153,7 +145,7 @@ module AutoC
           assert(target->size <= target->capacity);
           slot = #{first_slot.(target, new_slot)};
           /* looking for the first slot that is marked either empty or deleted */
-          while(!#{marked}(next_slot = target->slots + slot)) slot = #{next_slot}(target, slot);
+          while(!#{tagged}(next_slot = target->slots + slot)) slot = #{next_slot}(target, slot);
           *next_slot = *new_slot;
         }
       end
@@ -168,7 +160,7 @@ module AutoC
             #{create_capacity}(target, source_capacity << 1);
             for(slot = 0; slot < source_capacity; ++slot) {
               #{_slot_p} next_slot = source_slots + slot;
-              if(!#{marked}(next_slot)) #{adopt_slot.(target, '*next_slot')};
+              if(!#{tagged}(next_slot)) #{adopt_slot.(target, '*next_slot')};
             }
             target->size = source_size; /* restore the size since create_capacity() resets it to zero */
             #{memory.free(:source_slots)};
@@ -188,10 +180,10 @@ module AutoC
       put.configure do
         code %{
           #ifndef NDEBUG
-            #{_slot} the_slot = { #{value.to_value_argument} };
+            #{_slot} slot_ = { #{value.to_value_argument} };
           #endif
-          assert(!#{marked.(:the_slot)});
           assert(target);
+          assert(!#{tagged}(&slot_));
           if(!#{_lookup}(target, value)) {
             #{put_force}(target, value);
             return 1;
@@ -202,10 +194,10 @@ module AutoC
         code %{
           #{_slot_p} slot;
           #ifndef NDEBUG
-            #{_slot} the_slot = { #{value.to_value_argument} };
+            #{_slot} slot_ = { #{value.to_value_argument} };
           #endif
-          assert(!#{marked.(:the_slot)});
           assert(target);
+          assert(!#{tagged}(&slot_));
           if(slot = #{_lookup}(target, value)) {
             #{element.destroy.('slot->element') if element.destructible?};
             #{element.copy.('slot->element', value)};
@@ -222,7 +214,7 @@ module AutoC
           assert(target);
           if(slot = #{_lookup}(target, value)) {
             #{element.destroy.('slot->element') if element.destructible?};
-            #{mark}(slot, #{_DELETED});
+            #{tag_deleted}(slot);
             --target->size;
             return 1;
           } else return 0;
@@ -301,12 +293,12 @@ module AutoC
           int state, ops = 1;
           size_t slot;
           #{_slot_p} next_slot;
-          #{_slot} the_slot = { #{value.to_value_argument} };
+          #{_slot} slot_ = { #{value.to_value_argument} };
           assert(target);
-          slot = #{first_slot.(target, :the_slot)};
+          slot = #{first_slot.(target, :slot_)};
           /* zero state signifies real value, deleted state means slot gets skipped, empty state means end of search */
-          while((state = #{marked}(next_slot = target->slots + slot)) != #{_EMPTY}) {
-            if(!state && #{element.equal.('next_slot->element', value.to_value_argument)}) return ops;
+          while(!#{is_empty}(next_slot = target->slots + slot)) {
+            if(!#{is_deleted}(next_slot) && #{element.equal.('next_slot->element', value.to_value_argument)}) return ops;
             slot = #{next_slot}(target, slot);
             ++ops;
           }
@@ -397,7 +389,7 @@ module AutoC
       pop_front.configure do
         dependencies << empty
         code %{
-          do ++range->slot; while(!#{empty}(range) && #{iterable.marked}(range->slots + range->slot));
+          do ++range->slot; while(!#{empty}(range) && #{iterable.tagged}(range->slots + range->slot));
         }
       end
       view_front.configure do
