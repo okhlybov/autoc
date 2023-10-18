@@ -87,7 +87,7 @@ module AutoC::Random
 
     def initialize = dependencies << AutoC::Module::DEFINITIONS << DEFINITIONS << AutoC::STD::STDLIB_H
 
-    def generate(*args) = args.empty? ? 'autoc_random_seed_next' : 'autoc_random_seed_next()'
+    def generate(*args) = args.empty? ? 'autoc_random_seed' : 'autoc_random_seed()'
 
     def render_interface(stream)
       super
@@ -115,6 +115,7 @@ module AutoC::Random
         #endif
         #include <time.h>
         autoc_random_t #{generate}(void) {
+          /* TODO use getrandom() */
           #if defined(__POCC__)
             /* Pelles C check comes first as it might define _MSC_VER as well */
             unsigned r;
@@ -164,7 +165,7 @@ module AutoC::Random
 
     def state_type = type
 
-    def generate(state = nil)  = state.nil? ? 'autoc_random_next' : "autoc_random_next(&(#{state}))"
+    def generate(state = nil)  = state.nil? ? 'autoc_random' : "autoc_random(&(#{state}))"
 
     def render_interface(stream)
       super
@@ -174,7 +175,7 @@ module AutoC::Random
 
           @since 2.1
         */
-        AUTOC_EXTERN #{type} autoc_random_next(#{state_type}* state);
+        AUTOC_EXTERN #{type} #{generate}(#{state_type}* state);
       }
     end
 
