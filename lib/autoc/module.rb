@@ -362,7 +362,7 @@ module AutoC
         stream
       end
     end
-  
+
   private
 
     ### Overridable rendering methods
@@ -441,7 +441,7 @@ module AutoC
         #define AUTOC_INLINE inline
       #elif defined(__clang__)
         #define AUTOC_INLINE static __inline __attribute__((unused))
-      #elif __STDC_VERSION__ >= 199901L
+      #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
         #define AUTOC_INLINE static inline
       #else
         #define AUTOC_INLINE static __inline

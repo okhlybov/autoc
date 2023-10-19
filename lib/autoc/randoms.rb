@@ -110,7 +110,7 @@ module AutoC::Random
       # TODO ensure the seed is a full 32 bit random value
       # Ex. std::random_device()() yield unsigned int which might be 16 bit type
       stream << %{
-        #if __cplusplus >= 201103L
+        #if defined(__cplusplus) && __cplusplus >= 201103L
           #include <random>
         #endif
         #include <time.h>
@@ -145,14 +145,14 @@ module AutoC::Random
 
   def self.seeder = @seeder
   def self.seeder=(s) @seeder = s end
-  
-  
+
+
   self.seeder = Seeder.instance
 
 
   # Default pseudo-random number generator
   class Generator
-  
+
     include Singleton
 
     include AutoC::Entity
