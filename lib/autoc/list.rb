@@ -29,7 +29,7 @@ module AutoC
     #  false: computing #size function (slow, O(N))
     def initialize(*args, maintain_size: true, **kws)
       super(*args, **kws)
-      @_node = identifier(:_node, abbreviate: true)
+      @_node = decorate(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
       @maintain_size = maintain_size

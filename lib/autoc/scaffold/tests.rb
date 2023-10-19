@@ -42,7 +42,7 @@ def type_test(cls, *opts, **kws, &code)
     end
     def test(name, code)
       s = name.to_s
-      @test_names << [name, func_name = identifier("test_#{name}")]
+      @test_names << [name, func_name = decorate("test_#{name}")]
       @tests << %{
         void #{func_name}(void) {
           #{@setup_code}

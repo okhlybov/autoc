@@ -28,7 +28,7 @@ module AutoC
 
     def initialize(*args, rng: Random.generator, **opts)
       super(*args, **opts)
-      @_node = identifier(:_node, abbreviate: true)
+      @_node = decorate(:_node, abbreviate: true)
       @_node_p = _node.lvalue
       @_node_pp = "#{_node}*".lvalue
       dependencies << (@rng = rng) << STD::STDIO_H

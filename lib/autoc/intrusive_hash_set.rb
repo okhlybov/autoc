@@ -22,7 +22,7 @@ module AutoC
 
     def initialize(*args, load_factor: 0.75, auxillaries: false, **kws)
       super(*args, **kws)
-      @_slot = identifier(:_slot, abbreviate: true)
+      @_slot = decorate(:_slot, abbreviate: true)
       @_slot_p = _slot.lvalue
       @load_factor = load_factor
       @auxillaries = auxillaries

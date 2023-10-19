@@ -49,7 +49,7 @@ module AutoC
 
             @brief Box tag set
 
-            Use @ref #{identifier(:tag)} to query current box contents. Empty box is always tagged as 0.
+            Use @ref #{decorate(:tag)} to query current box contents. Empty box is always tagged as 0.
 
             @since 2.0
           */
@@ -58,7 +58,7 @@ module AutoC
         stream << PRIVATE
       end
       stream << 'typedef enum {'
-      i = 0; stream << (variants.collect { |name, type| "#{identifier(name)} = #{i+=1}" }).join(',')
+      i = 0; stream << (variants.collect { |name, type| "#{decorate(name)} = #{i+=1}" }).join(',')
       stream << "} #{tag_};"
       if public?
         stream << %{
@@ -152,7 +152,7 @@ module AutoC
           if(target->tag) switch(target->tag) {
         $
         variants.each do |name, type|
-          _code += "case #{identifier(name)}:"
+          _code += "case #{decorate(name)}:"
           _code += type.destroy.("target->variant.#{name}") if type.destructible?
           _code += ';break;'
         end
@@ -168,7 +168,7 @@ module AutoC
           if(source->tag) switch(source->tag) {
         $
         variants.each do |name, type|
-          _code += "case #{identifier(name)}:"
+          _code += "case #{decorate(name)}:"
           _code += type.copy.("target->variant.#{name}", "source->variant.#{name}")
           _code += ';break;'
         end
@@ -186,7 +186,7 @@ module AutoC
           switch(left->tag) {
         $
         variants.each do |name, type|
-          _code += "case #{identifier(name)}:"
+          _code += "case #{decorate(name)}:"
           _code += 'return '
           _code += type.equal.("left->variant.#{name}", "right->variant.#{name}")
           _code += ';'
@@ -205,7 +205,7 @@ module AutoC
           switch(left->tag) {
         $
         variants.each do |name, type|
-          _code += "case #{identifier(name)}: return "
+          _code += "case #{decorate(name)}: return "
           _code += type.compare.("left->variant.#{name}", "right->variant.#{name}")
           _code += ';'
         end
@@ -221,7 +221,7 @@ module AutoC
           switch(target->tag) {
         $
         variants.each do |name, type|
-          _code += "case #{identifier(name)}: return "
+          _code += "case #{decorate(name)}: return "
           _code += type.hash_code.("target->variant.#{name}")
           _code += ';'
         end
@@ -236,7 +236,7 @@ module AutoC
         method(type.const_lvalue, "view_#{name}", { target: const_rvalue }).configure do
           code %{
             assert(target);
-            assert(target->tag == #{identifier(name)});
+            assert(target->tag == #{decorate(name)});
             return &target->variant.#{name};
           }
           header %{
@@ -248,7 +248,7 @@ module AutoC
             This function is used to get a constant reference (in form of the C pointer) to value contained in `target`.
 
             It is the caller's responsibility to check the type of currently contained value.
-            Consider using guard `if(#{identifier(:tag)}(...) == #{identifier(name)}) ...`
+            Consider using guard `if(#{decorate(:tag)}(...) == #{decorate(name)}) ...`
 
             @see @ref #{tag}
 
@@ -260,7 +260,7 @@ module AutoC
             code %{
               #{type} result;
               assert(target);
-              assert(target->tag == #{identifier(name)});
+              assert(target->tag == #{decorate(name)});
               #{type.copy.(:result, "target->variant.#{name}")};
               return result;
             }
@@ -273,7 +273,7 @@ module AutoC
               This function is used to get a copy of the value contained in `target`.
   
               It is the caller's responsibility to check the type of currently contained value.
-              Consider using guard `if(#{identifier(:tag)}(...) == #{identifier(name)}) ...`
+              Consider using guard `if(#{decorate(:tag)}(...) == #{decorate(name)}) ...`
   
               @see @ref #{tag}
   
@@ -285,7 +285,7 @@ module AutoC
               assert(target);
               #{destroy.(target) if destructible?};
               #{type.copy.("target->variant.#{name}", value)};
-              target->tag = #{identifier(name)};
+              target->tag = #{decorate(name)};
             }
             header %{
               @brief Put value of type #{type} into box
@@ -296,7 +296,7 @@ module AutoC
               This function is used to put a copy of the value into the box.
               Previously contained value is destroyed with respective destructor.
   
-              After call to this function the value type may be obtained with @ref #{identifier(:tag)}.
+              After call to this function the value type may be obtained with @ref #{decorate(:tag)}.
 
               @see @ref #{tag}
   

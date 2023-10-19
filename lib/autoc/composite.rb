@@ -7,6 +7,7 @@ require 'autoc/module'
 require 'autoc/hashers'
 require 'autoc/allocators'
 require 'autoc/function'
+require 'autoc/decorator'
 
 
 module AutoC
@@ -23,6 +24,8 @@ module AutoC
     include STD
 
     include Entity
+
+    include Decorator
 
     attr_reader :visibility
 
@@ -62,9 +65,6 @@ module AutoC
 
     def inspect = "#{signature} <#{self.class}>"
 
-    # Decorate identifier with type-specific prefix
-    def identifier(id, **kws) = (@decorator.nil? ? Composite.decorator : @decorator).(self, id, **kws)
-
     def public? = @visibility == :public
 
     def private? = @visibility == :private
@@ -83,10 +83,6 @@ module AutoC
 
     def hasher = (@hasher.nil? ? Composite.hasher : @hasher)
 
-    def self.decorator=(decorator) @decorator = decorator end
-
-    def self.decorator = @decorator
-
     def self.allocator=(allocator) @allocator = allocator end
 
     def self.allocator = @allocator
@@ -99,58 +95,14 @@ module AutoC
 
     self.hasher = Hasher.instance # Default cycle-xor hasher
 
-    module Decorator
-      # Pluggable CamelCase identifier decorator
-      CAMEL_CASE = -> (type, symbol, abbreviate: false, **kws) {
-        id = symbol.to_s.sub(/[!?]$/, '') # Strip trailing !?
-        # Preserve trailing underscores
-        /(.*?)(_*)$/.match(id)
-        id = Regexp.last_match(1)
-        trail = Regexp.last_match(2)
-        _ = # Check for leading underscore
-          if /^(_+)(.*)/ =~ id
-            id = Regexp.last_match(2) # Chop leading underscore
-            true
-          else
-            false
-          end
-        id = id[0] if abbreviate
-        # Convert _separated_names to the CamelCase
-        id = type.prefix + id.split('_').collect{ |s| s[0].upcase << s[1..-1] }.join
-        # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-        (_ && !type.prefix.start_with?('_') ? Regexp.last_match(1) + id : id) + trail
-      }
-      # Pluggable _snake_case identifier decorator
-      SNAKE_CASE = -> (type, symbol, abbreviate: false, **kws) {
-        id = symbol.to_s.sub(/[!?]$/, '') # Strip trailing !?
-        # Preserve trailing underscores
-        /(.*?)(_*)$/.match(id)
-        id = Regexp.last_match(1)
-        trail = Regexp.last_match(2)
-        # Check for leading underscore
-        _ =
-          if /^(_+)(.*)/ =~ id
-            id = Regexp.last_match(2)
-            true
-          else
-            false
-          end
-        id = abbreviate ? "#{type.prefix}#{id[0]}" : "#{type.prefix}_#{id}"
-        # Carry over the method name's leading underscore only if the prefix is not in turn underscored
-        (_ && !type.prefix.start_with?('_') ? Regexp.last_match(1) + id : id) + trail
-      }
-    end # Decorator
-
-    self.decorator = Decorator::CAMEL_CASE
-
   private
     
     def method_missing(meth, *args)
       if (method = @methods[meth]).nil?
         # On anything thats not a defined method return a type-decorated identifier
         # This allows to generate arbitrary type-qualified identifiers with #{type.foo}
-        raise "unexpected arguments" unless args.empty?
-        identifier(meth)
+        raise 'unexpected arguments' unless args.empty?
+        decorate(meth)
       else
         method
       end
@@ -285,7 +237,7 @@ module AutoC
   
     def initialize(type, result, name, parameters, **kws)
       @type = type
-      super(result.to_value, self.type.identifier(name), parameters, **kws)
+      super(result.to_value, self.type.decorate(name), parameters, **kws)
       dependencies << self.type << self.result.to_type
       # TODO register parameters' types as dependencies
     end

@@ -22,9 +22,9 @@ module AutoC
 
     def range = @range ||= Range.new(self, visibility: visibility)
 
-    def _slot = @_slot ||= _slot_class.new(identifier(:_list, abbreviate: true), element, _master: self, maintain_size: false, visibility: :internal)
+    def _slot = @_slot ||= _slot_class.new(decorate(:_list, abbreviate: true), element, _master: self, maintain_size: false, visibility: :internal)
 
-    def _bin = @_bin ||= _bin_class.new(identifier(:_vector, abbreviate: true), _slot, _master: self, visibility: :internal)
+    def _bin = @_bin ||= _bin_class.new(decorate(:_vector, abbreviate: true), _slot, _master: self, visibility: :internal)
 
     def initialize(*args, auxillaries: false, **kws)
       super(*args, **kws)

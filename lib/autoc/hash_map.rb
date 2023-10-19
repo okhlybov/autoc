@@ -23,9 +23,9 @@ module AutoC
 
     def range = @range ||= _range_class.new(self, visibility: visibility)
 
-    def _node = @_node ||= _node_class.new(identifier(:_node, abbreviate: true), { index: index, element: element }, _master: self, visibility: :internal)
+    def _node = @_node ||= _node_class.new(decorate(:_node, abbreviate: true), { index: index, element: element }, _master: self, visibility: :internal)
 
-    def _set = @_set ||= _set_class.new(identifier(:_set, abbreviate: true), _node, _master: self, set_operations: false, auxillaries: @auxillaries, visibility: :internal)
+    def _set = @_set ||= _set_class.new(decorate(:_set, abbreviate: true), _node, _master: self, set_operations: false, auxillaries: @auxillaries, visibility: :internal)
 
     def orderable? = _set.orderable?
 
