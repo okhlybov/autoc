@@ -3,6 +3,7 @@
 
 require 'autoc/std'
 require 'autoc/set'
+require 'autoc/ranges'
 
 
 module AutoC
@@ -123,7 +124,6 @@ module AutoC
       end
       method(_slot_p, :_lookup, { target: const_rvalue, value: element.const_rvalue }, visibility: :private).configure do
         code %{
-          int state;
           size_t slot;
           #{_slot_p} next_slot;
           #{_slot} slot_ = { #{value.to_value_argument} };
@@ -290,7 +290,7 @@ module AutoC
       # NOTE this method must stay in sync with #lookup
       method(:int, :count_eops, { target: const_rvalue, value: element.const_lvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
         code %{
-          int state, ops = 1;
+          int ops = 1;
           size_t slot;
           #{_slot_p} next_slot;
           #{_slot} slot_ = { #{value.to_value_argument} };
@@ -341,7 +341,7 @@ module AutoC
 
   end # IntrusiveHashSet
 
- 
+
   class IntrusiveHashSet::Range < ForwardRange
 
     def render_interface(stream)
