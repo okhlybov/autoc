@@ -127,7 +127,6 @@ module AutoC
       end
       method(_slot_p, :_lookup, { target: const_rvalue, index: index.const_rvalue }, visibility: :private).configure do
         code %{
-          int state;
           size_t slot;
           #{_slot_p} next_slot;
           #{_slot} slot_;
@@ -207,7 +206,7 @@ module AutoC
         code %{
           #{_slot_p} slot;
           assert(target);
-          if(slot = #{_lookup}(target, index)) {
+          if((slot = #{_lookup}(target, index))) {
             #{_element.destroy.('slot->element') if _element.destructible?};
             #{_index.destroy.('slot->index') if _index.destructible?};
             #{tag_deleted}(slot);
@@ -330,7 +329,7 @@ module AutoC
       # NOTE this method must stay in sync with #lookup
       method(:int, :count_eops, { target: const_rvalue, index: index.const_lvalue}, constraint:-> { @auxillaries }, visibility: :internal).configure do
         code %{
-          int state, ops = 1;
+          int ops = 1;
           size_t slot;
           #{_slot_p} next_slot;
           #{_slot} slot_;

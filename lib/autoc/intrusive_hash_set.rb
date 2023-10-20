@@ -91,7 +91,7 @@ module AutoC
           capacity = (size_t)1 << (bits+1); assert(capacity > 0);
           target->size = 0;
           target->capacity = capacity; /* fast slot location for value: hash_code(value) & (capacity-1) */
-          target->slots = (#{_slot_p})#{memory.allocate(_slot, :capacity)}; assert(target->slots);
+          target->slots = #{memory.allocate(_slot, :capacity)}; assert(target->slots);
           for(slot = 0; slot < target->capacity; ++slot) #{tag_empty}(target->slots + slot);
         }
         header %{
@@ -198,7 +198,7 @@ module AutoC
           #endif
           assert(target);
           assert(!#{tagged}(&slot_));
-          if(slot = #{_lookup}(target, value)) {
+          if((slot = #{_lookup}(target, value))) {
             #{element.destroy.('slot->element') if element.destructible?};
             #{element.copy.('slot->element', value)};
             return 1;
@@ -212,7 +212,7 @@ module AutoC
         code %{
           #{_slot_p} slot;
           assert(target);
-          if(slot = #{_lookup}(target, value)) {
+          if((slot = #{_lookup}(target, value))) {
             #{element.destroy.('slot->element') if element.destructible?};
             #{tag_deleted}(slot);
             --target->size;
