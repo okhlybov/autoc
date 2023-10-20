@@ -114,4 +114,16 @@ module AutoC
   end # Type
 
 
+  # Mixin for standalone types which don't want to participate in the standard lifetime management
+  module Type::Standalone
+    def default_constructible? = false
+    def custom_constructible? = false
+    def default_constructible? = false
+    def destructible? = false
+    def copyable? = false
+    def comparable? = false
+    def orderable? = false
+  end # Standalone
+
+
 end
