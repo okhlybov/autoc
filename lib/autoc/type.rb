@@ -118,7 +118,6 @@ module AutoC
   module Type::Standalone
     def default_constructible? = false
     def custom_constructible? = false
-    def default_constructible? = false
     def destructible? = false
     def copyable? = false
     def comparable? = false
