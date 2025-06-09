@@ -199,9 +199,9 @@ module AutoC::Random
             #{type} x = low + ((high & 0xffff) << 15) + (high >> 16);
             x = (x & 0x7fffffff) + (x >> 31);
           #endif
-        assert(*state != 0); /* zero state breaks the LCG type generator */
-        return *state = x;
-      }
+          assert(*state != 0); /* zero state breaks the LCG type generator */
+          return *state = x;
+        }
       }
     end
 

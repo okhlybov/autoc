@@ -160,7 +160,7 @@ $tests = []
 
 require 'autoc/composite'
 
-#AutoC::Composite.decorator = AutoC::Composite::Decorator::SNAKE_CASE
+#AutoC::Decorator.decorator = AutoC::Decorator::SNAKE_CASE
 
 require_relative 'generic_value'
 
