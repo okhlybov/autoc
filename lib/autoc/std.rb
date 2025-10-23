@@ -124,6 +124,7 @@ module AutoC::STD
 
 
   class Complex < Primitive
+    def orderable? = false
     def hash_code = @hash_code ||= -> (target) { "((size_t)(crealf(#{target}))^(size_t)(cimagf(#{target})))" } # TODO use tgmath
   end # Complex
 
