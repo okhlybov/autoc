@@ -237,6 +237,7 @@ module AutoC
   
     def initialize(type, result, name, parameters, **kws)
       @type = type
+      @inject = false # Direct code injection instead of emitting any kind of external entity
       super(result.to_value, self.type.decorate(name), parameters, **kws)
       dependencies << self.type << self.result.to_type
       # TODO register parameters' types as dependencies
@@ -249,7 +250,22 @@ module AutoC
       end
     end
 
+    def inject_code(code)
+      @inject = true
+      code(code)
+    end
+
+    def call(*arguments) = @inject ? @code.(*arguments) : super
+
   private
+
+    def render_function_declaration(stream)
+      super unless @inject
+    end
+
+    def render_function_definition(stream)
+      super unless @inject
+    end
 
     def render_function_header(stream)
       if public?
