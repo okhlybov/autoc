@@ -443,7 +443,7 @@ Module::DEFINITIONS = Code.new interface: %{
     #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
       #define AUTOC_INLINE inline
     #else
-      #define AUTOC_INLINE __inline
+      #define AUTOC_INLINE static /*__inline*/
     #endif
   #endif
   #ifndef AUTOC_EXTERN

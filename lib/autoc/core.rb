@@ -233,9 +233,9 @@ class Function
 
   def call(*arguments) = Call.new(self, arguments)
 
-  def signature_c = '%s(%s)' % [return_c, parameters.values.map { |p| p.type_c }.join(', ') ]
+  def signature_c = '%s(%s)' % [return_c, parameters.values.map { |p| p.type_c }.join(', ')]
 
-  def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters.map { |v, p| p.declaration_c(v) }.join(', ') ]
+  def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters.map { |v, p| p.declaration_c(v) }.join(', ')]
 
   private def return_c = self.return.nil? ? :void : self.return.type_c
 
