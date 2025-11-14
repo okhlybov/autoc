@@ -102,10 +102,10 @@ class Complex < Primitive
 end # Complex
 
 
-COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
-FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
-DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
 LONG_DOUBLE_COMPLEX = Complex.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/, header: COMPLEX_H
+DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
+FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
+COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
 
 
 INTPTR_T = Primitive.new 'intptr_t', header: INTTYPES_H
