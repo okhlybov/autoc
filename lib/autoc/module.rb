@@ -435,22 +435,18 @@ end # SystemHeader
 
 
 Module::DEFINITIONS = Code.new interface: %{
-  #ifndef AUTOC_INLINE
-    #if defined(__cplusplus)
-      #define AUTOC_INLINE inline
-    #elif defined(__clang__)
-      #define AUTOC_INLINE __inline __attribute__((unused))
-    #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-      #define AUTOC_INLINE inline
-    #else
-      #define AUTOC_INLINE static /*__inline*/
-    #endif
-  #endif
   #ifndef AUTOC_EXTERN
     #ifdef __cplusplus
       #define AUTOC_EXTERN extern "C"
     #else
       #define AUTOC_EXTERN extern
+    #endif
+  #endif
+  #ifndef AUTOC_STATIC_INLINE
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+      #define AUTOC_STATIC_INLINE static inline
+    #else
+      #define AUTOC_STATIC_INLINE static
     #endif
   #endif
 }

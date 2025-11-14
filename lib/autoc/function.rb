@@ -14,26 +14,17 @@ class Function
 
   alias core_initialize initialize
 
-  def initialize(result, name, parameters = {}, inline: false, static: false, abstract: false, visibility: :public, constraint: true)
+  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, interface: :public, constraint: true, &code)
     core_initialize(result, name, parameters)
-    @inline = inline
-    @static = static
+    @spec = spec
     @abstract = abstract
-    @visibility = visibility
+    @visibility = interface
     @constraint = constraint
-    definitions.each { |x| dependencies << x } # TODO inject parameters' types
+    dependencies << Module::DEFINITIONS
+    configure(&code) if block_given?
   end
 
-  # Overridable set of entities to be injected into dependency set
-  private def definitions = [Module::DEFINITIONS]
-
   def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
-
-  def inline? = @inline == true
-
-  def static? = @static == true
-
-  def extern? = !inline? && !static?
 
   def public? = @visibility == :public
 
@@ -43,89 +34,83 @@ class Function
 
   def abstract? = @abstract == true
 
-  def render_interface(stream)
-    @stream = stream
-    declaration_r unless internal?
-  end
+  def extern? = @spec == :extern
+    
+  def inline? = @spec == :inline
+    
+  # C(++) inline notes:
+  # https://stackoverflow.com/questions/216510/what-does-extern-inline-do/216546#216546
 
-  def render_forward_declarations(stream)
-    @stream = stream
-    declaration_r if internal?
-    # A non-inline static function still separates declaration and definiton
-    # but the definition should be present in every translation unit
-    # that references this function threrefore it is put into
-    # forward declaration section, not the implementation one
-    if static? && !inline?
-      stream << "#{linkage_c} #{declaration_c}" # static is mandatory here to match the static declaration
-      code_r
+  def render_interface(stream)
+    if live?
+      @stream = stream
+      declaration_r unless internal?
     end
   end
 
-  private def declaration_r
-    stream << header_c
-    # Inline declaration always comes with definition regardless of the linkage specifiers
-    if inline?
-      stream << "#{static? ? :static : nil} AUTOC_INLINE #{declaration_c}"
-      code_r
-    else
-      # Non-inline function declaration coming into either public interface header or
-      # forward declarations sections of the translation units
-      if extern? || static?
-        stream << "#{linkage_c} #{declaration_c};"
-      end
+  def render_forward_declarations(stream)
+    if live?
+      @stream = stream
+      declaration_r if internal?
     end
   end
 
   def render_implementation(stream)
-    @stream = stream
-    # Regular extern C(++) function definition
-    if extern?
-      # No function decorators are put here as they should've been
-      # provided by the function definition code
-      stream << declaration_c
-      code_r
-    end
-    # Non-static inline function definition in a single translation unit
-    # This is required by the C mode only as C++ has different inline semantics
-    # A static inline definition is provided during declaration,
-    # in the same way as for the regular inline
-    if inline? && !static?
-      no_cxx_r("AUTOC_EXTERN #{declaration_c};")
+    if live?
+      @stream = stream
+      definition_r
     end
   end
 
-  # Function render implementation
+  def header(x) = @header = x
+
+  def code(x) = @code = x
+
+  def inline_code(x)
+    @spec = :inline
+    code(x)
+  end
+
+  def configure(&code)
+    instance_eval(&code)
+    self
+  end
 
   private attr_reader :stream
 
-  private def linkage_c
-    return :static if static?
-    return :AUTOC_EXTERN if extern?
-    nil
+  DECLSPECS = {extern: :AUTOC_EXTERN, inline: :AUTOC_STATIC_INLINE}
+
+  private def declspec_c = DECLSPECS[@spec]
+
+  private def declaration_r
+    header_r
+    stream << "#{declspec_c}\n#{declaration_c}"
+    inline? ? code_r : stream << ';'
   end
 
-  private def inline_c = inline? ? :AUTOC_INLINE : nil
-
-  private def header_c
-    # TODO
-    if public?
-      %{/* @public */}
-    else
-      %{/* @private */}
+  private def definition_r
+    if extern?
+      stream << declaration_c
+      code_r
     end
   end
 
-  private def no_cxx_r(code)
-    stream << %{
-      #ifndef __cplusplus
-        #{code}
-      #endif
-    }
+  private def header_r
+    stream << if public?
+      %{
+      /**
+        #{@header}
+      */
+      }
+    else
+      '/** @private */'
+    end
   end
 
   private def code_r
-    stream << '{}' # TODO
+    @code.nil? ? raise("missing implementation code for function #{name_c}") : stream << '{' << @code << '}'
   end
+
 end
 
 
