@@ -3,19 +3,22 @@
 
 require 'autoc/core'
 require 'autoc/module'
+require 'autoc/callable'
 
 
 module AutoC
-  
 
-class Function
-  
+
+class Function < Callable
+
   include Entity
 
-  alias core_initialize initialize
+  # C side function name
+  attr_reader :name_c
 
   def initialize(result, name, parameters = {}, spec: :extern, abstract: false, interface: :public, constraint: true, &code)
-    core_initialize(result, name, parameters)
+    super(result, parameters)
+    @name_c = name.to_s
     @spec = spec
     @abstract = abstract
     @visibility = interface
@@ -23,6 +26,8 @@ class Function
     dependencies << Module::DEFINITIONS
     configure(&code) if block_given?
   end
+
+  def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters_c]
 
   def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
 
@@ -35,9 +40,9 @@ class Function
   def abstract? = @abstract == true
 
   def extern? = @spec == :extern
-    
+
   def inline? = @spec == :inline
-    
+
   # C(++) inline notes:
   # https://stackoverflow.com/questions/216510/what-does-extern-inline-do/216546#216546
 
@@ -96,14 +101,16 @@ class Function
   end
 
   private def header_r
-    stream << if public?
-      %{
-      /**
-        #{@header}
-      */
-      }
+    if public?
+      unless @header.nil?
+        stream << %{
+          /**
+            #{@header}
+          */
+        }
+      end
     else
-      '/** @private */'
+      stream << '/** @private */'
     end
   end
 
