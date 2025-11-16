@@ -23,9 +23,11 @@ class Function < Callable
     @abstract = abstract
     @visibility = interface
     @constraint = constraint
-    dependencies << Module::DEFINITIONS
+    dependencies << DEFINITIONS
     configure(&code) if block_given?
   end
+
+  def to_s = '%s(%s)' % [function.name_c, arguments_c]
 
   def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters_c]
 
@@ -117,6 +119,23 @@ class Function < Callable
   private def code_r
     @code.nil? ? raise("missing implementation code for function #{name_c}") : stream << '{' << @code << '}'
   end
+
+  DEFINITIONS = Code.new interface: %{
+    #ifndef AUTOC_EXTERN
+      #ifdef __cplusplus
+        #define AUTOC_EXTERN extern "C"
+      #else
+        #define AUTOC_EXTERN extern
+      #endif
+    #endif
+    #ifndef AUTOC_STATIC_INLINE
+      #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+        #define AUTOC_STATIC_INLINE static inline
+      #else
+        #define AUTOC_STATIC_INLINE static
+      #endif
+    #endif
+  }
 
 end
 

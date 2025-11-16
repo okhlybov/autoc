@@ -78,31 +78,31 @@ class Callable
 
   end
 
-  # Result of a function call
-  # This is itself a value of the function's return type
+  # Result of a callable call
+  # This is itself a value of the callable's return type
   class Call
 
-    # Function being called
-    attr_reader :function
+    # callable being called
+    attr_reader :callable
 
-    # List of values passed to the function
+    # List of values passed to the callable
     attr_reader :arguments
 
-    # Value representing the result of the function call
-    # nil is returned for the void function
+    # Value representing the result of the callable call
+    # nil is returned for the void callable
     attr_reader :to_value
 
-    def initialize(function, arguments = [])
-      @function = function
-      @to_value = Result.new(self) unless function.return.nil?
+    def initialize(callable, arguments = [])
+      @callable = callable
+      @to_value = Result.new(self) unless callable.return.nil?
       @arguments = arguments.map(&:to_value)
     end
 
-    def to_s = '%s(%s)' % [function.name_c, function.parameters.values.zip(arguments).map { |p, v| p.bind_c(v) }.join(', ')]
+    def arguments_c = callable.parameters.values.zip(arguments).map { |p, v| p.bind_c(v) }.join(', ')
 
-    # Represents a value returned by a function call
-    # This is a facade for the function's return value which
-    # renders the function call code in place of the value
+    # Represents a value returned by a callable call
+    # This is a facade for the callable's return value which
+    # renders the callable call code in place of the value
     class Result
 
       include Bindable
@@ -112,7 +112,7 @@ class Callable
       def to_value = self
 
       def initialize(call)
-        @value = (@call = call).function.return.to_value
+        @value = (@call = call).callable.return.to_value
       end
 
       def method_missing(method, *args)
