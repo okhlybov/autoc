@@ -24,6 +24,8 @@ class Function < Callable
     @visibility = interface
     @constraint = constraint
     dependencies << DEFINITIONS
+    self.parameters.values.each { |x| dependencies << x.type }
+    dependencies << self.return.type unless self.return.nil?
     configure(&code) if block_given?
   end
 

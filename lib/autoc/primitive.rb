@@ -6,7 +6,7 @@ require 'autoc/module'
 
 
 module AutoC
-  
+
 
 # Primitive C side type augmented with stdc library support
 # This code performs type coercion for known standard C types
@@ -23,9 +23,9 @@ class Primitive
 
   attr_reader :matcher
 
-  def initialize(type, matcher: Regexp.new("^#{type}$"), header: nil)
+  def initialize(type, matcher: Regexp.new("^#{type}$"), dependencies: [])
     super(type)
-    dependencies << header unless header.nil?
+    Array(dependencies).each { |x| self.dependencies << x }
     @matcher = matcher
     @@types << self
   end
@@ -81,7 +81,7 @@ class Primitive
   end
 
   def compare = @compare ||= Compare.new(self)
-  
+
   ### Hash code computer
 
   class HashCode < Callable
@@ -117,7 +117,7 @@ STDLIB_H = Code.new interface: %{
   #include <stdlib.h>
 }
 
-BOOL = Primitive.new '_Bool', matcher: /^(bool|_Bool)$/, header: STDBOOL_H
+BOOL = Primitive.new '_Bool', matcher: /^(bool|_Bool)$/, dependencies: STDBOOL_H
 
 
 CHAR = Primitive.new 'char'
@@ -125,7 +125,7 @@ SIGNED_CHAR = Primitive.new 'signed char', matcher: /^signed\s+char$/
 UNSIGNED_CHAR = Primitive.new 'unsigned char', matcher: /^unsigned\s+char$/
 
 
-WCHAR_T = Primitive.new 'wchar_t', header: STDDEF_H
+WCHAR_T = Primitive.new 'wchar_t', dependencies: STDDEF_H
 
 
 SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Primitive.new 'short', matcher: /^(signed\s+)?short(\s+int)?$/
@@ -144,9 +144,9 @@ LONG_LONG = SIGNED_LONG_LONG = LONG_LONG_INT = SIGNED_LONG_LONG_INT = Primitive.
 UNSIGNED_LONG_LONG = UNSIGNED_LONG_LONG_INT = Primitive.new 'unsigned long long', matcher: /^unsigned\s+long\s+long(\s+int)?$/
 
 
-SIZE_T = Primitive.new 'size_t', header: STDDEF_H
-PTRDIFF_T = Primitive.new 'ptrdiff_t', header: STDDEF_H
-UINTPTR_T = Primitive.new 'uintptr_t', header: STDDEF_H
+SIZE_T = Primitive.new 'size_t', dependencies: STDDEF_H
+PTRDIFF_T = Primitive.new 'ptrdiff_t', dependencies: STDDEF_H
+UINTPTR_T = Primitive.new 'uintptr_t', dependencies: STDDEF_H
 
 
 FLOAT = Primitive.new 'float'
@@ -154,8 +154,8 @@ DOUBLE = Primitive.new 'double'
 LONG_DOUBLE = Primitive.new 'long double', matcher: /^long\s+double$/
 
 
-FLOAT_T = Primitive.new 'float_t', header: MATH_H
-DOUBLE_T = Primitive.new 'double_t', header: MATH_H
+FLOAT_T = Primitive.new 'float_t', dependencies: MATH_H
+DOUBLE_T = Primitive.new 'double_t', dependencies: MATH_H
 
 
 TGMATH_H = SystemHeader.new 'tgmath.h'
@@ -166,7 +166,7 @@ class Complex < Primitive
 
   def initialize(*args, **kws)
     super
-    dependencies << COMPLEX_H << TGMATH_H
+    dependencies << DEFINITIONS
   end
 
   class HashCode < Primitive::HashCode
@@ -183,27 +183,46 @@ class Complex < Primitive
 
   def hash_code = @hash_code ||= HashCode.new(self)
 
+  DEFINITIONS = Code.new dependencies: [COMPLEX_H, TGMATH_H], interface: %{
+    #ifdef __cplusplus
+      using autoc_double_complex_t = std::complex<double>;
+      using autoc_complex_t = autoc_double_complex_t;
+      using autoc_float_complex_t = std::complex<float>;
+      using autoc_long_double_complex_t = std::complex<long double>;
+      using autoc_long_complex_t = autoc_long_double_complex_t;
+    #else
+      #if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER)
+        #error Visual Studio requires C++ compilation mode for complex numeric types
+      #endif
+      typedef float complex autoc_float_complex_t;
+      typedef double complex autoc_double_complex_t;
+      typedef autoc_double_complex_t autoc_complex_t;
+      typedef long double complex autoc_long_double_complex_t;
+      typedef autoc_long_double_complex_t autoc_long_complex_t;
+    #endif
+  }
+
 end # Complex
 
 
-LONG_DOUBLE_COMPLEX = Complex.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/
-DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/
-FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/
-COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/
+LONG_DOUBLE_COMPLEX = Complex.new 'autoc_long_complex_t', matcher: /^long\s+double\s+(complex|complex)$/
+DOUBLE_COMPLEX = Complex.new 'autoc_double_complex_t', matcher: /^double\s+(complex|complex)$/
+FLOAT_COMPLEX = Complex.new 'autoc_float_complex_t', matcher: /^float\s+(complex|complex)$/
+COMPLEX = Complex.new 'autoc_complex_t', matcher: /^(complex|complex)$/
 
 
-INTPTR_T = Primitive.new 'intptr_t', header: INTTYPES_H
-INTMAX_T = Primitive.new 'intmax_t', header: INTTYPES_H
-UINTMAX_T = Primitive.new 'uintmax_t', header: INTTYPES_H
+INTPTR_T = Primitive.new 'intptr_t', dependencies: INTTYPES_H
+INTMAX_T = Primitive.new 'intmax_t', dependencies: INTTYPES_H
+UINTMAX_T = Primitive.new 'uintmax_t', dependencies: INTTYPES_H
 
 
 [8, 16, 32, 64].each do |bit|
-  const_set((type = "int#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
-  const_set((type = "uint#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
-  const_set((type = "int_fast#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
-  const_set((type = "uint_fast#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
-  const_set((type = "int_least#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
-  const_set((type = "uint_least#{bit}_t").upcase, Primitive.new(type, header: INTTYPES_H))
+  const_set((type = "int#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
+  const_set((type = "uint#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
+  const_set((type = "int_fast#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
+  const_set((type = "uint_fast#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
+  const_set((type = "int_least#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
+  const_set((type = "uint_least#{bit}_t").upcase, Primitive.new(type, dependencies: INTTYPES_H))
 end
 
 

@@ -399,10 +399,11 @@ class Code
 
   include Entity
 
-  def initialize(interface: nil, implementation: nil, definitions: nil)
+  def initialize(interface: nil, implementation: nil, definitions: nil, dependencies: [])
     @interface_ = interface
     @definitions_ = definitions
     @implementation_ = implementation
+    Array(dependencies).each { |x| self.dependencies << x }
   end
 
   def inspect = "... <#{self.class}>"
