@@ -16,7 +16,7 @@ class Function < Callable
   # C side function name
   attr_reader :name_c
 
-  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, interface: :public, constraint: true, &code)
+  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, interface: :public, constraint: true,&code)
     super(result, parameters)
     @name_c = name.to_s
     @spec = spec
@@ -94,11 +94,11 @@ class Function < Callable
   private def declaration_r
     header_r
     stream << "#{declspec_c}\n#{declaration_c}"
-    inline? ? code_r : stream << ';'
+    inline? && !abstract? ? code_r : stream << ';'
   end
 
   private def definition_r
-    if extern?
+    if extern? && !abstract?
       stream << declaration_c
       code_r
     end
