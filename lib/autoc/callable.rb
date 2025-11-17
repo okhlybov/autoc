@@ -98,7 +98,12 @@ class Callable
       @arguments = arguments.map(&:to_value)
     end
 
-    def arguments_c = callable.parameters.values.zip(arguments).map { |p, v| p.bind_c(v) }.join(', ')
+    # Instantiate Call whatever effective class defines
+    # def call(*arguments) = self.class.Call.new(self, arguments)
+
+    def arguments_a = callable.parameters.values.zip(arguments).map { |p, v| p.bind_c(v) }
+
+    def arguments_c = arguments_a.join(', ')
 
     # Represents a value returned by a callable call
     # This is a facade for the callable's return value which

@@ -56,6 +56,38 @@ class Type
 
   def to_s = name_c
 
+  # Test whether the type has a default (parameterless) constructor.
+  # This implementation looks up the {#default_create} method.
+  def default_constructible? = respond_to?(:default_create)
+
+  # Test whether the type has a custom constructor which accepts a number of parameters.
+  # This implementation looks up the {#custom_create} method.
+  def custom_constructible? = respond_to?(:custom_create)
+
+  # Test whether the type can be constructed, with either default or parametrized initialization.
+  # This implementation queries {#custom_constructible?} and {#default_constructible?}.
+  def constructible? = custom_constructible? || default_constructible?
+
+  # Test whether the type has a non-trivial destructor.
+  # This implementation looks up the {#destroy} method.
+  def destructible? = respond_to?(:destroy)
+
+  # Test whether the type can be created from an instance of the same type (cloned).
+  # This implementation looks up the {#copy} method.
+  def copyable? = respond_to?(:copy)
+
+  # Test whether the type has a well-defined test for content equality against another value of the same type.
+  # This implementation looks up the {#equal} method.
+  def comparable? = respond_to?(:equal)
+
+  # Test whether the type can be compared for less-equal-more against another value of the same type.
+  # Orderable type's values can be sorted and put into tree-based containers.
+  # For the type to be comparable this implementation looks up the {#compare} method.
+  def orderable? = respond_to?(:compare)
+
+  # Test whether the type's values which can be the elements of hash-based containers.
+  def hashable? = comparable? && respond_to?(:hash_code)
+
 end
 
 

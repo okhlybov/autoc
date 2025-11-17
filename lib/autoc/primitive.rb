@@ -25,10 +25,74 @@ class Primitive
 
   def initialize(type, matcher: Regexp.new("^#{type}$"), header: nil)
     super(type)
-    @matcher = matcher
     dependencies << header unless header.nil?
+    @matcher = matcher
     @@types << self
   end
+
+  ### Default initializer
+
+  class Create < Callable
+    def initialize(type) = super(nil, { target: type.out })
+    def call(*arguments) = Call.new(self, arguments)
+    class Call < Callable::Call
+      def to_s = "#{arguments_a.first} = 0"
+    end
+  end
+
+  def default_create = @default_create ||= Create.new(self)
+
+  ### Copy constructor (cloner)
+
+  class Copy < Callable
+    def initialize(type) = super(nil, { target: type.out, source: type })
+    def call(*arguments) = Call.new(self, arguments)
+    class Call < Callable::Call
+      def to_s = "#{arguments_a.first} = #{arguments_a.last}"
+    end
+  end
+
+  def copy = @copy ||= Copy.new(self)
+
+  ### Equality tester
+
+  class Equal < Callable
+    def initialize(type) = super(:int, { lt: type, rt: type })
+    def call(*arguments) = Call.new(self, arguments)
+    class Call < Callable::Call
+      def to_s = "#{arguments_a.first} == #{arguments_a.last}"
+    end
+  end
+
+  def equal = @equal ||= Equal.new(self)
+
+  ### Ordering <=> tester
+
+  class Compare < Callable
+    def initialize(type) = super(:int, { lt: type, rt: type })
+    def call(*arguments) = Call.new(self, arguments)
+    class Call < Callable::Call
+      def to_s
+        lt = arguments_a.first
+        rt = arguments_a.last
+        "(#{lt} == #{rt} ? 0 : (#{lt} < #{rt} ? -1 : +1))"
+      end
+    end
+  end
+
+  def compare = @compare ||= Compare.new(self)
+  
+  ### Hash code computer
+
+  class HashCode < Callable
+    def initialize(type) = super(SIZE_T, { source: type })
+    def call(*arguments) = Call.new(self, arguments)
+    class Call < Callable::Call
+      def to_s = "(size_t)(#{arguments_a.first})"
+    end
+  end
+
+  def hash_code = @hash_code ||= HashCode.new(self)
 
 end
 
@@ -45,7 +109,6 @@ COMPLEX_H = SystemHeader.new 'complex.h'
 INTTYPES_H = SystemHeader.new 'inttypes.h'
 
 
-# STDLIB_H = AutoC::SystemHeader.new 'stdlib.h'
 # Required by Visual Studio's rand_s() to work
 STDLIB_H = Code.new interface: %{
   #ifdef _MSC_VER
@@ -95,17 +158,38 @@ FLOAT_T = Primitive.new 'float_t', header: MATH_H
 DOUBLE_T = Primitive.new 'double_t', header: MATH_H
 
 
+TGMATH_H = SystemHeader.new 'tgmath.h'
+
+
+# TODO MSVC workarounds
 class Complex < Primitive
-  # TODO
-  #def orderable? = false
-  #def hash_code = @hash_code ||= -> (target) { "((size_t)(crealf(#{target}))^(size_t)(cimagf(#{target})))" } # TODO use tgmath
+
+  def initialize(*args, **kws)
+    super
+    dependencies << COMPLEX_H << TGMATH_H
+  end
+
+  class HashCode < Primitive::HashCode
+
+    def call(*arguments) = Call.new(self, arguments)
+
+    class Call < Callable::Call
+      def to_s = "(size_t)(creal(#{arguments_a.first})) ^ (size_t)(cimag(#{arguments_a.first}))"
+    end
+
+  end
+
+  undef_method :compare
+
+  def hash_code = @hash_code ||= HashCode.new(self)
+
 end # Complex
 
 
-LONG_DOUBLE_COMPLEX = Complex.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/, header: COMPLEX_H
-DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/, header: COMPLEX_H
-FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/, header: COMPLEX_H
-COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/, header: COMPLEX_H
+LONG_DOUBLE_COMPLEX = Complex.new 'long double _Complex', matcher: /^long\s+double\s+(complex|_Complex)$/
+DOUBLE_COMPLEX = Complex.new 'double _Complex', matcher: /^double\s+(complex|_Complex)$/
+FLOAT_COMPLEX = Complex.new 'float _Complex', matcher: /^float\s+(complex|_Complex)$/
+COMPLEX = Complex.new '_Complex', matcher: /^(complex|_Complex)$/
 
 
 INTPTR_T = Primitive.new 'intptr_t', header: INTTYPES_H
