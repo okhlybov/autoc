@@ -205,10 +205,10 @@ class Complex < Primitive
 end # Complex
 
 
-LONG_DOUBLE_COMPLEX = Complex.new 'autoc_long_complex_t', matcher: /^long\s+double\s+(complex|complex)$/
-DOUBLE_COMPLEX = Complex.new 'autoc_double_complex_t', matcher: /^double\s+(complex|complex)$/
-FLOAT_COMPLEX = Complex.new 'autoc_float_complex_t', matcher: /^float\s+(complex|complex)$/
-COMPLEX = Complex.new 'autoc_complex_t', matcher: /^(complex|complex)$/
+LONG_DOUBLE_COMPLEX = Complex.new 'autoc_long_double_complex_t', matcher: /^long\s+double\s+(complex|_Complex)$/
+DOUBLE_COMPLEX = Complex.new 'autoc_double_complex_t', matcher: /^double\s+(complex|_Complex)$/
+FLOAT_COMPLEX = Complex.new 'autoc_float_complex_t', matcher: /^float\s+(complex|_Complex)$/
+COMPLEX = Complex.new 'autoc_complex_t', matcher: /^(complex|_Complex)$/
 
 
 INTPTR_T = Primitive.new 'intptr_t', dependencies: INTTYPES_H
