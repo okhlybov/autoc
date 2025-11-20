@@ -28,9 +28,11 @@ class Callable
 
   def call(*arguments) = Call.new(self, arguments)
 
-  def signature_c = '%s(%s)' % [return_c, parameters_c]
+  def signature_c = '%s(%s)' % [return_c, parameter_signatures_c]
 
   def parameters_c = parameters.map { |v, p| p.declaration_c(v) }.join(', ')
+
+  private def parameter_signatures_c = parameters.map { |v, p| p.type_c }.join(', ')
 
   private def return_c = self.return.nil? ? :void : self.return.type_c
 
