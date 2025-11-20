@@ -28,9 +28,15 @@ module Coercions
     refine c do
       import_methods Parameters
       def to_type = Primitive.new(self)
-      def to_value = StringLiteral.new(self)
+      def to_value = Literal.new(nil, self) # FIXME support untyped values
+      def ~@ = StringLiteral.new(self) # Construct a string literal, ex. "string", to be used as ~'str' or ~:str
       def to_variable(name) = to_type.to_variable(name)
     end
+  end
+
+  refine Kernel do
+    def str(obj) = StringLiteral.new(obj) # Construct a string literal for obj, ex. "string", same as ~obj, to be used as str(:zzz)
+    def char(obj) = CharLiteral.new(obj) # Construct a char literal for obj, ex. 'c'
   end
 
 end
@@ -103,7 +109,7 @@ module Typed
     @in_i = in_i
     @out_i = out_i
     @inout_i = inout_i
-    @type = type.to_type
+    @type = type&.to_type
   end
 
   def to_value = self
@@ -116,7 +122,7 @@ module Typed
   def out_type_c = type_c(out_i)
   def inout_type_c = type_c(inout_i)
 
-  # Code to render variable's type declaration
+  # Code to render values's type declaration
   private def type_c(level)
     case level
     when  0 then type.name_c
