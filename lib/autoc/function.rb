@@ -29,9 +29,15 @@ class Function < Callable
     configure(&code) if block_given?
   end
 
-  def to_s = '%s(%s)' % [function.name_c, arguments_c]
+  def to_s = '%s(%s)' % [name_c, parameters_c]
 
   def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters_c]
+
+  def call(*arguments) = Call.new(self, arguments)
+
+  class Call < Callable::Call
+    def to_s = '%s(%s)' % [callable.name_c, arguments_c]
+  end
 
   def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
 
