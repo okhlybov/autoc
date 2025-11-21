@@ -28,7 +28,7 @@ module Coercions
     refine c do
       import_methods Parameters
       def to_type = Primitive.new(self)
-      def to_value = Literal.new(nil, self) # FIXME support untyped values
+      def to_value = Verbatim.new(to_s)
       def ~@ = StringLiteral.new(self) # Construct a string literal, ex. "string", to be used as ~'str' or ~:str
       def to_variable(name) = to_type.to_variable(name)
     end
@@ -253,6 +253,18 @@ end
 
 module Coercions
 
+  # A code block passed verbatim
+  class Verbatim < String
+    
+    def to_value = self
+
+    def bind_in_c(parameter) = to_s
+    def bind_out_c(parameter) = to_s
+    def bind_inout_c(parameter) = to_s
+
+  end
+
+  # Literal value (such as numeric)
   class Literal < Primitive::Value
 
     def initialize(type, value)
@@ -270,10 +282,12 @@ module Coercions
 
   end
 
+  # Single character value in single quotes
   class CharLiteral < Literal
     def initialize(value) = super('char', %{'#{value[0]}'})
   end
 
+  # C string literal in double quotes
   class StringLiteral < Literal
     def initialize(value) = super('const char*', %{"#{value}"})
   end
