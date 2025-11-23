@@ -16,12 +16,12 @@ class Function < Callable
   # C side function name
   attr_reader :name_c
 
-  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, interface: :public, constraint: true,&code)
+  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, visibility: :public, constraint: true, &code)
     super(result, parameters)
     @name_c = name.to_s
     @spec = spec
     @abstract = abstract
-    @visibility = interface
+    @visibility = visibility
     @constraint = constraint
     dependencies << DEFINITIONS
     self.parameters.values.each { |x| dependencies << x.type }

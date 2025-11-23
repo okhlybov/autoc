@@ -56,8 +56,11 @@ class Type
   # C side type signature
   attr_reader :name_c
 
-  def initialize(name)
+  #attr_reader :visibility
+
+  def initialize(name, visibility: :public)
     @name_c = name.to_s
+    @visibility = visibility
   end
 
   def to_s = name_c
@@ -93,6 +96,15 @@ class Type
 
   # Test whether the type's values which can be the elements of hash-based containers.
   def hashable? = comparable? && respond_to?(:hash_code)
+
+  # A public type is declared & documented in the interface header
+  def public? = @visibility == :public
+
+  # A private type is declared in the interface header but marked private to hide it from documentation extractors
+  def private? = @visibility == :private
+
+    # An internal type is declared in forward declaration sections of the respective translation units
+  def internal? = @visibility == :internal
 
 end
 
@@ -255,7 +267,7 @@ module Coercions
 
   # A code block passed verbatim
   class Verbatim < String
-    
+
     def to_value = self
 
     def bind_in_c(parameter) = to_s

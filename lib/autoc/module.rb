@@ -400,9 +400,9 @@ class Code
   include Entity
 
   def initialize(interface: nil, implementation: nil, definitions: nil, dependencies: [])
-    @interface_ = interface
-    @definitions_ = definitions
-    @implementation_ = implementation
+    @interface_c = interface
+    @definitions_c = definitions
+    @implementation_c = implementation
     Array(dependencies).each { |x| self.dependencies << x }
   end
 
@@ -411,15 +411,15 @@ class Code
 private
 
   def render_interface(stream)
-    stream << @interface_ unless @interface_.nil?
+    stream << @interface_c unless @interface_c.nil?
   end
 
   def render_implementation(stream)
-    stream << @implementation_ unless @implementation_.nil?
+    stream << @implementation_c unless @implementation_c.nil?
   end
 
   def render_forward_declarations(stream)
-    stream << @definitions_ unless @definitions_.nil?
+    stream << @definitions_c unless @definitions_c.nil?
   end
 
 end # Code
