@@ -25,13 +25,27 @@ class Record < Composite
 
   def destructible? = fields.values.any?(&:destructible?)
 
+  def comparable? = fields.values.all?(&:comparable?)
+
+  def copyable? = fields.values.all?(&:copyable?)
+
+  ENDL = "\n"
+
   private def render_type_declaration(stream)
     comment = @profile == :glassbox && public? ? '/**< @public */' : '/**< @private */'
-    stream << 'typedef struct {'
-      fields.each { |f, t| stream << "#{t} #{f}; #{comment}" }
+    stream << 'typedef struct {' << ENDL
+      fields.each { |f, t| stream << "#{t} #{f}; #{comment}" + ENDL }
     stream << "} #{name_c};"
   end
 
+  private def configure
+    super
+    default_create.code ENDL + fields.collect { |f, t| t.default_create.("target->#{f}").to_s + ';' + ENDL }.join
+    destroy.code ENDL + fields.collect { |f, t| t.destructible? ? t.destroy.("target->#{f}").to_s + ';' + ENDL : nil }.compact.join
+    equal.code ENDL + 'return ' + fields.collect { |f, t| t.equal.("lt->#{f}", "rt->#{f}").to_s }.join(' &&' + ENDL) + ';' + ENDL
+    hash_code.code ENDL + 'return ' + fields.collect { |f, t| t.hash_code.("target->#{f}").to_s }.join(' ^' + ENDL) + ';' + ENDL # TODO employ custom hasher
+    copy.code ENDL + fields.collect { |f, t| t.copy.("target->#{f}", "source->#{f}").to_s + ';' + ENDL }.join
+  end
 end
 
 

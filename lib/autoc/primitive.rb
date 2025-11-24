@@ -161,13 +161,15 @@ DOUBLE_T = Primitive.new 'double_t', dependencies: MATH_H
 TGMATH_H = SystemHeader.new 'tgmath.h'
 
 
-# TODO MSVC workarounds
 class Complex < Primitive
 
   def initialize(*args, **kws)
-    super
-    dependencies << DEFINITIONS
+    super(*args, dependencies: DEFINITIONS, **kws)
   end
+
+  undef_method :compare
+
+  def hash_code = @hash_code ||= HashCode.new(self)
 
   class HashCode < Primitive::HashCode
 
@@ -178,10 +180,6 @@ class Complex < Primitive
     end
 
   end
-
-  undef_method :compare
-
-  def hash_code = @hash_code ||= HashCode.new(self)
 
   DEFINITIONS = Code.new dependencies: [COMPLEX_H, TGMATH_H], interface: %{
     #ifdef __cplusplus

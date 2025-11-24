@@ -93,7 +93,7 @@ class Function < Callable
 
   private attr_reader :stream
 
-  DECLSPECS = {extern: :AUTOC_EXTERN, inline: :AUTOC_STATIC_INLINE}
+  DECLSPECS = { extern: :AUTOC_EXTERN, inline: :AUTOC_STATIC_INLINE }
 
   private def declspec_c = DECLSPECS[@spec]
 
