@@ -16,9 +16,9 @@ class Record < Composite
 
   def initialize(type, fields = {}, profile: :glassbox, **kws)
     super(type, **kws)
-    @fields = fields.map { |n, t| [n.to_s, t.to_type] }.to_h
     @profile = profile
-    self.fields.values.each { |t| dependencies << t }
+    @fields = fields.map { |name, type| [name.to_s, type.to_type] }.to_h
+    self.fields.values.each { |type| self.dependencies << type }
   end
 
   def default_constructible? = fields.values.all?(&:default_constructible?)
@@ -34,17 +34,17 @@ class Record < Composite
   private def render_type_declaration(stream)
     comment = @profile == :glassbox && public? ? '/**< @public */' : '/**< @private */'
     stream << 'typedef struct {' << ENDL
-      fields.each { |f, t| stream << "#{t} #{f}; #{comment}" + ENDL }
+      fields.each { |field, type| stream << "#{type.name_c} #{field}; #{comment}" + ENDL }
     stream << "} #{name_c};"
   end
 
   private def configure
     super
-    default_create.code ENDL + fields.collect { |f, t| t.default_create.("target->#{f}").to_s + ';' + ENDL }.join
-    destroy.code ENDL + fields.collect { |f, t| t.destructible? ? t.destroy.("target->#{f}").to_s + ';' + ENDL : nil }.compact.join
-    equal.code ENDL + 'return ' + fields.collect { |f, t| t.equal.("lt->#{f}", "rt->#{f}").to_s }.join(' &&' + ENDL) + ';' + ENDL
-    hash_code.code ENDL + 'return ' + fields.collect { |f, t| t.hash_code.("target->#{f}").to_s }.join(' ^' + ENDL) + ';' + ENDL # TODO employ custom hasher
-    copy.code ENDL + fields.collect { |f, t| t.copy.("target->#{f}", "source->#{f}").to_s + ';' + ENDL }.join
+    default_create.code ENDL + fields.collect { |field, type| type.default_create.("target->#{field}").to_s + ';' + ENDL }.join
+    destroy.code ENDL + fields.collect { |field, type| type.destructible? ? type.destroy.("target->#{field}").to_s + ';' + ENDL : nil }.compact.join
+    equal.code ENDL + 'return ' + fields.collect { |field, type| type.equal.("lt->#{field}", "rt->#{field}").to_s }.join(' &&' + ENDL) + ';' + ENDL
+    hash_code.code ENDL + 'return ' + fields.collect { |field, type| type.hash_code.("target->#{field}").to_s }.join(' ^' + ENDL) + ';' + ENDL # TODO employ custom hasher
+    copy.code ENDL + fields.collect { |field, type| type.copy.("target->#{field}", "source->#{field}").to_s + ';' + ENDL }.join
   end
 end
 

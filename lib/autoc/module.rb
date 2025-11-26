@@ -375,6 +375,7 @@ private
 end # Entity
 
 
+# @private
 Entity::ReferenceSet = ::Set
 
 

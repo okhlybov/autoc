@@ -56,7 +56,7 @@ class Type
   # C side type signature
   attr_reader :name_c
 
-  #attr_reader :visibility
+  attr_reader :visibility
 
   def initialize(name, visibility: :public)
     @name_c = name.to_s

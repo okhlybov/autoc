@@ -30,7 +30,7 @@ class Composite
 
   def references = super + @methods.values # Methods most likely introduce strong dependency on it of their own and hence can not be listed in type's dependencies
 
-  def method(result, name, parameters = {}, respond_to: nil, abstract: false, constraint: true)
+  def method(result, name, parameters = {}, respond_to: nil, abstract: false, visibility: self.visibility, constraint: true)
     method = (respond_to.nil? ? name : respond_to).to_sym
     m = @methods[method] = Function.new(result, decorate(name), parameters, visibility:, abstract:, constraint:)
     self.class.define_method(method) { |*args, **kws| m }
@@ -38,12 +38,7 @@ class Composite
 
   private def render_interface(stream)
     super
-    render_type_declaration(stream) unless internal?
-  end
-
-  private def render_forward_declarations(stream)
-    super
-    render_type_declaration(stream) if internal?
+    render_type_declaration(stream)
   end
 
   # def render_type_declaration(stream)
