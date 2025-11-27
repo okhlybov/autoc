@@ -14,11 +14,11 @@ class Record < Composite
 
   attr_reader :fields
 
-  def initialize(type, fields = {}, profile: :glassbox, **kws)
-    super(type, **kws)
+  def initialize(type, fields = {}, profile: :glassbox, **kws, &code)
+    super(type, **kws, &code)
     @profile = profile
     @fields = fields.map { |name, type| [name.to_s, type.to_type] }.to_h
-    self.fields.values.each { |type| self.dependencies << type }
+    self.dependencies.merge(self.fields.values)
   end
 
   def default_constructible? = fields.values.all?(&:default_constructible?)

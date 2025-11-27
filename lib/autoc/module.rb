@@ -404,7 +404,7 @@ class Code
     @interface_c = interface
     @definitions_c = definitions
     @implementation_c = implementation
-    Array(dependencies).each { |x| self.dependencies << x }
+    self.dependencies.merge(Array(dependencies))
   end
 
   def inspect = "... <#{self.class}>"
@@ -428,11 +428,16 @@ end # Code
 
 # Helper class to inject a system-wide header into the C side interface part of the module
 class SystemHeader < Code
+
   def initialize(header)
+    @header = header
     super interface: %{
       #include <#{header}>
     }
   end
+
+  def inspect = "#{@header} <#{self.class}>"
+
 end # SystemHeader
 
 

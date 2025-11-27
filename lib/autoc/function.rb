@@ -33,6 +33,8 @@ class Function < Callable
 
   def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters_c]
 
+  def inspect = "#{declaration_c} <#{self.class}>"
+
   def call(*arguments) = Call.new(self, arguments)
 
   class Call < Callable::Call

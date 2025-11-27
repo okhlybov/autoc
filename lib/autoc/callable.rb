@@ -32,6 +32,8 @@ class Callable
 
   def parameters_c = parameters.map { |v, p| p.declaration_c(v) }.join(', ')
 
+  def inspect = "#{signature_c} <#{self.class}>"
+  
   private def parameter_signatures_c = parameters.map { |v, p| p.type_c }.join(', ')
 
   private def return_c = self.return.nil? ? :void : self.return.type_c

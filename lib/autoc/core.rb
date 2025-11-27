@@ -63,6 +63,8 @@ class Type
     @visibility = visibility
   end
 
+  def inspect = "#{name_c} <#{self.class}>"
+
   def to_s = name_c
 
   # Test whether the type has a default (parameterless) constructor.

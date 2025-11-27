@@ -25,7 +25,7 @@ class Primitive
 
   def initialize(type, matcher: Regexp.new("^#{type}$"), dependencies: [])
     super(type)
-    Array(dependencies).each { |x| self.dependencies << x }
+    self.dependencies.merge(Array(dependencies))
     @matcher = matcher
     @@types << self
   end

@@ -17,7 +17,7 @@ class Composite
 
   alias prefix_c name_c
 
-  def self.new(*args, **kws, &block)
+  def self.new(*args, **kws)
     obj = super # Implicitly calls #initialize
     obj.send(:configure)
     obj
