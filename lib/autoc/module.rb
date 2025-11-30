@@ -392,6 +392,11 @@ class Entity::DependencySet < ::Set
     super
   end
 
+  def merge(xs)
+    @entity.references.merge(xs)
+    super
+  end
+
 end # DependencySet
 
 
