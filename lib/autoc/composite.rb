@@ -38,9 +38,11 @@ class Composite
   # def render_type_declaration(stream)
 
   private def configure
+    # TODO docs
     method(:void, :create, { target: self.out }, respond_to: :default_create, constraint: -> { default_constructible? })
     method(:void, :destroy, { target: self.inout }, constraint: -> { destructible? })
     method(:int, :equal, { lt: self, rt: self }, constraint: -> { comparable? })
+    method(:int, :compare, { lt: self, rt: self }, constraint: -> { orderable? })
     method(:size_t, :hash, { target: self }, respond_to: :hash_code, constraint: -> { hashable? })
     method(:void, :copy, { target: self.out, source: self }, constraint: -> { copyable? })
   end

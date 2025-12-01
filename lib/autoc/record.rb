@@ -29,6 +29,8 @@ class Record < Composite
 
   def copyable? = fields.values.all?(&:copyable?)
 
+  def orderable? = false
+
   ENDL = "\n"
 
   private def render_type_declaration(stream)

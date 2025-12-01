@@ -35,8 +35,8 @@ module Coercions
   end
 
   refine Kernel do
-    def str(obj) = StringLiteral.new(obj) # Construct a string literal for obj, ex. "string", same as ~obj, to be used as str(:zzz)
-    def char(obj) = CharLiteral.new(obj) # Construct a char literal for obj, ex. 'c'
+    def str(value) = StringLiteral.new(value) # Construct a string literal for obj, ex. "string", same as ~obj, to be used as str(:zzz)
+    def char(value) = CharLiteral.new(value) # Construct a char literal for obj, ex. 'c'
   end
 
 end
