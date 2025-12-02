@@ -23,7 +23,7 @@ class Composite
     obj
   end
 
-  def method(result, name, parameters = {}, respond_to: nil, abstract: false, visibility: self.visibility, constraint: true)
+  private def method(result, name, parameters = {}, respond_to: nil, abstract: false, visibility: self.visibility, constraint: true)
     method = Function.new(result, decorate(name), parameters, visibility:, abstract:, constraint:)
     self.class.define_method((respond_to.nil? ? name : respond_to).to_sym) { |*args, **kws| method }
     references << method

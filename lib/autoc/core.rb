@@ -145,9 +145,9 @@ module Typed
     end
   end
 
-  # Code to render the value passed to parameter
+  # Code to render the value passed to the formal parameter
   private def pass_value_c(parameter, value, value_i)
-    case (parameter.i - value_i)
+    case (level = parameter.i - value_i)
     when  0 then value.to_s
     when -1 then "&#{value}"
     when +1 then "*#{value}"
