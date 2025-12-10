@@ -1,7 +1,8 @@
 # frozen_string_literal: true
- 
+
 
 require 'autoc/core'
+require 'autoc/primitive'
 
 
 module AutoC
@@ -21,10 +22,10 @@ class Callable
     @parameters = parameters.map { |name, type| [name.to_sym, type.to_parameter.to_variable(name)] }.to_h
   end
 
-  def signature_c = '%s(%s)' % [result.name_c, parameters.values.map { |v| v.type.name_c }.join(', ')]
+  def signature_c = '%s(%s)' % [result.nil? ? :void : result.name_c, parameters.values.map { |v| v.type.name_c }.join(', ')]
 
   def inspect = "#{signature_c} <#{self.class}>"
-      
+
   class Parameter
 
     attr_reader :type

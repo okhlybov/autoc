@@ -38,7 +38,7 @@ class Function < Callable
 
   end
 
-  def declaration_c = '%s %s(%s)' % [result.name_c, name_c, parameters.values.map { |v| v.declaration_c }.join(', ')]
+  def declaration_c = '%s %s(%s)' % [result.nil? ? :void : result.name_c, name_c, parameters.values.map { |v| v.declaration_c }.join(', ')]
 
   def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
 
