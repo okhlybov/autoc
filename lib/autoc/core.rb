@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-
+ 
 
 module AutoC
 
@@ -7,53 +7,40 @@ module AutoC
 VERSION = '3.0.0'
 
 
-module Coercions
+refine Integer do
+  def to_type = Type::Primitive[:int]
+  def to_value = Value::Literal.new(to_type, self)
+end
 
-  module Parameters
-    def to_parameter = self.in
-    def in = Function::Parameter::In.new(self)
-    def out = Function::Parameter::Out.new(self)
-    def inout = Function::Parameter::InOut.new(self)
-  end
+refine Float do
+  def to_type = Type::Primitive[:double]
+  def to_value = Value::Literal.new(to_type, self)
+end
 
-  refine Integer do
-    def to_value = Literal.new('int', self)
+[String, Symbol].each do |c|
+  refine c do
+    def to_type = Type::Primitive[self]
+    def to_parameter = to_type.to_parameter
   end
+end
 
-  refine Float do
-    def to_value = Literal.new('double', self)
-  end
 
-  [String, Symbol].each do |c|
-    refine c do
-      import_methods Parameters
-      def to_type = Primitive.new(self)
-      def to_value = Verbatim.new(to_s)
-      def ~@ = StringLiteral.new(self) # Construct a string literal, ex. "string", to be used as ~'str' or ~:str
-      def to_variable(name) = to_type.to_variable(name)
-    end
-  end
+refine Kernel do
 
-  refine Kernel do
-    def str(value) = StringLiteral.new(value) # Construct a string literal for obj, ex. "string", same as ~obj, to be used as str(:zzz)
-    def char(value) = CharLiteral.new(value) # Construct a char literal for obj, ex. 'c'
-  end
+  def out(x) = Callable::Parameter::Out.new(x)
+  def inout(x) = Callable::Parameter::InOut.new(x)
+
+  def chr(x) = Value::Literal::Char.new(x)
+  def str(x) = Value::Literal::String.new(x)
 
 end
 
 
-using Coercions
+using self
 
 
-# @abstract
-# C side type descriptor
 class Type
 
-  include Coercions::Parameters
-
-  def to_type = self
-
-  # C side type signature
   attr_reader :name_c
 
   attr_reader :visibility
@@ -63,9 +50,21 @@ class Type
     @visibility = visibility
   end
 
+  def i = 0
+
+  def to_type = self
+
+  def to_parameter = Callable::Parameter::In.new(self)
+
   def inspect = "#{name_c} <#{self.class}>"
 
   def to_s = name_c
+
+  def to_i(i = 1) = Indirection.new(self, i).to_type
+
+  def to_value = Value.new(self)
+
+  def to_variable(name) = Variable.new(self, name)
 
   # Test whether the type has a default (parameterless) constructor.
   # This implementation looks up the {#default_create} method.
@@ -100,210 +99,99 @@ class Type
   def hashable? = comparable? && respond_to?(:hash_code)
 
   # A public type is declared & documented in the interface header
-  def public? = @visibility == :public
+  def public? = visibility == :public
 
   # A private type is declared in the interface header but marked private to hide it from documentation extractors
-  def private? = @visibility == :private
+  def private? = visibility == :private
 
     # An internal type is declared in forward declaration sections of the respective translation units
-  def internal? = @visibility == :internal
+  def internal? = visibility == :internal
 
 end
 
 
+class Value
 
-# @private
-# A mixin for typed values
-module Typed
-
-  # Value type
   attr_reader :type
 
-  private def typed_initialize(type, in_i, out_i, inout_i)
-    @in_i = in_i
-    @out_i = out_i
-    @inout_i = inout_i
-    @type = type&.to_type
+  def initialize(type)
+    @type = type.to_type
   end
 
   def to_value = self
 
-  # Per parameter's kind indirection levels for the value
-  attr_reader :in_i, :out_i, :inout_i
-
-  # Parameter type declarations
-  def in_type_c = type_c(in_i)
-  def out_type_c = type_c(out_i)
-  def inout_type_c = type_c(inout_i)
-
-  # Code to render values's type declaration
-  private def type_c(level)
-    case level
-    when  0 then type.name_c
-    when -1 then "#{type.name_c}*"
-    else raise "bad indirection level #{level}"
+  def bind_c(target)
+    xi = type.i - target.type.i
+    if xi >= 0
+      '*'*xi + to_s
+    else
+      raise("can not obtain address of the value #{self} with &")
     end
   end
 
-  # Code to render the value passed to the formal parameter
-  private def pass_value_c(parameter, value, value_i)
-    case (level = parameter.i - value_i)
-    when  0 then value.to_s
-    when -1 then "&#{value}"
-    when +1 then "*#{value}"
-    else raise "bad indirection level #{level}"
+  class Literal < Value
+
+    def initialize(type, value)
+      super(type)
+      @value = value.to_s
     end
+
+    def to_s = @value
+
+    def inspect = "#{self} :: #{type} <#{self.class}>"
+
+    def bind_c(target)
+      xi = type.i - target.type.i
+      xi == 0 ? to_s : raise("can not obtain address of the literal value #{self} with &")
+    end
+
+    class Char < Literal
+
+      def initialize(value)
+        super('char', value)
+      end
+
+      def to_s = %{'#{@value[0]}'}
+
+    end
+
+    class String < Literal
+
+      def initialize(value)
+        super('const char*', value)
+      end
+
+      def to_s = %{"#{@value}"}
+
+    end
+
   end
 
 end
 
 
-# @private
-# A mixin for types which represent entities bindable to paramaters
-# Implies Typed mixin in effect
-module Bindable
+class Variable < Value
 
-  # def bind_value_c
-
-  def bind_in_c(parameter) = pass_value_c(parameter, bind_value_c, in_i)
-  def bind_out_c(parameter) = pass_value_c(parameter, bind_value_c, out_i)
-  def bind_inout_c(parameter) = pass_value_c(parameter, bind_value_c, inout_i)
-
-end
-
-
-# @private
-# A mixin for named variables
-# C side variable representing a value of the specified type
-# A variable is a lvalue in the C/C++ terms
-# Implies Typed mixin in effect
-module Named
-
-  # C side variable name
   attr_reader :name_c
 
-  private def named_initialize(name)
+  def initialize(type, name)
+    super(type)
     @name_c = name.to_s
   end
 
   def to_s = name_c
 
-  include Bindable
-
-  def bind_value_c = name_c
-
   def declaration_c = "#{type.name_c} #{name_c}"
 
-end
-
-
-# Type descriptor for primitive C side types, such as int, char
-# The type's values are normally passed by value
-class Primitive < Type
-
-  def to_value = Value.new(self)
-
-  def to_variable(name) = Variable.new(self, name)
-
-  class Value
-
-    include Typed
-
-    def initialize(type)
-      typed_initialize(type, 0, -1, -1)
+  def bind_c(target)
+    xi = type.i - target.type.i
+    if xi >= 0
+      '*'*xi + name_c
+    elsif xi == -1
+      "&#{name_c}"
+    else
+      raise
     end
-
-  end
-
-  class Variable < Value
-
-    include Named
-
-    def initialize(type, name)
-      super(type)
-      named_initialize(name)
-    end
-
-  end
-
-end
-
-
-# Type descriptor for C side types which have a definite internal structure
-# (usually aggregates) such as struct, union etc.
-# The type's values are normally passed by a reference to const object
-# even though the type bears the value semantics
-class Composite < Type
-
-  def to_value = Value.new(self)
-
-  def to_variable(name) = Variable.new(self, name)
-
-  class Value
-
-    include Typed
-
-    def initialize(type)
-      typed_initialize(type, -1, -1, -1)
-    end
-
-    def in_type_c = "const #{super}"
-
-  end
-
-  class Variable < Value
-
-    include Named
-
-    def initialize(type, name)
-      super(type)
-      named_initialize(name)
-    end
-
-  end
-
-end
-
-
-module Coercions
-
-  # A code block passed verbatim
-  class Verbatim < String
-
-    def to_value = self
-
-    def bind_in_c(parameter) = to_s
-    def bind_out_c(parameter) = to_s
-    def bind_inout_c(parameter) = to_s
-
-  end
-
-  # Literal value (such as numeric)
-  class Literal < Primitive::Value
-
-    def initialize(type, value)
-      super(type)
-      @value_c = value.to_s
-    end
-
-    def to_s = @value_c
-
-    # A literal value can only be bound to the in parameter
-    def bind_in_c(parameter)
-      raise "literal value #{to_s} is not addressable" unless parameter.i == 0
-      to_s
-    end
-
-  end
-
-  # Single character value in single quotes
-  class CharLiteral < Literal
-    def initialize(value) = super('char', %{'#{value[0]}'})
-  end
-
-  # C string literal in double quotes
-  class StringLiteral < Literal
-    def initialize(value) = super('const char*', %{"#{value}"})
   end
 
 end

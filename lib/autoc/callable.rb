@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-
+ 
 
 require 'autoc/core'
 
@@ -7,126 +7,75 @@ require 'autoc/core'
 module AutoC
 
 
-using Coercions
+using self
 
 
-# C side generic callable code representation
-# Think of this as an unnamed function
 class Callable
 
-  # Function return parameter
-  # nil is returned for the void C side functions
-  attr_reader :return
+  attr_reader :result
 
-  # A hash of named formal parameters
   attr_reader :parameters
 
   def initialize(result, parameters = {})
-    @return = (result.nil? || result.to_s == 'void') ? nil : result.to_parameter
-    @parameters = parameters.map { |v, t| [v.to_s, t.to_parameter] }.to_h
+    @result = (result.nil? || result.to_s == 'void') ? nil : result.to_type
+    @parameters = parameters.map { |name, type| [name.to_sym, type.to_parameter.to_variable(name)] }.to_h
   end
 
-  def call(*arguments) = Call.new(self, arguments)
-
-  def signature_c = '%s(%s)' % [return_c, parameter_signatures_c]
-
-  def parameters_c = parameters.map { |v, p| p.declaration_c(v) }.join(', ')
+  def signature_c = '%s(%s)' % [result.name_c, parameters.values.map { |v| v.type.name_c }.join(', ')]
 
   def inspect = "#{signature_c} <#{self.class}>"
-  
-  private def parameter_signatures_c = parameters.map { |v, p| p.type_c }.join(', ')
-
-  private def return_c = self.return.nil? ? :void : self.return.type_c
-
-  # @private
-  # Function formal parameter
-  # The parameter is used for both function inputs and function return
-  # allowing the function calls to be chained
+      
   class Parameter
 
-    # Base type for the parameter with the value semantics
     attr_reader :type
+
+    def to_parameter = self
+
+    def to_type = type
 
     def initialize(type)
       @type = type.to_type
     end
 
-    def to_parameter = self
+    def call(*arguments) = Call.new(self, *arguments)
 
-    def to_value = type.to_value
-
-    def to_variable(name) = type.to_variable(name)
-
-    def declaration_c(variable) = "#{type_c} #{variable}"
-
-    # Input parameter treated as constant object
     class In < Parameter
-      def i = to_value.in_i
-      def type_c = to_value.in_type_c
-      def bind_c(value) = value.to_value.bind_in_c(self)
+      def to_variable(name) = type.to_in(name)
     end
 
-    # Output parameter which represents an uninitialized storage which is expected to be set
     class Out < Parameter
-      def i = to_value.out_i
-      def type_c = to_value.out_type_c
-      def bind_c(value) = value.to_value.bind_out_c(self)
+      def to_variable(name) = type.to_out(name)
     end
 
-    # Modifiable input parameter
     class InOut < Parameter
-      def i = to_value.inout_i
-      def type_c = to_value.inout_type_c
-      def bind_c(value) = value.to_value.bind_inout_c(self)
+      def to_variable(name) = type.to_inout(name)
     end
 
   end
 
-  # Result of a callable call
-  # This is itself a value of the callable's return type
   class Call
 
-    # callable being called
-    attr_reader :callable
-
-    # List of values passed to the callable
     attr_reader :arguments
 
-    # Value representing the result of the callable call
-    # nil is returned for the void callable
-    attr_reader :to_value
+    attr_reader :callable
 
-    def initialize(callable, arguments = [])
+    def to_value = @result
+
+    def initialize(callable, arguments)
       @callable = callable
-      @to_value = Result.new(self) unless callable.return.nil?
-      @arguments = arguments.map(&:to_value)
+      @arguments = arguments.map { |x| x.to_value }
+      @result = self.callable.result.nil? ? nil : Result.new(self)
     end
 
-    # Instantiate Call whatever effective class defines
-    # def call(*arguments) = self.class.Call.new(self, arguments)
+    class Result < Value
 
-    def arguments_a = callable.parameters.values.zip(arguments).map { |p, v| p.bind_c(v) }
-
-    def arguments_c = arguments_a.join(', ')
-
-    # Represents a value returned by a callable call
-    # This is a facade for the callable's return value which
-    # renders the callable call code in place of the value
-    class Result
-
-      include Bindable
-
-      def bind_value_c = @call.to_s
-
-      def to_value = self
+      attr_reader :call
 
       def initialize(call)
-        @value = (@call = call).callable.return.to_value
+        super((@call = call).callable.result)
       end
 
-      def method_missing(method, *args)
-        @value.send(method, *args)
-      end
+      def to_s = call.to_s
 
     end
 

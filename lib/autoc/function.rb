@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 
-require 'autoc/core'
 require 'autoc/module'
 require 'autoc/callable'
 
@@ -9,37 +8,37 @@ require 'autoc/callable'
 module AutoC
 
 
+using self
+
+
 class Function < Callable
 
   include Entity
 
-  # C side function name
   attr_reader :name_c
 
-  def initialize(result, name, parameters = {}, spec: :extern, abstract: false, visibility: :public, constraint: true, &code)
+  def initialize(result, name, parameters = {}, type: :external, visibility: :public, abstract: false, constraint: true, dependencies: [], &code)
     super(result, parameters)
     @name_c = name.to_s
-    @spec = spec
-    @abstract = abstract
+    @type = type
     @visibility = visibility
+    @abstract = abstract
     @constraint = constraint
-    dependencies << DEFINITIONS
-    self.parameters.values.each { |x| dependencies << x.type }
-    dependencies << self.return.type unless self.return.nil?
+    self.dependencies.merge([@@definitions, self.result].compact + self.parameters.values.collect(&:type) + Array(dependencies))
     configure(&code) if block_given?
   end
 
-  def to_s = '%s(%s)' % [name_c, parameters_c]
-
-  def declaration_c = '%s %s(%s)' % [return_c, name_c, parameters_c]
-
-  def inspect = "#{declaration_c} <#{self.class}>"
+  def arguments = parameters.values # Used to pass the function's local parameters to another function (possibly itself) as arguments
 
   def call(*arguments) = Call.new(self, arguments)
 
   class Call < Callable::Call
-    def to_s = '%s(%s)' % [callable.name_c, arguments_c]
+
+    def to_s = '%s(%s)' % [callable.name_c, callable.parameters.values.zip(arguments).map { |p, v| v.bind_c(p) }.join(', ')]
+
   end
+
+  def declaration_c = '%s %s(%s)' % [result.name_c, name_c, parameters.values.map { |v| v.declaration_c }.join(', ')]
 
   def live? = (@constraint.is_a?(Proc) ? @constraint.() : @constraint) == true
 
@@ -51,12 +50,9 @@ class Function < Callable
 
   def abstract? = @abstract == true
 
-  def extern? = @spec == :extern
+  def external? = @type == :external
 
-  def inline? = @spec == :inline
-
-  # C(++) inline notes:
-  # https://stackoverflow.com/questions/216510/what-does-extern-inline-do/216546#216546
+  def inline? = @type == :inline
 
   def render_interface(stream)
     if live?
@@ -84,7 +80,7 @@ class Function < Callable
   def code(x) = @code = x
 
   def inline_code(x)
-    @spec = :inline
+    @type = :inline
     code(x)
   end
 
@@ -93,20 +89,18 @@ class Function < Callable
     self
   end
 
+  @@types = { external: :AUTOC_EXTERN, inline: :AUTOC_STATIC_INLINE }
+
   private attr_reader :stream
-
-  DECLSPECS = { extern: :AUTOC_EXTERN, inline: :AUTOC_STATIC_INLINE }
-
-  private def declspec_c = DECLSPECS[@spec]
 
   private def declaration_r
     header_r
-    stream << "#{declspec_c}\n#{declaration_c}"
+    stream << "#{@@types[@type]}\n#{declaration_c}"
     inline? && !abstract? ? code_r : stream << ';'
   end
 
   private def definition_r
-    if extern? && !abstract?
+    if external? && !abstract?
       stream << declaration_c
       code_r
     end
@@ -114,7 +108,9 @@ class Function < Callable
 
   private def header_r
     if public?
-      unless @header.nil?
+      if @header.nil?
+        stream << '/** @public */'
+      else
         stream << %{
           /**
             #{@header}
@@ -130,7 +126,7 @@ class Function < Callable
     @code.nil? ? raise("missing implementation code for function #{name_c}") : stream << '{' << @code << '}'
   end
 
-  DEFINITIONS = Code.new interface: %{
+  @@definitions = Code.new interface: %{
     #ifndef AUTOC_EXTERN
       #ifdef __cplusplus
         #define AUTOC_EXTERN extern "C"
