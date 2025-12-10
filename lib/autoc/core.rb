@@ -1,5 +1,5 @@
 # frozen_string_literal: true
- 
+
 
 module AutoC
 
@@ -21,6 +21,7 @@ end
   refine c do
     def to_type = Type::Primitive[self]
     def to_parameter = to_type.to_parameter
+    def to_value = Verbatim.new(self)
   end
 end
 
@@ -193,6 +194,19 @@ class Variable < Value
       raise
     end
   end
+
+end
+
+
+class Verbatim < String
+
+  def to_value = self
+
+  def inspect = "#{self} <#{self.class}>"
+
+  #def bind_in_c(parameter) = to_s
+  #def bind_out_c(parameter) = to_s
+  #def bind_inout_c(parameter) = to_s
 
 end
 

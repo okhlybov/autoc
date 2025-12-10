@@ -30,6 +30,8 @@ class Function < Callable
 
   def arguments = parameters.values # Used to pass the function's local parameters to another function (possibly itself) as arguments
 
+  def inspect = '%s %s(%s) <%s>' % [result.nil? ? :void : result.name_c, name_c, parameters.values.map { |v| v.type.name_c }.join(', '), self.class]
+
   def call(*arguments) = Call.new(self, arguments)
 
   class Call < Callable::Call

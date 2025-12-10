@@ -205,7 +205,7 @@ class Type::Complex < Type::Primitive
     def call(*arguments) = Call.new(self, arguments)
 
     class Call < Callable::Call
-      def to_s = "(size_t)(creal(#{arguments_a.first})) ^ (size_t)(cimag(#{arguments_a.first}))"
+      def to_s = "(size_t)(creal(#{arguments.first})) ^ (size_t)(cimag(#{arguments.first}))"
     end
 
   end
@@ -218,7 +218,7 @@ class Type::Complex < Type::Primitive
       using autoc_long_double_complex_t = std::complex<long double>;
       using autoc_long_complex_t = autoc_long_double_complex_t;
     #else
-      #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER))
+      #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
         #error Visual Studio requires C++ compilation mode for complex numeric types
       #endif
       typedef float complex autoc_float_complex_t;
