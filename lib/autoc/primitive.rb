@@ -9,6 +9,9 @@ require 'autoc/callable'
 module AutoC
 
 
+using self
+
+
 # Primitive C side type augmented with stdc library support
 # This code performs type coercion for known standard C types
 class Type::Primitive < Type
@@ -45,7 +48,7 @@ class Type::Primitive < Type
     def initialize(type) = super(nil, { target: (type) })
     def call(*arguments) = Call.new(self, arguments)
     class Call < Callable::Call
-      def to_s = "#{arguments.first} = 0"
+      def to_s = "#{arguments.first.lvalue_c} = 0"
     end
   end
 
@@ -57,7 +60,7 @@ class Type::Primitive < Type
     def initialize(type) = super(nil, { target: (type), source: type })
     def call(*arguments) = Call.new(self, arguments)
     class Call < Callable::Call
-      def to_s = "#{arguments.first} = #{arguments.last}"
+      def to_s = "#{arguments.first.lvalue_c} = #{arguments.last.rvalue_c}"
     end
   end
 
@@ -69,7 +72,7 @@ class Type::Primitive < Type
     def initialize(type) = super(:int, { lt: type, rt: type })
     def call(*arguments) = Call.new(self, arguments)
     class Call < Callable::Call
-      def to_s = "#{arguments.first} == #{arguments.last}"
+      def to_s = "#{arguments.first.rvalue_c} == #{arguments.last.rvalue_c}"
     end
   end
 
@@ -82,8 +85,8 @@ class Type::Primitive < Type
     def call(*arguments) = Call.new(self, arguments)
     class Call < Callable::Call
       def to_s
-        lt = arguments.first
-        rt = arguments.last
+        lt = arguments.first.rvalue_c
+        rt = arguments.last.rvalue_c
         "(#{lt} == #{rt} ? 0 : (#{lt} < #{rt} ? -1 : +1))"
       end
     end
@@ -97,7 +100,7 @@ class Type::Primitive < Type
     def initialize(type) = super(SIZE_T, { source: type })
     def call(*arguments) = Call.new(self, arguments)
     class Call < Callable::Call
-      def to_s = "(size_t)(#{arguments.first})"
+      def to_s = "(size_t)(#{arguments.first.rvalue_c})"
     end
   end
 
@@ -106,7 +109,9 @@ class Type::Primitive < Type
 end
 
 
-class Type::Indirection < Type::Primitive
+class Type::Indirection < Type
+
+  include Entity
 
   attr_reader :type
 

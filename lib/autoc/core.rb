@@ -121,6 +121,8 @@ class Value
 
   def to_value = self
 
+  def rvalue_c = to_s
+
   def bind_c(target)
     xi = type.i - target.type.i
     if xi >= 0
@@ -184,6 +186,8 @@ class Variable < Value
 
   def declaration_c = "#{type.name_c} #{name_c}"
 
+  def lvalue_c = to_s
+
   def bind_c(target)
     xi = type.i - target.type.i
     if xi >= 0
@@ -204,9 +208,9 @@ class Verbatim < String
 
   def inspect = "#{self} <#{self.class}>"
 
-  #def bind_in_c(parameter) = to_s
-  #def bind_out_c(parameter) = to_s
-  #def bind_inout_c(parameter) = to_s
+  def rvalue_c = to_s
+
+  def lvalue_c = to_s
 
 end
 

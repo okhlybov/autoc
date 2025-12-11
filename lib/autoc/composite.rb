@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 
-require 'autoc/core'
 require 'autoc/module'
 require 'autoc/function'
 require 'autoc/decorator'
+require 'autoc/composable'
 
 
 module AutoC
@@ -15,33 +15,9 @@ using self
 
 class Composite < Type
 
-  include Entity
+  include Composable
 
-  include Decorator
-
-  alias prefix_c name_c
-
-  def self.new(*args, **kws)
-    obj = super # Implicitly calls #initialize
-    obj.send(:configure)
-    obj
-  end
-
-  class Constant < Variable
-    def declaration_c = "const #{super}"
-  end
-
-  def to_in(name) = Constant.new(to_i, name)
-  def to_out(name) = Variable.new(to_i, name)
-  def to_inout(name) = Variable.new(to_i, name)
-
-  private def method(result, name, parameters = {}, respond_to: nil, abstract: false, visibility: self.visibility, constraint: true)
-    method = Function.new(result, decorate(name), parameters, visibility:, abstract:, constraint:)
-    self.class.define_method((respond_to.nil? ? name : respond_to).to_s) { |*args, **kws| method }
-    method.dependencies << self
-    references << method
-    method
-  end
+  def prefix_c = name_c
 
   private def render_interface(stream)
     super
