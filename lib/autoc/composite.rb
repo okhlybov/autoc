@@ -27,11 +27,11 @@ class Composite < Type
     obj
   end
 
-  class CVariable < Variable
+  class Constant < Variable
     def declaration_c = "const #{super}"
   end
 
-  def to_in(name) = CVariable.new(to_i, name) # TODO make const
+  def to_in(name) = Constant.new(to_i, name)
   def to_out(name) = Variable.new(to_i, name)
   def to_inout(name) = Variable.new(to_i, name)
 

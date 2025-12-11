@@ -112,7 +112,7 @@ class Type::Indirection < Type::Primitive
 
   attr_reader :i
 
-  def initialize(type, i)
+  def initialize(type, i = 1)
     super((@type = type.to_type).name_c + '*'*i)
     @i = i
   end
@@ -139,9 +139,7 @@ INTTYPES_H = SystemHeader.new 'inttypes.h'
 
 # Required by Visual Studio's rand_s() to work
 STDLIB_H = Code.new interface: %{
-  #ifdef _MSC_VER
-    #define _CRT_RAND_S
-  #endif
+  #define _CRT_RAND_S
   #include <stdlib.h>
 }
 
