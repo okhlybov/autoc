@@ -12,6 +12,9 @@ module AutoC
 using self
 
 
+def self.primitive(cls, **kws) = Type::Primitive.register(cls, **kws)
+
+
 # Primitive C side type augmented with stdc library support
 # This code performs type coercion for known standard C types
 class Type::Primitive < Type
@@ -25,10 +28,10 @@ class Type::Primitive < Type
     Type::Primitive.new(type)
   end
 
-  def self.register(type, cls: Type::Primitive, matcher: Regexp.new("^#{type}$"), dependencies: [], **kws)
-    t = cls.new(type, **kws)
+  def self.register(cls, matcher: nil, dependencies: [], **kws)
+    t = cls.is_a?(Type::Primitive) ? cls : Type::Primitive.new(cls, **kws)
     t.dependencies.merge(Array(dependencies))
-    @@cache << [matcher, t]
+    @@cache << [matcher.nil? ? Regexp.new("^#{cls}$") : matcher, t]
     t
   end
 
@@ -147,46 +150,44 @@ STDLIB_H = Code.new interface: %{
   #define _CRT_RAND_S
   #include <stdlib.h>
 }
+BOOL = primitive '_Bool', matcher: /^(bool|_Bool)$/, dependencies: STDBOOL_H
 
-BOOL = Type::Primitive.register '_Bool', matcher: /^(bool|_Bool)$/, dependencies: STDBOOL_H
-
-
-CHAR = Type::Primitive.register 'char'
-SIGNED_CHAR = Type::Primitive.register 'signed char', matcher: /^signed\s+char$/
-UNSIGNED_CHAR = Type::Primitive.register 'unsigned char', matcher: /^unsigned\s+char$/
+CHAR = primitive 'char'
+SIGNED_CHAR = primitive 'signed char', matcher: /^signed\s+char$/
+UNSIGNED_CHAR = primitive 'unsigned char', matcher: /^unsigned\s+char$/
 
 
-WCHAR_T = Type::Primitive.register 'wchar_t', dependencies: STDDEF_H
+WCHAR_T = primitive 'wchar_t', dependencies: STDDEF_H
 
 
-SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = Type::Primitive.register 'short', matcher: /^(signed\s+)?short(\s+int)?$/
-UNSIGNED_SHORT = UNSIGNED_SHORT_INT = Type::Primitive.register 'unsigned short', matcher: /^unsigned\s+short(\s+int)?$/
+SHORT = SIGNED_SHORT = SHORT_INT = SIGNED_SHORT_INT = primitive 'short', matcher: /^(signed\s+)?short(\s+int)?$/
+UNSIGNED_SHORT = UNSIGNED_SHORT_INT = primitive 'unsigned short', matcher: /^unsigned\s+short(\s+int)?$/
 
 
-INT = SIGNED = SIGNED_INT = Type::Primitive.register 'int', matcher: /^(int|signed|signed\s+int)$/
-UNSIGNED = UNSIGNED_INT = Type::Primitive.register 'unsigned', matcher: /^(unsigned|unsigned\s+int)$/
+INT = SIGNED = SIGNED_INT = primitive 'int', matcher: /^(int|signed|signed\s+int)$/
+UNSIGNED = UNSIGNED_INT = primitive 'unsigned', matcher: /^(unsigned|unsigned\s+int)$/
 
 
-LONG = SIGNED_LONG = LONG_INT = SIGNED_LONG_INT = Type::Primitive.register 'long', matcher: /^(signed\s+)?long(\s+int)?$/
-UNSIGNED_LONG = UNSIGNED_LONG_INT = Type::Primitive.register 'unsigned long', matcher: /^unsigned\s+long(\s+int)?$/
+LONG = SIGNED_LONG = LONG_INT = SIGNED_LONG_INT = primitive 'long', matcher: /^(signed\s+)?long(\s+int)?$/
+UNSIGNED_LONG = UNSIGNED_LONG_INT = primitive 'unsigned long', matcher: /^unsigned\s+long(\s+int)?$/
 
 
-LONG_LONG = SIGNED_LONG_LONG = LONG_LONG_INT = SIGNED_LONG_LONG_INT = Type::Primitive.register 'long long', matcher: /^(signed\s+)?long\s+long(\s+int)?$/
-UNSIGNED_LONG_LONG = UNSIGNED_LONG_LONG_INT = Type::Primitive.register 'unsigned long long', matcher: /^unsigned\s+long\s+long(\s+int)?$/
+LONG_LONG = SIGNED_LONG_LONG = LONG_LONG_INT = SIGNED_LONG_LONG_INT = primitive 'long long', matcher: /^(signed\s+)?long\s+long(\s+int)?$/
+UNSIGNED_LONG_LONG = UNSIGNED_LONG_LONG_INT = primitive 'unsigned long long', matcher: /^unsigned\s+long\s+long(\s+int)?$/
 
 
-SIZE_T = Type::Primitive.register 'size_t', dependencies: STDDEF_H
-PTRDIFF_T = Type::Primitive.register 'ptrdiff_t', dependencies: STDDEF_H
-UINTPTR_T = Type::Primitive.register 'uintptr_t', dependencies: STDDEF_H
+SIZE_T = primitive 'size_t', dependencies: STDDEF_H
+PTRDIFF_T = primitive 'ptrdiff_t', dependencies: STDDEF_H
+UINTPTR_T = primitive 'uintptr_t', dependencies: STDDEF_H
 
 
-FLOAT = Type::Primitive.register 'float'
-DOUBLE = Type::Primitive.register 'double'
-LONG_DOUBLE = Type::Primitive.register 'long double', matcher: /^long\s+double$/
+FLOAT = primitive 'float'
+DOUBLE = primitive 'double'
+LONG_DOUBLE = primitive 'long double', matcher: /^long\s+double$/
 
 
-FLOAT_T = Type::Primitive.register 'float_t', dependencies: MATH_H
-DOUBLE_T = Type::Primitive.register 'double_t', dependencies: MATH_H
+FLOAT_T = primitive 'float_t', dependencies: MATH_H
+DOUBLE_T = primitive 'double_t', dependencies: MATH_H
 
 
 TGMATH_H = SystemHeader.new 'tgmath.h'
@@ -235,24 +236,29 @@ class Type::Complex < Type::Primitive
 end # Complex
 
 
-LONG_DOUBLE_COMPLEX = Type::Primitive.register 'autoc_long_double_complex_t', cls: Type::Complex, matcher: /^long\s+double\s+(complex|_Complex)$/
-DOUBLE_COMPLEX = Type::Primitive.register 'autoc_double_complex_t', cls: Type::Complex, matcher: /^double\s+(complex|_Complex)$/
-FLOAT_COMPLEX = Type::Primitive.register 'autoc_float_complex_t', cls: Type::Complex, matcher: /^float\s+(complex|_Complex)$/
-COMPLEX = Type::Primitive.register 'autoc_complex_t', cls: Type::Complex, matcher: /^(complex|_Complex)$/
+LONG_DOUBLE_COMPLEX = primitive Type::Complex.new('autoc_long_double_complex_t'), matcher: /^long\s+double\s+(complex|_Complex)$/
+DOUBLE_COMPLEX = primitive Type::Complex.new('autoc_double_complex_t'), matcher: /^double\s+(complex|_Complex)$/
+FLOAT_COMPLEX = primitive Type::Complex.new('autoc_float_complex_t'), matcher: /^float\s+(complex|_Complex)$/
+COMPLEX = primitive Type::Complex.new('autoc_complex_t'), matcher: /^(complex|_Complex)$/
 
 
-INTPTR_T = Type::Primitive.register 'intptr_t', dependencies: INTTYPES_H
-INTMAX_T = Type::Primitive.register 'intmax_t', dependencies: INTTYPES_H
-UINTMAX_T = Type::Primitive.register 'uintmax_t', dependencies: INTTYPES_H
+INTPTR_T = primitive 'intptr_t', dependencies: INTTYPES_H
+INTMAX_T = primitive 'intmax_t', dependencies: INTTYPES_H
+UINTMAX_T = primitive 'uintmax_t', dependencies: INTTYPES_H
 
 
 [8, 16, 32, 64].each do |bit|
-  const_set((type = "int#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
-  const_set((type = "uint#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
-  const_set((type = "int_fast#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
-  const_set((type = "uint_fast#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
-  const_set((type = "int_least#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
-  const_set((type = "uint_least#{bit}_t").upcase, Type::Primitive.register(type, dependencies: INTTYPES_H))
+  const_set((type = "int#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+  const_set((type = "uint#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+  const_set((type = "int_fast#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+  const_set((type = "uint_fast#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+  const_set((type = "int_least#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+  const_set((type = "uint_least#{bit}_t").upcase, primitive(type, dependencies: INTTYPES_H))
+end
+
+
+class << self
+  remove_method :primitive
 end
 
 
