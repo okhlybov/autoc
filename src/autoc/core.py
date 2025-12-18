@@ -45,6 +45,37 @@ def out(obj): return Callable.Out(obj)
 
 
 #
+class Value:
+  
+  def __init__(self, type, *args, **kws):
+    super().__init__(*args, **kws)
+    self.type = _type(type)
+
+  def bind(self, type):
+    x = self.type.indirection - type.indirection
+    if x >= 0:
+      return "*"*x + str(self)
+    raise ValueError(f"can not take address of the value {self} with &")
+
+#
+class Variable(Value):
+  def __init__(self, type, name, *args, **kws):
+    super().__init__(type, *args, **kws)
+    self.name = str(name)
+
+  def __str__(self): return self.name
+
+
+  def bind(self, type):
+    x = self.type.indirection - type.indirection
+    if x >= 0:
+      return "*"*x + str(self)
+    elif x == -1:
+      return "&" + str(self)
+    raise ValueError(f"bad indirection level {x} for taking address of {self} with &")
+
+
+#
 class Callable:
   
   def __init__(self, result, parameters, constraint = lambda: True, *args, **kws):
@@ -76,9 +107,9 @@ class Callable:
   class Out(Parameter):
     def forward_type(self, type): return type.type_out(self.type)
 
-  class Call:
+  class Call(Value):
     def __init__(self, callable, arguments, *args, **kws):
-      super().__init__(*args, **kws)
+      super().__init__(callable.result, *args, **kws)
       self.callable = callable
       nargs = len(arguments)
       nparams = len(self.callable.types)
@@ -157,10 +188,10 @@ class Primitive(Type):
   def _copy(self, result, parameters, **kws): return Code(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   def is_comparable(self): return True
-  def _equal(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"{left} == {right}", **kws)
+  def _equal(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"({left} == {right})", **kws)
 
   def is_orderable(self): return True
-  def _compare(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)", **kws)
+  def _compare(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
 
   def is_hashable(self): return True
   def _hash(self, result, parameters, **kws): return Code(result, parameters, lambda source: f"(size_t)({source})", **kws)
@@ -193,37 +224,6 @@ class Pointer(Primitive):
     super().__init__(t.name+"*"*indirection, *args, **kws)
     self.base = t
     self.indirection = indirection + i
-
-
-#
-class Value:
-  
-  def __init__(self, type, *args, **kws):
-    super().__init__(*args, **kws)
-    self.type = _type(type)
-
-  def bind(self, type):
-    x = self.type.indirection - type.indirection
-    if x >= 0:
-      return "*"*x + str(self)
-    raise ValueError(f"can not take address of the value {self} with &")
-
-#
-class Variable(Value):
-  def __init__(self, type, name, *args, **kws):
-    super().__init__(type, *args, **kws)
-    self.name = str(name)
-
-  def __str__(self): return self.name
-
-
-  def bind(self, type):
-    x = self.type.indirection - type.indirection
-    if x >= 0:
-      return "*"*x + str(self)
-    elif x == -1:
-      return "&" + str(self)
-    raise ValueError(f"bad indirection level {x} for taking address of {self} with &")
 
 
 #
