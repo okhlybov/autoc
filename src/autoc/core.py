@@ -1,0 +1,264 @@
+from functools import cached_property
+
+
+#
+def _type(obj):
+  match obj:
+    case Pointer():
+      if obj.indirection == 0:
+        return obj.base
+      else:
+        return obj
+    case Type(): return obj
+    case str(): return Primitive(obj)
+  raise TypeError(f"can not construct a Type from {obj}")
+
+
+#
+def _value(obj):
+  match obj:
+    case Value(): return obj
+    case int(): return Literal("int", obj)
+    case float(): return Literal("double", obj)
+    case str(): return Verbatim(obj)
+  raise TypeError(f"can not construct a Value from {obj}")
+  
+
+#
+def _parameter(obj):
+  match obj:
+    case Callable.Parameter(): return obj
+    case Type() | str(): return Callable.In(obj)
+  raise TypeError(f"can not construct a callable Parameter from {obj}")
+
+
+#  
+def string(obj): return StrLiteral(obj)
+
+
+#
+def char(obj): return CharLiteral(obj)
+
+
+#
+def out(obj): return Callable.Out(obj)
+
+
+#
+class Callable:
+  
+  def __init__(self, result, parameters, constraint = lambda: True, *args, **kws):
+    super().__init__(*args, **kws)
+    self.parameters = { str(name): _parameter(type) for name, type in parameters.items() }
+    self.types = [ parameter.forward_type(self) for parameter in self.parameters.values() ]
+    self.constraint = constraint
+    self.__result = result
+
+  @cached_property      
+  def result(self):
+    r = self.__result
+    return _type(r) if not (r == None or r == "void") else None
+    # Got to use property instead of attibute to avoid infinite recursion
+
+  def _result_str(self): return "void" if self.result == None else str(self.result)
+    
+  def signature(self):
+    r = self.result
+    return "%s(%s)" % (self._result_str(), ", ".join([str(t) for t in self.types]))
+  
+  class Parameter:
+    def __init__(self, type):
+      self.type = _type(type)
+      
+  class In(Parameter):
+    def forward_type(self, type): return type.type_in(self.type)
+  
+  class Out(Parameter):
+    def forward_type(self, type): return type.type_out(self.type)
+
+  class Call:
+    def __init__(self, callable, arguments, *args, **kws):
+      super().__init__(*args, **kws)
+      self.callable = callable
+      nargs = len(arguments)
+      nparams = len(self.callable.types)
+      if not (nargs == nparams):
+        raise ValueError(f"callable takes {nparams} arguments but {nargs} given")
+      self.arguments = [_value(x) for x in arguments]
+
+
+#
+class Code(Callable):
+
+  def __init__(self, result, parameters, emitter, constraint = lambda : True, *args, **kws):
+    super().__init__(result, parameters, constraint, *args, **kws)
+    self.emitter = emitter
+
+  def type_in(self, type): return type.rvalue_type
+  def type_out(self, type): return type.lvalue_type
+
+  def __call__(self, *arguments): return Code.Call(self, arguments)
+    
+  class Call(Callable.Call):
+    def __str__(self):
+      return self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)])
+
+#
+class Function(Callable):
+
+  def __init__(self, result, name, parameters, *args, **kws):
+    super().__init__(result, parameters, *args, **kws)
+    self.name = str(name)
+
+  def type_in(self, type): return type.in_type
+  def type_out(self, type): return type.out_type
+  
+  def __call__(self, *arguments): return Function.Call(self, arguments)
+
+  class Call(Callable.Call):
+    def __str__(self):
+      return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
+
+
+#
+class _setup(type):
+  def __call__(cls, *args, **kws):
+    obj = super().__call__(*args, **kws)
+    obj.__setup__()
+    return obj
+
+
+#
+class Type(metaclass = _setup):
+  
+  def __init__(self, name, *args, **kws):
+    super().__init__(*args, **kws)
+    self.name = str(name)
+    self.indirection = 0
+    
+  def __str__(self): return self.name
+
+  def __setup__(self):
+    self.construct = self._construct( None, { "target": out(self) }, constraint = lambda: self.is_constructible() )
+    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint = lambda: self.is_copyable() )
+    self.equal = self._equal("int", { "left": self, "right": self }, constraint = lambda: self.is_comparable() )
+    self.compare = self._compare("int", { "left": self, "right": self }, constraint = lambda: self.is_orderable() )
+    self.hash = self._hash("size_t", { "source": self }, constraint = lambda: self.is_hashable() )
+    self.destroy = self._destroy( None, { "target": out(self) }, constraint = lambda: self.is_destructible() )
+
+
+#
+class Primitive(Type):
+  
+  def is_constructible(self): return True
+  def _construct(self, result, parameters, **kws): return Code(result, parameters, lambda target: f"{target} = 0", **kws)
+
+  def is_copyable(self): return True
+  def _copy(self, result, parameters, **kws): return Code(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+
+  def is_comparable(self): return True
+  def _equal(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"{left} == {right}", **kws)
+
+  def is_orderable(self): return True
+  def _compare(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)", **kws)
+
+  def is_hashable(self): return True
+  def _hash(self, result, parameters, **kws): return Code(result, parameters, lambda source: f"(size_t)({source})", **kws)
+
+  def is_destructible(self): return False
+  def _destroy(self, result, parameters, **kws): pass
+  
+  @property
+  def rvalue_type(self): return self
+
+  @property
+  def lvalue_type(self): return self
+
+  @property
+  def in_type(self): return self
+
+  @cached_property
+  def out_type(self): return Pointer(self)
+
+
+#
+class Pointer(Primitive):
+  
+  def __init__(self, type, indirection = 1, *args, **kws):
+    i = 0
+    t = _type(type)
+    if isinstance(t, Pointer):
+      i = t.indirection
+      t = t.base
+    super().__init__(t.name+"*"*indirection, *args, **kws)
+    self.base = t
+    self.indirection = indirection + i
+
+
+#
+class Value:
+  
+  def __init__(self, type, *args, **kws):
+    super().__init__(*args, **kws)
+    self.type = _type(type)
+
+  def bind(self, type):
+    x = self.type.indirection - type.indirection
+    if x >= 0:
+      return "*"*x + str(self)
+    raise ValueError(f"can not take address of the value {self} with &")
+
+#
+class Variable(Value):
+  def __init__(self, type, name, *args, **kws):
+    super().__init__(type, *args, **kws)
+    self.name = str(name)
+
+  def __str__(self): return self.name
+
+
+  def bind(self, type):
+    x = self.type.indirection - type.indirection
+    if x >= 0:
+      return "*"*x + str(self)
+    elif x == -1:
+      return "&" + str(self)
+    raise ValueError(f"bad indirection level {x} for taking address of {self} with &")
+
+
+#
+class Verbatim(str):
+
+  def bind(self, type): return self
+
+
+#
+class Literal(Value):
+  
+  def __init__(self, type, value, *args, **kws):
+    super().__init__(type, *args, **kws)
+    self.value = value
+
+  def __str__(self): return str(self.value)
+  
+  
+#
+class StrLiteral(Literal):
+  
+  type = Pointer("char")
+  
+  def __init__(self, value, *args, **kws):
+    super().__init__(StrLiteral.type, str(value), *args, **kws)
+    
+  def __str__(self):
+    return f'"{self.value}"'
+  
+  
+#
+class CharLiteral(Literal):
+  
+  def __init__(self, value, *args, **kws):
+    super().__init__("char", str(value)[0], *args, **kws)
+    
+  def __str__(self):
+    return f"'{self.value}'"

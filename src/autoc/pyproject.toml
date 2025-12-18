@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoc"
+version = "0.0.1"
+description = "C source code generation package"
+authors = [{name = "Oleg A. Khlybov", email = "fougas@mail.ru"}]
+license = {text = "BSD 3-Clause"}
+requires-python = ">=3.13"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/okhlybov/autoc.py"

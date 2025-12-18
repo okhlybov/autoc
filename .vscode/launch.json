@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "env": {"PYTHONPATH": "src"},
+            "program": "test.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
