@@ -1,6 +1,6 @@
 import re
 import autoc.core
-from autoc.module import SystemHeader, Code, Entity
+from autoc.module import *
 
 
 math_h = SystemHeader("math.h")
@@ -95,7 +95,7 @@ class Complex(Primitive):
   def is_orderable(self): return False
   def _compare(self, left, right, **kws): pass
 
-  def _hash(self, result, parameters, **kws): return Code(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
+  def _hash(self, result, parameters, **kws): return autoc.core.Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
   
 
 long_double_complex = Complex.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")

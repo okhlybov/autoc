@@ -126,7 +126,7 @@ class Callable:
 
 
 #
-class Code(Callable):
+class Macro(Callable):
 
   def __init__(self, result, parameters, emitter, constraint = lambda : True, *args, **kws):
     super().__init__(result, parameters, constraint, *args, **kws)
@@ -135,7 +135,7 @@ class Code(Callable):
   def type_in(self, type): return type.rvalue_type
   def type_out(self, type): return type.lvalue_type
 
-  def __call__(self, *arguments): return Code.Call(self, arguments)
+  def __call__(self, *arguments): return Macro.Call(self, arguments)
     
   class Call(Callable.Call):
     def __str__(self):
@@ -189,19 +189,19 @@ class Type(metaclass = _setup):
 class Primitive(Type):
   
   def is_constructible(self): return True
-  def _construct(self, result, parameters, **kws): return Code(result, parameters, lambda target: f"{target} = 0", **kws)
+  def _construct(self, result, parameters, **kws): return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
 
   def is_copyable(self): return True
-  def _copy(self, result, parameters, **kws): return Code(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def _copy(self, result, parameters, **kws): return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   def is_comparable(self): return True
-  def _equal(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"({left} == {right})", **kws)
+  def _equal(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
 
   def is_orderable(self): return True
-  def _compare(self, result, parameters, **kws): return Code(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
+  def _compare(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
 
   def is_hashable(self): return True
-  def _hash(self, result, parameters, **kws): return Code(result, parameters, lambda source: f"(size_t)({source})", **kws)
+  def _hash(self, result, parameters, **kws): return Macro(result, parameters, lambda source: f"(size_t)({source})", **kws)
 
   def is_destructible(self): return False
   def _destroy(self, result, parameters, **kws): pass
