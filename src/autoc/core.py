@@ -1,6 +1,9 @@
 from functools import cached_property
 
 
+_type_cache = [] # [ (matcher, type) ]
+
+
 #
 def _type(obj):
   match obj:
@@ -10,7 +13,11 @@ def _type(obj):
       else:
         return obj
     case Type(): return obj
-    case str(): return Primitive(obj)
+    case str():
+      for rx, type in _type_cache:
+        if rx.match(obj):
+          return type
+      return Primitive(obj)
   raise TypeError(f"can not construct a Type from {obj}")
 
 

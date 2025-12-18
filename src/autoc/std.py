@@ -1,5 +1,7 @@
-from autoc.core import Primitive
-from autoc.module import SystemHeader, Code
+import re
+import autoc.core
+from autoc.module import SystemHeader, Code, Entity
+
 
 math_h = SystemHeader("math.h")
 tgmath_h = SystemHeader("tgmath.h")
@@ -17,6 +19,18 @@ stdlib_h = Code(interface="""
   #define _CRT_RAND_S
   #include <stdlib.h>
 """)
+
+
+class Primitive(autoc.core.Primitive, Entity):
+  
+  @classmethod
+  def register(cls, name, matcher=None, dependencies=[]):
+    obj = cls(name)
+    obj.dependencies.update(dependencies)
+    if matcher == None: matcher = f"^{name}$"
+    autoc.core._type_cache.append((re.compile(matcher), obj))
+    return obj
+
 
 bool = Primitive.register("_Bool", matcher=r"^(bool|_Bool)$", dependencies=[stdbool_h])
 
@@ -49,7 +63,7 @@ long_double = Primitive.register("long double", matcher=r"^long\s+double$")
 float_t = Primitive.register("float_t", dependencies=[math_h])
 double_t = Primitive.register("double_t", dependencies=[math_h])
 
-# Complex type definitions
+
 _complex_definitions = Code(
   dependencies=[complex_h, tgmath_h],
   interface="""
@@ -73,18 +87,21 @@ _complex_definitions = Code(
 )
 
 class Complex(Primitive):
-  def __init__(self, name_c: str):
-    super().__init__(name_c, dependencies=[_complex_definitions])
+  
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    self.dependencies.add(_complex_definitions)
 
   def is_orderable(self): return False
-  def _compare(self, left, right): pass
+  def _compare(self, left, right, **kws): pass
 
   def _hash(self, result, parameters, **kws): return Code(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
+  
 
-long_double_complex = Primitive.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")
-double_complex = Primitive.register("autoc_double_complex_t", matcher=r"^double\s+(complex|_Complex)$")
-float_complex = Primitive.register("autoc_float_complex_t", matcher=r"^float\s+(complex|_Complex)$")
-complex = Primitive.register("autoc_complex_t", matcher=r"^(complex|_Complex)$")
+long_double_complex = Complex.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")
+double_complex = Complex.register("autoc_double_complex_t", matcher=r"^double\s+(complex|_Complex)$")
+float_complex = Complex.register("autoc_float_complex_t", matcher=r"^float\s+(complex|_Complex)$")
+complex = Complex.register("autoc_complex_t", matcher=r"^(complex|_Complex)$")
 
 intptr_t = Primitive.register("intptr_t", dependencies=[inttypes_h])
 intmax_t = Primitive.register("intmax_t", dependencies=[inttypes_h])

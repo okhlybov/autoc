@@ -378,7 +378,6 @@ class _DependencySet(set):
     self.entity.references.add(item)
     super().add(item)
 
-
 #
 class Code(Entity):
   def __init__(self, interface=None, implementation=None, definitions=None, dependencies=None, *args, **kws):
