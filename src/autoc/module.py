@@ -36,17 +36,17 @@ class Module:
     self.stateful = stateful
     self.source_count = None
     self.source_threshold = None
-    self._entities = None
-    self._header = None
-    self._sources = None
-    self._digests = None
-    self._total_entities = None
+    self.__entities = None
+    self.__header = None
+    self.__sources = None
+    self.__digests = None
+    self.__total_entities = None
 
   @property
   def entities(self):
-    if self._entities is None:
-      self._entities = set()
-    return self._entities
+    if self.__entities is None:
+      self.__entities = set()
+    return self.__entities
 
   def add(self, entity):
     self.entities.add(entity)
@@ -54,23 +54,23 @@ class Module:
 
   @property
   def header(self):
-    if self._header is None:
-      self._header = Header(self)
-    return self._header
+    if self.__header is None:
+      self.__header = Header(self)
+    return self.__header
 
   @property
   def sources(self):
-    if self._sources is None:
+    if self.__sources is None:
       if self.source_count is None:
         raise ValueError("source_count must be set before accessing sources")
-      self._sources = [Source(self, i) for i in range(1, self.source_count + 1)]
-    return self._sources
+      self.__sources = [Source(self, i) for i in range(1, self.source_count + 1)]
+    return self.__sources
 
   @property
   def digests(self):
-    if self._digests is None:
-      self._digests = _State(self).read()
-    return self._digests
+    if self.__digests is None:
+      self.__digests = _State(self).read()
+    return self.__digests
 
   def render(self):
     self.distribute_entities()
@@ -83,12 +83,12 @@ class Module:
 
   @property
   def total_entities(self):
-    if self._total_entities is None:
+    if self.__total_entities is None:
       entity_set = set()
       for e in self.entities:
         entity_set.update(e.total_references)
-      self._total_entities = entity_set
-    return self._total_entities
+      self.__total_entities = entity_set
+    return self.__total_entities
 
   def distribute_entities(self):
     self.header.entities.update(self.total_entities)
@@ -175,10 +175,10 @@ class _SmartRenderer:
     temp_path = stream.path
     try:
       self.render_contents(stream)
-      self._digest = stream.digest
+      self.__digest = stream.digest
     finally:
       stream.close()
-    if not os.path.exists(self.file_name) or self.module.digests.get(self.file_name) != self._digest:
+    if not os.path.exists(self.file_name) or self.module.digests.get(self.file_name) != self.__digest:
       os.replace(temp_path, self.file_name)
     else:
       os.unlink(temp_path)
@@ -189,8 +189,8 @@ class Header(_EntityContainer, _SmartRenderer):
   def __init__(self, module, *args, **kws):
     super().__init__(*args, **kws)
     self.module = module
-    self._digest = None
-    self._stream = None
+    self.__digest = None
+    self.__stream = None
 
   @property
   def file_name(self): return f"{self.module.name}_auto.h"
@@ -199,13 +199,13 @@ class Header(_EntityContainer, _SmartRenderer):
   def tag(self): return f"{self.module.name}_auto_h".upper()
 
   @property
-  def digest(self): return self._digest
+  def digest(self): return self.__digest
 
   @property
   def stream(self):
-    if self._stream is None:
-      self._stream = _StreamFile(self.file_name + "~")
-    return self._stream
+    if self.__stream is None:
+      self.__stream = _StreamFile(self.file_name + "~")
+    return self.__stream
 
   def render_contents(self, stream):
     self.render_prologue(stream)
@@ -232,8 +232,8 @@ class Source(_EntityContainer, _SmartRenderer):
     self.module = module
     self.complexity = 0
     self.index = index
-    self._digest = None
-    self._stream = None
+    self.__digest = None
+    self.__stream = None
 
   @property
   def file_name(self):
@@ -242,13 +242,13 @@ class Source(_EntityContainer, _SmartRenderer):
     return f"{self.module.name}_auto{self.index}.c"
 
   @property
-  def digest(self): return self._digest
+  def digest(self): return self.__digest
 
   @property
   def stream(self):
-    if self._stream is None:
-      self._stream = _StreamFile(self.file_name + "~")
-    return self._stream
+    if self.__stream is None:
+      self.__stream = _StreamFile(self.file_name + "~")
+    return self.__stream
 
   def add(self, entity):
     if entity not in self.entities:
@@ -279,40 +279,40 @@ class Source(_EntityContainer, _SmartRenderer):
 class Entity:
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._references = None
-    self._total_references = None
-    self._dependencies = None
-    self._total_dependencies = None
-    self._position = None
-    self._interface = None
-    self._forward_declarations = None
-    self._implementation = None
+    self.__references = None
+    self.__total_references = None
+    self.__dependencies = None
+    self.__total_dependencies = None
+    self.__position = None
+    self.__interface = None
+    self.__forward_declarations = None
+    self.__implementation = None
 
   def __lt__(self, other): return self.position < other.position
 
   @property
   def references(self):
-    if self._references is None:
-      self._references = set()
-    return self._references
+    if self.__references is None:
+      self.__references = set()
+    return self.__references
 
   @property
   def total_references(self):
-    if self._total_references is None:
-      self._total_references = self.collect_references(set())
-    return self._total_references
+    if self.__total_references is None:
+      self.__total_references = self.collect_references(set())
+    return self.__total_references
 
   @property
   def dependencies(self):
-    if self._dependencies is None:
-      self._dependencies = _DependencySet(self)
-    return self._dependencies
+    if self.__dependencies is None:
+      self.__dependencies = _DependencySet(self)
+    return self.__dependencies
 
   @property
   def total_dependencies(self):
-    if self._total_dependencies is None:
-      self._total_dependencies = self.collect_dependencies(set())
-    return self._total_dependencies
+    if self.__total_dependencies is None:
+      self.__total_dependencies = self.collect_dependencies(set())
+    return self.__total_dependencies
 
   def collect_references(self, entity_set):
     if self not in entity_set:
@@ -330,37 +330,37 @@ class Entity:
 
   @property
   def position(self):
-    if self._position is None:
+    if self.__position is None:
       p = 0
       for d in self.total_dependencies:
         if d is not self:
           p = max(p, d.position)
-      self._position = p + 1
-    return self._position
+      self.__position = p + 1
+    return self.__position
 
   @property
   def complexity(self): return self.forward_declarations().complexity + self.implementation().complexity
 
   def interface(self):
-    if self._interface is None:
+    if self.__interface is None:
       stream = _Builder()
       self.render_interface(stream)
-      self._interface = stream
-    return self._interface
+      self.__interface = stream
+    return self.__interface
 
   def forward_declarations(self):
-    if self._forward_declarations is None:
+    if self.__forward_declarations is None:
       stream = _Builder()
       self.render_forward_declarations(stream)
-      self._forward_declarations = stream
-    return self._forward_declarations
+      self.__forward_declarations = stream
+    return self.__forward_declarations
 
   def implementation(self):
-    if self._implementation is None:
+    if self.__implementation is None:
       stream = _Builder()
       self.render_implementation(stream)
-      self._implementation = stream
-    return self._implementation
+      self.__implementation = stream
+    return self.__implementation
 
   def render_interface(self, stream): pass
 
