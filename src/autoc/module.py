@@ -84,10 +84,10 @@ class Module:
   @property
   def total_entities(self):
     if self.__total_entities is None:
-      entity_set = set()
+      entities = set()
       for e in self.entities:
-        entity_set.update(e.total_references)
-      self.__total_entities = entity_set
+        entities.update(e.total_references)
+      self.__total_entities = entities
     return self.__total_entities
 
   def distribute_entities(self):
@@ -260,6 +260,7 @@ class Source(_EntityContainer, _SmartRenderer):
     self.render_prologue(stream)
     total_entities = set()
     for e in self.entities:
+      print((e.total_references))
       total_entities.update(e.total_references)
     for e in sorted(total_entities):
       for line in e.forward_declarations():
@@ -314,19 +315,19 @@ class Entity:
       self.__total_dependencies = self.collect_dependencies(set())
     return self.__total_dependencies
 
-  def collect_references(self, entity_set):
-    if self not in entity_set:
-      entity_set.add(self)
+  def collect_references(self, entities):
+    if self not in entities:
+      entities.add(self)
       for ref in self.references:
-        ref.collect_references(entity_set)
-    return entity_set
+        ref.collect_references(entities)
+    return entities
 
-  def collect_dependencies(self, entity_set):
-    if self not in entity_set:
-      entity_set.add(self)
+  def collect_dependencies(self, entities):
+    if self not in entities:
+      entities.add(self)
       for dep in self.dependencies:
-        dep.collect_dependencies(entity_set)
-    return entity_set
+        dep.collect_dependencies(entities)
+    return entities
 
   @property
   def position(self):
