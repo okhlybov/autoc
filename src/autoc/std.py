@@ -27,7 +27,7 @@ class Primitive(autoc.core.Primitive, Entity):
   def register(cls, name, matcher=None, dependencies=[]):
     obj = cls(name)
     obj.dependencies.update(dependencies)
-    if matcher == None: matcher = f"^{name}$"
+    if matcher is None: matcher = f"^{name}$"
     autoc.core._type_cache.append((re.compile(matcher), obj))
     return obj
 

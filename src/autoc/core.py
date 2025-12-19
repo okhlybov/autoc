@@ -95,10 +95,10 @@ class Callable:
   @cached_property      
   def result(self):
     r = self.__result
-    return _type(r) if not (r == None or r == "void") else None
+    return _type(r) if not (r is None or r == "void") else None
     # Got to use property instead of attibute to avoid infinite recursion
 
-  def _result_str(self): return "void" if self.result == None else str(self.result)
+  def _result_str(self): return "void" if self.result is None else str(self.result)
     
   def signature(self):
     r = self.result
