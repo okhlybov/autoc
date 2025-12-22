@@ -260,7 +260,6 @@ class Source(_EntityContainer, _SmartRenderer):
     self.render_prologue(stream)
     total_entities = set()
     for e in self.entities:
-      print((e.total_references))
       total_entities.update(e.total_references)
     for e in sorted(total_entities):
       for line in e.forward_declarations():
