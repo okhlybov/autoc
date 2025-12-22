@@ -375,9 +375,13 @@ class _DependencySet(set):
     super().__init__(*args, **kws)
     self.entity = entity
 
-  def add(self, item):
-    self.entity.references.add(item)
-    super().add(item)
+  def add(self, entity):
+    self.entity.references.add(entity)
+    super().add(entity)
+    
+  def update(self, *entities):
+    self.entity.references.update(*entities)
+    super().update(*entities)
 
 #
 class Code(Entity):
