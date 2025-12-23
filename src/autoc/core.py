@@ -72,6 +72,7 @@ class Variable(Value):
 
   def __str__(self): return self.name
 
+  def __repr__(self): return f"{repr(self.name)} :: {repr(self.type)}"
 
   def bind(self, type):
     x = self.type.indirection - type.indirection
@@ -85,10 +86,11 @@ class Variable(Value):
 #
 class Callable:
   
-  def __init__(self, result, parameters, constraint = lambda: True, *args, **kws):
+  def __init__(self, result, parameters={}, constraint = lambda: True, *args, **kws):
     super().__init__(*args, **kws)
     self.parameters = { str(name): _parameter(type) for name, type in parameters.items() }
     self.types = [ parameter.forward_type(self) for parameter in self.parameters.values() ]
+    self.arguments = [Variable(type, name) for type, name in zip(self.types, self.parameters.keys())]
     self.constraint = constraint
     self.__result = result
 
@@ -100,9 +102,7 @@ class Callable:
 
   def _result_str(self): return "void" if self.result is None else str(self.result)
     
-  def signature(self):
-    r = self.result
-    return "%s(%s)" % (self._result_str(), ", ".join([str(t) for t in self.types]))
+  def signature(self): return "%s(%s)" % (self._result_str(), ", ".join([str(x) for x in self.types]))
   
   class Parameter:
     def __init__(self, type):
@@ -144,7 +144,7 @@ class Macro(Callable):
 #
 class Function(Callable):
 
-  def __init__(self, result, name, parameters, *args, **kws):
+  def __init__(self, result, name, parameters={}, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
     self.name = str(name)
 
@@ -153,13 +153,16 @@ class Function(Callable):
   
   def __call__(self, *arguments): return Function.Call(self, arguments)
 
+  def declaration(self):
+    return "%s %s(%s)" % (self._result_str(), self.name, ", ".join([f"{x.type} {x.name}" for x in self.arguments]))
+
   class Call(Callable.Call):
     def __str__(self):
       return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
 
 
 #
-class _setup(type):
+class _DoubleStepConstructor(type):
   def __call__(cls, *args, **kws):
     obj = super().__call__(*args, **kws)
     obj.__setup__()
@@ -167,7 +170,7 @@ class _setup(type):
 
 
 #
-class Type(metaclass = _setup):
+class Type(metaclass = _DoubleStepConstructor):
   
   def __init__(self, name, *args, **kws):
     super().__init__(*args, **kws)
@@ -175,6 +178,8 @@ class Type(metaclass = _setup):
     self.indirection = 0
     
   def __str__(self): return self.name
+
+  def __repr__(self): return f"{self} {super().__repr__()}"
 
   def __setup__(self):
     self.construct = self._construct( None, { "target": out(self) }, constraint = lambda: self.is_constructible() )

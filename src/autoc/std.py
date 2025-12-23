@@ -1,5 +1,4 @@
 import re
-import autoc.core
 from autoc.module import *
 
 
@@ -64,38 +63,40 @@ float_t = Primitive.register("float_t", dependencies=[math_h])
 double_t = Primitive.register("double_t", dependencies=[math_h])
 
 
-_complex_definitions = Code(
-  dependencies=[complex_h, tgmath_h],
-  interface="""
-    #ifdef __cplusplus
-      using autoc_double_complex_t = std::complex<double>;
-      using autoc_complex_t = autoc_double_complex_t;
-      using autoc_float_complex_t = std::complex<float>;
-      using autoc_long_double_complex_t = std::complex<long double>;
-      using autoc_long_complex_t = autoc_long_double_complex_t;
-    #else
-      #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
-        #error Visual Studio requires C++ compilation mode for complex numeric types
-      #endif
-      typedef float complex autoc_float_complex_t;
-      typedef double complex autoc_double_complex_t;
-      typedef autoc_double_complex_t autoc_complex_t;
-      typedef long double complex autoc_long_double_complex_t;
-      typedef autoc_long_double_complex_t autoc_long_complex_t;
-    #endif
-  """
-)
-
+#
 class Complex(Primitive):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self.dependencies.add(_complex_definitions)
+    self.dependencies.add(Complex._definitions)
 
   def is_orderable(self): return False
   def _compare(self, left, right, **kws): pass
 
   def _hash(self, result, parameters, **kws): return autoc.core.Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
+  
+  _definitions = Code(
+    dependencies=[complex_h, tgmath_h],
+    interface="""
+      #ifdef __cplusplus
+        using autoc_double_complex_t = std::complex<double>;
+        using autoc_complex_t = autoc_double_complex_t;
+        using autoc_float_complex_t = std::complex<float>;
+        using autoc_long_double_complex_t = std::complex<long double>;
+        using autoc_long_complex_t = autoc_long_double_complex_t;
+      #else
+        #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
+          #error Visual Studio requires C++ compilation mode for complex numeric types
+        #endif
+        typedef float complex autoc_float_complex_t;
+        typedef double complex autoc_double_complex_t;
+        typedef autoc_double_complex_t autoc_complex_t;
+        typedef long double complex autoc_long_double_complex_t;
+        typedef autoc_long_double_complex_t autoc_long_complex_t;
+      #endif
+    """
+  )
+  
   
 
 long_double_complex = Complex.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")
