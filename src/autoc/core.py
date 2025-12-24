@@ -86,6 +86,7 @@ class Variable(Value):
 #
 class Callable:
   
+  #
   def __init__(self, result, parameters={}, constraint = lambda: True, *args, **kws):
     super().__init__(*args, **kws)
     self.parameters = { str(name): _parameter(type) for name, type in parameters.items() }
@@ -100,9 +101,12 @@ class Callable:
     return _type(r) if not (r is None or r == "void") else None
     # Got to use property instead of attibute to avoid infinite recursion
 
-  def _result_str(self): return "void" if self.result is None else str(self.result)
+  @cached_property
+  def _result_c(self): return "void" if self.result is None else str(self.result)
     
-  def signature(self): return "%s(%s)" % (self._result_str(), ", ".join([str(x) for x in self.types]))
+  #
+  @cached_property
+  def signature(self): return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
   
   class Parameter:
     def __init__(self, type):
@@ -128,6 +132,7 @@ class Callable:
 #
 class Macro(Callable):
 
+  #
   def __init__(self, result, parameters, emitter, constraint = lambda : True, *args, **kws):
     super().__init__(result, parameters, constraint, *args, **kws)
     self.emitter = emitter
@@ -135,6 +140,7 @@ class Macro(Callable):
   def type_in(self, type): return type.rvalue_type
   def type_out(self, type): return type.lvalue_type
 
+  #
   def __call__(self, *arguments): return Macro.Call(self, arguments)
     
   class Call(Callable.Call):
@@ -144,18 +150,26 @@ class Macro(Callable):
 #
 class Function(Callable):
 
-  def __init__(self, result, name, parameters={}, *args, **kws):
+  #
+  def __init__(self, result, name, parameters={}, code=None, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
     self.name = str(name)
+    self.code = code
 
   def type_in(self, type): return type.in_type
   def type_out(self, type): return type.out_type
   
+  #
   def __call__(self, *arguments): return Function.Call(self, arguments)
 
+  #
   def declaration(self):
-    return "%s %s(%s)" % (self._result_str(), self.name, ", ".join([f"{x.type} {x.name}" for x in self.arguments]))
+    return "%s %s(%s)" % (self._result_c, self.name, ", ".join([f"{x.type} {x.name}" for x in self.arguments]))
 
+  #
+  def definition(self):
+    return str().join([self.declaration(), '{', *self.code, '}'])
+    
   class Call(Callable.Call):
     def __str__(self):
       return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))

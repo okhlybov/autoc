@@ -43,67 +43,87 @@ class Function(Function, Entity):
     
   def __init__(self, result, name, parameters={}, type=Type.EXTERNAL, visibility=Visibility.PUBLIC, abstract=False, *args, **kws):
     super().__init__(result, name, parameters, *args, **kws)
-    self.__type = type
-    self.__visibility = visibility
+    self.__type = type if isinstance(type, Function.Type) else Function.Type[type]
+    self.__visibility = visibility if isinstance(visibility, Function.Visibility) else Function.Visibility[visibility]
     self.__abstract = abstract
     for x in [x.base if isinstance(x, Pointer) else x for x in [Function.__definitions, self.result] + self.types]:
       # Pointer is a non-modularzed core type yet its base type can be
       if isinstance(x, Entity): self.dependencies.add(x)
 
   #
-  def is_live(self): return self.constraint() is True
+  @property
+  def live(self): return self.constraint() is True
   
   #
-  def is_inline(self): return self.__type is Function.Type.INLINE
+  @property
+  def inline(self): return self.__type is Function.Type.INLINE
   
   #
-  def is_external(self): return self.__type is Function.Type.EXTERNAL
+  @property
+  def external(self): return self.__type is Function.Type.EXTERNAL
   
   #
-  def is_abstract(self): return self.__abstract is True
+  @property
+  def abstract(self): return self.__abstract is True
   
   #
-  def is_public(self): return self.__visibility is Function.Visibility.PUBLIC
+  @property
+  def public(self): return self.__visibility is Function.Visibility.PUBLIC
   
   #
-  def is_private(self): return self.__visibility is Function.Visibility.PRIVATE
+  @property
+  def private(self): return self.__visibility is Function.Visibility.PRIVATE
   
   #
-  def is_internal(self): return self.__visibility is Function.Visibility.INTERNAL
+  @property
+  def internal(self): return self.__visibility is Function.Visibility.INTERNAL
   
   #
   def render_interface(self, stream):
     super().render_interface(stream)
-    if self.is_live():
-      self.__stream = stream
-      if not self.is_internal(): self._declaration()
+    if self.live and not self.internal:
+      if self.inline:
+        self.render_definition(stream)
+      else:
+        self.render_declaration(stream)
   
   #
   def render_forward_declarations(self, stream):
     super().render_forward_declarations(stream)
-    if self.is_live():
-      self.__stream = stream
-      if self.is_internal(): self._declaration()
+    if self.live and self.internal:
+      if self.inline:
+        self.render_definition(stream)
+      else:
+        self.render_declaration(stream)
   
   #
   def render_implementation(self, stream):
     super().render_implementation(stream)
-    if self.is_live():
-      self.__stream = stream
-      self._declaration()
+    if self.live and self.external and not self.abstract:
+      self.render_definition(stream)
+
+  #  
+  def render_definition(self, stream):
+    if not (self.internal or self.external): stream.append(self.description())
+    if not self.external: stream.append(self._decorator)
+    stream.append(self.definition())
+
+  #
+  def render_declaration(self, stream):
+    if not self.internal: stream.append(self.description())
+    stream.append(self._decorator)
+    stream.append(self.declaration())
+    stream.append(";")
+    
+  @cached_property
+  def _decorator(self): return f"{Function.__spec[self.__type]}\n"
   
   #
-  def _declaration(self):
-    self._header()
-    self.__stream.append(f"{Function.__spec[self.__type]}\n")
-    self.__stream.append(self.declaration())
-    
-  #
-  def _header(self):
-    if self.is_public():
-      self.__stream.append("/* @public */")
+  def description(self):
+    if self.public:
+      return "/* @public */"
     else:
-      self.__stream.append("/* @private */")
+      return "/* @private */"
 
   __spec = {Type.INLINE: "AUTOC_STATIC_INLINE", Type.EXTERNAL: "AUTOC_EXTERN"}
   
