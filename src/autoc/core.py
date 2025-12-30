@@ -87,7 +87,7 @@ class Variable(Value):
 class Callable:
   
   #
-  def __init__(self, result, parameters={}, constraint = lambda: True, *args, **kws):
+  def __init__(self, result, parameters={}, constraint=lambda: True, *args, **kws):
     super().__init__(*args, **kws)
     self.parameters = { str(name): _parameter(type) for name, type in parameters.items() }
     self.types = [ parameter.forward_type(self) for parameter in self.parameters.values() ]
@@ -95,17 +95,17 @@ class Callable:
     self.constraint = constraint
     self.__result = result
 
-  @cached_property      
+  @property      
   def result(self):
     r = self.__result
     return _type(r) if not (r is None or r == "void") else None
     # Got to use property instead of attibute to avoid infinite recursion
 
-  @cached_property
+  @property
   def _result_c(self): return "void" if self.result is None else str(self.result)
     
   #
-  @cached_property
+  @property
   def signature(self): return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
   
   class Parameter:
@@ -133,7 +133,7 @@ class Callable:
 class Macro(Callable):
 
   #
-  def __init__(self, result, parameters, emitter, constraint = lambda : True, *args, **kws):
+  def __init__(self, result, parameters, emitter, constraint=lambda: True, *args, **kws):
     super().__init__(result, parameters, constraint, *args, **kws)
     self.emitter = emitter
 
@@ -163,12 +163,14 @@ class Function(Callable):
   def __call__(self, *arguments): return Function.Call(self, arguments)
 
   #
+  @property
   def declaration(self):
     return "%s %s(%s)" % (self._result_c, self.name, ", ".join([f"{x.type} {x.name}" for x in self.arguments]))
 
   #
+  @property
   def definition(self):
-    return str().join([self.declaration(), '{', *self.code, '}'])
+    return str().join([self.declaration, "{", *self.code, "}"])
     
   class Call(Callable.Call):
     def __str__(self):
@@ -196,12 +198,12 @@ class Type(metaclass = _DoubleStepConstructor):
   def __repr__(self): return f"{self} {super().__repr__()}"
 
   def __setup__(self):
-    self.construct = self._construct( None, { "target": out(self) }, constraint = lambda: self.constructible )
-    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint = lambda: self.copyable )
-    self.equal = self._equal("int", { "left": self, "right": self }, constraint = lambda: self.comparable )
-    self.compare = self._compare("int", { "left": self, "right": self }, constraint = lambda: self.orderable )
-    self.hash = self._hash("size_t", { "source": self }, constraint = lambda: self.hashable )
-    self.destroy = self._destroy( None, { "target": out(self) }, constraint = lambda: self.destructible )
+    self.create = self._create(None, { "target": out(self) }, constraint=lambda: self.constructible)
+    self.destroy = self._destroy(None, { "target": out(self) }, constraint=lambda: self.destructible)
+    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint=lambda: self.copyable)
+    self.equal = self._equal("int", { "left": self, "right": self }, constraint=lambda: self.comparable)
+    self.hash = self._hash("size_t", { "source": self }, constraint=lambda: self.hashable)
+    self.compare = self._compare("int", { "left": self, "right": self }, constraint=lambda: self.orderable)
 
 
 #
@@ -209,7 +211,7 @@ class Primitive(Type):
   
   @property
   def constructible(self): return True
-  def _construct(self, result, parameters, **kws): return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
+  def _create(self, result, parameters, **kws): return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
 
   @property
   def copyable(self): return True

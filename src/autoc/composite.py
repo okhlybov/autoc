@@ -5,17 +5,38 @@ from autoc.core import *
 import autoc.std
 
 
+def default_decorator(type, identifier, **kws): return f"{type.prefix}{identifier}"
+
+
 #
 class Composite(Type, Entity):
-
-  @property
-  def constructible(self): return True
-  def _construct(self, result, parameters, **kws): pass
-
-  @property
-  def destructible(self): return False
-  def _destroy(self, result, parameters, **kws): pass
+ 
+  decorator = default_decorator
   
+  def __init__(self, *args, decorator=None, **kws):
+    super().__init__(*args, **kws)
+    self.prefix = self.name
+    self.__decorator = decorator
+    
+  def decorate(self, identifier, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
+
+  def method(self, result, identifier, parameters, **kws):
+    f = Function(result, self.decorate(identifier), parameters, **kws)
+    self.references.add(f)
+    return f
+  
+  def _create(self, result, parameters, **kws): return self.method(result, "create", parameters, **kws)
+
+  def _destroy(self, result, parameters, **kws): return self.method(result, "destroy", parameters, **kws)
+  
+  def _copy(self, result, parameters, **kws): return self.method(result, "copy", parameters, **kws)
+  
+  def _equal(self, result, parameters, **kws): return self.method(result, "equal", parameters, **kws)
+  
+  def _compare(self, result, parameters, **kws): return self.method(result, "compare", parameters, **kws)
+  
+  def _hash(self, result, parameters, **kws): return self.method(result, "hash", parameters, **kws)
+
   @cached_property
   def rvalue_type(self): return Pointer(self)
 
@@ -28,7 +49,7 @@ class Composite(Type, Entity):
   @cached_property
   def out_type(self): return Pointer(self)
 
-  
+
 #
 class Function(Function, Entity):
   
@@ -85,42 +106,43 @@ class Function(Function, Entity):
     super().render_interface(stream)
     if self.live and not self.internal:
       if self.inline:
-        self.render_definition(stream)
+        self._render_definition(stream)
       else:
-        self.render_declaration(stream)
+        self._render_declaration(stream)
   
   #
   def render_forward_declarations(self, stream):
     super().render_forward_declarations(stream)
     if self.live and self.internal:
       if self.inline:
-        self.render_definition(stream)
+        self._render_definition(stream)
       else:
-        self.render_declaration(stream)
+        self._render_declaration(stream)
   
   #
   def render_implementation(self, stream):
     super().render_implementation(stream)
     if self.live and self.external and not self.abstract:
-      self.render_definition(stream)
+      self._render_definition(stream)
 
   #  
-  def render_definition(self, stream):
-    if not (self.internal or self.external): stream.append(self.description())
+  def _render_definition(self, stream):
+    if not (self.internal or self.external): stream.append(self.description)
     if not self.external: stream.append(self.__decorator)
-    stream.append(self.definition())
+    stream.append(self.definition)
 
   #
-  def render_declaration(self, stream):
-    if not self.internal: stream.append(self.description())
+  def _render_declaration(self, stream):
+    if not self.internal: stream.append(self.description)
     stream.append(self.__decorator)
-    stream.append(self.declaration())
+    stream.append(self.declaration)
     stream.append(";")
     
   @cached_property
   def __decorator(self): return f"{Function.__spec[self.__type]}\n"
   
   #
+  @property
   def description(self):
     if self.public:
       return "/* @public */"
