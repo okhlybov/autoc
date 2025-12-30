@@ -6,12 +6,14 @@ import autoc.std
 
 
 #
-class Composite(autoc.core.Type, Entity):
+class Composite(Type, Entity):
 
-  def is_constructible(self): return True
+  @property
+  def constructible(self): return True
   def _construct(self, result, parameters, **kws): pass
 
-  def is_destructible(self): return False
+  @property
+  def destructible(self): return False
   def _destroy(self, result, parameters, **kws): pass
   
   @cached_property
@@ -105,18 +107,18 @@ class Function(Function, Entity):
   #  
   def render_definition(self, stream):
     if not (self.internal or self.external): stream.append(self.description())
-    if not self.external: stream.append(self._decorator)
+    if not self.external: stream.append(self.__decorator)
     stream.append(self.definition())
 
   #
   def render_declaration(self, stream):
     if not self.internal: stream.append(self.description())
-    stream.append(self._decorator)
+    stream.append(self.__decorator)
     stream.append(self.declaration())
     stream.append(";")
     
   @cached_property
-  def _decorator(self): return f"{Function.__spec[self.__type]}\n"
+  def __decorator(self): return f"{Function.__spec[self.__type]}\n"
   
   #
   def description(self):

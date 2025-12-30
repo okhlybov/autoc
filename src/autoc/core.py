@@ -196,33 +196,39 @@ class Type(metaclass = _DoubleStepConstructor):
   def __repr__(self): return f"{self} {super().__repr__()}"
 
   def __setup__(self):
-    self.construct = self._construct( None, { "target": out(self) }, constraint = lambda: self.is_constructible() )
-    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint = lambda: self.is_copyable() )
-    self.equal = self._equal("int", { "left": self, "right": self }, constraint = lambda: self.is_comparable() )
-    self.compare = self._compare("int", { "left": self, "right": self }, constraint = lambda: self.is_orderable() )
-    self.hash = self._hash("size_t", { "source": self }, constraint = lambda: self.is_hashable() )
-    self.destroy = self._destroy( None, { "target": out(self) }, constraint = lambda: self.is_destructible() )
+    self.construct = self._construct( None, { "target": out(self) }, constraint = lambda: self.constructible )
+    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint = lambda: self.copyable )
+    self.equal = self._equal("int", { "left": self, "right": self }, constraint = lambda: self.comparable )
+    self.compare = self._compare("int", { "left": self, "right": self }, constraint = lambda: self.orderable )
+    self.hash = self._hash("size_t", { "source": self }, constraint = lambda: self.hashable )
+    self.destroy = self._destroy( None, { "target": out(self) }, constraint = lambda: self.destructible )
 
 
 #
 class Primitive(Type):
   
-  def is_constructible(self): return True
+  @property
+  def constructible(self): return True
   def _construct(self, result, parameters, **kws): return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
 
-  def is_copyable(self): return True
+  @property
+  def copyable(self): return True
   def _copy(self, result, parameters, **kws): return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
-  def is_comparable(self): return True
+  @property
+  def comparable(self): return True
   def _equal(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
 
-  def is_orderable(self): return True
+  @property
+  def orderable(self): return True
   def _compare(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
 
-  def is_hashable(self): return True
+  @property
+  def hashable(self): return True
   def _hash(self, result, parameters, **kws): return Macro(result, parameters, lambda source: f"(size_t)({source})", **kws)
 
-  def is_destructible(self): return False
+  @property
+  def destructible(self): return False
   def _destroy(self, result, parameters, **kws): pass
   
   @property
