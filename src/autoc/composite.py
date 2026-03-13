@@ -58,16 +58,10 @@ class Function(Function, Entity):
     EXTERNAL = auto()
     INLINE = auto()
     
-  #
-  class Visibility(Enum):
-    PUBLIC = auto()
-    PRIVATE = auto()
-    INTERNAL = auto()
-    
-  def __init__(self, result, name, parameters={}, type=Type.EXTERNAL, visibility=Visibility.PUBLIC, abstract=False, *args, **kws):
+  def __init__(self, result, name, parameters={}, type=Type.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, *args, **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self.__type = type if isinstance(type, Function.Type) else Function.Type[type]
-    self.__visibility = visibility if isinstance(visibility, Function.Visibility) else Function.Visibility[visibility]
+    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
     for x in [x.base if isinstance(x, Pointer) else x for x in [Function.__definitions, self.result] + self.types]:
       # Pointer is a non-modularzed core type yet its base type can be
@@ -87,19 +81,23 @@ class Function(Function, Entity):
   
   #
   @property
-  def abstract(self): return self.__abstract is True
+  def abstract(self):
+    if self.__abstract is None:
+      return self.code is None
+    else:
+      return self.__abstract is True
   
   #
   @property
-  def public(self): return self.__visibility is Function.Visibility.PUBLIC
+  def public(self): return self.__visibility is Visibility.PUBLIC
   
   #
   @property
-  def private(self): return self.__visibility is Function.Visibility.PRIVATE
+  def private(self): return self.__visibility is Visibility.PRIVATE
   
   #
   @property
-  def internal(self): return self.__visibility is Function.Visibility.INTERNAL
+  def internal(self): return self.__visibility is Visibility.INTERNAL
   
   #
   def render_interface(self, stream):
@@ -127,8 +125,10 @@ class Function(Function, Entity):
 
   #  
   def _render_definition(self, stream):
-    if not (self.internal or self.external): stream.append(self.description)
-    if not self.external: stream.append(self.__decorator)
+    if not (self.internal or self.external):
+      stream.append(self.description)
+    if not self.external:
+      stream.append(self.__decorator)
     stream.append(self.definition)
 
   #

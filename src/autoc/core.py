@@ -1,4 +1,4 @@
-from functools import cached_property
+from enum import Enum, auto
 
 
 _type_cache = [] # [ (matcher, type) ]
@@ -51,6 +51,13 @@ def char(obj): return CharLiteral(obj)
 def out(obj): return Callable.Out(obj)
 
 
+# Generic identifier's visibility
+class Visibility(Enum):
+  PUBLIC = auto()
+  PRIVATE = auto()
+  INTERNAL = auto()
+
+
 #
 class Value:
   
@@ -89,8 +96,8 @@ class Callable:
   #
   def __init__(self, result, parameters={}, constraint=lambda: True, *args, **kws):
     super().__init__(*args, **kws)
-    self.parameters = { str(name): _parameter(type) for name, type in parameters.items() }
-    self.types = [ parameter.forward_type(self) for parameter in self.parameters.values() ]
+    self.parameters = {str(name): _parameter(type) for name, type in parameters.items()}
+    self.types = [parameter.forward_type(self) for parameter in self.parameters.values()]
     self.arguments = [Variable(type, name) for type, name in zip(self.types, self.parameters.keys())]
     self.constraint = constraint
     self.__result = result
@@ -147,6 +154,7 @@ class Macro(Callable):
     def __str__(self):
       return self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)])
 
+
 #
 class Function(Callable):
 
@@ -188,22 +196,35 @@ class _DoubleStepConstructor(type):
 #
 class Type(metaclass = _DoubleStepConstructor):
   
-  def __init__(self, name, *args, **kws):
+  def __init__(self, name, *args, visibility=Visibility.PUBLIC, **kws):
     super().__init__(*args, **kws)
     self.name = str(name)
     self.indirection = 0
-    
+    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
+
   def __str__(self): return self.name
 
   def __repr__(self): return f"{self} {super().__repr__()}"
 
   def __setup__(self):
-    self.create = self._create(None, { "target": out(self) }, constraint=lambda: self.constructible)
-    self.destroy = self._destroy(None, { "target": out(self) }, constraint=lambda: self.destructible)
-    self.copy = self._copy(None, { "target": out(self), "source": self }, constraint=lambda: self.copyable)
-    self.equal = self._equal("int", { "left": self, "right": self }, constraint=lambda: self.comparable)
-    self.hash = self._hash("size_t", { "source": self }, constraint=lambda: self.hashable)
-    self.compare = self._compare("int", { "left": self, "right": self }, constraint=lambda: self.orderable)
+    self.create = self._create(None, {"target": out(self)}, constraint=lambda: self.constructible)
+    self.destroy = self._destroy(None, {"target": out(self)}, constraint=lambda: self.destructible)
+    self.copy = self._copy(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
+    self.equal = self._equal("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
+    self.hash = self._hash("size_t", {"source": self}, constraint=lambda: self.hashable)
+    self.compare = self._compare("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
+
+  #
+  @property
+  def public(self): return self.__visibility is Visibility.PUBLIC
+  
+  #
+  @property
+  def private(self): return self.__visibility is Visibility.PRIVATE
+  
+  #
+  @property
+  def internal(self): return self.__visibility is Visibility.INTERNAL
 
 
 #
@@ -242,7 +263,7 @@ class Primitive(Type):
   @property
   def in_type(self): return self
 
-  @cached_property
+  @property
   def out_type(self): return Pointer(self)
 
 
@@ -296,3 +317,18 @@ class CharLiteral(Literal):
     
   def __str__(self):
     return f"'{self.value}'"
+  
+  
+class _Disabled:
+  @property
+  def constructible(self): return False
+  @property
+  def copyable(self): return False
+  @property
+  def orderable(self): return False
+  @property
+  def comparable(self): return False
+  @property
+  def destructible(self): return False
+  @property
+  def hashable(self): return False

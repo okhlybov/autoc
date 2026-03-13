@@ -1,5 +1,6 @@
 import re
-from autoc.module import *
+import autoc.core
+from autoc.module import Entity, Code, SystemHeader
 
 
 math_h = SystemHeader("math.h")
