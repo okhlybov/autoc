@@ -63,7 +63,7 @@ class Value:
   
   def __init__(self, type, *args, **kws):
     super().__init__(*args, **kws)
-    self.type = _type(type)
+    self.type = None if type is None else _type(type)
 
   def bind(self, type):
     x = self.type.indirection - type.indirection
@@ -178,7 +178,7 @@ class Function(Callable):
   #
   @property
   def definition(self):
-    return str().join([self.declaration, "{", *self.code, "}"])
+    return str().join([self.declaration, "{", *[str(c) for c in self.code], "}\n"])
     
   class Call(Callable.Call):
     def __str__(self):
@@ -200,7 +200,7 @@ class Type(metaclass = _DoubleStepConstructor):
     super().__init__(*args, **kws)
     self.name = str(name)
     self.indirection = 0
-    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
+    self.visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
 
   def __str__(self): return self.name
 
@@ -216,15 +216,15 @@ class Type(metaclass = _DoubleStepConstructor):
 
   #
   @property
-  def public(self): return self.__visibility is Visibility.PUBLIC
+  def public(self): return self.visibility is Visibility.PUBLIC
   
   #
   @property
-  def private(self): return self.__visibility is Visibility.PRIVATE
+  def private(self): return self.visibility is Visibility.PRIVATE
   
   #
   @property
-  def internal(self): return self.__visibility is Visibility.INTERNAL
+  def internal(self): return self.visibility is Visibility.INTERNAL
 
 
 #

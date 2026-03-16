@@ -20,8 +20,8 @@ class Composite(Type, Entity):
     
   def decorate(self, identifier, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
 
-  def method(self, result, identifier, parameters, **kws):
-    f = Function(result, self.decorate(identifier), parameters, **kws)
+  def method(self, result, identifier, parameters, visibility=None, **kws):
+    f = Function(result, self.decorate(identifier), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(f)
     return f
   
