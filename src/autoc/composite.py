@@ -5,20 +5,22 @@ from autoc.core import *
 import autoc.std
 
 
-def default_decorator(type, identifier, **kws): return f"{type.prefix}{identifier}"
+# Default composite identifier decorator
+def basic_decorator(type, *args, **kws):
+  return str(type.prefix) + "".join(args)
 
 
 #
 class Composite(Type, Entity):
  
-  decorator = default_decorator
+  decorator = basic_decorator
   
   def __init__(self, *args, decorator=None, **kws):
     super().__init__(*args, **kws)
     self.prefix = self.name
     self.__decorator = decorator
     
-  def decorate(self, identifier, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
+  def decorate(self, *args, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, *args, **kws)
 
   def method(self, result, identifier, parameters, visibility=None, **kws):
     f = Function(result, self.decorate(identifier), parameters, visibility=self.visibility if visibility is None else visibility, **kws)

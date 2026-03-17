@@ -1,13 +1,18 @@
 import autoc.core
-from autoc.composite import Composite
+import autoc.hash
+import autoc.composite
 
 
 #
-class Record(Composite, autoc.core._Disabled):
+class Record(autoc.composite.Composite,):
   
-  def __init__(self, name, fields={}, *args, **kws):
+  def __init__(self, name, fields={}, hasher=autoc.hash.Hasher(), readers=True, writers=True, *args, **kws):
     super().__init__(name, *args, **kws)
     self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
+    self.hasher = hasher
+    self.readers = readers
+    self.writers = writers
+    self.dependencies.add(hasher)
     for type in self.fields.values():
       self.dependencies.add(type)
 
@@ -42,7 +47,42 @@ class Record(Composite, autoc.core._Disabled):
         code.append(";")
       self.copy.code = code
       
-    # TODO hash
+    if self.hashable:
+      code = []
+      code.append(f"{self.hasher.state_t} state; size_t result; assert(source); {self.hasher.create("state")};")
+      for field, type in self.fields.items():
+        code.append(self.hasher.update("state", type.hash(f"source->{field}")))
+        code.append(";")
+      code.append(f"result = {self.hasher.hash("state")}; {self.hasher.destroy("state")}; return result;")
+      self.hash.code = code
+
+    if self.readers:
+      for field, type in self.fields.items():
+        self._add_reader(type, field)
+
+    if self.writers:
+      for field, type in self.fields.items():
+        self._add_writer(type, field)
+
+  def _add_reader(self, type, field):
+    self.references.add(autoc.composite.Function(type, self._reader_name(field), dict(target=self), visibility=self.visibility, type=autoc.composite.Function.Type.INLINE, code = f"""
+      assert(target);
+      {type} result;
+      {type.copy("result", f"target->{field}")};
+      return result;
+    """))
+
+  def _add_writer(self, type, field):
+    destroy_field = type.destory(f"target->{field}") if type.destructible else str()
+    self.references.add(autoc.composite.Function(None, self._writer_name(field), dict(target=self, value=type), visibility=self.visibility, type=autoc.composite.Function.Type.INLINE, code = f"""
+      assert(target);
+      {destroy_field};
+      {type.copy(f"target->{field}", "value")};
+    """))
+
+  def _reader_name(self, field): return self.decorate(field)
+    
+  def _writer_name(self, field): return self.decorate("set", field)
 
   def _render_struct(self, stream):
     stream.append("typedef struct {\n")
