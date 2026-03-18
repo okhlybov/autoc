@@ -26,29 +26,39 @@ class Composite(Type, Entity):
     self.references.add(f)
     return f
   
-  def _create(self, result, parameters, **kws): return self.method(result, "create", parameters, **kws)
+  def _create(self, result, parameters, **kws):
+    return self.method(result, "create", parameters, **kws)
 
-  def _destroy(self, result, parameters, **kws): return self.method(result, "destroy", parameters, **kws)
+  def _destroy(self, result, parameters, **kws):
+    return self.method(result, "destroy", parameters, **kws)
   
-  def _copy(self, result, parameters, **kws): return self.method(result, "copy", parameters, **kws)
+  def _copy(self, result, parameters, **kws):
+    return self.method(result, "copy", parameters, **kws)
   
-  def _equal(self, result, parameters, **kws): return self.method(result, "equal", parameters, **kws)
+  def _equal(self, result, parameters, **kws):
+    return self.method(result, "equal", parameters, **kws)
   
-  def _compare(self, result, parameters, **kws): return self.method(result, "compare", parameters, **kws)
+  def _compare(self, result, parameters, **kws):
+    return self.method(result, "compare", parameters, **kws)
   
-  def _hash(self, result, parameters, **kws): return self.method(result, "hash", parameters, **kws)
+  def _hash(self, result, parameters, **kws):
+    return self.method(result, "hash", parameters, **kws)
 
   @property
-  def rvalue_type(self): return Pointer(self)
+  def rvalue_type(self):
+    return Pointer(self)
 
   @property
-  def lvalue_type(self): return Pointer(self)
+  def lvalue_type(self):
+    return Pointer(self)
 
   @property
-  def in_type(self): return Pointer(self, constant=True)
+  def in_type(self):
+    return Pointer(self, constant=True)
 
   @property
-  def out_type(self): return Pointer(self)
+  def out_type(self):
+    return Pointer(self)
 
 
 #
@@ -70,15 +80,18 @@ class Function(Function, Entity):
 
   #
   @property
-  def live(self): return self.constraint() is True
+  def live(self):
+    return self.constraint() is True
   
   #
   @property
-  def inline(self): return self.__type is Function.Type.INLINE
+  def inline(self):
+    return self.__type is Function.Type.INLINE
   
   #
   @property
-  def external(self): return self.__type is Function.Type.EXTERNAL
+  def external(self):
+    return self.__type is Function.Type.EXTERNAL
   
   #
   @property
@@ -88,17 +101,22 @@ class Function(Function, Entity):
     else:
       return self.__abstract is True
   
-  #
-  @property
-  def public(self): return self.__visibility is Visibility.PUBLIC
+  # FIXME visibility should be extracted into independent mixin class
   
   #
   @property
-  def private(self): return self.__visibility is Visibility.PRIVATE
+  def public(self):
+    return self.__visibility is Visibility.PUBLIC
   
   #
   @property
-  def internal(self): return self.__visibility is Visibility.INTERNAL
+  def private(self):
+    return self.__visibility is Visibility.PRIVATE
+  
+  #
+  @property
+  def internal(self):
+    return self.__visibility is Visibility.INTERNAL
   
   #
   def render_interface(self, stream):

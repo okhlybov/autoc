@@ -216,15 +216,18 @@ class Type(metaclass = _DoubleStepConstructor):
 
   #
   @property
-  def public(self): return self.visibility is Visibility.PUBLIC
+  def public(self):
+    return self.visibility is Visibility.PUBLIC
   
   #
   @property
-  def private(self): return self.visibility is Visibility.PRIVATE
+  def private(self):
+    return self.visibility is Visibility.PRIVATE
   
   #
   @property
-  def internal(self): return self.visibility is Visibility.INTERNAL
+  def internal(self):
+    return self.visibility is Visibility.INTERNAL
 
 
 #
@@ -232,23 +235,28 @@ class Primitive(Type):
   
   @property
   def constructible(self): return True
-  def _create(self, result, parameters, **kws): return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
+  def _create(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
 
   @property
   def copyable(self): return True
-  def _copy(self, result, parameters, **kws): return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def _copy(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   @property
   def comparable(self): return True
-  def _equal(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
+  def _equal(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
 
   @property
   def orderable(self): return True
-  def _compare(self, result, parameters, **kws): return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
+  def _compare(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
 
   @property
   def hashable(self): return True
-  def _hash(self, result, parameters, **kws): return Macro(result, parameters, lambda source: f"(size_t)({source})", **kws)
+  def _hash(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda source: f"(size_t)({source})", **kws)
 
   @property
   def destructible(self): return False
@@ -320,8 +328,9 @@ class CharLiteral(Literal):
     
   def __str__(self):
     return f"'{self.value}'"
-  
-  
+
+ 
+#
 class _Disabled:
   @property
   def constructible(self): return False
