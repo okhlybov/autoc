@@ -147,8 +147,8 @@ class Function(Function, Entity):
   @property
   def description(self):
     if self.public:
-      return "/* @public */"
+      return "/* @public */\n"
     else:
-      return "/* @private */"
+      return "/* @private */\n"
 
   __spec = {Type.INLINE: "AUTOC_STATIC_INLINE", Type.EXTERNAL: "AUTOC_EXTERN"}
