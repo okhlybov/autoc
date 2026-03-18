@@ -98,8 +98,7 @@ class Complex(Primitive):
       #endif
     """
   )
-  
-  
+
 
 long_double_complex = Complex.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")
 double_complex = Complex.register("autoc_double_complex_t", matcher=r"^double\s+(complex|_Complex)$")
@@ -114,3 +113,23 @@ for bits in [8, 16, 32, 64]:
   for prefix in ["int", "uint", "int_fast", "uint_fast", "int_least", "uint_least"]:
     type_name = f"{prefix}{bits}_t"
     globals()[type_name] = Primitive.register(type_name, dependencies=[inttypes_h])
+
+
+definitions = Code(
+  interface="""
+    #ifndef AUTOC_EXTERN
+      #ifdef __cplusplus
+        #define AUTOC_EXTERN extern "C"
+      #else
+        #define AUTOC_EXTERN extern
+      #endif
+    #endif
+    #ifndef AUTOC_STATIC_INLINE
+      #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+        #define AUTOC_STATIC_INLINE static inline
+      #else
+        #define AUTOC_STATIC_INLINE static
+      #endif
+    #endif
+  """
+)

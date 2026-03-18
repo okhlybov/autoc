@@ -1,8 +1,7 @@
-from functools import cached_property
+import autoc.std
 from enum import Enum, auto
 from autoc.module import *
 from autoc.core import *
-import autoc.std
 
 
 # Default composite identifier decorator
@@ -39,16 +38,16 @@ class Composite(Type, Entity):
   
   def _hash(self, result, parameters, **kws): return self.method(result, "hash", parameters, **kws)
 
-  @cached_property
+  @property
   def rvalue_type(self): return Pointer(self)
 
-  @cached_property
+  @property
   def lvalue_type(self): return Pointer(self)
 
-  @cached_property
-  def in_type(self): return Pointer(self)
+  @property
+  def in_type(self): return Pointer(self, constant=True)
 
-  @cached_property
+  @property
   def out_type(self): return Pointer(self)
 
 
@@ -65,7 +64,7 @@ class Function(Function, Entity):
     self.__type = type if isinstance(type, Function.Type) else Function.Type[type]
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
-    for x in [x.base if isinstance(x, Pointer) else x for x in [Function.__definitions, self.result] + self.types]:
+    for x in [x.base if isinstance(x, Pointer) else x for x in [autoc.std.definitions, self.result] + self.types]:
       # Pointer is a non-modularzed core type yet its base type can be
       if isinstance(x, Entity): self.dependencies.add(x)
 
@@ -135,12 +134,13 @@ class Function(Function, Entity):
 
   #
   def _render_declaration(self, stream):
-    if not self.internal: stream.append(self.description)
+    if not self.internal:
+      stream.append(self.description)
     stream.append(self.__decorator)
     stream.append(self.declaration)
-    stream.append(";")
+    stream.append(";\n")
     
-  @cached_property
+  @property
   def __decorator(self): return f"{Function.__spec[self.__type]}\n"
   
   #
@@ -152,22 +152,3 @@ class Function(Function, Entity):
       return "/* @private */"
 
   __spec = {Type.INLINE: "AUTOC_STATIC_INLINE", Type.EXTERNAL: "AUTOC_EXTERN"}
-  
-  __definitions = Code(
-    interface="""
-      #ifndef AUTOC_EXTERN
-        #ifdef __cplusplus
-          #define AUTOC_EXTERN extern "C"
-        #else
-          #define AUTOC_EXTERN extern
-        #endif
-      #endif
-      #ifndef AUTOC_STATIC_INLINE
-        #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
-          #define AUTOC_STATIC_INLINE static inline
-        #else
-          #define AUTOC_STATIC_INLINE static
-        #endif
-      #endif
-    """
-  )
