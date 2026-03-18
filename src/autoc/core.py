@@ -270,15 +270,18 @@ class Primitive(Type):
 #
 class Pointer(Primitive):
   
-  def __init__(self, type, indirection = 1, *args, **kws):
+  def __init__(self, type, indirection=1, constant=False, *args, **kws):
     i = 0
     t = _type(type)
     if isinstance(t, Pointer):
       i = t.indirection
       t = t.base
-    super().__init__(t.name+"*"*indirection, *args, **kws)
+    signature = "const " if constant else str()
+    signature += t.name + "*"*indirection
+    super().__init__(signature, *args, **kws)
     self.base = t
     self.indirection = indirection + i
+    self.constant = constant
 
 
 #
