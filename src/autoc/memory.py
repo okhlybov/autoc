@@ -1,9 +1,11 @@
+import functools
 import autoc.module
 import autoc.std as std
 import autoc.core as core
 
 
-# Standard C malloc()+free() memory manager
+# Generic C malloc()+free() memory manager
+@functools.cache
 class Manager(autoc.module.Code):
   
   def __init__(self):

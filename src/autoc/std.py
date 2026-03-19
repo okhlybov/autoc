@@ -69,7 +69,7 @@ class Complex(Primitive):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self.dependencies.add(Complex._definitions)
+    self.dependencies.add(Complex.__definitions)
 
   @property
   def orderable(self): return False
@@ -77,7 +77,7 @@ class Complex(Primitive):
 
   def _hash(self, result, parameters, **kws): return autoc.core.Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
   
-  _definitions = Code(
+  __definitions = Code(
     dependencies=[complex_h, tgmath_h],
     interface="""
       #ifdef __cplusplus

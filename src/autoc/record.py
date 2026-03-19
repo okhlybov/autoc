@@ -50,9 +50,9 @@ class Record(autoc.composite.Composite):
       
     if self.hashable:
       code = []
-      code.append(f"{self.hasher.state_t} state; size_t result; assert(source); {self.hasher.create("state")};")
+      code.append(f"{self.hasher.state_t} state; size_t result; assert(target); {self.hasher.create("state")};")
       for field, type in self.fields.items():
-        code.append(self.hasher.update("state", type.hash(f"source->{field}")))
+        code.append(self.hasher.update("state", type.hash(f"target->{field}")))
         code.append(";")
       code.append(f"result = {self.hasher.hash("state")}; {self.hasher.destroy("state")}; return result;")
       self.hash.code = code

@@ -89,6 +89,9 @@ class Variable(Value):
       return "&" + str(self)
     raise ValueError(f"bad indirection level {x} for taking address of {self} with &")
 
+  @property
+  def definition(self):
+    return f"{self.type} {self.name}"
 
 #
 class Callable:
@@ -211,7 +214,7 @@ class Type(metaclass = _DoubleStepConstructor):
     self.destroy = self._destroy(None, {"target": out(self)}, constraint=lambda: self.destructible)
     self.copy = self._copy(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
     self.equal = self._equal("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
-    self.hash = self._hash("size_t", {"source": self}, constraint=lambda: self.hashable)
+    self.hash = self._hash("size_t", {"target": self}, constraint=lambda: self.hashable)
     self.compare = self._compare("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
 
   #
@@ -331,7 +334,7 @@ class CharLiteral(Literal):
 
  
 #
-class _Disabled:
+class TraitsDisabler:
   @property
   def constructible(self): return False
   @property
