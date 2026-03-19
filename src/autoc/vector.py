@@ -1,46 +1,73 @@
 import autoc.core
-from autoc.core import out
+from autoc.core import out, _type as type
+import autoc.memory
 import autoc.composite
 import autoc.std as std
-import autoc.memory
-
+from autoc.core import Pointer, Variable
 
 #
-class Vector(autoc.composite.Composite, autoc.core._Disabled):
+class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
 
-  def __init__(self, name, element, memory=autoc.memory.Manager(), *args, **kws):
+  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
     super().__init__(name, *args, **kws)
-    self.element = autoc.core._type(element)
+    self.element = type(element)
     self.memory = memory
-    self.dependencies.update([std.assert_h, self.element, self.memory])
+    self.hasher = hasher
+    self.dependencies.update([std.assert_h, self.element, self.memory, self.hasher])
 
   def __setup__(self):
     super().__setup__()
     
-    #
+    te_i = Variable(self.element, "target->elements[index]")
+    le_i = Variable(self.element, "left->elements[index]")
+    re_i = Variable(self.element, "right->elements[index]")
+    result = Variable(self.element, "result")
+    
+    self.method(std.size_t, "size", {"target": self}, type="INLINE", code=f"""
+      assert(target);
+      return target->size;
+    """)
+    
+    # TODO make use of zero initializable feature of primitives
+    self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, code=f"""
+      assert(target);
+      if(size > 0) {{
+        size_t index;
+        target->elements = {self.memory.allocate(self.element, "size")}; assert(target->elements);
+        for(index = 0; index < size; ++index) {self.element.create(te_i)};
+      }} else target->elements = NULL;
+      target->size = size;
+    """)
+
+    self.method(self.element, "get", {"target": self, "index": std.size_t}, type="INLINE", code=f"""
+      {result.definition};
+      assert(target);
+      assert(index < target->size);
+      {self.element.copy(result, te_i)};
+      return result;
+    """)
+    
+    destroy_i = self.element.destroy(te_i) if self.element.destructible else str()
+    
+    set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, type="INLINE")
+    set.code=f"""
+      assert(target);
+      {destroy_i};
+      {self.element.copy(te_i, set.arguments[2])};
+    """
+    
     self.create.code = """
       assert(target);
       target->elements = NULL;
       target->size = 0;
     """
     
-    # TODO make use of zero initializable feature of primitives
-    self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, code=f"""
-      assert(target);
-      if(size > 0) {{
-        size_t i;
-        target->elements = {self.memory.allocate(self.element, "size")}; assert(target->elements);
-        for(i = 0; i < size; ++i) {self.element.create(f"target->elements[i]")};
-      }} else target->elements = NULL;
-      target->size = size;
-    """)
-
     if self.element.destructible:
       self.destroy.code = f"""
-        size_t i;
+        size_t index;
         assert(target);
         if(target->size > 0) {{
-          for(i = 0; i < target->size; ++i) {self.element.destroy("target->elements[i]")};
+          for(index = 0; index < target->size; ++index) {self.element.destroy(te_i)};
           {self.memory.free("target->elements")};
         }}
       """
@@ -49,14 +76,39 @@ class Vector(autoc.composite.Composite, autoc.core._Disabled):
         assert(target);
         if(target->size > 0) {self.memory.free("target->elements")};
       """
+
+    if self.comparable:
+      self.equal.code = f"""
+        assert(left);
+        assert(right);
+        if(left->size == right->size) {{
+          size_t index;
+          for(index = 0; index < left->size; ++index) {{
+            if(!{self.element.equal(le_i, re_i)}) return 0;
+          }}
+          return 1;
+        }} else return 0;
+      """
     
+    if self.hashable:
+      self.hash.code = f"""
+        size_t index, result;
+        {self.hasher.state_t} state;
+        assert(target);
+        {self.hasher.create("state")};
+        for(index = 0; index < target->size; ++index) {self.hasher.update("state", self.element.hash(te_i))};
+        result = {self.hasher.hash("state")};
+        {self.hasher.destroy("state")};
+        return result;
+      """
+
   def _render_struct(self, stream):
     if self.public:
       stream.append("/** @public */\n")
     if self.private:
       stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
-      {autoc.core.Pointer(self.element)} elements; /**< @private */
+      {Pointer(self.element)} elements; /**< @private */
       {std.size_t} size; /**< @private */
     }} {self.name};
     """)
@@ -76,3 +128,15 @@ class Vector(autoc.composite.Composite, autoc.core._Disabled):
   
   @property
   def destructible(self): return True
+  
+  @property
+  def comparable(self):
+    return self.element.comparable
+  
+  @property
+  def hashable(self):
+    return self.element.hashable
+  
+  @property
+  def copyable(self):
+    return self.element.copyable
