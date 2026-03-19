@@ -12,6 +12,7 @@ def basic_decorator(type, *args, **kws):
 #
 class Composite(Type, Entity):
  
+  # Global decorator used by all Composite descentants unless set locally
   decorator = basic_decorator
   
   def __init__(self, *args, decorator=None, **kws):
@@ -22,7 +23,11 @@ class Composite(Type, Entity):
   def decorate(self, *args, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, *args, **kws)
 
   def method(self, result, identifier, parameters, visibility=None, **kws):
-    f = Function(result, self.decorate(identifier), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
+    try:
+      ids = iter(identifier)
+    except:
+      ids = identifier
+    f = Function(result, self.decorate(*ids), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(f)
     return f
   
@@ -65,18 +70,26 @@ class Composite(Type, Entity):
 class Function(Function, Entity):
   
   #
-  class Type(Enum):
+  class Linkage(Enum):
     EXTERNAL = auto()
     INLINE = auto()
     
-  def __init__(self, result, name, parameters={}, type=Type.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, *args, **kws):
+  def __init__(self, result, name, parameters={}, type=Linkage.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, *args, **kws):
     super().__init__(result, name, parameters, *args, **kws)
-    self.__type = type if isinstance(type, Function.Type) else Function.Type[type]
+    self.linkage = type # FIXME reflect in the interface
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
     for x in [x.base if isinstance(x, Pointer) else x for x in [autoc.std.definitions, self.result] + self.types]:
       # Pointer is a non-modularzed core type yet its base type can be
       if isinstance(x, Entity): self.dependencies.add(x)
+
+  @property
+  def linkage(self):
+    return self.__linkage
+
+  @linkage.setter
+  def linkage(self, linkage):
+    self.__linkage = linkage if isinstance(linkage, Function.Linkage) else Function.Linkage[linkage]
 
   #
   @property
@@ -86,12 +99,12 @@ class Function(Function, Entity):
   #
   @property
   def inline(self):
-    return self.__type is Function.Type.INLINE
+    return self.linkage is Function.Linkage.INLINE
   
   #
   @property
   def external(self):
-    return self.__type is Function.Type.EXTERNAL
+    return self.linkage is Function.Linkage.EXTERNAL
   
   #
   @property
@@ -159,14 +172,14 @@ class Function(Function, Entity):
     stream.append(";\n")
     
   @property
-  def __decorator(self): return f"{Function.__spec[self.__type]}\n"
+  def __decorator(self): return f"{Function.__spec[self.linkage]}\n"
   
   #
   @property
   def description(self):
     if self.public:
-      return "/* @public */\n"
+      return "/** @public */\n"
     else:
-      return "/* @private */\n"
+      return "/** @private */\n"
 
-  __spec = {Type.INLINE: "AUTOC_STATIC_INLINE", Type.EXTERNAL: "AUTOC_EXTERN"}
+  __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
