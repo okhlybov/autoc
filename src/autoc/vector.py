@@ -18,6 +18,7 @@ class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
   def __setup__(self):
     super().__setup__()
     
+    se_i = Variable(self.element, "source->elements[index]")
     te_i = Variable(self.element, "target->elements[index]")
     le_i = Variable(self.element, "left->elements[index]")
     re_i = Variable(self.element, "right->elements[index]")
@@ -27,17 +28,25 @@ class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
       assert(target);
       return target->size;
     """)
+
+    self.allocate = self.method(None, "allocate", {"target": out(self), "capacity": std.size_t}, visibility="PRIVATE", code=f"""
+      assert(target);
+      if(capacity > 0) {{
+        target->elements = {self.memory.allocate(self.element, "capacity")}; assert(target->elements);
+      }} else target->elements = NULL;
+      target->size = capacity;
+    """)
     
     # TODO make use of zero initializable feature of primitives
-    self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, code=f"""
+    create_size = self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t})
+    create_size.code=f"""
       assert(target);
       if(size > 0) {{
         size_t index;
-        target->elements = {self.memory.allocate(self.element, "size")}; assert(target->elements);
+        {self.allocate(*create_size.arguments)};
         for(index = 0; index < size; ++index) {self.element.create(te_i)};
       }} else target->elements = NULL;
-      target->size = size;
-    """)
+    """
 
     self.method(self.element, "get", {"target": self, "index": std.size_t}, type="INLINE", code=f"""
       {result.definition};
@@ -100,6 +109,15 @@ class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
         result = {self.hasher.hash("state")};
         {self.hasher.destroy("state")};
         return result;
+      """
+
+    if self.copyable:
+      self.copy.code = f"""
+        size_t index;
+        assert(target);
+        assert(source);
+        {self.allocate("target", "source->size")};
+        for(index = 0; index < target->size; ++index) {self.element.copy(te_i, se_i)};
       """
 
   def _render_struct(self, stream):
