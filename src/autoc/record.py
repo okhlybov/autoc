@@ -6,12 +6,12 @@ from autoc.core import out, Visibility
 #
 class Record(autoc.composite.Composite):
   
-  def __init__(self, name, fields={}, hasher=autoc.hash.Hasher(), readers=True, writers=True, glassbox=False, *args, **kws):
+  def __init__(self, name, fields={}, hasher=autoc.hash.Hasher(), getters=True, setters=True, glassbox=False, *args, **kws):
     super().__init__(name, *args, **kws)
     self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
     self.hasher = hasher
-    self.readers = readers
-    self.writers = writers
+    self.getters = getters
+    self.setters = setters
     self.glassbox = glassbox
     self.dependencies.add(hasher)
     for type in self.fields.values():
@@ -57,16 +57,16 @@ class Record(autoc.composite.Composite):
       code.append(f"result = {self.hasher.hash("state")}; {self.hasher.destroy("state")}; return result;")
       self.hash.code = code
 
-    if self.readers:
+    if self.getters:
       for field, type in self.fields.items():
         self._add_reader(type, field)
 
-    if self.writers:
+    if self.setters:
       for field, type in self.fields.items():
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    self.references.add(autoc.composite.Function(type, self._reader_name(field), {"target": self}, visibility=self.visibility, type=autoc.composite.Function.Linkage.INLINE, code = f"""
+    self.references.add(autoc.composite.Function(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type=autoc.composite.Function.Linkage.INLINE, code = f"""
       {type} result;
       assert(target);
       {type.copy("result", f"target->{field}")};
@@ -75,15 +75,15 @@ class Record(autoc.composite.Composite):
 
   def _add_writer(self, type, field):
     destroy_field = type.destory(f"target->{field}") if type.destructible else str()
-    self.references.add(autoc.composite.Function(None, self._writer_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=autoc.composite.Function.Linkage.INLINE, code = f"""
+    self.references.add(autoc.composite.Function(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=autoc.composite.Function.Linkage.INLINE, code = f"""
       assert(target);
       {destroy_field};
       {type.copy(f"target->{field}", "value")};
     """))
 
-  def _reader_name(self, field): return self.decorate(field)
+  def _getter_name(self, field): return self.decorate(field)
     
-  def _writer_name(self, field): return self.decorate("set", field)
+  def _setter_name(self, field): return self.decorate("set", field)
 
   def _render_struct(self, stream):
     if self.public:
