@@ -4,30 +4,35 @@ from autoc.module import *
 from autoc.core import *
 
 
-# Default composite identifier decorator
-def basic_decorator(type, *args, **kws):
-  return str(type.prefix) + "".join(args)
+# _snake_case identifier decorator
+def snake_decorator(type, identifier):
+  ids = [identifier] if isinstance(identifier, str) else [*identifier]
+  return  "_".join([str(type.prefix)] + ids)
+
+
+# CamelCase identifier decorator
+def camel_decorator(type, identifier):
+  ids = [identifier] if isinstance(identifier, str) else [*identifier]
+  return  "".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids])
 
 
 #
 class Composite(Type, Entity):
  
-  # Global decorator used by all Composite descentants unless set locally
-  decorator = basic_decorator
+  # Global decorator used by all Composite descentants unless overridden locally
+  decorator = camel_decorator
   
   def __init__(self, *args, decorator=None, **kws):
     super().__init__(*args, **kws)
     self.prefix = self.name
     self.__decorator = decorator
     
-  def decorate(self, *args, **kws): return (Composite.decorator if self.__decorator is None else self.__decorator)(self, *args, **kws)
-
+  def decorate(self, *args, **kws):
+    identifier = args if len(args) > 1 else args[0]
+    return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
+  
   def method(self, result, identifier, parameters, visibility=None, **kws):
-    try:
-      ids = iter(identifier)
-    except:
-      ids = identifier
-    f = Function(result, self.decorate(*ids), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
+    f = Function(result, self.decorate(identifier), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(f)
     return f
   
