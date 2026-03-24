@@ -1,7 +1,8 @@
 import autoc.std
-from enum import Enum, auto
-from autoc.module import *
+import autoc.memory
 from autoc.core import *
+from enum import Enum, auto
+from autoc.module import Entity
 
 
 # _snake_case identifier decorator
@@ -188,3 +189,58 @@ class Function(Function, Entity):
       return "/** @private */\n"
 
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
+
+
+#
+class Arc(Composite, autoc.core.TraitsDisabler):
+  
+  def __init__(self, type, *args, prefix=None, memory=autoc.memory.Manager(), **kws):
+    super().__init__(Pointer(t := autoc.core._type(type)), *args, **kws)
+    self.type = t
+    self.memory = memory
+    self.prefix = prefix if prefix else self.type.prefix
+    self.dependencies.add(self.type)
+
+  def __setup__(self):
+    super().__setup__()
+    
+    self.new = self.method(self, "new", {}, code=f"""
+      {self} result = {self.memory.allocate(self.type)}; assert(result);
+      return result;
+    """)
+    
+    self.free = self.method(None, "free", {"target": out(self)}, code=f"""
+      {self.memory.free("target")};
+    """)
+
+    
+  @property
+  def constructible(self):
+    return self.type.constructible
+
+  def _create(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda target: f"{target} = {self.new()}", **kws)
+
+  @property
+  def destructible(self):
+    return True
+
+  def _destroy(self, result, parameters, **kws):
+    return self.method(result, "free", parameters, **kws)
+  
+  
+  @property
+  def rvalue_type(self):
+    return self
+
+  @property
+  def lvalue_type(self):
+    return self
+
+  @property
+  def in_type(self):
+    return Pointer(self.type, constant=True)
+
+  @property
+  def out_type(self):
+    return self
