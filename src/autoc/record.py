@@ -1,7 +1,6 @@
-import autoc.core
 import autoc.hash
 import autoc.composite
-from autoc.core import out, Visibility
+from autoc.core import out
 
 #
 class Record(autoc.composite.Composite):

@@ -1,16 +1,14 @@
-import autoc.core
-from autoc.core import out, _type as type
 import autoc.memory
 import autoc.composite
 import autoc.std as std
-from autoc.core import Pointer, Variable
+from autoc.core import out, _type, Pointer, Variable
 
 #
 class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
 
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
     super().__init__(name, *args, **kws)
-    self.element = type(element)
+    self.element = _type(element)
     self.memory = memory
     self.hasher = hasher
     self.dependencies.update([std.assert_h, self.element, self.memory, self.hasher])

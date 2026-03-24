@@ -1,7 +1,7 @@
 import functools
 import autoc.module
 import autoc.std as std
-import autoc.core as core
+from autoc.core import Pointer
 
 
 # Generic C malloc()+free() memory manager
@@ -13,7 +13,7 @@ class Manager(autoc.module.Code):
     
   def allocate(self, type=None, count=1, zero=False):
     if type:
-      p = core.Pointer(type)
+      p = Pointer(type)
       return f"({p})calloc({count}, sizeof({type}))" if zero else f"({p})malloc({count}*sizeof({type}))"
     else:
       return f"calloc({count}, 1)" if zero else f"malloc({count})"

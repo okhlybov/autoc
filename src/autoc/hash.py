@@ -1,8 +1,7 @@
 import functools
 import autoc.module
 import autoc.std as std
-from autoc.core import Macro
-from autoc.core import out
+from autoc.core import out, Macro
 
 
 # Generic xor+shift hasher
