@@ -14,7 +14,10 @@ class Manager(autoc.module.Code):
   def allocate(self, type=None, count=1, zero=False):
     if type:
       p = Pointer(type)
-      return f"({p})calloc({count}, sizeof({type}))" if zero else f"({p})malloc({count}*sizeof({type}))"
+      if zero:
+        return f"({p})calloc({count}, sizeof({type}))"
+      else:
+        return  f"({p})malloc(sizeof({type}))" if count == 1 else  f"({p})malloc({count}*sizeof({type}))"
     else:
       return f"calloc({count}, 1)" if zero else f"malloc({count})"
     
