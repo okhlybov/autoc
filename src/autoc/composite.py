@@ -71,6 +71,10 @@ class Composite(Type, Entity):
   def out_type(self):
     return Pointer(self)
 
+  @property
+  def inout_type(self):
+    return Pointer(self)
+
 
 #
 class Function(Function, Entity):
@@ -194,9 +198,12 @@ class Function(Function, Entity):
 #
 class Arc(Composite, autoc.core.TraitsDisabler):
   
-  def __init__(self, type, *args, prefix=None, memory=autoc.memory.Manager(), **kws):
-    super().__init__(Pointer(t := autoc.core._type(type)), *args, **kws)
+  def __init__(self, type, *args, prefix=None, alias=None, memory=autoc.memory.Manager(), **kws):
+    t = autoc.core._type(type)
+    p = str(alias) if alias else Pointer(t)
+    super().__init__(p, *args, **kws)
     self.type = t
+    self.alias = alias
     self.memory = memory
     self.prefix = prefix if prefix else self.type.prefix
     self.dependencies.add(self.type)
@@ -209,11 +216,29 @@ class Arc(Composite, autoc.core.TraitsDisabler):
       return result;
     """)
     
-    self.free = self.method(None, "free", {"target": out(self)}, code=f"""
+    self.free = self.method(None, "free", {"target": inout(self)}, code=f"""
       {self.memory.free("target")};
     """)
 
     
+  def _render_struct(self, stream):
+    if self.alias:
+      if self.public:
+        stream.append("/** @public */\n")
+      if self.private:
+        stream.append("/** @private */\n")
+      stream.append(f"typedef {Pointer(self.type)} {self.name};\n")
+
+  def render_interface(self, stream):
+    super().render_interface(stream)
+    if not self.internal:
+      self._render_struct(stream)
+
+  def render_forward_declarations(self, stream):
+    super().render_forward_declarations(stream)
+    if self.internal:
+      self._render_struct(stream)
+
   @property
   def constructible(self):
     return self.type.constructible
@@ -232,15 +257,22 @@ class Arc(Composite, autoc.core.TraitsDisabler):
   @property
   def rvalue_type(self):
     return self
+    return Pointer(self) if self.alias else self
 
   @property
   def lvalue_type(self):
-    return self
+    return Pointer(self) if self.alias else self
 
   @property
   def in_type(self):
-    return Pointer(self.type, constant=True)
+    return self if self.alias else Pointer(self.type, constant=True)
 
   @property
   def out_type(self):
+    return Pointer(self)
+    return Pointer(self) if self.alias else self
+
+  @property
+  def inout_type(self):
     return self
+    return Pointer(self) if self.alias else self
