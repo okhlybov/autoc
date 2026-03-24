@@ -51,6 +51,10 @@ def char(obj): return CharLiteral(obj)
 def out(obj): return Callable.Out(obj)
 
 
+#
+def inout(obj): return Callable.InOut(obj)
+
+
 # Generic identifier's visibility
 class Visibility(Enum):
   PUBLIC = auto()
@@ -128,6 +132,9 @@ class Callable:
   class Out(Parameter):
     def forward_type(self, type): return type.type_out(self.type)
 
+  class InOut(Parameter):
+    def forward_type(self, type): return type.type_inout(self.type)
+
   class Call(Value):
     def __init__(self, callable, arguments, *args, **kws):
       super().__init__(callable.result, *args, **kws)
@@ -148,7 +155,10 @@ class Macro(Callable):
     self.emitter = emitter
 
   def type_in(self, type): return type.rvalue_type
+
   def type_out(self, type): return type.lvalue_type
+
+  def type_inout(self, type): return type.lvalue_type
 
   #
   def __call__(self, *arguments): return Macro.Call(self, arguments)
@@ -168,8 +178,11 @@ class Function(Callable):
     self.code = code
 
   def type_in(self, type): return type.in_type
+
   def type_out(self, type): return type.out_type
   
+  def type_inout(self, type): return type.inout_type
+
   #
   def __call__(self, *arguments): return Function.Call(self, arguments)
 
@@ -211,7 +224,7 @@ class Type(metaclass = _DoubleStepConstructor):
 
   def __setup__(self):
     self.create = self._create(None, {"target": out(self)}, constraint=lambda: self.constructible)
-    self.destroy = self._destroy(None, {"target": out(self)}, constraint=lambda: self.destructible)
+    self.destroy = self._destroy(None, {"target": inout(self)}, constraint=lambda: self.destructible)
     self.copy = self._copy(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
     self.equal = self._equal("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.hash = self._hash("size_t", {"target": self}, constraint=lambda: self.hashable)
@@ -276,6 +289,9 @@ class Primitive(Type):
 
   @property
   def out_type(self): return Pointer(self)
+
+  @property
+  def inout_type(self): return Pointer(self)
 
 
 #
