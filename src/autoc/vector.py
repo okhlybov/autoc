@@ -4,7 +4,7 @@ import autoc.std as std
 from autoc.core import out, _type, Pointer, Variable
 
 #
-class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
+class Vector(autoc.composite.Composite):
 
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
     super().__init__(name, *args, **kws)
@@ -159,3 +159,7 @@ class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
   @property
   def copyable(self):
     return self.element.copyable
+  
+  @property
+  def orderable(self):
+    return False
