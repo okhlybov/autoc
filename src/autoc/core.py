@@ -250,48 +250,65 @@ class Type(metaclass = _DoubleStepConstructor):
 class Primitive(Type):
   
   @property
-  def constructible(self): return True
+  def constructible(self):
+    return True
+  
   def _create(self, result, parameters, **kws):
     return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
 
   @property
-  def copyable(self): return True
+  def copyable(self):
+    return True
+  
   def _copy(self, result, parameters, **kws):
     return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   @property
-  def comparable(self): return True
+  def comparable(self):
+    return True
+  
   def _equal(self, result, parameters, **kws):
     return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
 
   @property
-  def orderable(self): return True
+  def orderable(self):
+    return True
+  
   def _compare(self, result, parameters, **kws):
     return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
 
   @property
-  def hashable(self): return True
+  def hashable(self):
+    return True
+  
   def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda source: f"(size_t)({source})", **kws)
+    return Macro(result, parameters, lambda target: f"(size_t)({target})", **kws)
 
   @property
-  def destructible(self): return False
+  def destructible(self):
+    return False
+  
   def _destroy(self, result, parameters, **kws): pass
   
   @property
-  def rvalue_type(self): return self
+  def rvalue_type(self):
+    return self
 
   @property
-  def lvalue_type(self): return self
+  def lvalue_type(self):
+    return self
 
   @property
-  def in_type(self): return self
+  def in_type(self):
+    return self
 
   @property
-  def out_type(self): return Pointer(self)
+  def out_type(self):
+    return Pointer(self)
 
   @property
-  def inout_type(self): return Pointer(self)
+  def inout_type(self):
+    return Pointer(self)
 
 
 #
@@ -314,7 +331,8 @@ class Pointer(Primitive):
 #
 class Verbatim(str):
 
-  def bind(self, type): return self
+  def bind(self, type):
+    return self
 
 
 #
@@ -324,7 +342,8 @@ class Literal(Value):
     super().__init__(type, *args, **kws)
     self.value = value
 
-  def __str__(self): return str(self.value)
+  def __str__(self):
+    return str(self.value)
   
   
 #
