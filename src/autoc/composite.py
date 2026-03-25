@@ -195,25 +195,25 @@ class Function(Function, Entity):
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
 
 
-class Arc(Composite, autoc.core.TraitsDisabler):
+class Arc(Pointer, Composite):
     
-  def __init__(self, name, type, *args, **kws):
-    super().__init__(name, *args, **kws)
-    self.type = autoc.core._type(type)
-    self.alias = Pointer(self.type)
+  def __init__(self, type, name, *args, **kws):
+    super().__init__(type, *args, **kws)
+    self.prefix = name
+    self.dependencies.add(self.base)
 
   def __setup__(self):
     super().__setup__()
 
-    result = Variable(self.alias, "result")
+    result = Variable(self, "result")
 
     self.new = self.method(self, "new", {}, code=f"""
       {result.definition};
-      {self.type.create(result)};
+      {self.base.create(result)};
       return result;
     """)
     
-    destroy = self.type.destroy(Variable(self.alias, "target")) if self.type.destructible else str()
+    destroy = self.base.destroy(Variable(inout(self), "target")) if self.base.destructible else str()
     self.free = self.method(None, "free", {"target": inout(self)}, code=f"""
       assert(target);
       {destroy};
@@ -224,26 +224,9 @@ class Arc(Composite, autoc.core.TraitsDisabler):
       return target;
     """)
 
-  def _render_struct(self, stream):
-    if self.public:
-      stream.append("/** @public */\n")
-    if self.private:
-      stream.append("/** @private */\n")
-    stream.append(f"typedef {self.alias} {self.name};\n")
-
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if not self.internal:
-      self._render_struct(stream)
-
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.internal:
-      self._render_struct(stream)
-
   @property
   def constructible(self):
-    return self.type.constructible
+    return self.base.constructible
 
   def _create(self, result, parameters, **kws):
     return Macro(result, parameters, lambda target: f"{target} = {self.new()}", **kws)
@@ -264,41 +247,21 @@ class Arc(Composite, autoc.core.TraitsDisabler):
 
   @property
   def comparable(self):
-    return self.type.comparable
+    return self.base.comparable
 
   def _equal(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.type.equal(left, right)), **kws)
+    return Macro(result, parameters, lambda left, right: str(self.base.equal(left, right)), **kws)
   
   @property
   def hashable(self):
-    return self.type.hashable
+    return self.base.hashable
   
   def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.type.hash(target)), **kws)
+    return Macro(result, parameters, lambda target: str(self.base.hash(target)), **kws)
 
   @property
   def orderable(self):
-    return self.type.orderable
+    return self.base.orderable
   
   def _compare(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.type.compare(left, right)), **kws)
-  
-  @property
-  def rvalue_type(self):
-    return self
-
-  @property
-  def lvalue_type(self):
-    return self
-
-  @property
-  def in_type(self):
-    return self
-
-  @property
-  def out_type(self):
-    return Pointer(self)
-
-  @property
-  def inout_type(self):
-    return self
+    return Macro(result, parameters, lambda left, right: str(self.base.compare(left, right)), **kws)
