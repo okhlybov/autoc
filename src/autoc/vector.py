@@ -43,7 +43,10 @@ class Vector(autoc.composite.Composite, autoc.core.TraitsDisabler):
         size_t index;
         {self.allocate(*create_size.arguments)};
         for(index = 0; index < size; ++index) {self.element.create(te_i)};
-      }} else target->elements = NULL;
+      }} else {{
+        target->elements = NULL;
+        target->size = 0;
+      }}
     """
 
     self.method(self.element, "get", {"target": self, "index": std.size_t}, type="INLINE", code=f"""
