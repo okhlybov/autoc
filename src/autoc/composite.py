@@ -195,39 +195,41 @@ class Function(Function, Entity):
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
 
 
-#
 class Arc(Composite, autoc.core.TraitsDisabler):
-  
-  def __init__(self, type, *args, prefix=None, alias=None, memory=autoc.memory.Manager(), **kws):
-    t = autoc.core._type(type)
-    p = str(alias) if alias else Pointer(t)
-    super().__init__(p, *args, **kws)
-    self.type = t
-    self.alias = alias
-    self.memory = memory
-    self.prefix = prefix if prefix else self.type.prefix
-    self.dependencies.add(self.type)
+    
+  def __init__(self, name, type, *args, **kws):
+    super().__init__(name, *args, **kws)
+    self.type = autoc.core._type(type)
+    self.alias = Pointer(self.type)
 
   def __setup__(self):
     super().__setup__()
-    
+
+    result = Variable(self.alias, "result")
+
     self.new = self.method(self, "new", {}, code=f"""
-      {self} result = {self.memory.allocate(self.type)}; assert(result);
+      {result.definition};
+      {self.type.create(result)};
       return result;
     """)
     
+    destroy = self.type.destroy(Variable(self.alias, "target")) if self.type.destructible else str()
     self.free = self.method(None, "free", {"target": inout(self)}, code=f"""
-      {self.memory.free("target")};
+      assert(target);
+      {destroy};
+    """)
+    
+    self.share = self.method(self, "share", {"target": inout(self)}, code=f"""
+      assert(target);
+      return target;
     """)
 
-    
   def _render_struct(self, stream):
-    if self.alias:
-      if self.public:
-        stream.append("/** @public */\n")
-      if self.private:
-        stream.append("/** @private */\n")
-      stream.append(f"typedef {Pointer(self.type)} {self.name};\n")
+    if self.public:
+      stream.append("/** @public */\n")
+    if self.private:
+      stream.append("/** @private */\n")
+    stream.append(f"typedef {self.alias} {self.name};\n")
 
   def render_interface(self, stream):
     super().render_interface(stream)
@@ -251,28 +253,52 @@ class Arc(Composite, autoc.core.TraitsDisabler):
     return True
 
   def _destroy(self, result, parameters, **kws):
-    return self.method(result, "free", parameters, **kws)
+    return Macro(result, parameters, lambda target: str(self.free(target)), **kws)
+
+  @property
+  def copyable(self):
+    return True
   
+  def _copy(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda target, source: f"{target} = {self.share(source)}", **kws)
+
+  @property
+  def comparable(self):
+    return self.type.comparable
+
+  def _equal(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda left, right: str(self.type.equal(left, right)), **kws)
+  
+  @property
+  def hashable(self):
+    return self.type.hashable
+  
+  def _hash(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda target: str(self.type.hash(target)), **kws)
+
+  @property
+  def orderable(self):
+    return self.type.orderable
+  
+  def _compare(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda left, right: str(self.type.compare(left, right)), **kws)
   
   @property
   def rvalue_type(self):
     return self
-    return Pointer(self) if self.alias else self
 
   @property
   def lvalue_type(self):
-    return Pointer(self) if self.alias else self
+    return self
 
   @property
   def in_type(self):
-    return self if self.alias else Pointer(self.type, constant=True)
+    return self
 
   @property
   def out_type(self):
     return Pointer(self)
-    return Pointer(self) if self.alias else self
 
   @property
   def inout_type(self):
     return self
-    return Pointer(self) if self.alias else self
