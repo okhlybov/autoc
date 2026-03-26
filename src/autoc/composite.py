@@ -1,3 +1,4 @@
+import re
 import autoc.std
 import autoc.memory
 from autoc.core import *
@@ -5,16 +6,24 @@ from enum import Enum, auto
 from autoc.module import Entity
 
 
+def _hidden_prefix(s, hidden):
+  m = re.match("^(_*)(.*)", s)
+  u = m.group(1)
+  if not u and hidden:
+    u = "_" # Prepend single underscore for a symbol marked hidden that is not already underscored
+  return u + m.group(2)
+
+
 # _snake_case identifier decorator
-def snake_decorator(type, identifier):
+def snake_decorator(type, identifier, hidden=False):
   ids = [identifier] if isinstance(identifier, str) else [*identifier]
-  return  "_".join([str(type.prefix)] + ids)
+  return _hidden_prefix("_".join([str(type.prefix)] + ids), hidden)
 
 
 # CamelCase identifier decorator
-def camel_decorator(type, identifier):
+def camel_decorator(type, identifier, hidden=False):
   ids = [identifier] if isinstance(identifier, str) else [*identifier]
-  return  "".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids])
+  return _hidden_prefix("".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids]), hidden)
 
 
 #
@@ -32,8 +41,8 @@ class Composite(Type, Entity):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
   
-  def method(self, result, identifier, parameters, visibility=None, **kws):
-    f = Function(result, self.decorate(identifier), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
+  def method(self, result, identifier, parameters, visibility=None, hidden=False, **kws):
+    f = Function(result, self.decorate(identifier, hidden=hidden), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(f)
     return f
   
@@ -84,12 +93,12 @@ class Function(Function, Entity):
     EXTERNAL = auto()
     INLINE = auto()
     
-  def __init__(self, result, name, parameters={}, type=Linkage.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, *args, **kws):
+  def __init__(self, result, name, parameters={}, type=Linkage.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, dependencies=[], *args, **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self.linkage = type # FIXME reflect in the interface
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
-    for x in [x.base if isinstance(x, Pointer) else x for x in [autoc.std.definitions, self.result] + self.types]:
+    for x in [x.base if isinstance(x, Pointer) else x for x in [autoc.std.definitions, self.result] + self.types + dependencies]:
       # Pointer is a non-modularzed core type yet its base type can be
       if isinstance(x, Entity): self.dependencies.add(x)
 
@@ -203,47 +212,58 @@ class Arc(Pointer, Composite):
     self.dependencies.add(self.base)
 
   def __setup__(self):
-    super().__setup__()
 
     result = Variable(self, "result")
 
-    self.new = self.method(self, "new", {}, code=f"""
+    self.new = self.method(self, "new", {}, type="INLINE", code=f"""
       {result.definition};
       {self.base.create(result)};
       return result;
     """)
     
     destroy = self.base.destroy(Variable(inout(self), "target")) if self.base.destructible else str()
-    self.free = self.method(None, "free", {"target": inout(self)}, code=f"""
+    self.free = self.method(None, "free", {"target": inout(self)}, type="INLINE", code=f"""
       assert(target);
       {destroy};
     """)
     
-    self.share = self.method(self, "share", {"target": inout(self)}, code=f"""
+    self.share = self.method(self, "share", {"target": inout(self)}, type="INLINE", code=f"""
       assert(target);
       return target;
     """)
+
+    super().__setup__()
 
   @property
   def constructible(self):
     return self.base.constructible
 
   def _create(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: f"{target} = {self.new()}", **kws)
+    return self.method(result, "create", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], code=f"""
+      assert(target);
+      *target = {self.new()};
+    """)
 
   @property
   def destructible(self):
     return True
 
   def _destroy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.free(target)), **kws)
+    return self.method(result, "destroy", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], code=f"""
+      assert(target);
+      {self.free("target")};
+    """)
 
   @property
   def copyable(self):
     return True
   
   def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {self.share(source)}", **kws)
+    return self.method(result, "copy", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], code=f"""
+      assert(source);
+      assert(target);
+      *target = {self.share("source")};
+    """)
 
   @property
   def comparable(self):
@@ -265,3 +285,7 @@ class Arc(Pointer, Composite):
   
   def _compare(self, result, parameters, **kws):
     return Macro(result, parameters, lambda left, right: str(self.base.compare(left, right)), **kws)
+  
+  @property
+  def rvalue_type(self):
+    return self.base
