@@ -1,5 +1,5 @@
 import autoc.hash
-from autoc.composite import Composite, Function
+from autoc.composite import Composite, Method
 from autoc.core import out
 
 #
@@ -65,7 +65,7 @@ class Record(Composite):
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    self.references.add(Function(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type=Function.Linkage.INLINE, code = f"""
+    self.references.add(Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type=Method.Linkage.INLINE, code = f"""
       {type} result;
       assert(target);
       {type.copy("result", f"target->{field}")};
@@ -74,7 +74,7 @@ class Record(Composite):
 
   def _add_writer(self, type, field):
     destroy_field = type.destory(f"target->{field}") if type.destructible else str()
-    self.references.add(Function(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=Function.Linkage.INLINE, code = f"""
+    self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=Method.Linkage.INLINE, code = f"""
       assert(target);
       {destroy_field};
       {type.copy(f"target->{field}", "value")};
