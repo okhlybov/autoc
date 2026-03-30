@@ -34,7 +34,7 @@ class Module:
     super().__init__(*args, **kws)
     self.name = str(name)
     self.stateful = stateful
-    self.source_count = None
+    self.source_count = 1
     self.source_threshold = None
     self.__entities = None
     self.__header = None
@@ -148,18 +148,19 @@ class _State(dict):
 class _StreamFile:
   def __init__(self, path, mode="wt", *args, **kws):
     super().__init__(*args, **kws)
-    self.file = open(path, mode)
-    self.digest_obj = hashlib.md5()
+    self.__file = open(path, mode)
+    self.__digest = hashlib.md5()
     self.path = path
 
   @property
-  def digest(self): return self.digest_obj.hexdigest()
+  def digest(self):
+    return self.__digest.hexdigest()
 
   def write(self, data):
-    self.file.write(data)
-    self.digest_obj.update(data.encode("utf-8"))
+    self.__file.write(data)
+    self.__digest.update(data.encode("utf-8"))
 
-  def close(self): self.file.close()
+  def close(self): self.__file.close()
 
   def __enter__(self): return self
 
@@ -172,16 +173,16 @@ class _SmartRenderer:
 
   def render(self):
     stream = self.stream
-    temp_path = stream.path
+    path = stream.path
     try:
       self.render_contents(stream)
       self.__digest = stream.digest
     finally:
       stream.close()
     if not os.path.exists(self.file_name) or self.module.digests.get(self.file_name) != self.__digest:
-      os.replace(temp_path, self.file_name)
+      os.replace(path, self.file_name)
     else:
-      os.unlink(temp_path)
+      os.unlink(path)
 
 
 #

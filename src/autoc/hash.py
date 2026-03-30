@@ -11,7 +11,8 @@ class Hasher(autoc.module.Code):
   def __init__(self):
     super().__init__(dependencies=[std.limits_h, self.state_t, std.definitions], interface=f"""
       /** @private */
-      AUTOC_STATIC_INLINE size_t _autoc_rcycle(size_t value) {{
+      AUTOC_STATIC_INLINE
+      size_t _autoc_rcycle(size_t value) {{
         return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));
       }}
     """)
