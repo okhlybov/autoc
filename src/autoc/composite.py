@@ -1,7 +1,8 @@
 import re
 import autoc.std
-import autoc.memory
 from autoc.core import *
+import autoc.memory
+import autoc.std as std
 from enum import Enum, auto
 from autoc.module import Entity
 
@@ -41,10 +42,10 @@ class Composite(Type, Entity):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
   
-  def method(self, result, identifier, parameters, visibility=None, hidden=False, **kws):
-    f = Function(result, self.decorate(identifier, hidden=hidden), parameters, visibility=self.visibility if visibility is None else visibility, **kws)
-    self.references.add(f)
-    return f
+  def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], **kws):
+    m = Method(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=[self, *dependencies], visibility=self.visibility if visibility is None else visibility, **kws)
+    self.references.add(m)
+    return m
   
   def _create(self, result, parameters, **kws):
     return self.method(result, "create", parameters, **kws)
@@ -86,7 +87,7 @@ class Composite(Type, Entity):
 
 
 #
-class Function(Function, Entity):
+class Method(Function, Entity):
   
   #
   class Linkage(Enum):
@@ -98,9 +99,14 @@ class Function(Function, Entity):
     self.linkage = type # FIXME reflect in the interface
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
-    for x in [x.base if isinstance(x, Pointer) else x for x in [autoc.std.definitions, self.result] + self.types + dependencies]:
-      # Pointer is a non-modularzed core type yet its base type can be
-      if isinstance(x, Entity): self.dependencies.add(x)
+    for x in [autoc.std.definitions, self.result] + self.types + dependencies:
+      if isinstance(x, Entity):
+        self.dependencies.add(x)
+      else:
+        # Pointer is a non-modularzed core type yet its base type can be
+        if isinstance(x, Pointer) and isinstance(x.base, Entity):
+          self.dependencies.add(x.base)
+    
 
   @property
   def linkage(self):
@@ -108,7 +114,7 @@ class Function(Function, Entity):
 
   @linkage.setter
   def linkage(self, linkage):
-    self.__linkage = linkage if isinstance(linkage, Function.Linkage) else Function.Linkage[linkage]
+    self.__linkage = linkage if isinstance(linkage, Method.Linkage) else Method.Linkage[linkage]
 
   #
   @property
@@ -118,12 +124,12 @@ class Function(Function, Entity):
   #
   @property
   def inline(self):
-    return self.linkage is Function.Linkage.INLINE
+    return self.linkage is Method.Linkage.INLINE
   
   #
   @property
   def external(self):
-    return self.linkage is Function.Linkage.EXTERNAL
+    return self.linkage is Method.Linkage.EXTERNAL
   
   #
   @property
@@ -191,7 +197,7 @@ class Function(Function, Entity):
     stream.append(";\n")
     
   @property
-  def __decorator(self): return f"{Function.__spec[self.linkage]}\n"
+  def __decorator(self): return f"{Method.__spec[self.linkage]}\n"
   
   #
   @property
@@ -206,9 +212,11 @@ class Function(Function, Entity):
 
 class Arc(Pointer, Composite):
     
-  def __init__(self, type, name, *args, **kws):
+  def __init__(self, type, prefix, memory=autoc.memory.Manager(), *args, **kws):
     super().__init__(type, *args, **kws)
-    self.prefix = name
+    self.prefix = prefix
+    self.memory = memory
+    self._layout = self.decorate("layout", hidden=True)
     self.dependencies.add(self.base)
 
   def __setup__(self):
@@ -217,18 +225,25 @@ class Arc(Pointer, Composite):
 
     self.new = self.method(self, "new", {}, type="INLINE", code=f"""
       {result.definition};
+      result = {self.memory.allocate(self.base, size=f"sizeof({self._layout})")}; assert(result);
       {self.base.create(result)};
+      (({self._layout}*)result)->count = 1;
       return result;
     """)
-    
+
     destroy = self.base.destroy(Variable(inout(self), "target")) if self.base.destructible else str()
+    
     self.free = self.method(None, "free", {"target": inout(self)}, type="INLINE", code=f"""
       assert(target);
-      {destroy};
+      if(--(({self._layout}*)target)->count == 0) {{
+        {destroy};
+        {self.memory.free("target")};
+      }}
     """)
     
     self.share = self.method(self, "share", {"target": inout(self)}, type="INLINE", code=f"""
       assert(target);
+      ++(({self._layout}*)target)->count;
       return target;
     """)
 
@@ -239,7 +254,7 @@ class Arc(Pointer, Composite):
     return self.base.constructible
 
   def _create(self, result, parameters, **kws):
-    return self.method(result, "create", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], code=f"""
+    return self.method(result, ("create", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], code=f"""
       assert(target);
       *target = {self.new()};
     """)
@@ -249,7 +264,7 @@ class Arc(Pointer, Composite):
     return True
 
   def _destroy(self, result, parameters, **kws):
-    return self.method(result, "destroy", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], code=f"""
+    return self.method(result, ("destroy", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], code=f"""
       assert(target);
       {self.free("target")};
     """)
@@ -259,7 +274,7 @@ class Arc(Pointer, Composite):
     return True
   
   def _copy(self, result, parameters, **kws):
-    return self.method(result, "copy", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], code=f"""
+    return self.method(result, ("copy", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], code=f"""
       assert(source);
       assert(target);
       *target = {self.share("source")};
@@ -289,3 +304,22 @@ class Arc(Pointer, Composite):
   @property
   def rvalue_type(self):
     return self.base
+  
+  def _render_struct(self, stream):
+    if not self.internal:
+      stream.append("/** @private */\n")
+    stream.append(f"""typedef struct {{
+      {self.base} value;
+      {std.size_t} count;
+    }} {self._layout};
+    """)
+
+  def render_interface(self, stream):
+    super().render_interface(stream)
+    if not self.internal:
+      self._render_struct(stream)
+
+  def render_forward_declarations(self, stream):
+    super().render_forward_declarations(stream)
+    if self.internal:
+      self._render_struct(stream)
