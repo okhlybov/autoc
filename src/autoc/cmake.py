@@ -4,8 +4,8 @@ def CMake(module):
   contents = f"""
     set({module.name}_HEADER ${{CMAKE_CURRENT_SOURCE_DIR}}/{module.header.file_name})
     set({module.name}_SOURCES {sources})
-    add_library({module.name} OBJECT ${{{module.name}_SOURCES}})
-    target_include_directories({module.name} INTERFACE $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}>)
+    add_library({module.name}-auto OBJECT ${{{module.name}_SOURCES}})
+    target_include_directories({module.name}-auto INTERFACE $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}>)
   """
   try:
     with open(cmake, "r") as f:

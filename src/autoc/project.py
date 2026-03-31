@@ -10,7 +10,7 @@ def interpolate(template, **items):
 
 
 def generate(project):
-  items = dict(project=project, module=f"_{project}")
+  items = dict(project=project, module=project)
   pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
   for file, template in {
     "cmake/AutoC.cmake": _autoc_cmake,
@@ -72,7 +72,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(@project@)
 
-set(AUTOC_MODULE_NAME _${PROJECT_NAME})
+set(AUTOC_MODULE_NAME ${PROJECT_NAME})
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.py)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
@@ -87,7 +87,7 @@ add_autoc_module(
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c)
-target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME})
+target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME}-auto)
 """
 
 
@@ -124,7 +124,7 @@ function(add_autoc_module module)
     VERBATIM
   )
   add_custom_target(${module_target} DEPENDS ${module_state})
-  add_dependencies(${module} ${module_target})
+  add_dependencies(${module}-auto ${module_target})
 endfunction()
 """
 
