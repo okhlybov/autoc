@@ -125,17 +125,21 @@ class _State(dict):
     return self
 
   def read(self):
-    if self.module.stateful and os.path.exists(self.file_name):
-      with open(self.file_name, "rt") as io:
-        for line in io:
-          line = line.strip()
-          if not line:
-            continue
-          match = re.match(r"\s*([^\s]+)\s+\*(.*)", line)
-          if match is None:
-            raise ValueError("bad state file format")
-          digest, fname = match.groups()
-          self[fname] = digest
+    if os.path.exists(self.file_name):
+      if self.module.stateful:
+        with open(self.file_name, "rt") as io:
+          for line in io:
+            line = line.strip()
+            if not line:
+              continue
+            match = re.match(r"\s*([^\s]+)\s+\*(.*)", line)
+            if match is None:
+              raise ValueError("bad state file format")
+            digest, fname = match.groups()
+            self[fname] = digest
+      else:
+        # Delete stray state file on (porbable) switch from stateful operation to stateless
+        os.unlink(self.file_name)
     return self
 
   def write(self):
@@ -171,6 +175,10 @@ class _SmartRenderer:
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
 
+  @property
+  def digest(self):
+    return self.__digest
+  
   def render(self):
     stream = self.stream
     path = stream.path
@@ -190,7 +198,6 @@ class Header(_EntityContainer, _SmartRenderer):
   def __init__(self, module, *args, **kws):
     super().__init__(*args, **kws)
     self.module = module
-    self.__digest = None
     self.__stream = None
 
   @property
@@ -198,9 +205,6 @@ class Header(_EntityContainer, _SmartRenderer):
 
   @property
   def tag(self): return f"{self.module.name}_auto_h".upper()
-
-  @property
-  def digest(self): return self.__digest
 
   @property
   def stream(self):
@@ -233,7 +237,6 @@ class Source(_EntityContainer, _SmartRenderer):
     self.module = module
     self.complexity = 0
     self.index = index
-    self.__digest = None
     self.__stream = None
 
   @property
@@ -241,9 +244,6 @@ class Source(_EntityContainer, _SmartRenderer):
     if self.module.source_count < 2:
       return f"{self.module.name}_auto.c"
     return f"{self.module.name}_auto{self.index}.c"
-
-  @property
-  def digest(self): return self.__digest
 
   @property
   def stream(self):
