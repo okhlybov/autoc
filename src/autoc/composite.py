@@ -213,7 +213,7 @@ class Method(Function, Entity):
 class Arc(Pointer, Composite):
     
   def __init__(self, type, prefix, memory=autoc.memory.Manager(), *args, **kws):
-    super().__init__(type, *args, **kws)
+    super().__init__(type, *args, dependencies=[memory], **kws)
     self.prefix = prefix
     self.memory = memory
     self._layout = self.decorate("layout", hidden=True)

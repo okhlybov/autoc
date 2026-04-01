@@ -278,11 +278,13 @@ class Source(_EntityContainer, _SmartRenderer):
 
 #
 class Entity:
-  def __init__(self, *args, **kws):
+  def __init__(self, *args, dependencies=[], references=[], **kws):
     super().__init__(*args, **kws)
-    self.__references = None
+    self.references = set()
+    self.references.update(references)
+    self.dependencies = _DependencySet(self, dependencies)
+    self.dependencies.update(dependencies)
     self.__total_references = None
-    self.__dependencies = None
     self.__total_dependencies = None
     self.__position = None
     self.__interface = None
@@ -292,22 +294,10 @@ class Entity:
   def __lt__(self, other): return self.position < other.position
 
   @property
-  def references(self):
-    if self.__references is None:
-      self.__references = set()
-    return self.__references
-
-  @property
   def total_references(self):
     if self.__total_references is None:
       self.__total_references = self.collect_references(set())
     return self.__total_references
-
-  @property
-  def dependencies(self):
-    if self.__dependencies is None:
-      self.__dependencies = _DependencySet(self)
-    return self.__dependencies
 
   @property
   def total_dependencies(self):
@@ -385,13 +375,11 @@ class _DependencySet(set):
 
 #
 class Code(Entity):
-  def __init__(self, interface=None, implementation=None, definitions=None, dependencies=None, *args, **kws):
+  def __init__(self, interface=None, implementation=None, definitions=None, *args, **kws):
     super().__init__(*args, **kws)
     self.__interface = interface
     self.__definitions = definitions
     self.__implementation = implementation
-    if dependencies:
-      self.dependencies.update(dependencies)
 
   def __repr__(self):
     return f"... <{self.__class__.__name__}>"

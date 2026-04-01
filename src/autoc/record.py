@@ -1,18 +1,18 @@
 import autoc.hash
 from autoc.composite import Composite, Method
 from autoc.core import out
+import autoc.std as std
 
 #
 class Record(Composite):
   
   def __init__(self, name, fields={}, hasher=autoc.hash.Hasher(), getters=True, setters=True, glassbox=False, *args, **kws):
-    super().__init__(name, *args, **kws)
+    super().__init__(name, *args, dependencies=[std.assert_h, hasher], **kws)
     self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters
     self.setters = setters
     self.glassbox = glassbox
-    self.dependencies.add(hasher)
     for type in self.fields.values():
       self.dependencies.add(type)
 
@@ -37,11 +37,11 @@ class Record(Composite):
       self.destroy.code = code
 
     if self.comparable:
-      self.equal.code = ["assert(left);assert(right);", "return ", " && ".join([str(type.equal(f"left->{field}", f"right->{field}")) for field, type in self.fields.items()] + ["1"]), ";"]
+      self.equal.code = ["assert(left); assert(right);", "return ", " && ".join([str(type.equal(f"left->{field}", f"right->{field}")) for field, type in self.fields.items()] + ["1"]), ";"]
       
     if self.copyable:
       code = []
-      code.append("assert(target);assert(source);")
+      code.append("assert(target); assert(source);")
       for field, type in self.fields.items():
         code.append(type.copy(f"target->{field}", f"source->{field}"))
         code.append(";")

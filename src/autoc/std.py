@@ -68,8 +68,7 @@ double_t = Primitive.register("double_t", dependencies=[math_h])
 class Complex(Primitive):
   
   def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
-    self.dependencies.add(Complex.__definitions)
+    super().__init__(*args, dependencies=[Complex.__definitions], **kws)
 
   @property
   def orderable(self): return False
