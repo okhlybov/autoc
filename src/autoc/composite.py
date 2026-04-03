@@ -1,8 +1,6 @@
 import re
 import autoc.std
 from autoc.core import *
-import autoc.memory
-import autoc.std as std
 from enum import Enum, auto
 from autoc.module import Entity
 
@@ -33,9 +31,9 @@ class Composite(Type, Entity):
   # Global decorator used by all Composite descentants unless overridden locally
   decorator = camel_decorator
   
-  def __init__(self, *args, decorator=None, **kws):
-    super().__init__(*args, **kws)
-    self.prefix = self.name
+  def __init__(self, name, *args, prefix=None, decorator=None, **kws):
+    super().__init__(name, *args, **kws)
+    self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
     
   def decorate(self, *args, **kws):
@@ -94,7 +92,7 @@ class Method(Function, Entity):
     EXTERNAL = auto()
     INLINE = auto()
     
-  def __init__(self, result, name, parameters={}, type=Linkage.EXTERNAL, visibility=Visibility.PUBLIC, abstract=None, dependencies=[], *args, **kws):
+  def __init__(self, result, name, parameters, *args, type="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self.linkage = type # FIXME reflect in the interface
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
@@ -208,118 +206,3 @@ class Method(Function, Entity):
       return "/** @private */\n"
 
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
-
-
-class Arc(Pointer, Composite):
-    
-  def __init__(self, type, prefix, memory=autoc.memory.Manager(), *args, **kws):
-    super().__init__(type, *args, dependencies=[memory], **kws)
-    self.prefix = prefix
-    self.memory = memory
-    self._layout = self.decorate("layout", hidden=True)
-    self.dependencies.add(self.base)
-
-  def __setup__(self):
-
-    result = Variable(self, "result")
-
-    self.new = self.method(self, "new", {}, type="INLINE", code=f"""
-      {result.definition};
-      result = {self.memory.allocate(self.base, size=f"sizeof({self._layout})")}; assert(result);
-      {self.base.create(result)};
-      (({self._layout}*)result)->count = 1;
-      return result;
-    """)
-
-    destroy = self.base.destroy(Variable(inout(self), "target")) if self.base.destructible else str()
-    
-    self.free = self.method(None, "free", {"target": inout(self)}, type="INLINE", code=f"""
-      assert(target);
-      if(--(({self._layout}*)target)->count == 0) {{
-        {destroy};
-        {self.memory.free("target")};
-      }}
-    """)
-    
-    self.share = self.method(self, "share", {"target": inout(self)}, type="INLINE", code=f"""
-      assert(target);
-      ++(({self._layout}*)target)->count;
-      return target;
-    """)
-
-    super().__setup__()
-
-  @property
-  def constructible(self):
-    return self.base.constructible
-
-  def _create(self, result, parameters, **kws):
-    return self.method(result, ("create", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], code=f"""
-      assert(target);
-      *target = {self.new()};
-    """)
-
-  @property
-  def destructible(self):
-    return True
-
-  def _destroy(self, result, parameters, **kws):
-    return self.method(result, ("destroy", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], code=f"""
-      assert(target);
-      {self.free("target")};
-    """)
-
-  @property
-  def copyable(self):
-    return True
-  
-  def _copy(self, result, parameters, **kws):
-    return self.method(result, ("copy", "value"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], code=f"""
-      assert(source);
-      assert(target);
-      *target = {self.share("source")};
-    """)
-
-  @property
-  def comparable(self):
-    return self.base.comparable
-
-  def _equal(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.base.equal(left, right)), **kws)
-  
-  @property
-  def hashable(self):
-    return self.base.hashable
-  
-  def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.base.hash(target)), **kws)
-
-  @property
-  def orderable(self):
-    return self.base.orderable
-  
-  def _compare(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.base.compare(left, right)), **kws)
-  
-  @property
-  def rvalue_type(self):
-    return self.base
-  
-  def _render_struct(self, stream):
-    if not self.internal:
-      stream.append("/** @private */\n")
-    stream.append(f"""typedef struct {{
-      {self.base} value;
-      {std.size_t} count;
-    }} {self._layout};
-    """)
-
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if not self.internal:
-      self._render_struct(stream)
-
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.internal:
-      self._render_struct(stream)
