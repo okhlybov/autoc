@@ -7,11 +7,10 @@ from autoc.core import out, _type, Pointer, Variable
 class Vector(autoc.composite.Composite):
 
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
-    super().__init__(name, dependencies=[std.assert_h, memory, hasher], *args, **kws)
-    self.element = _type(element)
+    super().__init__(name, dependencies=[std.assert_h, memory, hasher, e := _type(element)], *args, **kws)
+    self.element = e
     self.memory = memory
     self.hasher = hasher
-    self.dependencies.add(self.element)
 
   def __setup__(self):
     super().__setup__()
@@ -26,7 +25,7 @@ class Vector(autoc.composite.Composite):
       assert(target);
       return target->size;
     """)
-
+    
     self.allocate = self.method(None, "allocate", {"target": out(self), "capacity": std.size_t}, visibility="PRIVATE", code=f"""
       assert(target);
       if(capacity > 0) {{
