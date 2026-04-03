@@ -73,7 +73,7 @@ class Record(Composite):
     """))
 
   def _add_writer(self, type, field):
-    destroy_field = type.destory(f"target->{field}") if type.destructible else str()
+    destroy_field = type.destroy(f"target->{field}") if type.destructible else str()
     self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=Method.Linkage.INLINE, code = f"""
       assert(target);
       {destroy_field};
