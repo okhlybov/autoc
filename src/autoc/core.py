@@ -101,7 +101,7 @@ class Variable(Value):
 class Callable:
   
   #
-  def __init__(self, result, parameters={}, constraint=lambda: True, *args, **kws):
+  def __init__(self, result, parameters, constraint=lambda: True, *args, **kws):
     super().__init__(*args, **kws)
     self.parameters = {str(name): _parameter(type) for name, type in parameters.items()}
     self.types = [parameter.forward_type(self) for parameter in self.parameters.values()]
@@ -151,14 +151,14 @@ class Macro(Callable):
 
   #
   def __init__(self, result, parameters, emitter, constraint=lambda: True, *args, **kws):
-    super().__init__(result, parameters, constraint, *args, **kws)
+    super().__init__(result, parameters, constraint=constraint, *args, **kws)
     self.emitter = emitter
 
   def type_in(self, type): return type.rvalue_type
 
   def type_out(self, type): return type.lvalue_type
 
-  def type_inout(self, type): return type.lvalue_type
+  def type_inout(self, type): return type.rvalue_type
 
   #
   def __call__(self, *arguments): return Macro.Call(self, arguments)
@@ -172,7 +172,7 @@ class Macro(Callable):
 class Function(Callable):
 
   #
-  def __init__(self, result, name, parameters={}, code=None, *args, **kws):
+  def __init__(self, result, name, parameters, code=None, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
     self.name = str(name)
     self.code = code
@@ -212,7 +212,7 @@ class _DoubleStepConstructor(type):
 #
 class Type(metaclass = _DoubleStepConstructor):
   
-  def __init__(self, name, *args, visibility=Visibility.PUBLIC, **kws):
+  def __init__(self, name, visibility="PUBLIC", *args, **kws):
     super().__init__(*args, **kws)
     self.name = str(name)
     self.indirection = 0

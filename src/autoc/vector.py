@@ -7,7 +7,7 @@ from autoc.core import out, _type, Pointer, Variable
 class Vector(autoc.composite.Composite):
 
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
-    super().__init__(name, *args, dependencies=[std.assert_h, memory, hasher], **kws)
+    super().__init__(name, dependencies=[std.assert_h, memory, hasher], *args, **kws)
     self.element = _type(element)
     self.memory = memory
     self.hasher = hasher
