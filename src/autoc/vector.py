@@ -15,12 +15,12 @@ class Vector(autoc.composite.Composite):
   def __setup__(self):
     super().__setup__()
     
-    se_i = Variable(self.element, "source->elements[index]")
-    te_i = Variable(self.element, "target->elements[index]")
-    le_i = Variable(self.element, "left->elements[index]")
-    re_i = Variable(self.element, "right->elements[index]")
+    source_i = Variable(self.element, "source->elements[index]")
+    target_i = Variable(self.element, "target->elements[index]")
+    left_i = Variable(self.element, "left->elements[index]")
+    right_i = Variable(self.element, "right->elements[index]")
     result = Variable(self.element, "result")
-    
+
     self.method(std.size_t, "size", {"target": self}, type="INLINE", code=f"""
       assert(target);
       return target->size;
@@ -41,28 +41,27 @@ class Vector(autoc.composite.Composite):
       if(size > 0) {{
         size_t index;
         {self.allocate(*create_size.arguments)};
-        for(index = 0; index < size; ++index) {self.element.create(te_i)};
+        for(index = 0; index < size; ++index) {self.element.create(target_i)};
       }} else {{
         target->elements = NULL;
         target->size = 0;
       }}
     """
-
     self.method(self.element, "get", {"target": self, "index": std.size_t}, type="INLINE", code=f"""
       {result.definition};
       assert(target);
       assert(index < target->size);
-      {self.element.copy(result, te_i)};
+      {self.element.copy(result, target_i)};
       return result;
     """)
     
-    destroy_i = self.element.destroy(te_i) if self.element.destructible else str()
+    destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
     set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, type="INLINE")
     set.code=f"""
       assert(target);
       {destroy_i};
-      {self.element.copy(te_i, set.arguments[2])};
+      {self.element.copy(target_i, set.arguments[2])};
     """
     
     self.create.code = """
@@ -76,7 +75,7 @@ class Vector(autoc.composite.Composite):
         size_t index;
         assert(target);
         if(target->size > 0) {{
-          for(index = 0; index < target->size; ++index) {self.element.destroy(te_i)};
+          for(index = 0; index < target->size; ++index) {self.element.destroy(target_i)};
           {self.memory.free("target->elements")};
         }}
       """
@@ -93,7 +92,7 @@ class Vector(autoc.composite.Composite):
         if(left->size == right->size) {{
           size_t index;
           for(index = 0; index < left->size; ++index) {{
-            if(!{self.element.equal(le_i, re_i)}) return 0;
+            if(!{self.element.equal(left_i, right_i)}) return 0;
           }}
           return 1;
         }} else return 0;
@@ -105,7 +104,7 @@ class Vector(autoc.composite.Composite):
         {self.hasher.state_t} state;
         assert(target);
         {self.hasher.create("state")};
-        for(index = 0; index < target->size; ++index) {self.hasher.update("state", self.element.hash(te_i))};
+        for(index = 0; index < target->size; ++index) {self.hasher.update("state", self.element.hash(target_i))};
         result = {self.hasher.hash("state")};
         {self.hasher.destroy("state")};
         return result;
@@ -117,7 +116,7 @@ class Vector(autoc.composite.Composite):
         assert(target);
         assert(source);
         {self.allocate("target", "source->size")};
-        for(index = 0; index < target->size; ++index) {self.element.copy(te_i, se_i)};
+        for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
 
   def _render_struct(self, stream):
