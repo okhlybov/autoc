@@ -10,11 +10,10 @@ from functools import cached_property
 class Shared(autoc.composite.Composite, Pointer):
   
   def __init__(self, type, memory=autoc.memory.Manager(), dependencies=[], *args, **kws):
-    super().__init__(type, *args, dependencies=[*dependencies, memory], **kws)
+    super().__init__(type, *args, dependencies=[*dependencies, std.assert_h, memory], **kws)
     self.memory = memory
+    self._depend_on(self.base)
     self._layout = self.decorate("layout", hidden=True)
-    if isinstance(type, autoc.module.Entity):
-      self.dependencies.add(self.base) # FIXME
     
   @property
   def lvalue_type(self):
@@ -26,7 +25,7 @@ class Shared(autoc.composite.Composite, Pointer):
   
   @cached_property
   def in_type(self):
-    return Pointer(self.base, indirection=self.indirection, constant=True)
+    return self
   
   @cached_property
   def out_type(self):
@@ -40,7 +39,7 @@ class Shared(autoc.composite.Composite, Pointer):
     if not self.internal:
       stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
-      {self.base} value;
+      {self.base} payload;
       {std.size_t} count;
     }} {self._layout};
     """)
@@ -91,39 +90,51 @@ class Shared(autoc.composite.Composite, Pointer):
     return self.base.constructible
 
   def _create(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: f"{target} = {self.new()}", **kws)
+    method = self.method(result, ("create", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], **kws)
+    method.code = f"*target = {self.new()};"
+    return method
   
   @property
   def destructible(self):
     return True
   
   def _destroy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.free(target)), **kws)
+    method = self.method(result, ("destroy", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], **kws)
+    method.code = f"{self.free("target")};"
+    return method
 
   @property
   def copyable(self):
     return True
   
   def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {self.share(source)}", **kws)
+    method = self.method(result, ("copy", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], **kws)
+    method.code = f"*target = {self.share("source")};"
+    return method
 
   @property
   def comparable(self):
     return self.base.comparable
   
   def _equal(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.base.equal(left, right)), **kws)
+    method = self.method(result, ("equal", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.equal("left", "right")};"
+    return method
   
   @property
   def hashable(self):
     return self.base.hashable
   
   def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.base.hash(target)), **kws)
+    method = self.method(result, ("hash", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.hash("target")};"
+    return method
 
   @property
   def orderable(self):
     return self.base.orderable
   
   def _compare(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: str(self.base.compare(left, right)), **kws)
+    method = self.method(result, ("compare", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.compare("left", "right")};"
+    return method
