@@ -35,7 +35,7 @@ class Composite(Type, Entity):
     super().__init__(name, *args, **kws)
     self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
-    
+
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
@@ -45,6 +45,11 @@ class Composite(Type, Entity):
     self.references.add(m)
     return m
   
+  # 
+  def _depend_on(self, *entities):
+    for entity in entities:
+      self.dependencies.update([*entity.dependencies, *entity.references, entity])
+    
   def _create(self, result, parameters, **kws):
     return self.method(result, "create", parameters, **kws)
 

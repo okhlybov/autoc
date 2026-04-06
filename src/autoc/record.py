@@ -13,8 +13,7 @@ class Record(Composite):
     self.getters = getters
     self.setters = setters
     self.glassbox = glassbox
-    for type in self.fields.values():
-      self.dependencies.add(type)
+    self._depend_on(*self.fields.values())
 
   def __setup__(self):
     super().__setup__()

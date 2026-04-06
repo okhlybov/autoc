@@ -6,11 +6,12 @@ from autoc.core import out, _type, Pointer, Variable
 #
 class Vector(autoc.composite.Composite):
 
-  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), *args, **kws):
-    super().__init__(name, dependencies=[std.assert_h, memory, hasher, e := _type(element)], *args, **kws)
-    self.element = e
+  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), dependencies=[], *args, **kws):
+    super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
+    self.element = _type(element)
     self.memory = memory
     self.hasher = hasher
+    self._depend_on(self.element)
 
   def __setup__(self):
     super().__setup__()
