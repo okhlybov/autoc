@@ -1,17 +1,10 @@
 import autoc.memory
 import autoc.composite
 import autoc.std as std
-from autoc.core import out, _type, Pointer, Variable
+from autoc.core import out, Pointer
 
 #
-class Vector(autoc.composite.Composite):
-
-  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), dependencies=[], *args, **kws):
-    super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
-    self.element = _type(element)
-    self.memory = memory
-    self.hasher = hasher
-    self._depend_on(self.element)
+class Vector(autoc.composite.Collection):
 
   def __setup__(self):
     super().__setup__()
@@ -101,14 +94,15 @@ class Vector(autoc.composite.Composite):
       """
     
     if self.hashable:
+      state = self.hasher.state_t.variable("state")
       self.hash.code = f"""
         size_t index, result;
-        {self.hasher.state_t} state;
+        {state.definition};
         assert(target);
         {self.hasher.create("state")};
-        for(index = 0; index < target->size; ++index) {self.hasher.update("state", self.element.hash(target_i))};
-        result = {self.hasher.hash("state")};
-        {self.hasher.destroy("state")};
+        for(index = 0; index < target->size; ++index) {self.hasher.update(state, self.element.hash(target_i))};
+        result = {self.hasher.hash(state)};
+        {self.hasher.destroy(state)};
         return result;
       """
 

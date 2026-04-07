@@ -9,7 +9,7 @@ from autoc.core import out, Macro
 class Hasher(autoc.module.Code):
 
   def __init__(self):
-    super().__init__(dependencies=[std.limits_h, self.state_t, std.definitions], interface=f"""
+    super().__init__(dependencies=[std.limits_h, self.state_t, std.linkage], interface=f"""
       /** @private */
       AUTOC_STATIC_INLINE
       size_t _autoc_rcycle(size_t value) {{

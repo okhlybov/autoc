@@ -6,8 +6,8 @@ import autoc.std as std
 #
 class Record(Composite):
   
-  def __init__(self, name, fields, hasher=autoc.hash.Hasher(), getters=True, setters=True, glassbox=False, *args, **kws):
-    super().__init__(name, dependencies=[std.assert_h, hasher], *args, **kws)
+  def __init__(self, name, fields, hasher=autoc.hash.Hasher(), getters=True, setters=True, glassbox=False, dependencies=[], *args, **kws):
+    super().__init__(name, dependencies=[*dependencies, std.assert_h, hasher], *args, **kws)
     self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters
