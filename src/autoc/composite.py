@@ -1,8 +1,12 @@
 import re
 import autoc.std
+import autoc.core
 from autoc.core import *
 from enum import Enum, auto
 from autoc.module import Entity
+import autoc.std as std
+import autoc.memory
+import autoc.hash
 
 
 def _hidden_prefix(s, hidden):
@@ -102,7 +106,7 @@ class Method(Function, Entity):
     self.linkage = linkage
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
-    for x in [autoc.std.definitions, self.result] + self.types + dependencies:
+    for x in [autoc.std.linkage, self.result] + self.types + dependencies:
       if isinstance(x, Entity):
         self.dependencies.add(x)
       else:
@@ -211,3 +215,14 @@ class Method(Function, Entity):
       return "/** @private */\n"
 
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
+  
+  
+#
+class Collection(Composite):
+  
+  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), dependencies=[], *args, **kws):
+    super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
+    self.element = autoc.core._type(element)
+    self._depend_on(self.element)
+    self.memory = memory
+    self.hasher = hasher
