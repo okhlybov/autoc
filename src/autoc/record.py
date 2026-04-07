@@ -6,13 +6,13 @@ import autoc.std as std
 #
 class Record(Composite):
   
-  def __init__(self, name, fields, hasher=autoc.hash.Hasher(), getters=True, setters=True, glassbox=False, dependencies=[], *args, **kws):
+  def __init__(self, name, fields, hasher=autoc.hash.Hasher(), getters=True, setters=True, opaque=True, dependencies=[], *args, **kws):
     super().__init__(name, dependencies=[*dependencies, std.assert_h, hasher], *args, **kws)
     self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters
     self.setters = setters
-    self.glassbox = glassbox
+    self.opaque = opaque
     self._depend_on(*self.fields.values())
 
   def __setup__(self):
@@ -99,15 +99,20 @@ class Record(Composite):
       stream.append("/** @public */\n")
     if self.private:
       stream.append("/** @private */\n")
-    stream.append("typedef struct {\n")
+    stream.append(f"typedef struct {self.name} {self.name};\n")
+    if self.opaque or self.private:
+      stream.append("/** @private */\n")
+    else:
+      stream.append("/** @public */\n")
+    stream.append(f"struct {self.name} {{\n")
     for field, type in self.fields.items():
       stream.append(f"{type} {field};")
       if not self.internal:
-        if self.private or not self.glassbox:
+        if self.opaque or self.private:
           stream.append("/**< @private */\n")
         else:
           stream.append("/**< @public */\n")
-    stream.append(f"}} {self.name};\n")
+    stream.append("};\n")
     
   @property
   def constructible(self):
