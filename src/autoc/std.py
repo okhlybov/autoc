@@ -72,7 +72,6 @@ class Complex(Primitive):
 
   @property
   def orderable(self): return False
-  def _compare(self, left, right, **kws): pass
 
   def _hash(self, result, parameters, **kws): return autoc.core.Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
   

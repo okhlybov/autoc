@@ -16,11 +16,11 @@ class Vector(autoc.composite.Composite):
   def __setup__(self):
     super().__setup__()
     
-    source_i = Variable(self.element, "source->elements[index]")
-    target_i = Variable(self.element, "target->elements[index]")
-    left_i = Variable(self.element, "left->elements[index]")
-    right_i = Variable(self.element, "right->elements[index]")
-    result = Variable(self.element, "result")
+    source_i = self.element.variable("source->elements[index]")
+    target_i = self.element.variable("target->elements[index]")
+    left_i = self.element.variable("left->elements[index]")
+    right_i = self.element.variable("right->elements[index]")
+    result = self.element.variable("result")
 
     self.method(std.size_t, "size", {"target": self}, type="INLINE", code=f"""
       assert(target);

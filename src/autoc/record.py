@@ -22,7 +22,7 @@ class Record(Composite):
       code = []
       code.append("assert(target);")
       for field, type in self.fields.items():
-        code.append(type.create(f"target->{field}"))
+        code.append(type.create(type.variable(f"target->{field}")))
         code.append(";")
       self.create.code = code
     
@@ -31,28 +31,32 @@ class Record(Composite):
       code.append("assert(target);")
       for field, type in self.fields.items():
         if type.destructible:
-          code.append(type.destroy(f"target->{field}"))
+          code.append(type.destroy(type.variable(f"target->{field}")))
           code.append(";")
       self.destroy.code = code
 
     if self.comparable:
-      self.equal.code = ["assert(left); assert(right);", "return ", " && ".join([str(type.equal(f"left->{field}", f"right->{field}")) for field, type in self.fields.items()] + ["1"]), ";"]
+      xs = []
+      for field, type in self.fields.items():
+        xs.append(str(type.equal(type.variable(f"left->{field}"), type.variable(f"right->{field}"))))
+      self.equal.code = ["assert(left); assert(right);", "return ", " && ".join(xs if xs else ["1"]), ";"]
       
     if self.copyable:
       code = []
       code.append("assert(target); assert(source);")
       for field, type in self.fields.items():
-        code.append(type.copy(f"target->{field}", f"source->{field}"))
+        code.append(type.copy(type.variable(f"target->{field}"), type.variable(f"source->{field}")))
         code.append(";")
       self.copy.code = code
       
     if self.hashable:
       code = []
-      code.append(f"{self.hasher.state_t} state; size_t result; assert(target); {self.hasher.create("state")};")
+      state = self.hasher.state_t.variable("state")
+      code.append(f"{state.definition}; size_t result; assert(target); {self.hasher.create(state)};")
       for field, type in self.fields.items():
-        code.append(self.hasher.update("state", type.hash(f"target->{field}")))
+        code.append(self.hasher.update(state, type.hash(type.variable(f"target->{field}"))))
         code.append(";")
-      code.append(f"result = {self.hasher.hash("state")}; {self.hasher.destroy("state")}; return result;")
+      code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
       self.hash.code = code
 
     if self.getters:
@@ -64,19 +68,20 @@ class Record(Composite):
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    self.references.add(Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type=Method.Linkage.INLINE, code = f"""
-      {type} result;
+    result = type.variable("result")
+    self.references.add(Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type="INLINE", code = f"""
+      {result.definition};
       assert(target);
-      {type.copy("result", f"target->{field}")};
-      return result;
+      {type.copy(result, type.variable(f"target->{field}"))};
+      return {result};
     """))
 
   def _add_writer(self, type, field):
-    destroy_field = type.destroy(f"target->{field}") if type.destructible else str()
-    self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type=Method.Linkage.INLINE, code = f"""
+    destroy_field = type.destroy(type.variable(f"target->{field}")) if type.destructible else str()
+    self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type="INLINE", code = f"""
       assert(target);
       {destroy_field};
-      {type.copy(f"target->{field}", "value")};
+      {type.copy(type.variable(f"target->{field}"), "value")};
     """))
 
   def _getter_name(self, field): return self.decorate(field)

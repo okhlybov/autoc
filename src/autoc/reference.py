@@ -90,7 +90,7 @@ class Shared(autoc.composite.Composite, Pointer):
     return self.base.constructible
 
   def _create(self, result, parameters, **kws):
-    method = self.method(result, ("create", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], **kws)
+    method = self.method(result, "create_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.new], **kws)
     method.code = f"*target = {self.new()};"
     return method
   
@@ -99,8 +99,8 @@ class Shared(autoc.composite.Composite, Pointer):
     return True
   
   def _destroy(self, result, parameters, **kws):
-    method = self.method(result, ("destroy", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], **kws)
-    method.code = f"{self.free("target")};"
+    method = self.method(result, "destroy_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.free], **kws)
+    method.code = f"{self.free(method.target)};"
     return method
 
   @property
@@ -108,8 +108,8 @@ class Shared(autoc.composite.Composite, Pointer):
     return True
   
   def _copy(self, result, parameters, **kws):
-    method = self.method(result, ("copy", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], **kws)
-    method.code = f"*target = {self.share("source")};"
+    method = self.method(result, "copy_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, dependencies=[self.share], **kws)
+    method.code = f"*target = {self.share(method.source)};"
     return method
 
   @property
@@ -117,8 +117,8 @@ class Shared(autoc.composite.Composite, Pointer):
     return self.base.comparable
   
   def _equal(self, result, parameters, **kws):
-    method = self.method(result, ("equal", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
-    method.code = f"return {self.base.equal("left", "right")};"
+    method = self.method(result, "equal_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.equal(method.left, method.right)};"
     return method
   
   @property
@@ -126,8 +126,8 @@ class Shared(autoc.composite.Composite, Pointer):
     return self.base.hashable
   
   def _hash(self, result, parameters, **kws):
-    method = self.method(result, ("hash", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
-    method.code = f"return {self.base.hash("target")};"
+    method = self.method(result, "hash_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.hash(method.target)};"
     return method
 
   @property
@@ -135,6 +135,6 @@ class Shared(autoc.composite.Composite, Pointer):
     return self.base.orderable
   
   def _compare(self, result, parameters, **kws):
-    method = self.method(result, ("compare", "payload"), parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
-    method.code = f"return {self.base.compare("left", "right")};"
+    method = self.method(result, "compare_", parameters, type="INLINE", visibility="PRIVATE", hidden=True, **kws)
+    method.code = f"return {self.base.compare(method.left, method.right)};"
     return method

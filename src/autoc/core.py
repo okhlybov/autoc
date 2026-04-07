@@ -106,6 +106,8 @@ class Callable:
     self.parameters = {str(name): _parameter(type) for name, type in parameters.items()}
     self.types = [parameter.forward_type(self) for parameter in self.parameters.values()]
     self.arguments = [Variable(type, name) for type, name in zip(self.types, self.parameters.keys())]
+    for x in self.arguments:
+      setattr(self, x.name, x)
     self.constraint = constraint
     self.__result = result
 
@@ -229,6 +231,9 @@ class Type(metaclass = _DoubleStepConstructor):
     self.equal = self._equal("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.hash = self._hash("size_t", {"target": self}, constraint=lambda: self.hashable)
     self.compare = self._compare("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
+
+  def variable(self, name):
+    return Variable(self, name)
 
   #
   @property
