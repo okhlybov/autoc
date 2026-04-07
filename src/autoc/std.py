@@ -113,21 +113,19 @@ for bits in [8, 16, 32, 64]:
     globals()[type_name] = Primitive.register(type_name, dependencies=[inttypes_h])
 
 
-definitions = Code(
-  interface="""
-    #ifndef AUTOC_EXTERN
-      #ifdef __cplusplus
-        #define AUTOC_EXTERN extern "C"
-      #else
-        #define AUTOC_EXTERN extern
-      #endif
+linkage = Code(interface="""
+  #ifndef AUTOC_EXTERN
+    #ifdef __cplusplus
+      #define AUTOC_EXTERN extern "C"
+    #else
+      #define AUTOC_EXTERN extern
     #endif
-    #ifndef AUTOC_STATIC_INLINE
-      #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
-        #define AUTOC_STATIC_INLINE static inline
-      #else
-        #define AUTOC_STATIC_INLINE static
-      #endif
+  #endif
+  #ifndef AUTOC_STATIC_INLINE
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+      #define AUTOC_STATIC_INLINE static inline
+    #else
+      #define AUTOC_STATIC_INLINE static
     #endif
-  """
-)
+  #endif
+""")
