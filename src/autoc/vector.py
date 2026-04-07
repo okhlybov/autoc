@@ -22,7 +22,7 @@ class Vector(autoc.composite.Composite):
     right_i = self.element.variable("right->elements[index]")
     result = self.element.variable("result")
 
-    self.method(std.size_t, "size", {"target": self}, type="INLINE", code=f"""
+    self.method(std.size_t, "size", {"target": self}, linkage="INLINE", code=f"""
       assert(target);
       return target->size;
     """)
@@ -48,7 +48,7 @@ class Vector(autoc.composite.Composite):
         target->size = 0;
       }}
     """
-    self.method(self.element, "get", {"target": self, "index": std.size_t}, type="INLINE", code=f"""
+    self.method(self.element, "get", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
       {result.definition};
       assert(target);
       assert(index < target->size);
@@ -58,13 +58,14 @@ class Vector(autoc.composite.Composite):
     
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
-    set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, type="INLINE")
+    set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, linkage="INLINE")
     set.code=f"""
       assert(target);
       {destroy_i};
       {self.element.copy(target_i, set.arguments[2])};
     """
-    
+
+    self.create.linkage = "INLINE"    
     self.create.code = """
       assert(target);
       target->elements = NULL;

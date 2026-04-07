@@ -97,9 +97,9 @@ class Method(Function, Entity):
     EXTERNAL = auto()
     INLINE = auto()
     
-  def __init__(self, result, name, parameters, *args, type="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], **kws):
+  def __init__(self, result, name, parameters, *args, linkage="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], **kws):
     super().__init__(result, name, parameters, *args, **kws)
-    self.linkage = type # FIXME reflect in the interface
+    self.linkage = linkage
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
     for x in [autoc.std.definitions, self.result] + self.types + dependencies:

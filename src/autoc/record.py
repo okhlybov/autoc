@@ -25,6 +25,7 @@ class Record(Composite):
         code.append(type.create(type.variable(f"target->{field}")))
         code.append(";")
       self.create.code = code
+      self.create.linkage = "INLINE"
     
     if self.destructible:
       code = []
@@ -34,12 +35,14 @@ class Record(Composite):
           code.append(type.destroy(type.variable(f"target->{field}")))
           code.append(";")
       self.destroy.code = code
+      self.destroy.linkage = "INLINE"
 
     if self.comparable:
       xs = []
       for field, type in self.fields.items():
         xs.append(str(type.equal(type.variable(f"left->{field}"), type.variable(f"right->{field}"))))
       self.equal.code = ["assert(left); assert(right);", "return ", " && ".join(xs if xs else ["1"]), ";"]
+      self.equal.linkage = "INLINE"
       
     if self.copyable:
       code = []
@@ -48,6 +51,7 @@ class Record(Composite):
         code.append(type.copy(type.variable(f"target->{field}"), type.variable(f"source->{field}")))
         code.append(";")
       self.copy.code = code
+      self.copy.linkage = "INLINE"
       
     if self.hashable:
       code = []
@@ -58,6 +62,8 @@ class Record(Composite):
         code.append(";")
       code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
       self.hash.code = code
+      self.hash.linkage = "INLINE"
+
 
     if self.getters:
       for field, type in self.fields.items():
@@ -69,7 +75,7 @@ class Record(Composite):
 
   def _add_reader(self, type, field):
     result = type.variable("result")
-    self.references.add(Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, type="INLINE", code = f"""
+    self.references.add(Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, linkage="INLINE", code = f"""
       {result.definition};
       assert(target);
       {type.copy(result, type.variable(f"target->{field}"))};
@@ -78,7 +84,7 @@ class Record(Composite):
 
   def _add_writer(self, type, field):
     destroy_field = type.destroy(type.variable(f"target->{field}")) if type.destructible else str()
-    self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, type="INLINE", code = f"""
+    self.references.add(Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, linkage="INLINE", code = f"""
       assert(target);
       {destroy_field};
       {type.copy(type.variable(f"target->{field}"), "value")};
