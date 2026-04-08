@@ -1,10 +1,9 @@
-import autoc.memory
-import autoc.composite
+from autoc.composite import Collection, _StructRenderer
 import autoc.std as std
 from autoc.core import out, Pointer
 
 #
-class Vector(autoc.composite.Collection):
+class Vector(_StructRenderer, Collection):
 
   def __setup__(self):
     super().__setup__()
@@ -126,16 +125,6 @@ class Vector(autoc.composite.Collection):
     }} {self.name};
     """)
 
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if not self.internal:
-      self._render_struct(stream)
-
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.internal:
-      self._render_struct(stream)
-      
   @property
   def constructible(self): return True
   

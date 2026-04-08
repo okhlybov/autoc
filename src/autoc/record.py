@@ -1,10 +1,10 @@
 import autoc.hash
-from autoc.composite import Composite, Method
+from autoc.composite import Composite, Method, _StructRenderer
 from autoc.core import out
 import autoc.std as std
 
 #
-class Record(Composite):
+class Record(_StructRenderer, Composite):
   
   def __init__(self, name, fields, hasher=autoc.hash.Hasher(), getters=True, setters=True, opaque=True, dependencies=[], *args, **kws):
     super().__init__(name, dependencies=[*dependencies, std.assert_h, hasher], *args, **kws)
@@ -13,7 +13,7 @@ class Record(Composite):
     self.getters = getters
     self.setters = setters
     self.opaque = opaque
-    self._depend_on(*self.fields.values())
+    self.depends(*self.fields.values())
 
   def __setup__(self):
     super().__setup__()
@@ -137,13 +137,3 @@ class Record(Composite):
   @property
   def orderable(self):
     return False
-  
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if not self.internal:
-      self._render_struct(stream)
-
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.internal:
-      self._render_struct(stream)

@@ -1,18 +1,17 @@
-import autoc.module
 import autoc.memory
 import autoc.std as std
 from autoc.core import *
-import autoc.composite
+from autoc.composite import Composite, _StructRenderer
 from functools import cached_property
 
 
 #
-class Reference(autoc.composite.Composite, Pointer):
+class Reference(Composite, Pointer):
   
   def __init__(self, type, memory=autoc.memory.Manager(), dependencies=[], *args, **kws):
     super().__init__(type, *args, dependencies=[*dependencies, std.assert_h, memory], **kws)
     self.memory = memory
-    self._depend_on(self.base)
+    self.depends(self.base)
     
   @property
   def lvalue_type(self):
@@ -35,7 +34,7 @@ class Reference(autoc.composite.Composite, Pointer):
     return self
 
   def __setup__(self):
-    
+
     self.new = self.method(self, "new", {}, linkage="INLINE")
     result = Variable(self, "result")
     self.new.code = f"""
@@ -45,6 +44,12 @@ class Reference(autoc.composite.Composite, Pointer):
       return result;
     """
     
+    self.share = self.method(self, "share", {"target": inout(self)}, linkage="INLINE")
+    self.share.code = f"""
+      assert(target);
+      return target;
+    """
+
     self.free = self.method(None, "free", {"target": inout(self)}, linkage="INLINE")
     destroy = self.base.destroy(*self.free.arguments) if self.base.destructible else str()
     self.free.code = f"""
@@ -115,11 +120,11 @@ class Reference(autoc.composite.Composite, Pointer):
 
 
 #
-class Shared(Reference, Pointer):
+class Shared(_StructRenderer, Reference):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._layout = self.decorate("layout", hidden=True)
+    self._storage = self.decorate("storage", hidden=True)
     
   def _render_struct(self, stream):
     if not self.internal:
@@ -127,43 +132,31 @@ class Shared(Reference, Pointer):
     stream.append(f"""typedef struct {{
       {self.base} value;
       {std.size_t} count;
-    }} {self._layout};
+    }} {self._storage};
     """)
 
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if not self.internal:
-      self._render_struct(stream)
-
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.internal:
-      self._render_struct(stream)
-
   def __setup__(self):
-
-    self.share = self.method(self, "share", {"target": inout(self)}, linkage="INLINE")
+    super().__setup__()
+    
     self.share.code = f"""
       assert(target);
-      ++(({self._layout}*)target)->count;
+      ++(({self._storage}*)target)->count;
       return target;
     """
 
-    super().__setup__()
-    
     result = Variable(self, "result")
     self.new.code = f"""
       {result.definition};
-      result = {self.memory.allocate(f"sizeof({self._layout})", cast=self.base)}; assert(result);
+      result = {self.memory.allocate(f"sizeof({self._storage})", cast=self.base)}; assert(result);
       {self.base.create(result)};
-      (({self._layout}*)result)->count = 1;
+      (({self._storage}*)result)->count = 1;
       return result;
     """
     
     destroy = self.base.destroy(*self.free.arguments) if self.base.destructible else str()
     self.free.code = f"""
       assert(target);
-      if(--(({self._layout}*)target)->count == 0) {{
+      if(--(({self._storage}*)target)->count == 0) {{
         {destroy};
         {self.memory.free(*self.free.arguments)};
       }}

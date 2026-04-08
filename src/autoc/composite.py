@@ -43,32 +43,32 @@ class Composite(Type, Entity):
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
-  
+
   def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], **kws):
     m = Method(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=[self, *dependencies], visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(m)
     return m
-  
+
   # 
-  def _depend_on(self, *entities):
+  def depends(self, *entities):
     for entity in entities:
       self.dependencies.update([*entity.dependencies, *entity.references, entity])
-    
+
   def _create(self, result, parameters, **kws):
     return self.method(result, "create", parameters, **kws)
 
   def _destroy(self, result, parameters, **kws):
     return self.method(result, "destroy", parameters, **kws)
-  
+
   def _copy(self, result, parameters, **kws):
     return self.method(result, "copy", parameters, **kws)
-  
+
   def _equal(self, result, parameters, **kws):
     return self.method(result, "equal", parameters, **kws)
-  
+
   def _compare(self, result, parameters, **kws):
     return self.method(result, "compare", parameters, **kws)
-  
+
   def _hash(self, result, parameters, **kws):
     return self.method(result, "hash", parameters, **kws)
 
@@ -95,12 +95,12 @@ class Composite(Type, Entity):
 
 #
 class Method(Function, Entity):
-  
+
   #
   class Linkage(Enum):
     EXTERNAL = auto()
     INLINE = auto()
-    
+
   def __init__(self, result, name, parameters, *args, linkage="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self.linkage = linkage
@@ -113,7 +113,7 @@ class Method(Function, Entity):
         # Pointer is a non-modularzed core type yet its base type can be
         if isinstance(x, Pointer) and isinstance(x.base, Entity):
           self.dependencies.add(x.base)
-    
+
 
   @property
   def linkage(self):
@@ -127,17 +127,17 @@ class Method(Function, Entity):
   @property
   def live(self):
     return self.constraint() is True
-  
+
   #
   @property
   def inline(self):
     return self.linkage is Method.Linkage.INLINE
-  
+
   #
   @property
   def external(self):
     return self.linkage is Method.Linkage.EXTERNAL
-  
+
   #
   @property
   def abstract(self):
@@ -145,9 +145,9 @@ class Method(Function, Entity):
       return self.code is None
     else:
       return self.__abstract is True
-  
+
   # FIXME visibility should be extracted into independent mixin class
-  
+
   #
   @property
   def public(self):
@@ -157,40 +157,32 @@ class Method(Function, Entity):
   @property
   def private(self):
     return self.__visibility is Visibility.PRIVATE
-  
+
   #
   @property
   def internal(self):
     return self.__visibility is Visibility.INTERNAL
-  
+
   #
-  def render_interface(self, stream):
-    super().render_interface(stream)
-    if self.live and not self.internal:
-      if self.inline:
-        self._render_definition(stream)
-      else:
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if self.live:
+      if (header and not self.internal) or (not header and self.internal):
         self._render_declaration(stream)
-  
+
   #
-  def render_forward_declarations(self, stream):
-    super().render_forward_declarations(stream)
-    if self.live and self.internal:
+  def render_definitions(self, stream, header):
+    super().render_definitions(stream, header)
+    if self.live:
       if self.inline:
-        self._render_definition(stream)
+        if (header and not self.internal) or (not header and self.internal):
+          self._render_definition(stream)
       else:
-        self._render_declaration(stream)
-  
-  #
-  def render_implementation(self, stream):
-    super().render_implementation(stream)
-    if self.live and self.external and not self.abstract:
-      self._render_definition(stream)
+        if not header:
+          self._render_definition(stream)
 
   #  
   def _render_definition(self, stream):
-    if not (self.internal or self.external):
-      stream.append(self.description)
     if not self.external:
       stream.append(self.__decorator)
     stream.append(self.definition)
@@ -223,6 +215,16 @@ class Collection(Composite):
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), dependencies=[], *args, **kws):
     super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
     self.element = autoc.core._type(element)
-    self._depend_on(self.element)
+    self.depends(self.element)
     self.memory = memory
     self.hasher = hasher
+
+
+class _StructRenderer:
+  
+  # def _render_struct(stream)
+  
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if (header and not self.internal) or (not header and self.internal):
+      self._render_struct(stream)

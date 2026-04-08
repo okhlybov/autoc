@@ -30,17 +30,19 @@ class _Builder(list):
 
 #
 class Module:
+
+  source_count = 1
+  source_threshold = None
+  __entities = None
+  __header = None
+  __sources = None
+  __digests = None
+  __total_entities = None
+
   def __init__(self, name, stateful=True, *args, **kws):
     super().__init__(*args, **kws)
     self.name = str(name)
     self.stateful = stateful
-    self.source_count = 1
-    self.source_threshold = None
-    self.__entities = None
-    self.__header = None
-    self.__sources = None
-    self.__digests = None
-    self.__total_entities = None
 
   @property
   def entities(self):
@@ -195,16 +197,20 @@ class _SmartRenderer:
 
 #
 class Header(_EntityContainer, _SmartRenderer):
+  
+  __stream = None
+  
   def __init__(self, module, *args, **kws):
     super().__init__(*args, **kws)
     self.module = module
-    self.__stream = None
 
   @property
-  def file_name(self): return f"{self.module.name}_auto.h"
+  def file_name(self):
+    return f"{self.module.name}_auto.h"
 
   @property
-  def tag(self): return f"{self.module.name}_auto_h".upper()
+  def tag(self):
+    return f"{self.module.name}_auto_h".upper()
 
   @property
   def stream(self):
@@ -212,11 +218,22 @@ class Header(_EntityContainer, _SmartRenderer):
       self.__stream = _StreamFile(self.file_name + "~")
     return self.__stream
 
+  def render_prologue(self, stream):
+    stream.write(f"""
+      {_caption}
+      #ifndef {self.tag}
+      #define {self.tag}
+    """.lstrip())
+
   def render_contents(self, stream):
     self.render_prologue(stream)
-    for e in sorted(self.entities):
-      for line in e.interface():
-        stream.write(line)
+    entities = sorted(self.entities)
+    for e in entities:
+      for chunk in e._header_declarations:
+        stream.write(chunk)
+    for e in entities:
+      for chunk in e._header_definitions:
+        stream.write(chunk)
     self.render_epilogue(stream)
 
   def render_prologue(self, stream):
@@ -232,12 +249,14 @@ class Header(_EntityContainer, _SmartRenderer):
 
 #
 class Source(_EntityContainer, _SmartRenderer):
+  
+  complexity = 0
+  __stream = None
+
   def __init__(self, module, index, *args, **kws):
     super().__init__(*args, **kws)
     self.module = module
-    self.complexity = 0
     self.index = index
-    self.__stream = None
 
   @property
   def file_name(self):
@@ -263,11 +282,11 @@ class Source(_EntityContainer, _SmartRenderer):
     for e in self.entities:
       total_entities.update(e.total_references)
     for e in sorted(total_entities):
-      for line in e.forward_declarations():
-        stream.write(line)
+      for chunk in e._source_declarations:
+        stream.write(chunk)
     for e in sorted(self.entities):
-      for line in e.implementation():
-        stream.write(line)
+      for chunk in e._source_definitions:
+        stream.write(chunk)
 
   def render_prologue(self, stream):
     stream.write(f"""
@@ -278,20 +297,24 @@ class Source(_EntityContainer, _SmartRenderer):
 
 #
 class Entity:
+  
+  __hdefs = None
+  __sdefs = None
+  __hdecls = None
+  __sdecls = None
+  __position = None
+  __total_references = None
+  __total_dependencies = None
+  
   def __init__(self, *args, dependencies=[], references=[], **kws):
     super().__init__(*args, **kws)
     self.references = set()
     self.references.update(references)
     self.dependencies = _DependencySet(self, dependencies)
     self.dependencies.update(dependencies)
-    self.__total_references = None
-    self.__total_dependencies = None
-    self.__position = None
-    self.__interface = None
-    self.__forward_declarations = None
-    self.__implementation = None
 
-  def __lt__(self, other): return self.position < other.position
+  def __lt__(self, other):
+    return self.position < other.position
 
   @property
   def total_references(self):
@@ -330,34 +353,40 @@ class Entity:
     return self.__position
 
   @property
-  def complexity(self): return self.forward_declarations().complexity + self.implementation().complexity
+  def complexity(self):
+    return self._source_declarations.complexity + self._source_definitions.complexity
 
-  def interface(self):
-    if self.__interface is None:
-      stream = _Builder()
-      self.render_interface(stream)
-      self.__interface = stream
-    return self.__interface
+  def render_declarations(self, stream, header): pass
+  
+  def render_definitions(self, stream, header): pass
 
-  def forward_declarations(self):
-    if self.__forward_declarations is None:
-      stream = _Builder()
-      self.render_forward_declarations(stream)
-      self.__forward_declarations = stream
-    return self.__forward_declarations
+  @property
+  def _header_declarations(self):
+    if self.__hdecls is None:
+      self.__hdecls = _Builder()
+      self.render_declarations(self.__hdecls, True)
+    return self.__hdecls
 
-  def implementation(self):
-    if self.__implementation is None:
-      stream = _Builder()
-      self.render_implementation(stream)
-      self.__implementation = stream
-    return self.__implementation
+  @property
+  def _header_definitions(self):
+    if self.__hdefs is None:
+      self.__hdefs = _Builder()
+      self.render_definitions(self.__hdefs, True)
+    return self.__hdefs
+      
+  @property
+  def _source_declarations(self):
+    if self.__sdecls is None:
+      self.__sdecls = _Builder()
+      self.render_declarations(self.__sdecls, False)
+    return self.__sdecls
 
-  def render_interface(self, stream): pass
-
-  def render_forward_declarations(self, stream): pass
-
-  def render_implementation(self, stream): pass
+  @property
+  def _source_definitions(self):
+    if self.__sdefs is None:
+      self.__sdefs = _Builder()
+      self.render_definitions(self.__sdefs, False)
+    return self.__sdefs
 
 
 class _DependencySet(set):
@@ -384,19 +413,21 @@ class Code(Entity):
   def __repr__(self):
     return f"... <{self.__class__.__name__}>"
 
-  def render_interface(self, stream):
-    if self.__interface:
-      stream.append(self.__interface)
+  def render_declarations(self, stream, header):
+    if header:
+      if self.__interface:
+        stream.append(self.__interface)
+    else:
+      if self.__definitions:
+        stream.append(self.__definitions)
 
-  def render_forward_declarations(self, stream):
-    if self.__definitions:
-      stream.append(self.__definitions)
-
-  def render_implementation(self, stream):
-    if self.__implementation:
-      stream.append(self.__implementation)
+  def render_definitions(self, stream, header):
+    if not header:
+      if self.__implementation:
+        stream.append(self.__implementation)
 
 
+#
 class SystemHeader(Code):
   def __init__(self, header, *args, **kws):
     self.header_name = header
