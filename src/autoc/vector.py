@@ -7,10 +7,6 @@ import autoc.core
 #
 class Vector(_StructRenderer, Collection):
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
-    self.element_view = Pointer(self.element, constant=True)
-
   def __setup__(self):
     super().__setup__()
     
@@ -20,15 +16,23 @@ class Vector(_StructRenderer, Collection):
     right_i = self.element.variable("right->elements[index]")
     result = self.element.variable("result")
 
+    self.empty.code = f"""
+      assert(target);
+      return target->size == 0;
+    """
+    self._inline_policy(self.empty)
+    
     self.index = self.method("int", "index", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
       assert(target);
       return index < target->size;
     """)
+    self._inline_policy(self.index)
     
     self.size = self.method(std.size_t, "size", {"target": self}, linkage="INLINE", code=f"""
       assert(target);
       return target->size;
     """)
+    self._inline_policy(self.size)
     
     self.allocate = self.method(None, "allocate", {"target": out(self), "capacity": std.size_t}, visibility="PRIVATE", code=f"""
       assert(target);
@@ -37,20 +41,22 @@ class Vector(_StructRenderer, Collection):
       }} else target->elements = NULL;
       target->size = capacity;
     """)
+    self._inline_policy(self.allocate)
     
     # TODO make use of zero initializable feature of primitives
-    create_size = self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t})
-    create_size.code=f"""
+    self.create_size = self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t})
+    self.create_size.code = f"""
       assert(target);
       if(size > 0) {{
         size_t index;
-        {self.allocate(*create_size.arguments)};
+        {self.allocate(*self.create_size.arguments)};
         for(index = 0; index < size; ++index) {self.element.create(target_i)};
       }} else {{
         target->elements = NULL;
         target->size = 0;
       }}
     """
+    self._inline_policy(self.create_size)
 
     self.get = self.method(self.element, "get", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
       {result.definition};
@@ -59,9 +65,10 @@ class Vector(_StructRenderer, Collection):
       {self.element.copy(result, target_i)};
       return result;
     """)
+    self._inline_policy(self.get)
     
-    # FIXME explicit casting here and in the respective Range type is a kind of a hack to deal with double pointer values
-    # Normally Pointer type should be responsible for handling the per-inderection constness flags
+    # FIXME explicit casting here and ithere in the respective Range type is a kind of hack to deal with double pointer types
+    # Normally Pointer type should be responsible for handling the per-indirection constness flags
     
     self.view = self.method(self.element_view, "view", {"target": self, "index": std.size_t}, linkage="INLINE")
     self.view.code = f"""
@@ -69,6 +76,7 @@ class Vector(_StructRenderer, Collection):
       assert({self.index("target", "index")});
       return ({self.view.result})&{target_i};
     """
+    self._inline_policy(self.view)
 
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
@@ -79,6 +87,7 @@ class Vector(_StructRenderer, Collection):
       {destroy_i};
       {self.element.copy(target_i, self.set.arguments[2])};
     """
+    self._inline_policy(self.set)
 
     self.create.linkage = "INLINE"    
     self.create.code = """
@@ -86,6 +95,7 @@ class Vector(_StructRenderer, Collection):
       target->elements = NULL;
       target->size = 0;
     """
+    self._inline_policy(self.create)
     
     if self.element.destructible:
       self.destroy.code = f"""
@@ -101,7 +111,8 @@ class Vector(_StructRenderer, Collection):
         assert(target);
         if(target->size > 0) {self.memory.free("target->elements")};
       """
-
+    self._inline_policy(self.destroy)
+    
     if self.comparable:
       self.equal.code = f"""
         assert(left);
@@ -114,6 +125,7 @@ class Vector(_StructRenderer, Collection):
           return 1;
         }} else return 0;
       """
+      self._inline_policy(self.equal)
     
     if self.hashable:
       state = self.hasher.state_t.variable("state")
@@ -127,6 +139,7 @@ class Vector(_StructRenderer, Collection):
         {self.hasher.destroy(state)};
         return result;
       """
+      self._inline_policy(self.hash)
 
     if self.copyable:
       self.copy.code = f"""
@@ -136,6 +149,7 @@ class Vector(_StructRenderer, Collection):
         {self.allocate("target", "source->size")};
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
+      self._inline_policy(self.copy)
 
     self.range = Range(self)
     self.references.add(self.range)

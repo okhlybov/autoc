@@ -19,13 +19,17 @@ def _hidden_prefix(s, hidden):
 
 # _snake_case identifier decorator
 def snake_decorator(type, identifier, hidden=False):
-  ids = [identifier] if isinstance(identifier, str) else [*identifier]
+  ids = []
+  if identifier:
+    ids = [identifier] if isinstance(identifier, str) else [*identifier]
   return _hidden_prefix("_".join([str(type.prefix)] + ids), hidden)
 
 
 # CamelCase identifier decorator
 def camel_decorator(type, identifier, hidden=False):
-  ids = [identifier] if isinstance(identifier, str) else [*identifier]
+  ids = []
+  if identifier:
+    ids = [identifier] if isinstance(identifier, str) else [*identifier]
   return _hidden_prefix("".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids]), hidden)
 
 
@@ -35,10 +39,11 @@ class Composite(Type, Entity):
   # Global decorator used by all Composite descentants unless overridden locally
   decorator = camel_decorator
   
-  def __init__(self, name, *args, prefix=None, decorator=None, **kws):
+  def __init__(self, name, *args, prefix=None, decorator=None, inline_methods=None, **kws):
     super().__init__(name, *args, **kws)
     self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
+    self.__inline_policy = inline_methods
 
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
@@ -48,6 +53,13 @@ class Composite(Type, Entity):
     m = Method(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=[self, *dependencies], visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(m)
     return m
+
+  def _inline_policy(self, method):
+    match self.__inline_policy:
+      case True:
+        method.linkage = "INLINE"
+      case False:
+        method.linkage = "EXTERNAL"
 
   # 
   def depends(self, *entities):
@@ -215,10 +227,14 @@ class Collection(Composite):
   def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Hasher(), dependencies=[], *args, **kws):
     super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
     self.element = autoc.core._type(element)
+    self.element_view = Pointer(self.element, constant=True)
     self.depends(self.element)
     self.memory = memory
     self.hasher = hasher
 
+  def __setup__(self):
+    super().__setup__()
+    self.empty = self.method("int", "empty", {"target": self})
 
 class _StructRenderer:
   
