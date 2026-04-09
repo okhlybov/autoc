@@ -382,16 +382,22 @@ class CharLiteral(Literal):
 
  
 #
-class TraitsDisabler:
+class _NoTraits:
   @property
-  def constructible(self): return False
+  def constructible(self):
+    return False
   @property
-  def copyable(self): return False
+  def copyable(self):
+    return False
   @property
-  def orderable(self): return False
+  def orderable(self):
+    return False
   @property
-  def comparable(self): return False
+  def comparable(self):
+    return False
   @property
-  def destructible(self): return False
+  def destructible(self):
+    return False
   @property
-  def hashable(self): return False
+  def hashable(self):
+    return False
