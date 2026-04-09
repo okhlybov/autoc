@@ -1,9 +1,15 @@
 from autoc.composite import Collection, _StructRenderer
 import autoc.std as std
-from autoc.core import out, Pointer
+from autoc.core import out, inout, Pointer
+import autoc.range
+import autoc.core
 
 #
 class Vector(_StructRenderer, Collection):
+
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    self.element_view = Pointer(self.element, constant=True)
 
   def __setup__(self):
     super().__setup__()
@@ -14,7 +20,12 @@ class Vector(_StructRenderer, Collection):
     right_i = self.element.variable("right->elements[index]")
     result = self.element.variable("result")
 
-    self.method(std.size_t, "size", {"target": self}, linkage="INLINE", code=f"""
+    self.index = self.method("int", "index", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
+      assert(target);
+      return index < target->size;
+    """)
+    
+    self.size = self.method(std.size_t, "size", {"target": self}, linkage="INLINE", code=f"""
       assert(target);
       return target->size;
     """)
@@ -40,21 +51,33 @@ class Vector(_StructRenderer, Collection):
         target->size = 0;
       }}
     """
-    self.method(self.element, "get", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
+
+    self.get = self.method(self.element, "get", {"target": self, "index": std.size_t}, linkage="INLINE", code=f"""
       {result.definition};
       assert(target);
-      assert(index < target->size);
+      assert({self.index("target", "index")});
       {self.element.copy(result, target_i)};
       return result;
     """)
     
+    # FIXME explicit casting here and in the respective Range type is a kind of a hack to deal with double pointer values
+    # Normally Pointer type should be responsible for handling the per-inderection constness flags
+    
+    self.view = self.method(self.element_view, "view", {"target": self, "index": std.size_t}, linkage="INLINE")
+    self.view.code = f"""
+      assert(target);
+      assert({self.index("target", "index")});
+      return ({self.view.result})&{target_i};
+    """
+
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
-    set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, linkage="INLINE")
-    set.code=f"""
+    self.set = self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}, linkage="INLINE")
+    self.set.code = f"""
       assert(target);
+      assert({self.index("target", "index")});
       {destroy_i};
-      {self.element.copy(target_i, set.arguments[2])};
+      {self.element.copy(target_i, self.set.arguments[2])};
     """
 
     self.create.linkage = "INLINE"    
@@ -114,6 +137,9 @@ class Vector(_StructRenderer, Collection):
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
 
+    self.range = Range(self)
+    self.references.add(self.range)
+
   def _render_struct(self, stream):
     if self.public:
       stream.append("/** @public */\n")
@@ -126,10 +152,12 @@ class Vector(_StructRenderer, Collection):
     """)
 
   @property
-  def constructible(self): return True
+  def constructible(self):
+    return True
   
   @property
-  def destructible(self): return True
+  def destructible(self):
+    return True
   
   @property
   def comparable(self):
@@ -146,3 +174,105 @@ class Vector(_StructRenderer, Collection):
   @property
   def orderable(self):
     return False
+
+
+#
+class Range(autoc.range.DirectAccess):
+  
+  def __init__(self, iterable, *args, **kws):
+    super().__init__(iterable.element, iterable.decorate("range"), **kws)
+    self.iterable = iterable
+    self.depends(iterable)
+
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      stream.append(f"""
+        typedef struct {{
+          {Pointer(self.iterable)} iterable;
+          {std.size_t} front, back;
+        }} {self.name};
+      """)
+
+  def _copy(self, result, parameters, **kws):
+    return autoc.core.Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+
+  def __setup__(self):
+    super().__setup__()
+
+    self.new = self.method(self, "new", {"iterable" : inout(self.iterable)})
+
+    self.new.linkage = "INLINE"
+    self.new.code = f"""
+      assert(iterable);
+      return ({self}){{ iterable, 0, {self.iterable.size(self.new.iterable)} }};
+    """
+
+    self.empty.linkage = "INLINE"
+    self.empty.code = f"""
+      assert(target);
+      return target->front >= target->back;
+    """
+
+    target = self.empty.target
+
+    self.front.linkage = "INLINE"
+    self.front.code = f"""
+      assert(target);
+      assert(!{self.empty(target)});
+      return {self.iterable.get("target->iterable", "target->front")};
+    """
+
+    self.view_front.linkage = "INLINE"
+    self.view_front.code = f"""
+      assert(target);
+      assert(!{self.empty(target)});
+      return ({self.view_front.result}){self.iterable.view("target->iterable", "target->front")};
+    """
+
+    self.pop_front.linkage = "INLINE"
+    self.pop_front.code = f"""
+      assert(target);
+      assert(!{self.empty(target)});
+      ++target->front;
+    """
+
+    self.back.linkage = "INLINE"
+    self.back.code = f"""
+      assert(target);
+      assert(!{self.empty(target)});
+      return {self.iterable.get("target->iterable", "target->back-1")};
+    """
+
+    self.view_back.linkage = "INLINE"
+    self.view_back.code = f"""
+      assert(target);
+      assert(!{self.empty(target)});
+      return ({self.view_back.result}){self.iterable.view("target->iterable", "target->back-1")};
+    """
+
+    self.pop_back.linkage = "INLINE"
+    self.pop_back.code = f"""
+      assert(target);
+      assert(!{self.empty(self.pop_back.target)});
+      --target->back;
+    """
+
+    self.get.linkage = "INLINE"
+    self.get.code = f"""
+      assert(target);
+      return {self.iterable.get("target->iterable", "target->front + index")};
+    """
+
+    self.view.linkage = "INLINE"
+    self.view.code = f"""
+      assert(target);
+      return {self.iterable.view("target->iterable", "target->front + index")};
+    """
+
+    self.size.linkage = "INLINE"
+    self.size.code = f"""
+      assert(target);
+      assert(target->back >= target->front);
+      return target->back - target->front;
+    """
