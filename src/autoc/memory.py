@@ -22,6 +22,8 @@ class Manager(autoc.module.Code):
       code = f"calloc({count}, {size})"
     else:
       code = f"malloc({size})" if count == 1 else f"malloc({count}*{size})"
+    if not cast and type:
+      cast = type
     return f"({cast}*){code}" if cast else code
     
   def free(self, ptr):
