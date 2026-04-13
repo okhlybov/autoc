@@ -186,8 +186,13 @@ class Function(Callable):
   def type_inout(self, type): return type.inout_type
 
   #
-  def __call__(self, *arguments): return Function.Call(self, arguments)
+  def __call__(self, *arguments):
+    return Function.Call(self, arguments)
 
+  #
+  def __str__(self):
+    return self.name
+    
   #
   @property
   def declaration(self):
