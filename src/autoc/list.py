@@ -33,9 +33,10 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
       assert(target);
       node = target->front;
       while(node) {{
+        {self.node}* _node = node;
         {self.element.destroy(node_element) if self.element.destructible else str()};
-        {self.memory.free("node")};
         node = node->next;
+        {self.memory.free("_node")};
       }}
     """
     self._inline_policy(self.destroy)
