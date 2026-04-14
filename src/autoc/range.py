@@ -21,7 +21,7 @@ class Input(Range):
     self.empty = self.method("int", "empty", {"target": self})
     self.front = self.method(self.element, "front", {"target": self})
     self.view_front = self.method(self.element_view, ("view", "front"), {"target": self})
-    self.pop_front = self.method(None, ("pop", "front"), {"target": inout(self)})
+    self.move_front = self.method(None, ("move", "front"), {"target": inout(self)})
 
 
 #
@@ -43,7 +43,7 @@ class Backward(Input):
     super().__setup__()
     self.back = self.method(self.element, "back", {"target": self})
     self.view_back = self.method(self.element_view, ("view", "back"), {"target": self})
-    self.pop_back = self.method(None, ("pop", "back"), {"target": inout(self)})
+    self.move_back = self.method(None, ("move", "back"), {"target": inout(self)})
 
 
 #

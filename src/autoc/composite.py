@@ -236,6 +236,7 @@ class Collection(Composite):
     super().__setup__()
     self.empty = self.method("int", "empty", {"target": self})
 
+
 class _StructRenderer:
   
   # def _render_struct(stream)

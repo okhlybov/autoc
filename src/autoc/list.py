@@ -103,6 +103,16 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     """
     self._inline_policy(self.pop_front)
     
+    self.front = self.method(self.element, "front", {"target": self})
+    self.front.code = f"""
+      {result.definition};
+      assert(target);
+      assert(!{self.empty("target")});
+      {self.element.copy(result, front_element)};
+      return {result};
+    """
+    self._inline_policy(self.front)
+
     self.view_front = self.method(self.element_view, ("view", "front"), {"target": self})
     self.view_front.code = f"""
       assert(target);
@@ -237,8 +247,8 @@ class Range(autoc.range.Forward):
       return ({self.iterable.element_view})&target->front->element;
     """
     
-    self.pop_front.linkage = "INLINE"
-    self.pop_front.code = f"""
+    self.move_front.linkage = "INLINE"
+    self.move_front.code = f"""
       assert(target);
       assert(!{self.empty("target")});
       target->front = target->front->next;

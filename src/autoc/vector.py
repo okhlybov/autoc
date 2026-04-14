@@ -244,8 +244,8 @@ class Range(autoc.range.DirectAccess):
       return ({self.view_front.result}){self.iterable.view("target->iterable", "target->front")};
     """
 
-    self.pop_front.linkage = "INLINE"
-    self.pop_front.code = f"""
+    self.move_front.linkage = "INLINE"
+    self.move_front.code = f"""
       assert(target);
       assert(!{self.empty(target)});
       ++target->front;
@@ -265,8 +265,8 @@ class Range(autoc.range.DirectAccess):
       return ({self.view_back.result}){self.iterable.view("target->iterable", "target->back-1")};
     """
 
-    self.pop_back.linkage = "INLINE"
-    self.pop_back.code = f"""
+    self.move_back.linkage = "INLINE"
+    self.move_back.code = f"""
       assert(target);
       assert(!{self.empty(self.pop_back.target)});
       --target->back;
