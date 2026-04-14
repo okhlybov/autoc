@@ -14,7 +14,8 @@ def generate(project):
   pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
   for file, template in {
     "cmake/AutoC.cmake": _autoc_cmake,
-    f"CMakeLists.txt": _cmakelists_txt,
+    "CMakeLists.txt": _cmakelists_txt,
+    "CMakePresets.json": _cmakepresets_json,
     f"{project}.c": _project_c,
     f"{project}.py": _project_py,
     f"{project}.code-workspace": _code_workspace,
@@ -48,27 +49,58 @@ int main(int argc, char** argv) {
 """
 
 
-_code_workspace = """
-{
+_code_workspace = """{
   "folders": [
     {
       "path": "."
     }
-  ],
-  "settings": {
-    "cmake.sourceDirectory": "${workspaceFolder}",
-    "cmake.buildDirectory": "${workspaceFolder}/build"
-  }
-}
-"""
+  ]
+}"""
 
 
 _gitignore = """
 build
 """
 
+
+_cmakepresets_json = """{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}"
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    }
+  ]
+}"""
+
+
 _cmakelists_txt = """
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 
 project(@project@)
 
@@ -127,6 +159,7 @@ function(add_autoc_module module)
   add_dependencies(${module}-auto ${module_target})
 endfunction()
 """
+
 
 if __name__ == "__main__":
   generate(sys.argv[1])
