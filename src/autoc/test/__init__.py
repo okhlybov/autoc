@@ -9,6 +9,24 @@ codes = set()
 autoc.composite.Composite.decorator = autoc.composite.snake_decorator
 
 
+def _import_modules(package):
+  import pkgutil
+  import importlib
+  for importer, module_name, is_pkg in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+    importlib.import_module(module_name)
+
+
+def configure_module(module):
+  _import_modules(autoc.test)
+  code = []
+  code.append("void run_codes() {\n")
+  for c in codes:
+    module.add(c)
+    code.append(f"run_code({c.name});\n")
+  code.append("}")
+  module.add(autoc.module.Code(definitions="".join(code)))
+  
+  
 class Unit(autoc.module.Code):
 
   def __init__(self, name, dependencies=[]):
