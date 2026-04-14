@@ -1,4 +1,9 @@
 {
+  "settings": {
+    "cmake.configureOnOpen": false,
+    "cmake.autoSelectActiveFolder": false,
+    "cmake.sourceDirectory": "${workspaceFolder}",
+  },
   "folders": [
     {
       "path": ".",

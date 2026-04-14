@@ -1,2 +1,4 @@
-
+tmp
 build
+test.cmake
+test_auto.*
