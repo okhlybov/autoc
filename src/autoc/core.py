@@ -201,6 +201,8 @@ class Function(Callable):
   #
   @property
   def definition(self):
+    if not isinstance(self.code, str) and not self.code:
+      raise ValueError(f"missing body for non-abstract function {self.name}()")
     return str().join([self.declaration, "{", *[str(c) for c in self.code], "}\n"])
     
   class Call(Callable.Call):

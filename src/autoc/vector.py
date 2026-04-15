@@ -268,7 +268,7 @@ class Range(autoc.range.DirectAccess):
     self.move_back.linkage = "INLINE"
     self.move_back.code = f"""
       assert(target);
-      assert(!{self.empty(self.pop_back.target)});
+      assert(!{self.empty(self.move_back.target)});
       --target->back;
     """
 
