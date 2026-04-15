@@ -18,10 +18,9 @@ x.unit(f"{type.empty}(): test empty list", f"""
   TEST_TRUE( {type.empty(t)} );
 """)
 
-x.unit(f"!{type.empty}(): test !empty list", f"""
-  {type.push_front(t, 0)};
-  TEST_FALSE( {type.empty(t)} );
-  TEST_EQUAL( {type.front(t)}, 0 );
+x.unit(f"{type.hash}(): hash empty list", f"""
+  TEST_TRUE( {type.empty(t)} );
+  {type.hash(t)};
 """)
 
 x.unit(f"{type.front}(): front peek from !empty list", f"""
@@ -54,6 +53,16 @@ x.setup(f"""
 """)
 x.cleanup(f"""
   {type.destroy(t)};
+""")
+
+x.unit(f"{type.empty}(): test !empty list", f"""
+  TEST_FALSE( {type.empty(t)} );
+  TEST_EQUAL( {type.front(t)}, 0 );
+""")
+
+x.unit(f"{type.hash}(): hash !empty list", f"""
+  TEST_FALSE( {type.empty(t)} );
+  {type.hash(t)};
 """)
 
 x.unit(f"{type.push_front}(): push to !empty list", f"""
@@ -94,11 +103,114 @@ x.unit(f"{range}(): traverse empty list", f"""
   TEST_TRUE( {range.empty(r)} );
 """)
 
-x.unit(f"!{range}(): traverse !empty list", f"""
+x.unit(f"{range}(): traverse !empty list", f"""
   {type.push_front(t, -1)};
   for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) {{
     TEST_FALSE( {range.empty(r)} );
     TEST_EQUAL( {range.front(r)}, -1 );
   }}
   TEST_TRUE( {range.empty(r)} );
+""")
+
+
+t1 = type.variable("t1")
+t2 = type.variable("t2")
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+  {type.create(t2)};
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.equal}(): compare equal empty lists", f"""
+    TEST_TRUE( {type.equal(t1, t2)} );
+""")
+
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+  {type.create(t2)};
+  {type.push_front(t1, 3)};
+  {type.push_front(t2, 3)};
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.equal}(): compare equal !empty lists", f"""
+    TEST_TRUE( {type.equal(t1, t2)} );
+    TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
+""")
+
+x.unit(f"{type.equal}(): compare !equal !empty lists of same size", f"""
+  {type.push_front(t1, 3)};
+  {type.push_front(t2, 4)};
+    TEST_FALSE( {type.equal(t1, t2)} );
+""")
+
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+  {type.create(t2)};
+  {type.push_front(t1, 3)};
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.equal}(): compare !empty > empty lists", f"""
+    TEST_FALSE( {type.equal(t1, t2)} );
+""")
+
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+  {type.create(t2)};
+  {type.push_front(t1, 3)};
+  {type.push_front(t2, 3)};
+  {type.push_front(t2, 4)};
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.equal}(): compare !empty < !empty lists", f"""
+  TEST_FALSE( {type.equal(t1, t2)} );
+""")
+
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.copy}(): copy empty list", f"""
+  {type.copy(t2, t1)};
+""")
+
+x.unit(f"{type.copy}(): copy !empty list", f"""
+  {type.push_front(t2, 0)};
+  {type.push_front(t2, 1)};
+  {type.push_front(t2, 2)};
+  {type.copy(t2, t1)};
+  TEST_TRUE( {type.equal(t1, t2)} );
 """)
