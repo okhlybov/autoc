@@ -113,13 +113,13 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     """
     self._inline_policy(self.front)
 
-    self.view_front = self.method(self.element_view, ("view", "front"), {"target": self})
-    self.view_front.code = f"""
+    self.front_view = self.method(self.element_view, ("view", "front"), {"target": self})
+    self.front_view.code = f"""
       assert(target);
       assert(!{self.empty("target")});
-      return ({self.view_front.result})&{front_element};
+      return ({self.front_view.result})&{front_element};
     """
-    self._inline_policy(self.view_front)
+    self._inline_policy(self.front_view)
     
     lt = self.node.variable("lt->element")
     rt = self.node.variable("rt->element")
@@ -239,21 +239,7 @@ class Range(autoc.range.Forward):
       assert(target);
       return !target->front;
     """
-    
-    self.view_front.linkage = "INLINE"
-    self.view_front.code = f"""
-      assert(target);
-      assert(!{self.empty("target")});
-      return ({self.iterable.element_view})&target->front->element;
-    """
-    
-    self.move_front.linkage = "INLINE"
-    self.move_front.code = f"""
-      assert(target);
-      assert(!{self.empty("target")});
-      target->front = target->front->next;
-    """
-    
+
     result = self.element.variable("result")
     front_element = self.element.variable("target->front->element")
     
@@ -264,4 +250,18 @@ class Range(autoc.range.Forward):
       assert(!{self.empty("target")});
       {self.element.copy(result, front_element)};
       return result;
+    """
+        
+    self.front_view.linkage = "INLINE"
+    self.front_view.code = f"""
+      assert(target);
+      assert(!{self.empty("target")});
+      return ({self.iterable.element_view})&target->front->element;
+    """
+    
+    self.move_front.linkage = "INLINE"
+    self.move_front.code = f"""
+      assert(target);
+      assert(!{self.empty("target")});
+      target->front = target->front->next;
     """

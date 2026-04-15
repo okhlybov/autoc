@@ -31,11 +31,11 @@ x.unit(f"{type.front}(): front peek from !empty list", f"""
   TEST_EQUAL( {type.front(t)}, 0 );
 """)
 
-x.unit(f"{type.view_front}(): front view from !empty list", f"""
+x.unit(f"{type.front_view}(): front view from !empty list", f"""
   {type.push_front(t, 0)};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL( *{type.view_front(t)}, 0 );
+  TEST_EQUAL( *{type.front_view(t)}, 0 );
 """)
 
 x.unit(f"{type.push_front}(): push to empty list", f"""
