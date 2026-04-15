@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "../src")
+
 import autoc.test
 import autoc.cmake
 import autoc.module
