@@ -41,10 +41,10 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     """
     self._inline_policy(self.destroy)
     
-    self.size = self.method(std.size_t, "size", {"target": self}, code=f"""
+    self.size.code = f"""
       assert(target);
       return target->size;
-    """)
+    """
     self._inline_policy(self.size)
     
     front_element = self.element.variable("target->front->element")

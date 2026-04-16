@@ -235,6 +235,7 @@ class Collection(Composite):
   def __setup__(self):
     super().__setup__()
     self.empty = self.method("int", "empty", {"target": self})
+    self.size = self.method(std.size_t, "size", {"target": self})
 
 
 class _StructRenderer:

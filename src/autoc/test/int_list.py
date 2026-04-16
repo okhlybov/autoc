@@ -16,6 +16,7 @@ x.cleanup(f"""
 
 x.unit(f"{type.empty}(): test empty list", f"""
   TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
 """)
 
 x.unit(f"{type.hash}(): hash empty list", f"""

@@ -61,7 +61,7 @@ class Type(Unit):
     self.codes = []
 
   def render_code(self, stream):
-    stream.append(rf'fprintf(stdout, "--- {self.type}\n");')
+    stream.append(rf'fprintf(stdout, "\n--- {self.type}\n");')
     for c in self.codes:
       stream.append(c)
 
@@ -123,9 +123,9 @@ code = autoc.module.Code(
     int main(int argc, char** argv) {
       run_codes();
       if(failed) {
-        printf("*** %d of %d unit(s) failed\n", failed, run);
+        printf("\n*** %d of %d unit(s) failed\n", failed, run);
       } else {
-        printf("+++ all %d unit(s) succeeded\n", run);
+        printf("\n+++ all %d unit(s) succeeded\n", run);
       }
       exit(failed ? EXIT_FAILURE : EXIT_SUCCESS);
     }
