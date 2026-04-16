@@ -91,3 +91,12 @@ x.unit(f"{type.contains}(): failed lookup in !empty set", f"""
   TEST_FALSE( {type.contains(t, 1)} );
 """)
 
+x.unit(f"{type.put}(): put to empty set triggering storage expansion", f"""
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  for(int i = -1; i < 33; ++i) {{
+    TEST_TRUE( {type.put(t, "i")} );
+  }}
+  TEST_EQUAL( {type.size(t)}, 35 );
+""")
+
