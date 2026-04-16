@@ -209,9 +209,9 @@ x.unit(f"{type.copy}(): copy empty list", f"""
 """)
 
 x.unit(f"{type.copy}(): copy !empty list", f"""
-  {type.push_front(t2, 0)};
-  {type.push_front(t2, 1)};
-  {type.push_front(t2, 2)};
+  {type.push_front(t1, 0)};
+  {type.push_front(t1, 1)};
+  {type.push_front(t1, 2)};
   {type.copy(t2, t1)};
   TEST_TRUE( {type.equal(t1, t2)} );
 """)
