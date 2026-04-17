@@ -191,8 +191,8 @@ class Range(autoc.range.DirectAccess):
     if header:
       stream.append(f"""
         typedef struct {{
-          {Pointer(self.iterable)} iterable;
-          {std.size_t} front, back;
+          {Pointer(self.iterable)} iterable; /**< @private */
+          {std.size_t} front, back; /**< @private */
         }} {self.name};
       """)
 

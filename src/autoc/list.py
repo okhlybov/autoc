@@ -216,7 +216,7 @@ class Range(autoc.range.Forward):
     if header:
       stream.append(f"""
         typedef struct {{
-          {self.iterable.node}* front;
+          {self.iterable.node}* front; /**< @private */
         }} {self.name};
       """)
 
