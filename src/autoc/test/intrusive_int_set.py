@@ -97,6 +97,6 @@ x.unit(f"{type.put}(): put to empty set triggering storage expansion", f"""
   for(int i = -1; i < 33; ++i) {{
     TEST_TRUE( {type.put(t, "i")} );
   }}
-  TEST_EQUAL( {type.size(t)}, 35 );
+  TEST_EQUAL( {type.size(t)}, 34 );
 """)
 

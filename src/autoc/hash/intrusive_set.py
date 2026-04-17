@@ -6,9 +6,10 @@ from autoc.core import out, inout, Pointer
 #
 class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._NoTraits):
   
-  def __init__(self, *args, dependencies=[], **kws):
+  def __init__(self, *args, dependencies=[], capacity_threshold=0.75, **kws):
     super().__init__(*args, dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
     self._element_p = Pointer(self.element)
+    self.capacity_threshold = capacity_threshold
     
   def __setup__(self):
     super().__setup__()
@@ -53,7 +54,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       size_t index;
       assert(target);
       if(size) {{
-        {self.allocate("target", "size*4/3")};
+        {self.allocate("target", f"size/{self.capacity_threshold}")};
         for(index = 0; index < target->capacity; ++index) {self.mark_empty(target_i)};
       }} else {{
         {self.create("target")};
@@ -66,7 +67,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       {_target.definition};
       size_t index;
       assert(target);
-      if(new_size > target->size && new_size > (target->capacity/4)*3 /* 0.75 capacity threshold */) {{
+      if(!target->elements || (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity)) {{
         {self.create_size(_target, "new_size")};
         if(target->elements) {{
           for(index = 0; index < target->capacity; ++index) {{
