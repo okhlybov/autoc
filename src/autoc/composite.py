@@ -237,6 +237,18 @@ class Collection(Composite):
     self.empty = self.method("int", "empty", {"target": self})
     self.size = self.method(std.size_t, "size", {"target": self})
 
+  @property
+  def copyable(self):
+    return self.element.copyable
+  
+  @property
+  def constructible(self):
+    return True
+  
+  @property
+  def destructible(self):
+    return True
+
 
 class _StructRenderer:
   

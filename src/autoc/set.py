@@ -24,7 +24,7 @@ ceil_power2 = autoc.module.Code(dependencies=[std.size_t, std.linkage], interfac
 """, definitions="""
   size_t _autoc_ceil_power2(size_t value) {
     if(value == 0) return 1;
-    value--;
+    --value;
     value |= value >> 1;
     value |= value >> 2;
     value |= value >> 4;

@@ -164,14 +164,6 @@ class Vector(_StructRenderer, Collection):
       {std.size_t} size; /**< @private */
     }} {self.name};
     """)
-
-  @property
-  def constructible(self):
-    return True
-  
-  @property
-  def destructible(self):
-    return True
   
   @property
   def comparable(self):
@@ -180,10 +172,6 @@ class Vector(_StructRenderer, Collection):
   @property
   def hashable(self):
     return self.element.hashable
-  
-  @property
-  def copyable(self):
-    return self.element.copyable
   
   @property
   def orderable(self):
