@@ -1,13 +1,14 @@
 import autoc.set
 import autoc.core
+import autoc.hash
 import autoc.std as std
 from autoc.core import out, inout, Pointer
 
 #
-class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._NoTraits):
+class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
   
   def __init__(self, *args, dependencies=[], capacity_threshold=0.75, **kws):
-    super().__init__(*args, dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
+    super().__init__(*args, hasher=autoc.hash.Xor(), dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
     self._element_p = Pointer(self.element)
     self.capacity_threshold = capacity_threshold
     
@@ -25,6 +26,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     source_i = self.element.variable("source->elements[index]")
     target_elements = Pointer(self.element).variable("target->elements")
     
+    self.size.linkage = "INLINE"
     self.size.code = f"""
       assert(target);
       return target->size;
@@ -176,6 +178,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     """
     self._inline_policy(self.destroy)
 
+    self.empty.linkage = "INLINE"
     self.empty.code = f"""
       assert(target);
       return target->size == 0;
@@ -217,9 +220,41 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       }}
     """
     self._inline_policy(self.copy)
-    
+
     self.range = Range(self)
     self.references.add(self.range)
+    
+    range = self.range
+    r = range.variable("r")
+    
+    self.equal.code = f"""
+      {r.definition};
+      assert(left);
+      assert(right);
+      if({self.size("left")} == {self.size("right")}) {{
+        for({r} = {range.new("left")}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if(!{self.contains("right", range.front_view(r))}) return 0;
+        }}
+        return 1;
+      }} else return 0;
+    """
+    
+    state = self.hasher.state_t.variable("state")
+    
+    self.hash.code = f"""
+      size_t result;
+      {r.definition};
+      {state.definition};
+      assert(target);
+      {self.hasher.create("state")};
+      for({r} = {range.new("target")}; !{range.empty(r)}; {range.move_front(r)}) {{
+        {self.hasher.update(state, self.element.hash(range.front_view(r)))};
+      }}
+      result = {self.hasher.hash(state)};
+      {self.hasher.destroy(state)};
+      return result;
+    """
+    
 
   def _render_struct(self, stream):
     if self.public:
@@ -247,7 +282,7 @@ class Range(autoc.range.Forward):
     if header:
       stream.append(f"""
         typedef struct {{
-          {Pointer(self.iterable)} iterable; /**< @private */
+          {Pointer(self.iterable, constant=True)} iterable; /**< @private */
           {std.size_t} front; /**< @private */
         }} {self.name};
       """)
@@ -258,7 +293,7 @@ class Range(autoc.range.Forward):
   def __setup__(self):
     super().__setup__()
     
-    self.new = self.method(self, "new", {"iterable" : inout(self.iterable)})
+    self.new = self.method(self, "new", {"iterable" : self.iterable})
 
     target = self.variable("target")
     front_element = self.element.variable("target->iterable->elements[target->front]")

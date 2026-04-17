@@ -3,7 +3,7 @@ from autoc.test import *
 from autoc.hash.intrusive_set import *
 
 
-class IS(IntrusiveSet):
+class IS(IntrusiveHashSet):
   
   def _test_empty(self, result, parameters, **kws):
     return Macro(result, parameters, lambda element: f"{element} == INT_MIN /* EMPTY? */")
@@ -22,6 +22,7 @@ x = Type(type := IS("int_intrusive_set", "int"))
 
 t = type.variable("t")
 t1 = type.variable("t1")
+t2 = type.variable("t2")
 
 range = type.range
 r = range.variable("r")
@@ -66,6 +67,12 @@ x.unit(f"{type.empty}(): test empty set", f"""
 x.unit(f"{type.range}(): traverse empty set", f"""
   {r.definition};
   for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) TEST_ASSERT(0);
+""")
+
+x.unit(f"{type.hash}(): hash of empty set", f"""
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  {type.hash(t)};
 """)
 
 x.unit(f"{type.copy}(): copy empty set", f"""
@@ -132,6 +139,11 @@ x.cleanup(f"""
   {type.destroy(t)};
 """)
 
+x.unit(f"{type.hash}(): hash of !empty set", f"""
+  TEST_FALSE( {type.empty(t)} );
+  {type.hash(t)};
+""")
+
 x.unit(f"{type.range}(): traverse !empty set", f"""
   {r.definition};
   int i = 0;
@@ -151,5 +163,25 @@ x.unit(f"{type.contains}(): contains all elements", f"""
     TEST_TRUE( {type.contains(t, "i")} );
   }}
   TEST_FALSE( {type.contains(t, 88)} );
+""")
+
+x.setup(f"""
+  {t1.definition};
+  {t2.definition};
+  {type.create(t1)};
+  {type.create(t2)};
+  for(int i = -8; i <= 8; ++i) {{
+    TEST_TRUE( {type.put(t1, "+i")} );
+    TEST_TRUE( {type.put(t2, "-i")} );
+  }}
+""")
+x.cleanup(f"""
+  {type.destroy(t1)};
+  {type.destroy(t2)};
+""")
+
+x.unit(f"{type.hash}(): hashes of two equal !empty sets", f"""
+  TEST_TRUE( {type.equal(t1, t2)} );
+  TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
 """)
 
