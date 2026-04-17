@@ -5,7 +5,6 @@ from autoc.core import out, Macro
 
 
 # Incremental xor+shift hasher for ordered data types
-@functools.cache
 class XorShift(autoc.module.Code):
 
   state_t = std.size_t
@@ -15,8 +14,9 @@ class XorShift(autoc.module.Code):
   hash = Macro(std.size_t, {"state": state_t}, lambda state: state)
   
   def __init__(self):
-    super().__init__(dependencies=[std.limits_h, self.state_t, std.linkage], interface=f"""
-      /** @private */
+    super().__init__(dependencies=[XorShift.__rotr])
+    
+  __rotr = autoc.module.Code(dependencies=[std.limits_h, std.size_t, std.linkage], definitions=f"""
       AUTOC_STATIC_INLINE
       size_t _autoc_rotr(size_t value) {{
         return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));
@@ -25,7 +25,6 @@ class XorShift(autoc.module.Code):
     
     
 # Incremental xor hasher for unordered data types
-@functools.cache
 class Xor(autoc.module.Code):
 
   state_t = std.size_t
@@ -35,4 +34,4 @@ class Xor(autoc.module.Code):
   hash = Macro(std.size_t, {"state": state_t}, lambda state: state)
   
   def __init__(self):
-    super().__init__(dependencies=[self.state_t])
+    super().__init__(dependencies=[std.size_t])
