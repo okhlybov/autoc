@@ -21,10 +21,15 @@ class IS(IntrusiveSet):
 x = Type(type := IS("int_intrusive_set", "int"))
 
 t = type.variable("t")
+t1 = type.variable("t1")
+
+range = type.range
+r = range.variable("r")
 
 
 x.setup(f"""
   {t.definition};
+  {r.definition};
 """)
 x.cleanup(f"""
   {type.destroy(t)};
@@ -44,6 +49,7 @@ x.unit(f"{type.create_size}(): create empty set with zero size", f"""
   TEST_TRUE( {type.put(t, -1)} );
 """)
 
+
 x.setup(f"""
   {t.definition};
   {type.create(t)};
@@ -55,6 +61,21 @@ x.cleanup(f"""
 x.unit(f"{type.empty}(): test empty set", f"""
   TEST_TRUE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 0 );
+""")
+
+x.unit(f"{type.range}(): traverse empty set", f"""
+  {r.definition};
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) TEST_ASSERT(0);
+""")
+
+x.unit(f"{type.copy}(): copy empty set", f"""
+  {t1.definition};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  {type.copy(t1, t)};
+  TEST_TRUE( {type.empty(t1)} );
+  TEST_EQUAL( {type.size(t1)}, 0 );
+  {type.destroy(t1)};
 """)
 
 x.unit(f"{type.contains}(): lookup in empty set", f"""
@@ -98,5 +119,37 @@ x.unit(f"{type.put}(): put to empty set triggering storage expansion", f"""
     TEST_TRUE( {type.put(t, "i")} );
   }}
   TEST_EQUAL( {type.size(t)}, 34 );
+""")
+
+x.setup(f"""
+  {t.definition};
+  {type.create(t)};
+  for(int i = -8; i < 8; ++i) {{
+    TEST_TRUE( {type.put(t, "i")} );
+  }}
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.range}(): traverse !empty set", f"""
+  {r.definition};
+  int i = 0;
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) ++i;
+  TEST_EQUAL( i, 16 );
+""")
+
+x.unit(f"{type.copy}(): copy !empty set", f"""
+  {t1.definition};
+  {type.copy(t1, t)};
+  TEST_EQUAL( {type.size(t)}, {type.size(t1)} );
+  {type.destroy(t1)};
+""")
+
+x.unit(f"{type.contains}(): contains all elements", f"""
+  for(int i = -8; i < 8; ++i) {{
+    TEST_TRUE( {type.contains(t, "i")} );
+  }}
+  TEST_FALSE( {type.contains(t, 88)} );
 """)
 

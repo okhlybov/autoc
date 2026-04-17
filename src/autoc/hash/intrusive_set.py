@@ -20,7 +20,9 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     self.test_deleted = self._test_deleted("int", {"element": self.element})
     self.mark_deleted = self._mark_deleted(None, {"element": inout(self.element)})
 
+    element = self.element.variable("element")
     target_i = self.element.variable("target->elements[index]")
+    source_i = self.element.variable("source->elements[index]")
     target_elements = Pointer(self.element).variable("target->elements")
     
     self.size.code = f"""
@@ -29,11 +31,10 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     """
     self._inline_policy(self.size)
     
-    self.test_element = self.method("int", ("test", "element"), {"target": self, "index": std.size_t}, linkage="INLINE", visibility="PRIVATE", hidden=True, code=f"""
-      assert(target);
-      assert(index < target->capacity);
-      return !({self.test_empty(target_i)} || {self.test_deleted(target_i)});
-    """)
+    self.test_element = self.method("int", ("test", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
+    self.test_element.code = f"""
+      return !({self.test_empty(element)} || {self.test_deleted(element)});
+    """
     self._inline_policy(self.test_element)
     
     self.allocate = self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="PRIVATE")
@@ -71,7 +72,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
         {self.create_size(_target, "new_size")};
         if(target->elements) {{
           for(index = 0; index < target->capacity; ++index) {{
-            if({self.test_element("target", "index")}) {{
+            if({self.test_element(target_i)}) {{
               {self.put(_target, target_i)};
             }}
           }}
@@ -97,6 +98,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       assert(target);
       assert(_index);
       assert(target->capacity > 0);
+      assert({self.test_element(element)});
       /* linear probing */
       start = {self.element.hash(self.locate_element.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* when looking for specific element the lookup terminator is an empty slot while deleted slot is not */
@@ -129,17 +131,18 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       assert(_index);
       assert(target->capacity > 0);
       assert(target->size < target->capacity);
+      assert({self.test_element(element)});
       /* linear probing */
       start = {self.element.hash(self.locate_slot.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* a slot for the new element is either empty or deleted */
       for(index = start; index < target->capacity; ++index) {{
-        if(!{self.test_element("target", "index")}) {{
+        if(!{self.test_element(target_i)}) {{
           *_index = index;
           return &{target_i};
         }}
       }}
       for(index = 0; index < start; ++index) {{
-        if(!{self.test_element("target", "index")}) {{
+        if(!{self.test_element(target_i)}) {{
           *_index = index;
           return &{target_i};
         }}
@@ -152,13 +155,14 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     self.contains.code = f"""
       size_t index;
       assert(target);
+      assert({self.test_element(element)});
       return target->elements && {self.locate_element("target", "&index", self.contains.element)} != NULL;
     """
     self._inline_policy(self.contains)
     
     destroy = f"""
       for(index = 0; index < target->capacity; ++index)
-        if({self.test_element("target", "index")})
+        if({self.test_element(target_i)})
           {self.element.destroy(target_i)};
     """ if self.element.destructible else str()
     
@@ -182,6 +186,7 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       size_t index;
       {self.element_view} _element;
       assert(target);
+      assert({self.test_element(element)});
       if(!{self.contains("target", self.put.element)}) {{
         {self.manage_storage("target", "target->size+1")};
         {self.element.copy(self.locate_slot("target", "&index", self.put.element), self.put.element)};
@@ -195,10 +200,27 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
     self.find_view.code = f"""
       size_t index;
       assert(target);
+      assert({self.test_element(element)});
       return {self.locate_element("target", "&index", self.find_view.element)};
     """
     self._inline_policy(self.find_view)
     
+    self.copy.code = f"""
+      size_t index;
+      assert(target);
+      assert(source);
+      {self.create_size("target", "source->size")};
+      for(index = 0; index < source->capacity; ++index) {{
+        if({self.test_element(source_i)}) {{
+          {self.put("target", source_i)};
+        }}
+      }}
+    """
+    self._inline_policy(self.copy)
+    
+    self.range = Range(self)
+    self.references.add(self.range)
+
   def _render_struct(self, stream):
     if self.public:
       stream.append("/** @public */\n")
@@ -210,11 +232,81 @@ class IntrusiveSet(autoc.composite._StructRenderer, autoc.set.Set, autoc.core._N
       {std.size_t} size; /**< @private */
     }} {self.name};
     """)
-    
-  @property
-  def constructible(self):
-    return True
+
+
+#
+class Range(autoc.range.Forward):
   
-  @property
-  def destructible(self):
-    return True
+  def __init__(self, iterable, *args, **kws):
+    super().__init__(iterable.element, iterable.decorate("range"), **kws)
+    self.iterable = iterable
+    self.depends(iterable)
+
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      stream.append(f"""
+        typedef struct {{
+          {Pointer(self.iterable)} iterable; /**< @private */
+          {std.size_t} front; /**< @private */
+        }} {self.name};
+      """)
+
+  def _copy(self, result, parameters, **kws):
+    return autoc.core.Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+
+  def __setup__(self):
+    super().__setup__()
+    
+    self.new = self.method(self, "new", {"iterable" : inout(self.iterable)})
+
+    target = self.variable("target")
+    front_element = self.element.variable("target->iterable->elements[target->front]")
+
+    self.next = self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="PRIVATE", linkage="INLINE", code=f"""
+      assert(target);
+      while(!{self.empty("target")} && !{self.iterable.test_element(front_element)}) ++target->front;
+    """)
+    
+    self.new.linkage = "INLINE"
+    self.new.code = f"""
+      {self} result = {{ iterable, 0 }};
+      assert(iterable);
+      {self.next("&result")};
+      {self.next("&result")};
+      return result;
+    """
+
+    self.empty.linkage = "INLINE"
+    self.empty.code = f"""
+      assert(target);
+      return target->front >= target->iterable->capacity;
+    """
+
+    result = self.element.variable("result")
+    
+    self.front.linkage = "INLINE"
+    self.front.code = f"""
+      {result.definition};
+      assert(target);
+      assert(!{self.empty("target")});
+      assert({self.iterable.test_element(front_element)});
+      {self.element.copy(result, front_element)};
+      return result;
+    """
+        
+    self.front_view.linkage = "INLINE"
+    self.front_view.code = f"""
+      assert(target);
+      assert(!{self.empty("target")});
+      assert({self.iterable.test_element(front_element)});
+      return ({self.iterable.element_view})&{front_element};
+    """
+    
+    self.move_front.linkage = "INLINE"
+    self.move_front.code = f"""
+      assert(target);
+      assert(!{self.empty("target")});
+      ++target->front;
+      {self.next("target")};
+    """    
