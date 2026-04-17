@@ -1,6 +1,6 @@
 from autoc.core import *
 from autoc.test import *
-from autoc.hash.intrusive_set import *
+from autoc.intrusive_hash_set import *
 
 
 class IS(IntrusiveHashSet):

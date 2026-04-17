@@ -308,7 +308,6 @@ class Range(autoc.range.Forward):
       {self} result = {{ iterable, 0 }};
       assert(iterable);
       {self.next("&result")};
-      {self.next("&result")};
       return result;
     """
 
