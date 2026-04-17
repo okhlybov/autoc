@@ -1,11 +1,15 @@
-from autoc.composite import Collection, _StructRenderer
 import autoc.std as std
+import autoc.core
 from autoc.core import out, inout, Pointer
 import autoc.range
-import autoc.core
+import autoc.hash
+from autoc.composite import Collection, _StructRenderer
 
 #
 class Vector(_StructRenderer, Collection):
+
+  def __init__(self, *args, **kws):
+    super().__init__(*args, hasher=autoc.hash.XorShift(), **kws)
 
   def __setup__(self):
     super().__setup__()
@@ -16,6 +20,7 @@ class Vector(_StructRenderer, Collection):
     right_i = self.element.variable("right->elements[index]")
     result = self.element.variable("result")
 
+    self.empty.linkage = "INLINE"
     self.empty.code = f"""
       assert(target);
       return target->size == 0;
@@ -164,18 +169,6 @@ class Vector(_StructRenderer, Collection):
       {std.size_t} size; /**< @private */
     }} {self.name};
     """)
-  
-  @property
-  def comparable(self):
-    return self.element.comparable
-  
-  @property
-  def hashable(self):
-    return self.element.hashable
-  
-  @property
-  def orderable(self):
-    return False
 
 
 #

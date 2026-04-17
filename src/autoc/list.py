@@ -1,5 +1,6 @@
 import autoc.core
 import autoc.range
+import autoc.hash
 import autoc.composite
 import autoc.std as std
 from autoc.core import inout
@@ -8,12 +9,13 @@ from autoc.core import inout
 class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.core._NoTraits):
   
   def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+    super().__init__(*args, hasher=autoc.hash.XorShift(), **kws)
     self.node = autoc.core._type(f"{self.decorate(None, hidden=True)}n")
     
   def __setup__(self):
     super().__setup__()
     
+    self.empty.linkage = "INLINE"
     self.empty.code = f"""
       assert(target);
       assert((target->size == 0) == (target->front == NULL));
@@ -21,6 +23,7 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     """
     self._inline_policy(self.empty)
     
+    self.create.linkage = "INLINE"
     self.create.code = f"""
       assert(target);
       target->front = NULL;
@@ -41,6 +44,7 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     """
     self._inline_policy(self.destroy)
     
+    self.size.linkage = "INLINE"
     self.size.code = f"""
       assert(target);
       return target->size;
@@ -161,27 +165,8 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.co
     
     self.range = Range(self)
     self.references.add(self.range)
-    
-  @property
-  def constructible(self):
-    return True
 
-  @property
-  def destructible(self):
-    return True
-  
-  @property
-  def comparable(self):
-    return self.element.comparable
-  
-  @property
-  def hashable(self):
-    return self.element.hashable
-  
-  @property
-  def copyable(self):
-    return self.element.copyable
-  
+
   def _render_struct(self, stream):
     stream.append(f"""
       /** @private */
