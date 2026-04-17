@@ -8,8 +8,8 @@ from autoc.composite import Collection, _StructRenderer
 #
 class Vector(_StructRenderer, Collection):
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, hasher=autoc.hash.XorShift(), **kws)
+  def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
+    super().__init__(*args, hasher=hasher, **kws)
 
   def __setup__(self):
     super().__setup__()

@@ -7,8 +7,8 @@ from autoc.core import out, inout, Pointer
 #
 class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
   
-  def __init__(self, *args, dependencies=[], capacity_threshold=0.75, **kws):
-    super().__init__(*args, hasher=autoc.hash.Xor(), dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
+  def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], **kws):
+    super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
     self._element_p = Pointer(self.element)
     self.capacity_threshold = capacity_threshold
     

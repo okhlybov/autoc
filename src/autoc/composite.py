@@ -224,7 +224,7 @@ class Method(Function, Entity):
 #
 class Collection(Composite):
   
-  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=None, dependencies=[], *args, **kws):
+  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Xor(), dependencies=[], *args, **kws):
     super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
     self.element = autoc.core._type(element)
     self.element_view = Pointer(self.element, constant=True)

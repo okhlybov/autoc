@@ -6,10 +6,10 @@ import autoc.std as std
 from autoc.core import inout
 
 
-class List(autoc.composite._StructRenderer, autoc.composite.Collection, autoc.core._NoTraits):
+class List(autoc.composite._StructRenderer, autoc.composite.Collection):
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, hasher=autoc.hash.XorShift(), **kws)
+  def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
+    super().__init__(*args, hasher=hasher, **kws)
     self.node = autoc.core._type(f"{self.decorate(None, hidden=True)}n")
     
   def __setup__(self):
