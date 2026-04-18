@@ -1,22 +1,22 @@
-import autoc.module
+from autoc.module import Code
 import autoc.std as std
 import autoc.random
 from autoc.core import out, Macro
 
 
-seeder = autoc.random.StaticSeed()
+seeder = autoc.random.RandomSeeder()
 
 
-class _IncrementalHasher(autoc.module.Code):
+class _IncrementalHasher(Code):
   
   def __init__(self, seeder=None, dependencies=[], **kws):
     self.seeder = seeder if seeder else autoc.hash.seeder
     super().__init__(dependencies=[*dependencies, self.seeder], **kws)
     self.state_t = std.size_t
-    self.create = Macro(None, {"state": out(self.state_t)}, lambda state: f"{state} = {self.seeder}")
+    self.create = Macro(None, {"state": out(self.state_t)}, lambda state: f"{state} = {self.seeder.seed}")
     self.destroy = Macro(None, {"state": out(self.state_t)}, lambda source: str())
-    self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotr({hash})")
     self.hash = Macro(std.size_t, {"state": self.state_t}, lambda state: state)
+    # self.update =
 
   
 # Incremental xor+shift hasher for ordered data types
