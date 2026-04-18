@@ -162,20 +162,24 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     """
     self._inline_policy(self.contains)
     
-    destroy = f"""
-      for(index = 0; index < target->capacity; ++index)
-        if({self.test_element(target_i)})
-          {self.element.destroy(target_i)};
-    """ if self.element.destructible else str()
-    
-    self.destroy.code = f"""
-      size_t index;
-      assert(target);
-      if(target->elements) {{
-        {destroy};
-        {self.memory.free(target_elements)};
-      }}
-    """
+    if self.element.destructible:
+      self.destroy.code = f"""
+        size_t index;
+        assert(target);
+        if(target->elements) {{
+          for(index = 0; index < target->capacity; ++index)
+            if({self.test_element(target_i)})
+              {self.element.destroy(target_i)};
+          {self.memory.free(target_elements)};
+        }}
+      """
+    else:
+      self.destroy.code = f"""
+        assert(target);
+        if(target->elements) {{
+          {self.memory.free(target_elements)};
+        }}
+      """
     self._inline_policy(self.destroy)
 
     self.empty.linkage = "INLINE"
@@ -187,7 +191,6 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     
     self.put.code = f"""
       size_t index;
-      {self.element_view} _element;
       assert(target);
       assert({self.test_element(element)});
       if(!{self.contains("target", self.put.element)}) {{
