@@ -308,8 +308,10 @@ class Range(autoc.range.Forward):
     
     self.new.linkage = "INLINE"
     self.new.code = f"""
-      {self} result = {{ iterable, 0 }};
+      {self} result;
       assert(iterable);
+      result.iterable = iterable;
+      result.front = 0;
       {self.next("&result")};
       return result;
     """

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(test)
+project(${PROJECT_NAME} LANGUAGES C CXX)
 
 set(AUTOC_MODULE_NAME ${PROJECT_NAME})
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.py)
@@ -17,4 +18,5 @@ add_autoc_module(
 )
 
 add_executable(${PROJECT_NAME})
+#set_source_files_properties(test_auto.c PROPERTIES LANGUAGE CXX)
 target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME}-auto)

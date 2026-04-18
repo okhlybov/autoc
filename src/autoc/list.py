@@ -215,12 +215,10 @@ class Range(autoc.range.Forward):
 
     self.new.linkage = "INLINE"
     self.new.code = f"""
+      {self} result;
       assert(iterable);
-      #ifdef __cplusplus
-        return {{ iterable->front }};
-      #else
-        return ({self}){{ iterable->front }};
-      #endif
+      result.front = iterable->front;
+      return result;
     """
 
     self.empty.linkage = "INLINE"
