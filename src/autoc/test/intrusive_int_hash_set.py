@@ -3,22 +3,18 @@ from autoc.test import *
 from autoc.intrusive_hash_set import Set
 
 
-class Set(Set):
-  
-  def _is_empty(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda element: f"{element} == INT_MIN /* EMPTY? */")
+class IntrusiveSetInt(TypeProxy):
+  def is_empty(self, element):
+    return f"{element} == INT_MIN /* EMPTY? */"
+  def mark_empty(self, element):
+    return f"{element} = INT_MIN /* EMPTY */"
+  def is_deleted(self, element):
+    return f"{element} == INT_MAX /* DELETED? */"
+  def mark_deleted(self, element):
+    return f"{element} = INT_MAX /* DELETED */"
 
-  def _mark_empty(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda element: f"{element} = INT_MIN /* EMPTY */")
 
-  def _is_deleted(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda element: f"{element} == INT_MAX /* DELETED? */")
-
-  def _mark_deleted(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda element: f"{element} = INT_MAX /* DELETED */")
-
-  
-x = Type(type := Set("intrusive_int_set", "int"))
+x = Type(type := Set("intrusive_int_set", IntrusiveSetInt("int")))
 
 t = type.variable("t")
 t1 = type.variable("t1")

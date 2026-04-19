@@ -9,7 +9,7 @@ description = "C source code generation package"
 authors = [{name = "Oleg A. Khlybov", email = "fougas@mail.ru"}]
 license = {text = "BSD 2-Clause"}
 requires-python = ">=3.13"
-dependencies = []
+dependencies = ["wrapt>=2.1"]
 
 [project.urls]
 Homepage = "https://github.com/okhlybov/autoc"

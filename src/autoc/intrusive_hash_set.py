@@ -15,12 +15,6 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
   def __setup__(self):
     super().__setup__()
     
-    self.is_empty = self._is_empty("int", {"element": self.element})
-    self.mark_empty = self._mark_empty(None, {"element": inout(self.element)})
-
-    self.is_deleted = self._is_deleted("int", {"element": self.element})
-    self.mark_deleted = self._mark_deleted(None, {"element": inout(self.element)})
-
     element = self.element.variable("element")
     target_i = self.element.variable("target->elements[index]")
     source_i = self.element.variable("source->elements[index]")
@@ -35,7 +29,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
     
     self.is_element = self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
     self.is_element.code = f"""
-      return !({self.is_empty(element)} || {self.is_deleted(element)});
+      return !({self.element.is_empty(element)} || {self.element.is_deleted(element)});
     """
     self._inline_policy(self.is_element)
     
@@ -58,7 +52,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       assert(target);
       if(size) {{
         {self.allocate("target", f"size/{self.capacity_threshold}")};
-        for(index = 0; index < target->capacity; ++index) {self.mark_empty(target_i)};
+        for(index = 0; index < target->capacity; ++index) {self.element.mark_empty(target_i)};
       }} else {{
         {self.create("target")};
       }}
@@ -105,16 +99,16 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       start = {self.element.hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
       for(index = start; index < target->capacity; ++index) {{
-        if(!({self.is_empty(target_i)})) {{
-          if(!({self.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
+        if(!({self.element.is_empty(target_i)})) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}
         }} else goto stop;
       }}
       for(index = 0; index < start; ++index) {{
-        if(!({self.is_empty(target_i)})) {{
-          if(!({self.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
+        if(!({self.element.is_empty(target_i)})) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}

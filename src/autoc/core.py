@@ -6,18 +6,18 @@ _type_cache = [] # [ (matcher, type) ]
 
 #
 def _type(obj):
-  match obj:
-    case Pointer():
-      if obj.indirection == 0:
-        return obj.base
-      else:
-        return obj
-    case Type(): return obj
-    case str():
-      for rx, type in _type_cache:
-        if rx.match(obj):
-          return type
-      return Primitive(obj)
+  if isinstance(obj, Pointer):
+    if obj.indirection == 0:
+      return obj.base
+    else:
+      return obj
+  if isinstance(obj, Type):
+    return obj
+  if isinstance(obj, str):
+    for rx, type in _type_cache:
+      if rx.match(str(obj)):
+        return type
+    return Primitive(obj)
   raise TypeError(f"can not construct a Type from {obj}")
 
 

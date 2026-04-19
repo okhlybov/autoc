@@ -3,6 +3,12 @@ import autoc.module
 import autoc.composite
 
 
+import wrapt
+class TypeProxy(wrapt.BaseObjectProxy):
+  def __init__(self, type, *args, **kws):
+     super().__init__(autoc.core._type(type), *args, **kws)
+
+
 codes = set()
 
 
@@ -25,8 +31,8 @@ def configure_module(module):
     code.append(f"run_code({c.name});\n")
   code.append("}")
   module.add(autoc.module.Code(definitions="".join(code)))
-  
-  
+
+
 class Unit(autoc.module.Code):
 
   def __init__(self, name, dependencies=[]):
