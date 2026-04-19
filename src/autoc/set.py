@@ -2,7 +2,6 @@ from autoc.core import out, inout
 import autoc.std as std
 import autoc.composite
 import autoc.module
-import functools
 
 
 #
@@ -17,7 +16,7 @@ class Set(autoc.composite.Collection):
 
 
 #
-ceil_power2 = autoc.module.Code(dependencies=[std.size_t, std.linkage], definitions=f"""
+ceil_power2 = autoc.module.Code(dependencies=[std.size_t, std.linkage], definitions="""
   AUTOC_EXTERN
   size_t _autoc_ceil_power2(size_t value);
 """, implementation="""

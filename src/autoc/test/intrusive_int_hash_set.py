@@ -1,24 +1,24 @@
 from autoc.core import *
 from autoc.test import *
-from autoc.intrusive_hash_set import *
+from autoc.intrusive_hash_set import Set
 
 
-class IS(IntrusiveHashSet):
+class Set(Set):
   
-  def _test_empty(self, result, parameters, **kws):
+  def _is_empty(self, result, parameters, **kws):
     return Macro(result, parameters, lambda element: f"{element} == INT_MIN /* EMPTY? */")
 
   def _mark_empty(self, result, parameters, **kws):
     return Macro(result, parameters, lambda element: f"{element} = INT_MIN /* EMPTY */")
 
-  def _test_deleted(self, result, parameters, **kws):
+  def _is_deleted(self, result, parameters, **kws):
     return Macro(result, parameters, lambda element: f"{element} == INT_MAX /* DELETED? */")
 
   def _mark_deleted(self, result, parameters, **kws):
     return Macro(result, parameters, lambda element: f"{element} = INT_MAX /* DELETED */")
 
   
-x = Type(type := IS("int_intrusive_set", "int"))
+x = Type(type := Set("intrusive_int_set", "int"))
 
 t = type.variable("t")
 t1 = type.variable("t1")
@@ -37,7 +37,7 @@ x.cleanup(f"""
 """)
 
 x.unit(f"{type.create_size}(): create empty set with preferred capacity", f"""
-  {type.create_size(t, 1024*1024+11)};
+  {type.create_size(t, 1024+11)};
   TEST_TRUE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 0 );
   TEST_TRUE( {type.put(t, -1)} );
@@ -184,4 +184,3 @@ x.unit(f"{type.hash}(): hashes of two equal !empty sets", f"""
   TEST_TRUE( {type.equal(t1, t2)} );
   TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
 """)
-

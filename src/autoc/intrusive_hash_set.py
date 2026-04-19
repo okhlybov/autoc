@@ -5,7 +5,7 @@ import autoc.std as std
 from autoc.core import out, inout, Pointer
 
 #
-class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
+class Set(autoc.composite._StructRenderer, autoc.set.Set):
   
   def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], **kws):
     super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
@@ -15,10 +15,10 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
   def __setup__(self):
     super().__setup__()
     
-    self.test_empty = self._test_empty("int", {"element": self.element})
+    self.is_empty = self._is_empty("int", {"element": self.element})
     self.mark_empty = self._mark_empty(None, {"element": inout(self.element)})
 
-    self.test_deleted = self._test_deleted("int", {"element": self.element})
+    self.is_deleted = self._is_deleted("int", {"element": self.element})
     self.mark_deleted = self._mark_deleted(None, {"element": inout(self.element)})
 
     element = self.element.variable("element")
@@ -33,11 +33,11 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     """
     self._inline_policy(self.size)
     
-    self.test_element = self.method("int", ("test", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
-    self.test_element.code = f"""
-      return !({self.test_empty(element)} || {self.test_deleted(element)});
+    self.is_element = self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
+    self.is_element.code = f"""
+      return !({self.is_empty(element)} || {self.is_deleted(element)});
     """
-    self._inline_policy(self.test_element)
+    self._inline_policy(self.is_element)
     
     self.allocate = self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="PRIVATE")
     self.allocate.code = f"""
@@ -74,7 +74,7 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
         {self.create_size(_target, "new_size")};
         if(target->elements) {{
           for(index = 0; index < target->capacity; ++index) {{
-            if({self.test_element(target_i)}) {{
+            if({self.is_element(target_i)}) {{
               {self.put(_target, target_i)};
             }}
           }}
@@ -100,21 +100,21 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
       assert(target);
       assert(_index);
       assert(target->capacity > 0);
-      assert({self.test_element(element)});
+      assert({self.is_element(element)});
       /* linear probing */
-      start = {self.element.hash(self.locate_element.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
-      /* when looking for specific element the lookup terminator is an empty slot while deleted slot is not */
+      start = {self.element.hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
       for(index = start; index < target->capacity; ++index) {{
-        if(!({self.test_empty(target_i)})) {{
-          if(!({self.test_deleted(target_i)}) && {self.element.equal(target_i, self.locate_element.element)}) {{
+        if(!({self.is_empty(target_i)})) {{
+          if(!({self.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}
         }} else goto stop;
       }}
       for(index = 0; index < start; ++index) {{
-        if(!({self.test_empty(target_i)})) {{
-          if(!({self.test_deleted(target_i)}) && {self.element.equal(target_i, self.locate_element.element)}) {{
+        if(!({self.is_empty(target_i)})) {{
+          if(!({self.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}
@@ -133,18 +133,18 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
       assert(_index);
       assert(target->capacity > 0);
       assert(target->size < target->capacity);
-      assert({self.test_element(element)});
+      assert({self.is_element(element)});
       /* linear probing */
-      start = {self.element.hash(self.locate_slot.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
-      /* a slot for the new element is either empty or deleted */
+      start = {self.element.hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      /* lookup terminator for non-existing entry is either empty or deleted slot */
       for(index = start; index < target->capacity; ++index) {{
-        if(!{self.test_element(target_i)}) {{
+        if(!{self.is_element(target_i)}) {{
           *_index = index;
           return &{target_i};
         }}
       }}
       for(index = 0; index < start; ++index) {{
-        if(!{self.test_element(target_i)}) {{
+        if(!{self.is_element(target_i)}) {{
           *_index = index;
           return &{target_i};
         }}
@@ -157,8 +157,8 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     self.contains.code = f"""
       size_t index;
       assert(target);
-      assert({self.test_element(element)});
-      return target->elements && {self.locate_element("target", "&index", self.contains.element)} != NULL;
+      assert({self.is_element(element)});
+      return target->elements && {self.locate_element("target", "&index", element)} != NULL;
     """
     self._inline_policy(self.contains)
     
@@ -168,7 +168,7 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
         assert(target);
         if(target->elements) {{
           for(index = 0; index < target->capacity; ++index)
-            if({self.test_element(target_i)})
+            if({self.is_element(target_i)})
               {self.element.destroy(target_i)};
           {self.memory.free(target_elements)};
         }}
@@ -192,10 +192,10 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     self.put.code = f"""
       size_t index;
       assert(target);
-      assert({self.test_element(element)});
-      if(!{self.contains("target", self.put.element)}) {{
+      assert({self.is_element(element)});
+      if(!{self.contains("target", element)}) {{
         {self.manage_storage("target", "target->size+1")};
-        {self.element.copy(self.locate_slot("target", "&index", self.put.element), self.put.element)};
+        {self.element.copy(self.locate_slot("target", "&index", element), element)};
         ++target->size;
         return 1;
       }} else return 0;
@@ -206,8 +206,8 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
     self.find_view.code = f"""
       size_t index;
       assert(target);
-      assert({self.test_element(element)});
-      return {self.locate_element("target", "&index", self.find_view.element)};
+      assert({self.is_element(element)});
+      return {self.locate_element("target", "&index", element)};
     """
     self._inline_policy(self.find_view)
     
@@ -217,7 +217,7 @@ class IntrusiveHashSet(autoc.composite._StructRenderer, autoc.set.Set):
       assert(source);
       {self.create_size("target", "source->size")};
       for(index = 0; index < source->capacity; ++index) {{
-        if({self.test_element(source_i)}) {{
+        if({self.is_element(source_i)}) {{
           {self.put("target", source_i)};
         }}
       }}
@@ -303,7 +303,7 @@ class Range(autoc.range.Forward):
 
     self.next = self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="PRIVATE", linkage="INLINE", code=f"""
       assert(target);
-      while(!{self.empty("target")} && !{self.iterable.test_element(front_element)}) ++target->front;
+      while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
     """)
     
     self.new.linkage = "INLINE"
@@ -329,7 +329,7 @@ class Range(autoc.range.Forward):
       {result.definition};
       assert(target);
       assert(!{self.empty("target")});
-      assert({self.iterable.test_element(front_element)});
+      assert({self.iterable.is_element(front_element)});
       {self.element.copy(result, front_element)};
       return result;
     """
@@ -338,7 +338,7 @@ class Range(autoc.range.Forward):
     self.front_view.code = f"""
       assert(target);
       assert(!{self.empty("target")});
-      assert({self.iterable.test_element(front_element)});
+      assert({self.iterable.is_element(front_element)});
       return ({self.iterable.element_view})&{front_element};
     """
     
