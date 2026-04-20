@@ -26,7 +26,8 @@ class XorShift(_IncrementalHasher):
     super().__init__(dependencies=[*dependencies, XorShift.__rotr])
     self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotr({hash})")
     
-  __rotr = autoc.module.Code(dependencies=[std.limits_h, std.size_t, std.linkage], definitions=f"""
+  __rotr = autoc.module.Code(dependencies=[std.limits_h, std.size_t, std.linkage], interface=f"""
+      /** @private */
       AUTOC_STATIC_INLINE
       size_t _autoc_rotr(size_t value) {{
         return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));

@@ -16,7 +16,8 @@ class StaticSeeder(Entity):
   
 
 #
-hash = Code(dependencies=[std.linkage, std.size_t], definitions="""
+hash = Code(dependencies=[std.linkage, std.size_t], interface="""
+  /** @private */
   AUTOC_EXTERN
   size_t _autoc_hash(size_t);
 """, implementation="""
@@ -49,8 +50,10 @@ hash = Code(dependencies=[std.linkage, std.size_t], definitions="""
 class RandomSeeder(Code):
 
   def __init__(self):
-    super().__init__(definitions="""
+    super().__init__(interface="""
+      /** @private */
       AUTOC_EXTERN unsigned _autoc_seed;
+      /** @private */
       AUTOC_EXTERN void _autoc_randomize_seed(void);
     """, implementation="""
       unsigned _autoc_seed = 1;
