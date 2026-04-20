@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
+  set(ENV{VIRTUAL_ENV} "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
+  set(Python_FIND_VIRTUALENV FIRST)
+endif()
+
 find_package(Python 3.13 REQUIRED)
 
 function(add_autoc_module module)
