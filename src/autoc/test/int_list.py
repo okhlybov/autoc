@@ -1,7 +1,7 @@
 from autoc.test import *
-import autoc.list
+from autoc.list import List
 
-x = Type(type := autoc.list.List("int_list", "int"))
+x = Type(type := List("int_list", "int"))
 
 t = type.variable("t")
 

@@ -1,4 +1,4 @@
-from autoc.core import out, inout
+from autoc.core import inout
 import autoc.std as std
 import autoc.composite
 import autoc.module
