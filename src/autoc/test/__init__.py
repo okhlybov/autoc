@@ -3,12 +3,6 @@ import autoc.module
 import autoc.composite
 
 
-import wrapt
-class TypeProxy(wrapt.BaseObjectProxy):
-  def __init__(self, type, *args, **kws):
-     super().__init__(autoc.core._type(type), *args, **kws)
-
-
 codes = set()
 
 

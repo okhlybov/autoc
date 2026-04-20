@@ -1,9 +1,10 @@
 from autoc.core import *
 from autoc.test import *
+import autoc.std as std
 from autoc.intrusive_hash_set import Set
 
 
-class IntrusiveSetInt(TypeProxy):
+class Primitive(std.Primitive):
   def is_empty(self, element):
     return f"{element} == INT_MIN /* EMPTY? */"
   def mark_empty(self, element):
@@ -13,8 +14,8 @@ class IntrusiveSetInt(TypeProxy):
   def mark_deleted(self, element):
     return f"{element} = INT_MAX /* DELETED */"
 
-
-x = Type(type := Set("intrusive_int_set", IntrusiveSetInt("int")))
+  
+x = Type(type := Set("intrusive_int_set", Primitive("int")))
 
 t = type.variable("t")
 t1 = type.variable("t1")
