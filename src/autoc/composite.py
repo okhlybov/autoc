@@ -262,6 +262,28 @@ class Collection(Composite):
     return False
 
 
+#
+class Mapping(Collection):
+  
+  def __init__(self, name, element, index, *args, **kws):
+    super().__init__(name, element, *args, **kws)
+    self.index = autoc.core._type(index)
+    self.index_view = Pointer(self.index, constant=True)
+    self.depends(self.index)
+
+  @property
+  def copyable(self):
+    return self.element.copyable and self.index.copyable
+  
+  @property
+  def hashable(self):
+    return self.element.hashable and self.index.hashable
+
+  @property
+  def comparable(self):
+    return self.element.comparable and self.index.comparable
+  
+
 class _StructRenderer:
   
   # def _render_struct(stream)
