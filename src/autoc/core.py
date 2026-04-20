@@ -239,6 +239,10 @@ class Type(metaclass = _DoubleStepConstructor):
     self.hash = self._hash("size_t", {"target": self}, constraint=lambda: self.hashable)
     self.compare = self._compare("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
 
+    # Used by the lookup mechanisms if hash-based containers
+    self._lookup_hash = self.hash
+    self._lookup_equal = self.equal
+    
   def variable(self, name):
     return Variable(self, name)
 

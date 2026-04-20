@@ -1,6 +1,7 @@
 import autoc.set
 import autoc.core
 import autoc.hash
+import autoc.range
 import autoc.std as std
 from autoc.core import out, inout, Pointer
 
@@ -96,11 +97,11 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       assert(target->capacity > 0);
       assert({self.is_element(element)});
       /* linear probing */
-      start = {self.element.hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      start = {self.element._lookup_hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
       for(index = start; index < target->capacity; ++index) {{
         if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}
@@ -108,7 +109,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       }}
       for(index = 0; index < start; ++index) {{
         if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element.equal(target_i, element)}) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, element)}) {{
             _element = &{target_i};
             goto stop;
           }}
@@ -129,7 +130,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       assert(target->size < target->capacity);
       assert({self.is_element(element)});
       /* linear probing */
-      start = {self.element.hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      start = {self.element._lookup_hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* lookup terminator for non-existing entry is either empty or deleted slot */
       for(index = start; index < target->capacity; ++index) {{
         if(!{self.is_element(target_i)}) {{
