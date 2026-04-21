@@ -49,6 +49,12 @@ class Composite(Type, Entity):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
 
+  def _decorate_component(self, suffix, abbreviate=True):
+    if abbreviate:
+      return f"{self.decorate(None, hidden=True)}{suffix[0]}"
+    else:
+      return self.decorate(suffix, hidden=True)
+  
   def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], **kws):
     m = Method(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=[self, *dependencies], visibility=self.visibility if visibility is None else visibility, **kws)
     self.references.add(m)
@@ -90,7 +96,7 @@ class Composite(Type, Entity):
 
   @property
   def lvalue_type(self):
-    return Pointer(self)
+    return Pointer(self, constant=True)
 
   @property
   def in_type(self):
@@ -221,69 +227,6 @@ class Method(Function, Entity):
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
   
   
-#
-class Collection(Composite):
-  
-  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Xor(), dependencies=[], *args, **kws):
-    super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
-    self.element = autoc.core._type(element)
-    self.element_view = Pointer(self.element, constant=True)
-    self.depends(self.element)
-    self.memory = memory
-    self.hasher = hasher
-
-  def __setup__(self):
-    super().__setup__()
-    self.empty = self.method("int", "empty", {"target": self})
-    self.size = self.method(std.size_t, "size", {"target": self})
-
-  @property
-  def constructible(self):
-    return True
-  
-  @property
-  def destructible(self):
-    return True
-
-  @property
-  def copyable(self):
-    return self.element.copyable
-  
-  @property
-  def hashable(self):
-    return self.element.hashable
-
-  @property
-  def comparable(self):
-    return self.element.comparable
-  
-  @property
-  def orderable(self):
-    return False
-
-
-#
-class Mapping(Collection):
-  
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, *args, **kws)
-    self.index = autoc.core._type(index)
-    self.index_view = Pointer(self.index, constant=True)
-    self.depends(self.index)
-
-  @property
-  def copyable(self):
-    return self.element.copyable and self.index.copyable
-  
-  @property
-  def hashable(self):
-    return self.element.hashable and self.index.hashable
-
-  @property
-  def comparable(self):
-    return self.element.comparable and self.index.comparable
-  
-
 class _StructRenderer:
   
   # def _render_struct(stream)

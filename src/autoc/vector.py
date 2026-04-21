@@ -1,9 +1,10 @@
 import autoc.std as std
 import autoc.core
-from autoc.core import out, inout, Pointer
-import autoc.range
 import autoc.hash
-from autoc.composite import Collection, _StructRenderer
+import autoc.range
+from autoc.composite import _StructRenderer
+from autoc.collection import Collection
+
 
 #
 class Vector(_StructRenderer, Collection):

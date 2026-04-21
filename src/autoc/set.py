@@ -1,11 +1,11 @@
 from autoc.core import inout
 import autoc.std as std
-import autoc.composite
-import autoc.module
+from autoc.module import Code
+from autoc.collection import Collection
 
 
 #
-class Set(autoc.composite.Collection):
+class Set(Collection):
   
   def __setup__(self):
     super().__setup__()
@@ -16,7 +16,7 @@ class Set(autoc.composite.Collection):
 
 
 #
-ceil_power2 = autoc.module.Code(dependencies=[std.size_t, std.linkage], definitions="""
+_ceil_power2 = Code(dependencies=[std.size_t, std.linkage], definitions="""
   AUTOC_EXTERN
   size_t _autoc_ceil_power2(size_t value);
 """, implementation="""

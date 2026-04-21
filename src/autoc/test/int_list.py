@@ -24,6 +24,11 @@ x.unit(f"{type.hash}(): hash empty list", f"""
   {type.hash(t)};
 """)
 
+x.unit(f"{type.contains}(): !contained in empty list", f"""
+  TEST_TRUE( {type.empty(t)} );
+  TEST_FALSE( {type.contains(t, -1)} );
+""")
+
 x.unit(f"{type.front}(): front peek from !empty list", f"""
   {type.push_front(t, 0)};
   TEST_FALSE( {type.empty(t)} );
@@ -59,6 +64,16 @@ x.cleanup(f"""
 x.unit(f"{type.empty}(): test !empty list", f"""
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.front(t)}, 0 );
+""")
+
+x.unit(f"{type.contains}(): !contained in !empty list", f"""
+  TEST_FALSE( {type.empty(t)} );
+  TEST_FALSE( {type.contains(t, -1)} );
+""")
+
+x.unit(f"{type.contains}(): contained in !empty list", f"""
+  TEST_FALSE( {type.empty(t)} );
+  TEST_TRUE( {type.contains(t, 0)} );
 """)
 
 x.unit(f"{type.hash}(): hash !empty list", f"""

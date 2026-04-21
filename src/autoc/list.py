@@ -1,12 +1,14 @@
 import autoc.core
 import autoc.range
 import autoc.hash
-import autoc.composite
 import autoc.std as std
 from autoc.core import inout
+from autoc.collection import Collection, Sequence
+from autoc.composite import _StructRenderer
 
 
-class List(autoc.composite._StructRenderer, autoc.composite.Collection):
+#
+class List(_StructRenderer, Collection):
   
   def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
@@ -166,6 +168,16 @@ class List(autoc.composite._StructRenderer, autoc.composite.Collection):
     self.range = Range(self)
     self.references.add(self.range)
 
+    r = self.range.variable("r")
+    
+    self.contains.code = f"""
+      {r.definition};
+      for({r} = {self.range.new("target")}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        if({self.element.equal(self.range.front_view(r), self.contains.element)}) return 1;
+      }}
+      return 0;
+    """
+
 
   def _render_struct(self, stream):
     stream.append(f"""
@@ -211,7 +223,7 @@ class Range(autoc.range.Forward):
   def __setup__(self):
     super().__setup__()
     
-    self.new = self.method(self, "new", {"iterable" : inout(self.iterable)})
+    self.new = self.method(self, "new", {"iterable" : self.iterable})
 
     self.new.linkage = "INLINE"
     self.new.code = f"""
