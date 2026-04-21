@@ -1,22 +1,22 @@
-import autoc.set
 import autoc.core
 import autoc.hash
 import autoc.range
 import autoc.std as std
+from autoc.set import Set
 from autoc.core import out, inout, Pointer
+from autoc.composite import _StructRenderer
 
 #
-class Set(autoc.composite._StructRenderer, autoc.set.Set):
+class Set(_StructRenderer, Set):
   
   def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], **kws):
-    super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set.ceil_power2], **kws)
+    super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set._ceil_power2], **kws)
     self._element_p = Pointer(self.element)
     self.capacity_threshold = capacity_threshold
     
   def __setup__(self):
     super().__setup__()
     
-    element = self.element.variable("element")
     target_i = self.element.variable("target->elements[index]")
     source_i = self.element.variable("source->elements[index]")
     target_elements = Pointer(self.element).variable("target->elements")
@@ -30,7 +30,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
     
     self.is_element = self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
     self.is_element.code = f"""
-      return !({self.element.is_empty(element)} || {self.element.is_deleted(element)});
+      return !({self.element.is_empty(self.is_element.element)} || {self.element.is_deleted(self.is_element.element)});
     """
     self._inline_policy(self.is_element)
     
@@ -95,13 +95,13 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       assert(target);
       assert(_index);
       assert(target->capacity > 0);
-      assert({self.is_element(element)});
+      assert({self.is_element(self.locate_element.element)});
       /* linear probing */
-      start = {self.element._lookup_hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      start = {self.element._lookup_hash(self.locate_element.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
       for(index = start; index < target->capacity; ++index) {{
         if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, element)}) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, self.locate_element.element)}) {{
             _element = &{target_i};
             goto stop;
           }}
@@ -109,7 +109,7 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       }}
       for(index = 0; index < start; ++index) {{
         if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, element)}) {{
+          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, self.locate_element.element)}) {{
             _element = &{target_i};
             goto stop;
           }}
@@ -128,9 +128,9 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
       assert(_index);
       assert(target->capacity > 0);
       assert(target->size < target->capacity);
-      assert({self.is_element(element)});
+      assert({self.is_element(self.locate_slot.element)});
       /* linear probing */
-      start = {self.element._lookup_hash(element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+      start = {self.element._lookup_hash(self.locate_slot.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
       /* lookup terminator for non-existing entry is either empty or deleted slot */
       for(index = start; index < target->capacity; ++index) {{
         if(!{self.is_element(target_i)}) {{
@@ -148,12 +148,11 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
     """
     self._inline_policy(self.locate_slot)
 
-    self.contains = self.method("int", "contains", {"target": self, "element": self.element})
     self.contains.code = f"""
       size_t index;
       assert(target);
-      assert({self.is_element(element)});
-      return target->elements && {self.locate_element("target", "&index", element)} != NULL;
+      assert({self.is_element(self.contains.element)});
+      return target->elements && {self.locate_element("target", "&index", self.contains.element)} != NULL;
     """
     self._inline_policy(self.contains)
     
@@ -187,10 +186,10 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
     self.put.code = f"""
       size_t index;
       assert(target);
-      assert({self.is_element(element)});
-      if(!{self.contains("target", element)}) {{
+      assert({self.is_element(self.put.element)});
+      if(!{self.contains("target", self.put.element)}) {{
         {self.manage_storage("target", "target->size+1")};
-        {self.element.copy(self.locate_slot("target", "&index", element), element)};
+        {self.element.copy(self.locate_slot("target", "&index", self.put.element), self.put.element)};
         ++target->size;
         return 1;
       }} else return 0;
@@ -201,8 +200,8 @@ class Set(autoc.composite._StructRenderer, autoc.set.Set):
     self.find_view.code = f"""
       size_t index;
       assert(target);
-      assert({self.is_element(element)});
-      return {self.locate_element("target", "&index", element)};
+      assert({self.is_element(self.find_view.element)});
+      return {self.locate_element("target", "&index", self.find_view.element)};
     """
     self._inline_policy(self.find_view)
     
