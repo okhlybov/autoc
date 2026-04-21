@@ -1,9 +1,9 @@
-import autoc.std as std
-import autoc.core
 import autoc.hash
-import autoc.range
+import autoc.std as std
+from autoc.core import out, inout, Pointer
+from autoc.range import DirectAccess
 from autoc.composite import _StructRenderer
-from autoc.collection import Collection
+from autoc.collection import _Range, Collection
 
 
 #
@@ -11,6 +11,8 @@ class Vector(_StructRenderer, Collection):
 
   def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
+    self.range = Range(self)
+
 
   def __setup__(self):
     super().__setup__()
@@ -119,46 +121,27 @@ class Vector(_StructRenderer, Collection):
       """
     self._inline_policy(self.destroy)
     
-    if self.comparable:
-      self.equal.code = f"""
-        assert(left);
-        assert(right);
-        if(left->size == right->size) {{
-          size_t index;
-          for(index = 0; index < left->size; ++index) {{
-            if(!{self.element.equal(left_i, right_i)}) return 0;
-          }}
-          return 1;
-        }} else return 0;
-      """
-      self._inline_policy(self.equal)
-    
-    if self.hashable:
-      state = self.hasher.state_t.variable("state")
-      self.hash.code = f"""
-        size_t index, result;
-        {state.definition};
-        assert(target);
-        {self.hasher.create("state")};
-        for(index = 0; index < target->size; ++index) {self.hasher.update(state, self.element.hash(target_i))};
-        result = {self.hasher.hash(state)};
-        {self.hasher.destroy(state)};
-        return result;
-      """
-      self._inline_policy(self.hash)
-
-    if self.copyable:
-      self.copy.code = f"""
+    self.equal.code = f"""
+      assert(left);
+      assert(right);
+      if(left->size == right->size) {{
         size_t index;
-        assert(target);
-        assert(source);
-        {self.allocate("target", "source->size")};
-        for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
-      """
-      self._inline_policy(self.copy)
-
-    self.range = Range(self)
-    self.references.add(self.range)
+        for(index = 0; index < left->size; ++index) {{
+          if(!{self.element.equal(left_i, right_i)}) return 0;
+        }}
+        return 1;
+      }} else return 0;
+    """
+    self._inline_policy(self.equal)
+    
+    self.copy.code = f"""
+      size_t index;
+      assert(target);
+      assert(source);
+      {self.allocate("target", "source->size")};
+      for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
+    """
+    self._inline_policy(self.copy)
 
   def _render_struct(self, stream):
     if self.public:
@@ -173,13 +156,8 @@ class Vector(_StructRenderer, Collection):
 
 
 #
-class Range(autoc.range.DirectAccess):
+class Range(_Range, DirectAccess):
   
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable.decorate("range"), **kws)
-    self.iterable = iterable
-    self.depends(iterable)
-
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:

@@ -5,6 +5,18 @@ from autoc.core import Pointer
 from autoc.composite import Composite
 
 
+class _Range:
+
+  def __init__(self, iterable, *args, **kws):
+    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=False), **kws)
+    self.iterable = iterable
+    self.depends(iterable)
+    iterable.references.add(self)
+    
+  def _copy(self, result, parameters, **kws):
+    return autoc.core.Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+
+
 #
 class Collection(Composite):
   
@@ -47,19 +59,36 @@ class Collection(Composite):
     return False
 
 
-
+#
 class Sequence(Collection):
   
   def __setup__(self):
     super().__setup__()
     
-    r = self.range.variable("r")
+    range = self.range
+    r =range.variable("r")
     
     self.contains.code = f"""
       {r.definition};
-      for({r} = {self.range.new("target")}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-        if({self.element.equal(self.range.front_view(r), self.contains.element)}) return 1;
+      for({r} = {range.new("target")}; !{range.empty(r)}; {range.move_front(r)}) {{
+        if({self.element.equal(range.front_view(r), self.contains.element)}) return 1;
       }}
       return 0;
     """
-    
+    self._inline_policy(self.contains)
+
+    state = self.hasher.state_t.variable("state")
+
+    self.hash.code = f"""
+      size_t result;
+      {r.definition};
+      {state.definition};
+      {self.hasher.create("state")};
+      for({r} = {range.new("target")}; !{range.empty(r)}; {range.move_front(r)}) {{
+        {self.hasher.update("state", self.element.hash(range.front_view(r)))};
+      }}
+      result = {self.hasher.hash(state)};
+      {self.hasher.destroy(state)};
+      return result;
+    """
+    self._inline_policy(self.hash)    

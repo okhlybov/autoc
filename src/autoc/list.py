@@ -1,18 +1,19 @@
 import autoc.core
-import autoc.range
 import autoc.hash
 import autoc.std as std
 from autoc.core import inout
-from autoc.collection import Collection, Sequence
+from autoc.range import Forward
+from autoc.collection import _Range, Collection, Sequence
 from autoc.composite import _StructRenderer
 
 
 #
-class List(_StructRenderer, Collection):
+class List(_StructRenderer, Sequence):
   
   def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
-    self.node = autoc.core._type(f"{self.decorate(None, hidden=True)}n")
+    self.node = autoc.core._type(self._decorate_component("node"))
+    self.range = Range(self)
     
   def __setup__(self):
     super().__setup__()
@@ -146,37 +147,6 @@ class List(_StructRenderer, Collection):
       return 1;
     """
     self._inline_policy(self.equal)
-    
-    state = self.hasher.state_t.variable("state")
-    self.hash.code = f"""
-      size_t result;
-      {self.node}* node;
-      {state.definition};
-      assert(target);
-      {self.hasher.create("state")};
-      node = target->front;
-      while(node) {{
-        {self.hasher.update("state", self.element.hash(node_element))};
-        node = node->next;
-      }}
-      result = {self.hasher.hash(state)};
-      {self.hasher.destroy(state)};
-      return result;
-    """
-    self._inline_policy(self.hash)
-    
-    self.range = Range(self)
-    self.references.add(self.range)
-
-    r = self.range.variable("r")
-    
-    self.contains.code = f"""
-      {r.definition};
-      for({r} = {self.range.new("target")}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-        if({self.element.equal(self.range.front_view(r), self.contains.element)}) return 1;
-      }}
-      return 0;
-    """
 
 
   def _render_struct(self, stream):
@@ -201,13 +171,8 @@ class List(_StructRenderer, Collection):
 
 
 #
-class Range(autoc.range.Forward):
+class Range(_Range, Forward):
   
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable.decorate("range"), **kws)
-    self.iterable = iterable
-    self.depends(iterable)
-
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
@@ -216,9 +181,6 @@ class Range(autoc.range.Forward):
           {self.iterable.node}* front; /**< @private */
         }} {self.name};
       """)
-
-  def _copy(self, result, parameters, **kws):
-    return autoc.core.Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   def __setup__(self):
     super().__setup__()

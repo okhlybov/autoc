@@ -1,15 +1,14 @@
-import autoc.core
-import autoc.composite
 import autoc.std as std
-from autoc.core import inout, Pointer
+from autoc.core import _type, inout, Pointer, Traitless
+from autoc.composite import Composite
 
 
 #
-class Range(autoc.composite.Composite, autoc.core._NoTraits):
+class Range(Composite, Traitless):
   
   def __init__(self, element, *args, **kws):
     super().__init__(*args, **kws)
-    self.element = autoc.core._type(element)
+    self.element = _type(element)
     self.element_view = Pointer(self.element, constant=True)
   
 

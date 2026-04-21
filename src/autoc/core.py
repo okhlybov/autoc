@@ -393,7 +393,7 @@ class CharLiteral(Literal):
 
  
 #
-class _NoTraits:
+class Traitless:
   @property
   def constructible(self):
     return False
