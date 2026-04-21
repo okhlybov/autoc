@@ -1,10 +1,12 @@
 import autoc.core
 import autoc.hash
-import autoc.range
 import autoc.std as std
 from autoc.set import Set
 from autoc.core import out, inout, Pointer
 from autoc.composite import _StructRenderer
+from autoc.collection import _Range
+from autoc.range import Forward
+
 
 #
 class Set(_StructRenderer, Set):
@@ -219,8 +221,7 @@ class Set(_StructRenderer, Set):
     self._inline_policy(self.copy)
 
     self.range = Range(self)
-    self.references.add(self.range)
-    
+
     range = self.range
     r = range.variable("r")
     
@@ -251,7 +252,7 @@ class Set(_StructRenderer, Set):
       {self.hasher.destroy(state)};
       return result;
     """
-    
+
 
   def _render_struct(self, stream):
     if self.public:
@@ -267,13 +268,8 @@ class Set(_StructRenderer, Set):
 
 
 #
-class Range(autoc.range.Forward):
+class Range(_Range, Forward):
   
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable.decorate("range"), **kws)
-    self.iterable = iterable
-    self.depends(iterable)
-
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:

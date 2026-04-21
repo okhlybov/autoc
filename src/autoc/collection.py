@@ -66,7 +66,7 @@ class Sequence(Collection):
     super().__setup__()
     
     range = self.range
-    r =range.variable("r")
+    r = range.variable("r")
     
     self.contains.code = f"""
       {r.definition};
