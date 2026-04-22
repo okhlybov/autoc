@@ -53,7 +53,7 @@ class Composite(Type, Entity):
     if abbreviate:
       return f"{self.decorate(None, hidden=True)}{suffix[0]}"
     else:
-      return self.decorate(suffix, hidden=True)
+      return self.decorate(suffix)
   
   def _decorate_attribute(self, identifier):
     match identifier:

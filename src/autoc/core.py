@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from collections.abc import Iterable, Callable
 
 
 _type_cache = [] # [ (matcher, type) ]
@@ -203,7 +204,11 @@ class Function(Callable):
   def definition(self):
     if not isinstance(self.code, str) and not self.code:
       raise ValueError(f"missing body of non-abstract function {self.name}()")
-    return str().join([self.declaration, "{", *[str(c) for c in self.code], "}\n"])
+    match self.code:
+      case Iterable(): cs = [str(x) for x in self.code]
+      case _ if callable(self.code): cs = [str(self.code())]
+      case _: cs = [str(self.code)]
+    return str().join([self.declaration, "{", *cs, "}\n"])
     
   class Call(Callable.Call):
     def __str__(self):
