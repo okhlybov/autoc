@@ -15,7 +15,8 @@ class Set(_StructRenderer, Set):
     super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set._ceil_power2], **kws)
     self._element_p = Pointer(self.element)
     self.capacity_threshold = capacity_threshold
-    
+    self.range = Range(self)
+
   def __setup__(self):
     super().__setup__()
     
@@ -220,8 +221,6 @@ class Set(_StructRenderer, Set):
     """
     self._inline_policy(self.copy)
 
-    self.range = Range(self)
-
     range = self.range
     r = range.variable("r")
     
@@ -286,56 +285,55 @@ class Range(_Range, Forward):
   def __setup__(self):
     super().__setup__()
     
-    self.new = self.method(self, "new", {"iterable" : self.iterable})
-
-    target = self.variable("target")
     front_element = self.element.variable("target->iterable->elements[target->front]")
 
-    self.next = self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="PRIVATE", linkage="INLINE", code=f"""
-      assert(target);
-      while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
-    """)
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="PRIVATE") as f:
+      f.inline = lambda: f"""
+        assert(target);
+        while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
+      """
     
-    self.new.linkage = "INLINE"
-    self.new.code = f"""
-      {self} result;
-      assert(iterable);
-      result.iterable = iterable;
-      result.front = 0;
-      {self.next("&result")};
-      return result;
-    """
+    with self.method(self, "new", {"iterable" : self.iterable}) as f:
+      f.inline = f"""
+        {self} result;
+        assert(iterable);
+        result.iterable = iterable;
+        result.front = 0;
+        {self.next("&result")};
+        return result;
+      """
 
     self.empty.linkage = "INLINE"
-    self.empty.code = f"""
-      assert(target);
-      return target->front >= target->iterable->capacity;
-    """
+    with self.empty as f:
+      f.inline = f"""
+        assert(target);
+        return target->front >= target->iterable->capacity;
+      """
 
     result = self.element.variable("result")
     
-    self.front.linkage = "INLINE"
-    self.front.code = f"""
-      {result.definition};
-      assert(target);
-      assert(!{self.empty("target")});
-      assert({self.iterable.is_element(front_element)});
-      {self.element.copy(result, front_element)};
-      return result;
-    """
+    with self.front as f:
+      f.inline = lambda: f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty("target")});
+        assert({self.iterable.is_element(front_element)});
+        {self.element.copy(result, front_element)};
+        return result;
+      """
         
-    self.front_view.linkage = "INLINE"
-    self.front_view.code = f"""
-      assert(target);
-      assert(!{self.empty("target")});
-      assert({self.iterable.is_element(front_element)});
-      return ({self.iterable.element_view})&{front_element};
-    """
+    with self.front_view as f:
+      f.inline = lambda: f"""
+        assert(target);
+        assert(!{self.empty("target")});
+        assert({self.iterable.is_element(front_element)});
+        return ({self.iterable.element_view})&{front_element};
+      """
     
-    self.move_front.linkage = "INLINE"
-    self.move_front.code = f"""
-      assert(target);
-      assert(!{self.empty("target")});
-      ++target->front;
-      {self.next("target")};
-    """    
+    with self.move_front as f:
+      f.inline = f"""
+        assert(target);
+        assert(!{self.empty("target")});
+        ++target->front;
+        {self.next("target")};
+      """    

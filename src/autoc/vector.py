@@ -1,13 +1,13 @@
 import autoc.hash
 import autoc.std as std
-from autoc.core import out, inout, Pointer, Macro
 from autoc.range import DirectAccess
+from autoc.core import out, Pointer, Macro
 from autoc.composite import _StructRenderer
-from autoc.collection import _Range, Collection
+from autoc.collection import _Range, Sequence
 
 
 #
-class Vector(_StructRenderer, Collection):
+class Vector(_StructRenderer, Sequence):
 
   def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
@@ -178,7 +178,7 @@ class Range(_Range, DirectAccess):
     if header:
       stream.append(f"""
         typedef struct {{
-          {Pointer(self.iterable)} iterable; /**< @private */
+          {Pointer(self.iterable, constant=True)} iterable; /**< @private */
           {std.size_t} front, back; /**< @private */
         }} {self.name};
       """)
@@ -189,13 +189,14 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(self, "new", {"iterable" : inout(self.iterable)}) as f:
+    with self.method(self, "new", {"iterable" : self.iterable}) as f:
       f.inline = f"""
         {self} result;
         assert(iterable);
-        result->iterable = iterable;
-        result->front = 0;
-        result->back = iterable->size;
+        result.iterable = iterable;
+        result.front = 0;
+        result.back = iterable->size;
+        return result;
       """
 
     with self.empty as f:
@@ -205,17 +206,17 @@ class Range(_Range, DirectAccess):
       """
 
     with self.front as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
     with self.front_view as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return ({f.result}){self.iterable.view("target->iterable", "target->front")};
+        return {self.iterable.view("target->iterable", "target->front")};
       """
 
     with self.move_front as f:
@@ -226,17 +227,17 @@ class Range(_Range, DirectAccess):
       """
 
     with self.back as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
     with self.back_view as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return ({f.result}){self.iterable.view("target->iterable", "target->back-1")};
+        return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
     with self.move_back as f:
@@ -247,13 +248,13 @@ class Range(_Range, DirectAccess):
       """
 
     with self.get as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
       assert(target);
       return {self.iterable.get("target->iterable", "target->front + index")};
     """
 
     with self.view as f:
-      f.inline = f"""
+      f.inline = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
