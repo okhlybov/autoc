@@ -55,9 +55,23 @@ class Composite(Type, Entity):
     else:
       return self.decorate(suffix, hidden=True)
   
-  def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], **kws):
-    m = Method(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=[self, *dependencies], visibility=self.visibility if visibility is None else visibility, **kws)
+  def _decorate_attribute(self, identifier):
+    match identifier:
+      case str(): return identifier
+      case list() | tuple(): return "_".join(identifier)
+
+  def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], attribute=None, **kws):
+    m = Method(
+      result,
+      self.decorate(identifier, hidden=hidden),
+      parameters,
+      dependencies=[self, *dependencies],
+      visibility=self.visibility if visibility is None else visibility,
+      composite=self,
+      **kws
+    )
     self.references.add(m)
+    setattr(self, self._decorate_attribute(attribute if attribute else identifier), m)
     return m
 
   def _inline_policy(self, method):
@@ -119,8 +133,9 @@ class Method(Function, Entity):
     EXTERNAL = auto()
     INLINE = auto()
 
-  def __init__(self, result, name, parameters, *args, linkage="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], **kws):
+  def __init__(self, result, name, parameters, *args, linkage="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], composite, **kws):
     super().__init__(result, name, parameters, *args, **kws)
+    self.composite = composite
     self.linkage = linkage
     self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
     self.__abstract = abstract
@@ -132,6 +147,12 @@ class Method(Function, Entity):
         if isinstance(x, Pointer) and isinstance(x.base, Entity):
           self.dependencies.add(x.base)
 
+  def __enter__(self):
+    return self
+  
+  def __exit__(self, *args):
+    self.composite._inline_policy(self)
+    return False
 
   @property
   def linkage(self):
@@ -151,10 +172,20 @@ class Method(Function, Entity):
   def inline(self):
     return self.linkage is Method.Linkage.INLINE
 
+  @inline.setter
+  def inline(self, code):
+    self.linkage = "INLINE"
+    self.code = code
+
   #
   @property
   def external(self):
     return self.linkage is Method.Linkage.EXTERNAL
+
+  @external.setter
+  def external(self, code):
+    self.linkage = "EXTERNAL"
+    self.code = code
 
   #
   @property

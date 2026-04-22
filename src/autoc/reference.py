@@ -5,6 +5,8 @@ from autoc.composite import Composite, _StructRenderer
 from functools import cached_property
 
 
+# FIXME use with:
+
 #
 class Reference(Composite, Pointer):
   

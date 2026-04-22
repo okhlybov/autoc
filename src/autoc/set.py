@@ -10,7 +10,7 @@ class Set(Collection):
   def __setup__(self):
     super().__setup__()
     
-    self.put = self.method("int", "put", {"target": inout(self), "element": self.element})
+    self.method("int", "put", {"target": inout(self), "element": self.element})
 
     # TODO more to come
 
