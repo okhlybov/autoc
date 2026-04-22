@@ -11,6 +11,7 @@ class Vector(_StructRenderer, Collection):
 
   def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
+    self.range = Range(self)
 
   def __setup__(self):
     super().__setup__()
@@ -137,8 +138,6 @@ class Vector(_StructRenderer, Collection):
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
 
-    self.range = Range(self)
-
     range = self.range
     r = range.variable("r")
     
@@ -192,8 +191,11 @@ class Range(_Range, DirectAccess):
 
     with self.method(self, "new", {"iterable" : inout(self.iterable)}) as f:
       f.inline = f"""
+        {self} result;
         assert(iterable);
-        return ({self}){{ iterable, 0, {self.iterable.size(f.iterable)} }}; // FIXME not portable across c/c++
+        result->iterable = iterable;
+        result->front = 0;
+        result->back = iterable->size;
       """
 
     with self.empty as f:

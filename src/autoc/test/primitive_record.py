@@ -1,6 +1,5 @@
 from autoc.core import *
 from autoc.test import *
-import autoc.std as std
 from autoc.record import Record
 
 
@@ -19,8 +18,7 @@ x.cleanup(f"""
   // {type.destroy(t)};
 """)
 
-x.unit(f"{type.create}(): default create record", f"""
-""")
+x.unit(f"{type.create}(): default create record", "")
 
 x.unit(f"{type.hash}(): hash default created record", f"""
   {type.hash(t)};
