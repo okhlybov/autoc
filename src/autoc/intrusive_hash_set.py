@@ -91,30 +91,33 @@ class Set(_StructRenderer, Set):
         {self._element_p} _element = NULL;
         assert(target);
         assert(_index);
-        assert(target->capacity > 0);
         assert({self.is_element(f.element)});
         /* linear probing */
-        start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
-        /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
-        for(index = start; index < target->capacity; ++index) {{
-          if(!({self.element.is_empty(target_i)})) {{
-            if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
-              _element = &{target_i};
-              goto stop;
-            }}
-          }} else goto stop;
+        if(target->elements) {{
+          assert(target->capacity > 0);
+          start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+          /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
+          for(index = start; index < target->capacity; ++index) {{
+            if(!({self.element.is_empty(target_i)})) {{
+              if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+                _element = &{target_i};
+                goto stop;
+              }}
+            }} else goto stop;
+          }}
+          for(index = 0; index < start; ++index) {{
+            if(!({self.element.is_empty(target_i)})) {{
+              if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+                _element = &{target_i};
+                goto stop;
+              }}
+            }} else goto stop;
+          }}
+          stop:
+            *_index = index;
+            return _element;
         }}
-        for(index = 0; index < start; ++index) {{
-          if(!({self.element.is_empty(target_i)})) {{
-            if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
-              _element = &{target_i};
-              goto stop;
-            }}
-          }} else goto stop;
-        }}
-        stop:
-          *_index = index;
-          return _element;
+        return NULL;
       """
     
     with self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True) as f:
