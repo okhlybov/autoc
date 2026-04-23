@@ -146,18 +146,17 @@ class List(_StructRenderer, Sequence):
 
   def _render_struct(self, stream):
     stream.append(f"""
-      /** @private */
+      /** @internal */
       typedef struct {self.node} {self.node};
-      /** @private */
+      /** @internal */
       struct {self.node} {{
         {self.element.variable("element").definition};
         {self.node}* next;
       }};
     """)
+    super()._render_struct(stream)
     if self.public:
       stream.append("/** @public */\n")
-    if self.private:
-      stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
       {self.node}* front; /**< @private */
       {std.size_t} size; /**< @private */

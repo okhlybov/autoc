@@ -129,8 +129,7 @@ class Shared(_StructRenderer, Reference):
     self._storage = self.decorate("storage", hidden=True)
     
   def _render_struct(self, stream):
-    if not self.internal:
-      stream.append("/** @private */\n")
+    stream.append("/** @internal */\n")
     stream.append(f"""typedef struct {{
       {self.base} value;
       {std.size_t} count;

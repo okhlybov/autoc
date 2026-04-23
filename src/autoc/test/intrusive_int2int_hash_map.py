@@ -4,7 +4,7 @@ from autoc.intrusive_hash_map import Map
 # Better to use index field for marking entries otherwise
 # memory debuggers gonna complain about uninitialized access
 
-x = Type(type := Map("int2int", "int", "int",
+x = Type(type := Map("intrusive_int2int_hash_map", "int", "int",
   is_empty=lambda entry: f"({entry})->index == INT_MIN",
   mark_empty=lambda entry: f"({entry})->index = INT_MIN",
   is_deleted=lambda entry: f"({entry})->index == INT_MAX",

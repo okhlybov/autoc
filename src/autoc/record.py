@@ -94,14 +94,11 @@ class Record(_StructRenderer, Composite):
   def _setter_name(self, field): return self.decorate("set", field)
 
   def _render_struct(self, stream):
+    #super()._render_struct(stream)
     if self.public:
       stream.append("/** @public */\n")
-    if self.private:
-      stream.append("/** @private */\n")
     stream.append(f"typedef struct {self.name} {self.name};\n")
-    if self.opaque or self.private:
-      stream.append("/** @private */\n")
-    else:
+    if self.public:
       stream.append("/** @public */\n")
     stream.append(f"struct {self.name} {{\n")
     for field, type in self.fields.items():

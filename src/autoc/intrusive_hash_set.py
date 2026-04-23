@@ -30,12 +30,12 @@ class Set(_StructRenderer, Set):
       return target->size;
     """
     
-    with self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True) as f:
-      f.inline = f"""
+    with self.method("int", ("is", "element"), {"element": self.element}, visibility="INTERNAL", hidden=True) as f:
+      f.external = f"""
         return !({self.element.is_empty(f.element)} || {self.element.is_deleted(f.element)});
       """
     
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="PRIVATE") as f:
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="INTERNAL") as f:
       f.external = f"""
         assert(target);
         assert(capacity > 0);
@@ -59,7 +59,7 @@ class Set(_StructRenderer, Set):
         }}
       """
     
-    with self.method(None, ("manage", "storage"), {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="PRIVATE") as f:
+    with self.method(None, ("manage", "storage"), {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="INTERNAL") as f:
       f.external = f"""
         {_target.definition};
         size_t index;
@@ -85,7 +85,7 @@ class Set(_StructRenderer, Set):
         target->capacity = target->size = 0;
       """
     
-    with self.method(self._element_p, ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True) as f:
+    with self.method(self._element_p, ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="INTERNAL", hidden=True) as f:
       f.external = f"""
         size_t index, start;
         {self._element_p} _element = NULL;
@@ -120,7 +120,7 @@ class Set(_StructRenderer, Set):
         return NULL;
       """
     
-    with self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True) as f:
+    with self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="INTERNAL", hidden=True) as f:
       f.external = f"""
         size_t index, start;
         assert(target);
@@ -248,10 +248,9 @@ class Set(_StructRenderer, Set):
       """
 
   def _render_struct(self, stream):
+    super()._render_struct(stream)
     if self.public:
       stream.append("/** @public */\n")
-    if self.private:
-      stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
       {self.element}* elements; /**< @private */
       {std.size_t} capacity; /**< @private */
@@ -281,14 +280,14 @@ class Range(CollectionRange, Forward):
     
     front_element = self.element.variable("target->iterable->elements[target->front]")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="PRIVATE") as f:
-      f.inline = lambda: f"""
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="INTERNAL") as f:
+      f.external = lambda: f"""
         assert(target);
         while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
       """
     
     with self.method(self, "new", {"iterable" : self.iterable}) as f:
-      f.inline = f"""
+      f.external = f"""
         {self} result;
         assert(iterable);
         result.iterable = iterable;
@@ -298,7 +297,7 @@ class Range(CollectionRange, Forward):
       """
 
     with self.empty as f:
-      f.inline = f"""
+      f.external = f"""
         assert(target);
         return target->front >= target->iterable->capacity;
       """
@@ -306,7 +305,7 @@ class Range(CollectionRange, Forward):
     result = self.element.variable("result")
     
     with self.front as f:
-      f.inline = lambda: f"""
+      f.external = lambda: f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
@@ -316,7 +315,7 @@ class Range(CollectionRange, Forward):
       """
         
     with self.front_view as f:
-      f.inline = lambda: f"""
+      f.external = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
@@ -324,7 +323,7 @@ class Range(CollectionRange, Forward):
       """
     
     with self.move_front as f:
-      f.inline = f"""
+      f.external = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         ++target->front;

@@ -8,7 +8,7 @@ from autoc.composite import Composite
 class _Range:
 
   def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=False), **kws)
+    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not(iterable.public)), visibility=iterable.visibility, **kws)
     self.iterable = iterable
     self.depends(iterable)
     iterable.references.add(self)

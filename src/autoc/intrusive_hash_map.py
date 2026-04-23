@@ -21,13 +21,13 @@ class Map(_StructRenderer, Map):
   
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self._set = Set(self._decorate_component("set", abbreviate=True), _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index,
-      is_empty=is_empty,
-      is_deleted=is_deleted,
-      mark_empty=mark_empty,
-      mark_deleted=mark_deleted
-    )
-    )
+    self._set = Set(self._decorate_component("set", abbreviate=True),
+        _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="INTERNAL",
+          is_empty=is_empty,
+          is_deleted=is_deleted,
+          mark_empty=mark_empty,
+          mark_deleted=mark_deleted
+    ), visibility="INTERNAL")
     self.depends(self._set)
 
   def __setup__(self):
@@ -39,13 +39,13 @@ class Map(_StructRenderer, Map):
     _right = self.variable("right->set")
     
     with self.create as f:
-      f.inline = f"""
+      f.external = f"""
         assert(target);
         {self._set.create(_target)};
       """
     
     with self.destroy as f:
-      f.inline = f"""
+      f.external = f"""
         assert(target);
         {self._set.destroy(_target)};
       """
@@ -164,10 +164,9 @@ class Map(_StructRenderer, Map):
       """
 
   def _render_struct(self, stream):
+    super()._render_struct(stream)
     if self.public:
       stream.append("/** @public */\n")
-    if self.private:
-      stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
       {self._set.variable("set").definition}; /**< @private */
     }} {self.name};

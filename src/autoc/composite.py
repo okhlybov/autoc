@@ -260,9 +260,14 @@ class Method(Function, Entity):
   
 class _StructRenderer:
   
-  # def _render_struct(stream)
+  def _render_struct(self, stream):
+    if not self.public:
+      stream.append("/** @internal */\n")
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
-    if (header and not self.internal) or (not header and self.internal):
+    # Structures are expected to be rendered in the interface header
+    # even for internal types since they can be a part of more acessible structures
+    # treated by the public inline code
+    if header:
       self._render_struct(stream)
