@@ -1,4 +1,4 @@
-from autoc.core import _type, Pointer
+from autoc.core import _type, inout, Pointer
 from autoc.collection import Collection
 
 
@@ -8,9 +8,16 @@ class Map(Collection):
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, *args, **kws)
     self.index = _type(index)
-    self.index_view = Pointer(self.index, constant=True)
+    self.element_view = Pointer(self.element, constant=True)
     self.depends(self.index)
 
+  def __setup__(self):
+    super().__setup__()
+    self.method("int", "indexed", {"target": self, "index": self.index})
+    self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element})
+    self.method(self.element, "get", {"target": self, "index": self.index})
+    self.method(self.element_view, "view", {"target": self, "index": self.index})
+    
   @property
   def copyable(self):
     return self.element.copyable and self.index.copyable

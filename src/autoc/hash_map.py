@@ -1,4 +1,4 @@
-from autoc.core import out, inout, Macro
+from autoc.core import inout, Macro, Pointer
 import autoc.std as std
 import autoc.record
 
@@ -9,23 +9,61 @@ class _Entry(autoc.record.Record):
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, {"element": element, "index": index}, *args, visibility="PRIVATE", **kws)
     self.element = self.fields["element"]
+    self.element_p = Pointer(self.element, constant=True)
     self.index = self.fields["index"]
     
   def __setup__(self):
     super().__setup__()
+
+    _index = self.index.variable("target->index")
+    _element = self.element.variable("target->element")
     
-    self.create_index = self.method(None, ("create", "index"), {"target": out(self), "index": self.index}, hidden=True, linkage="INLINE")
-    self.create_index.code = f"""
-      assert(target);
-      {self.index.copy(self.variable("target->index"), self.create_index.index)};
-    """
+    with self.method(self.element_p, ("element", "view"), {"target": self}, hidden=True, visibility="INTERNAL") as f:
+      f.inline = f"""
+        assert(target);
+        return &target->element;
+      """
     
-    self.create = self.method(None, "create", {"target": out(self), "element": self.element, "index": self.index}, hidden=True, linkage="INLINE")
-    self.create.code = f"""
-      assert(target);
-      {self.index.copy(self.variable("target->element"), self.create.element)};
-      {self.index.copy(self.variable("target->index"), self.create.index)};
-    """
+    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="INTERNAL") as f:
+      f.inline = f"""
+        assert(target);
+        {self.index.copy(_index, f.index)};
+      """
+
+    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="INTERNAL") as f:
+      if self.index.destructible:
+        f.inline = f"""
+          assert(target);
+          {self.index.destroy(_index)};
+        """
+      else:
+        f.inline = f"""
+          assert(target);
+        """
+      
+    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="INTERNAL") as f:
+      f.inline = f"""
+        assert(target);
+        {self.element.copy(_element, f.element)};
+      """
+
+    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="INTERNAL") as f:
+      if self.element.destructible:
+        f.inline = f"""
+          assert(target);
+          {self.element.destroy(_element)};
+        """
+      else:
+        f.inline = f"""
+          assert(target);
+        """
+
+    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="INTERNAL") as f:
+      f.inline = f"""
+        assert(target);
+        {self.destroy_element(f.target)};
+        {self.element.copy(_element, f.element)};
+      """
 
     self._lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash(f"({target})->index")))
     self._lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal(f"({left})->index", f"({right})->index")))
