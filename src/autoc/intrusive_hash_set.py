@@ -4,7 +4,7 @@ import autoc.std as std
 from autoc.set import Set
 from autoc.core import out, inout, Pointer
 from autoc.composite import _StructRenderer
-from autoc.collection import _Range
+from autoc.collection import _Range as CollectionRange
 from autoc.range import Forward
 
 
@@ -258,7 +258,7 @@ class Set(_StructRenderer, Set):
 
 
 #
-class Range(_Range, Forward):
+class Range(CollectionRange, Forward):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

@@ -3,7 +3,8 @@ import autoc.hash
 import autoc.std as std
 from autoc.core import inout
 from autoc.range import Forward
-from autoc.collection import _Range, Sequence
+from autoc.collection import _Range as _CollectionRange
+from autoc.sequence import Sequence
 from autoc.composite import _StructRenderer
 
 
@@ -165,7 +166,7 @@ class List(_StructRenderer, Sequence):
 
 
 #
-class Range(_Range, Forward):
+class Range(_CollectionRange, Forward):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
