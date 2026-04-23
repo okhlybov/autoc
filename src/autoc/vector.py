@@ -1,7 +1,7 @@
 import autoc.hash
 import autoc.std as std
 from autoc.range import DirectAccess
-from autoc.core import out, Pointer, Macro
+from autoc.core import out, inout, Pointer, Macro
 from autoc.composite import _StructRenderer
 from autoc.collection import _Range, Sequence
 
@@ -28,7 +28,7 @@ class Vector(_StructRenderer, Sequence):
         return target->size == 0;
       """
     
-    with self.method("int", "index", {"target": self, "index": std.size_t}) as f:
+    with self.method("int", "indexed", {"target": self, "index": std.size_t}) as f:
       f.inline = f"""
         assert(target);
         return index < target->size;
@@ -67,7 +67,7 @@ class Vector(_StructRenderer, Sequence):
       f.inline = f"""
         {result.definition};
         assert(target);
-        assert({self.index(f.target, f.index)});
+        assert({self.indexed(f.target, f.index)});
         {self.element.copy(result, target_i)};
         return result;
       """
@@ -78,16 +78,16 @@ class Vector(_StructRenderer, Sequence):
     with self.method(self.element_view, "view", {"target": self, "index": std.size_t}) as f:
       f.inline = f"""
         assert(target);
-        assert({self.index(f.target, f.index)});
+        assert({self.indexed(f.target, f.index)});
         return ({self.view.result})&{target_i};
       """
 
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
-    with self.method(None, "set", {"target": out(self), "index": std.size_t, "element": self.element}) as f:
+    with self.method(None, "set", {"target": inout(self), "index": std.size_t, "element": self.element}) as f:
       f.inline = f"""
         assert(target);
-        assert({self.index(f.target, f.index)});
+        assert({self.indexed(f.target, f.index)});
         {destroy_i};
         {self.element.copy(target_i, f.element)};
       """
@@ -137,26 +137,6 @@ class Vector(_StructRenderer, Sequence):
         {self.allocate(f.target, "source->size")};
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
-
-    range = self.range
-    r = range.variable("r")
-    
-    state = self.hasher.state_t.variable("state")
-
-    with self.hash as f:
-      f.external = f"""
-        size_t result;
-        {r.definition};
-        {state.definition};
-        {self.hasher.create(state)};
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          {self.hasher.update(state, self.element.hash(range.front_view(r)))};
-        }}
-        result = {self.hasher.hash(state)};
-        {self.hasher.destroy(state)};
-        return result;
-      """
-
 
   def _render_struct(self, stream):
     if self.public:
