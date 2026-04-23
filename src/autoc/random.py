@@ -51,10 +51,15 @@ class RandomSeeder(Code):
 
   def __init__(self):
     super().__init__(interface="""
-      /** @private */
+      /** @internal */
       AUTOC_EXTERN unsigned _autoc_seed;
-      /** @private */
-      AUTOC_EXTERN void _autoc_randomize_seed(void);
+      /** @internal */
+      AUTOC_EXTERN
+        void
+      #if defined(__POCC__)
+        __cdecl
+      #endif
+      _autoc_randomize_seed(void);
     """, implementation="""
       unsigned _autoc_seed = 1;
       #include <time.h>
@@ -74,7 +79,9 @@ class RandomSeeder(Code):
         void _autoc_randomize_seed(void) __attribute__((__constructor__));
       #elif defined(__PGI) || defined(__NVCOMPILER)
         #pragma init (_autoc_randomize_seed)
-      #elif defined(_MSC_VER) || defined(__POCC__)
+      #elif defined(__POCC__)
+        #pragma startup _autoc_randomize_seed
+      #elif defined(_MSC_VER)
         #pragma section(".CRT$XCU", read)
         __declspec(allocate(".CRT$XCU"))
         void (*my_init)(void) = _autoc_randomize_seed;
