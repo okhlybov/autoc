@@ -3,14 +3,16 @@ import autoc.std as std
 from autoc.range import DirectAccess
 from autoc.core import out, inout, Pointer, Macro
 from autoc.composite import _StructRenderer
-from autoc.collection import _Range, Sequence
+from autoc.collection import _Range as _CollectionRange
+from autoc.sequence import Sequence
+from autoc.map import Map
 
 
 #
-class Vector(_StructRenderer, Sequence):
+class Vector(_StructRenderer, Map, Sequence):
 
-  def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
-    super().__init__(*args, hasher=hasher, **kws)
+  def __init__(self, name, element, hasher=autoc.hash.XorShift(), **kws):
+    super().__init__(name, element, std.size_t, hasher=hasher, **kws)
     self.range = Range(self)
 
   def __setup__(self):
@@ -28,7 +30,7 @@ class Vector(_StructRenderer, Sequence):
         return target->size == 0;
       """
     
-    with self.method("int", "indexed", {"target": self, "index": std.size_t}) as f:
+    with self.indexed as f:
       f.inline = f"""
         assert(target);
         return index < target->size;
@@ -40,7 +42,7 @@ class Vector(_StructRenderer, Sequence):
         return target->size;
       """
     
-    with self.method(None, "allocate", {"target": out(self), "capacity": std.size_t}, visibility="PRIVATE") as f:
+    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="PRIVATE") as f:
       f.external = f"""
         assert(target);
         if(capacity > 0) {{
@@ -50,11 +52,11 @@ class Vector(_StructRenderer, Sequence):
       """
     
     # TODO make use of zero initializable feature of primitives
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}) as f:
       f.external = f"""
         assert(target);
         if(size > 0) {{
-          size_t index;
+          {self.index} index;
           {self.allocate(*f.arguments)};
           for(index = 0; index < size; ++index) {self.element.create(target_i)};
         }} else {{
@@ -63,7 +65,7 @@ class Vector(_StructRenderer, Sequence):
         }}
       """
 
-    with self.method(self.element, "get", {"target": self, "index": std.size_t}) as f:
+    with self.get as f:
       f.inline = f"""
         {result.definition};
         assert(target);
@@ -75,16 +77,16 @@ class Vector(_StructRenderer, Sequence):
     # FIXME explicit casting here and ithere in the respective Range type is a kind of hack to deal with double pointer types
     # Normally Pointer type should be responsible for handling the per-indirection constness flags
     
-    with self.method(self.element_view, "view", {"target": self, "index": std.size_t}) as f:
+    with self.view as f:
       f.inline = f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
-        return ({self.view.result})&{target_i};
+        return ({f.result})&{target_i};
       """
 
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
-    with self.method(None, "set", {"target": inout(self), "index": std.size_t, "element": self.element}) as f:
+    with self.set as f:
       f.inline = f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
@@ -102,7 +104,7 @@ class Vector(_StructRenderer, Sequence):
     with self.destroy as f:
       if self.element.destructible:
         f.external = f"""
-          size_t index;
+          {self.index} index;
           assert(target);
           if(target->size > 0) {{
             for(index = 0; index < target->size; ++index) {self.element.destroy(target_i)};
@@ -121,7 +123,7 @@ class Vector(_StructRenderer, Sequence):
         assert(left);
         assert(right);
         if(left->size == right->size) {{
-          size_t index;
+          {self.index} index;
           for(index = 0; index < left->size; ++index) {{
             if(!{self.element.equal(left_i, right_i)}) return 0;
           }}
@@ -131,7 +133,7 @@ class Vector(_StructRenderer, Sequence):
 
     with self.copy as f:
       f.external = f"""
-        size_t index;
+        {self.index} index;
         assert(target);
         assert(source);
         {self.allocate(f.target, "source->size")};
@@ -145,13 +147,13 @@ class Vector(_StructRenderer, Sequence):
       stream.append("/** @private */\n")
     stream.append(f"""typedef struct {{
       {Pointer(self.element)} elements; /**< @private */
-      {std.size_t} size; /**< @private */
+      {self.index} size; /**< @private */
     }} {self.name};
     """)
 
 
 #
-class Range(_Range, DirectAccess):
+class Range(_CollectionRange, DirectAccess):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -159,7 +161,7 @@ class Range(_Range, DirectAccess):
       stream.append(f"""
         typedef struct {{
           {Pointer(self.iterable, constant=True)} iterable; /**< @private */
-          {std.size_t} front, back; /**< @private */
+          {self.iterable.index} front, back; /**< @private */
         }} {self.name};
       """)
 
