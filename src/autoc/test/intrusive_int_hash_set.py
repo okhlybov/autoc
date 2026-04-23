@@ -1,4 +1,3 @@
-from autoc.core import *
 from autoc.test import *
 import autoc.std as std
 from autoc.intrusive_hash_set import Set
@@ -15,7 +14,7 @@ class Primitive(std.Primitive):
     return f"{element} = INT_MAX /* DELETED */"
 
   
-x = Type(type := Set("intrusive_int_set", Primitive("int")))
+x = Type(type := Set("intrusive_int_hash_set", Primitive("int")))
 
 t = type.variable("t")
 t1 = type.variable("t1")

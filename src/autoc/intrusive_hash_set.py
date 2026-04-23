@@ -24,234 +24,225 @@ class Set(_StructRenderer, Set):
     source_i = self.element.variable("source->elements[index]")
     target_elements = Pointer(self.element).variable("target->elements")
     
-    self.size.linkage = "INLINE"
-    self.size.code = f"""
+    with self.size as f:
+      f.inline = f"""
       assert(target);
       return target->size;
     """
-    self._inline_policy(self.size)
     
-    self.is_element = self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True)
-    self.is_element.code = f"""
-      return !({self.element.is_empty(self.is_element.element)} || {self.element.is_deleted(self.is_element.element)});
-    """
-    self._inline_policy(self.is_element)
+    with self.method("int", ("is", "element"), {"element": self.element}, visibility="PRIVATE", hidden=True) as f:
+      f.inline = f"""
+        return !({self.element.is_empty(f.element)} || {self.element.is_deleted(f.element)});
+      """
     
-    self.allocate = self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="PRIVATE")
-    self.allocate.code = f"""
-      assert(target);
-      assert(capacity > 0);
-      target->size = 0;
-      target->capacity = _autoc_ceil_power2(capacity);
-      assert(!(target->capacity & (target->capacity - 1))); /* verify the capacity is a power of 2 */
-      {target_elements} = {self.memory.allocate(self.element, "target->capacity")}; assert({target_elements});
-    """
-    self._inline_policy(self.allocate)
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="PRIVATE") as f:
+      f.external = f"""
+        assert(target);
+        assert(capacity > 0);
+        target->size = 0;
+        target->capacity = _autoc_ceil_power2(capacity);
+        assert(!(target->capacity & (target->capacity - 1))); /* verify the capacity is a power of 2 */
+        {target_elements} = {self.memory.allocate(self.element, "target->capacity")}; assert({target_elements});
+      """
     
     _target = self.variable("_target")
     
-    self.create_size = self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t})
-    self.create_size.code = f"""
-      size_t index;
-      assert(target);
-      if(size) {{
-        {self.allocate("target", f"size/{self.capacity_threshold}")};
-        for(index = 0; index < target->capacity; ++index) {self.element.mark_empty(target_i)};
-      }} else {{
-        {self.create("target")};
-      }}
-    """
-    self._inline_policy(self.create_size)
-    
-    self.manage_storage = self.method(None, ("manage", "storage"), {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="PRIVATE")
-    self.manage_storage.code = f"""
-      {_target.definition};
-      size_t index;
-      assert(target);
-      if(!target->elements || (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity)) {{
-        {self.create_size(_target, "new_size")};
-        if(target->elements) {{
-          for(index = 0; index < target->capacity; ++index) {{
-            if({self.is_element(target_i)}) {{
-              {self.put(_target, target_i)};
-            }}
-          }}
-          {self.destroy("target")};
-        }}
-        *target = _target;
-      }}
-    """
-    self._inline_policy(self.manage_storage)
-    
-    self.create.linkage = "INLINE"
-    self.create.code = f"""
-      assert(target);
-      target->elements = NULL;
-      target->capacity = target->size = 0;
-    """
-    self._inline_policy(self.create)
-    
-    self.locate_element = self.method(self._element_p, ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True)
-    self.locate_element.code=f"""
-      size_t index, start;
-      {self._element_p} _element = NULL;
-      assert(target);
-      assert(_index);
-      assert(target->capacity > 0);
-      assert({self.is_element(self.locate_element.element)});
-      /* linear probing */
-      start = {self.element._lookup_hash(self.locate_element.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
-      /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
-      for(index = start; index < target->capacity; ++index) {{
-        if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, self.locate_element.element)}) {{
-            _element = &{target_i};
-            goto stop;
-          }}
-        }} else goto stop;
-      }}
-      for(index = 0; index < start; ++index) {{
-        if(!({self.element.is_empty(target_i)})) {{
-          if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, self.locate_element.element)}) {{
-            _element = &{target_i};
-            goto stop;
-          }}
-        }} else goto stop;
-      }}
-      stop:
-        *_index = index;
-        return _element;
-    """
-    self._inline_policy(self.locate_element)
-    
-    self.locate_slot = self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True)
-    self.locate_slot.code=f"""
-      size_t index, start;
-      assert(target);
-      assert(_index);
-      assert(target->capacity > 0);
-      assert(target->size < target->capacity);
-      assert({self.is_element(self.locate_slot.element)});
-      /* linear probing */
-      start = {self.element._lookup_hash(self.locate_slot.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
-      /* lookup terminator for non-existing entry is either empty or deleted slot */
-      for(index = start; index < target->capacity; ++index) {{
-        if(!{self.is_element(target_i)}) {{
-          *_index = index;
-          return &{target_i};
-        }}
-      }}
-      for(index = 0; index < start; ++index) {{
-        if(!{self.is_element(target_i)}) {{
-          *_index = index;
-          return &{target_i};
-        }}
-      }}
-      abort(); /* not finding a suitable empty slot is a fatal error */
-    """
-    self._inline_policy(self.locate_slot)
-
-    self.contains.code = f"""
-      size_t index;
-      assert(target);
-      assert({self.is_element(self.contains.element)});
-      return target->elements && {self.locate_element("target", "&index", self.contains.element)} != NULL;
-    """
-    self._inline_policy(self.contains)
-    
-    if self.element.destructible:
-      self.destroy.code = f"""
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
+      f.external = f"""
         size_t index;
         assert(target);
-        if(target->elements) {{
-          for(index = 0; index < target->capacity; ++index)
-            if({self.is_element(target_i)})
-              {self.element.destroy(target_i)};
-          {self.memory.free(target_elements)};
+        if(size) {{
+          {self.allocate(f.target, f"size/{self.capacity_threshold}")};
+          for(index = 0; index < target->capacity; ++index) {self.element.mark_empty(target_i)};
+        }} else {{
+          {self.create(f.target)};
         }}
       """
-    else:
-      self.destroy.code = f"""
+    
+    with self.method(None, ("manage", "storage"), {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="PRIVATE") as f:
+      f.external = f"""
+        {_target.definition};
+        size_t index;
         assert(target);
-        if(target->elements) {{
-          {self.memory.free(target_elements)};
+        if(!target->elements || (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity)) {{
+          {self.create_size(_target, "new_size")};
+          if(target->elements) {{
+            for(index = 0; index < target->capacity; ++index) {{
+              if({self.is_element(target_i)}) {{
+                {self.put(_target, target_i)};
+              }}
+            }}
+            {self.destroy(f.target)};
+          }}
+          *target = _target;
         }}
       """
-    self._inline_policy(self.destroy)
-
-    self.empty.linkage = "INLINE"
-    self.empty.code = f"""
-      assert(target);
-      return target->size == 0;
-    """
-    self._inline_policy(self.empty)
     
-    self.put.code = f"""
-      size_t index;
-      assert(target);
-      assert({self.is_element(self.put.element)});
-      if(!{self.contains("target", self.put.element)}) {{
-        {self.manage_storage("target", "target->size+1")};
-        {self.element.copy(self.locate_slot("target", "&index", self.put.element), self.put.element)};
-        ++target->size;
-        return 1;
-      }} else return 0;
-    """
-    self._inline_policy(self.put)
+    with self.create as f:
+      f.inline = f"""
+        assert(target);
+        target->elements = NULL;
+        target->capacity = target->size = 0;
+      """
     
-    self.find_view = self.method(self.element_view, ("find", "view"), {"target": self, "element": self.element})
-    self.find_view.code = f"""
-      size_t index;
-      assert(target);
-      assert({self.is_element(self.find_view.element)});
-      return {self.locate_element("target", "&index", self.find_view.element)};
-    """
-    self._inline_policy(self.find_view)
-    
-    self.copy.code = f"""
-      size_t index;
-      assert(target);
-      assert(source);
-      {self.create_size("target", "source->size")};
-      for(index = 0; index < source->capacity; ++index) {{
-        if({self.is_element(source_i)}) {{
-          {self.put("target", source_i)};
+    with self.method(self._element_p, ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True) as f:
+      f.external = f"""
+        size_t index, start;
+        {self._element_p} _element = NULL;
+        assert(target);
+        assert(_index);
+        assert(target->capacity > 0);
+        assert({self.is_element(f.element)});
+        /* linear probing */
+        start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+        /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
+        for(index = start; index < target->capacity; ++index) {{
+          if(!({self.element.is_empty(target_i)})) {{
+            if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+              _element = &{target_i};
+              goto stop;
+            }}
+          }} else goto stop;
         }}
-      }}
-    """
-    self._inline_policy(self.copy)
+        for(index = 0; index < start; ++index) {{
+          if(!({self.element.is_empty(target_i)})) {{
+            if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+              _element = &{target_i};
+              goto stop;
+            }}
+          }} else goto stop;
+        }}
+        stop:
+          *_index = index;
+          return _element;
+      """
+    
+    with self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="PRIVATE", hidden=True) as f:
+      f.external = f"""
+        size_t index, start;
+        assert(target);
+        assert(_index);
+        assert(target->capacity > 0);
+        assert(target->size < target->capacity);
+        assert({self.is_element(f.element)});
+        /* linear probing */
+        start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+        /* lookup terminator for non-existing entry is either empty or deleted slot */
+        for(index = start; index < target->capacity; ++index) {{
+          if(!{self.is_element(target_i)}) {{
+            *_index = index;
+            return &{target_i};
+          }}
+        }}
+        for(index = 0; index < start; ++index) {{
+          if(!{self.is_element(target_i)}) {{
+            *_index = index;
+            return &{target_i};
+          }}
+        }}
+        abort(); /* not finding a suitable empty slot is a fatal error */
+      """
+
+    with self.contains as f:
+      f.external = f"""
+        size_t index;
+        assert(target);
+        assert({self.is_element(f.element)});
+        return target->elements && {self.locate_element(f.target, "&index", f.element)} != NULL;
+      """
+    
+    with self.destroy as f:
+      if self.element.destructible:
+        f.external = f"""
+          size_t index;
+          assert(target);
+          if(target->elements) {{
+            for(index = 0; index < target->capacity; ++index)
+              if({self.is_element(target_i)})
+                {self.element.destroy(target_i)};
+            {self.memory.free(target_elements)};
+          }}
+        """
+      else:
+        f.external = f"""
+          assert(target);
+          if(target->elements) {{
+            {self.memory.free(target_elements)};
+          }}
+        """
+
+    with self.empty as f:
+      f.inline = f"""
+        assert(target);
+        return target->size == 0;
+      """
+    
+    with self.put as f:
+      f.external = f"""
+        size_t index;
+        assert(target);
+        assert({self.is_element(f.element)});
+        if(!{self.contains(f.target, f.element)}) {{
+          {self.manage_storage(f.target, "target->size+1")};
+          {self.element.copy(self.locate_slot(f.target, "&index", f.element), f.element)};
+          ++target->size;
+          return 1;
+        }} else return 0;
+      """
+    
+    with self.method(self.element_view, ("find", "view"), {"target": self, "element": self.element}) as f:
+      f.external = f"""
+        size_t index;
+        assert(target);
+        assert({self.is_element(f.element)});
+        return {self.locate_element(f.target, "&index", f.element)};
+      """
+    
+    with self.copy as f:
+      f.external = f"""
+        size_t index;
+        assert(target);
+        assert(source);
+        {self.create_size(f.target, "source->size")};
+        for(index = 0; index < source->capacity; ++index) {{
+          if({self.is_element(source_i)}) {{
+            {self.put(f.target, source_i)};
+          }}
+        }}
+      """
 
     range = self.range
     r = range.variable("r")
     
-    self.equal.code = f"""
-      {r.definition};
-      assert(left);
-      assert(right);
-      if({self.size("left")} == {self.size("right")}) {{
-        for({r} = {range.new("left")}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if(!{self.contains("right", range.front_view(r))}) return 0;
-        }}
-        return 1;
-      }} else return 0;
-    """
+    with self.equal as f:
+      f.external = f"""
+        {r.definition};
+        assert(left);
+        assert(right);
+        if({self.size(f.left)} == {self.size(f.right)}) {{
+          for({r} = {range.new(f.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
+            if(!{self.contains(f.right, range.front_view(r))}) return 0;
+          }}
+          return 1;
+        }} else return 0;
+      """
     
     state = self.hasher.state_t.variable("state")
     
-    self.hash.code = f"""
-      size_t result;
-      {r.definition};
-      {state.definition};
-      assert(target);
-      {self.hasher.create("state")};
-      for({r} = {range.new("target")}; !{range.empty(r)}; {range.move_front(r)}) {{
-        {self.hasher.update(state, self.element.hash(range.front_view(r)))};
-      }}
-      result = {self.hasher.hash(state)};
-      {self.hasher.destroy(state)};
-      return result;
-    """
-
+    with self.hash as f:
+      f.external = f"""
+        size_t result;
+        {r.definition};
+        {state.definition};
+        assert(target);
+        {self.hasher.create(state)};
+        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          {self.hasher.update(state, self.element.hash(range.front_view(r)))};
+        }}
+        result = {self.hasher.hash(state)};
+        {self.hasher.destroy(state)};
+        return result;
+      """
 
   def _render_struct(self, stream):
     if self.public:
@@ -303,7 +294,6 @@ class Range(_Range, Forward):
         return result;
       """
 
-    self.empty.linkage = "INLINE"
     with self.empty as f:
       f.inline = f"""
         assert(target);
@@ -316,7 +306,7 @@ class Range(_Range, Forward):
       f.inline = lambda: f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty("target")});
+        assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
         {self.element.copy(result, front_element)};
         return result;
@@ -325,7 +315,7 @@ class Range(_Range, Forward):
     with self.front_view as f:
       f.inline = lambda: f"""
         assert(target);
-        assert(!{self.empty("target")});
+        assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
         return ({self.iterable.element_view})&{front_element};
       """
@@ -333,7 +323,7 @@ class Range(_Range, Forward):
     with self.move_front as f:
       f.inline = f"""
         assert(target);
-        assert(!{self.empty("target")});
+        assert(!{self.empty(f.target)});
         ++target->front;
-        {self.next("target")};
+        {self.next(f.target)};
       """    
