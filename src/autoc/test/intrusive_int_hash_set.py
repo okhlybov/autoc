@@ -161,6 +161,17 @@ x.unit(f"{type.contains}(): contains all elements", f"""
   TEST_FALSE( {type.contains(t, 88)} );
 """)
 
+x.unit(f"{type.remove}(): remove !existing element", f"""
+  TEST_FALSE( {type.contains(t, 88)} );
+  TEST_FALSE( {type.remove(t, 88)} );
+""")
+
+x.unit(f"{type.remove}(): remove existing element", f"""
+  TEST_TRUE( {type.contains(t, -1)} );
+  TEST_TRUE( {type.remove(t, -1)} );
+  TEST_FALSE( {type.contains(t, -1)} );
+""")
+
 x.setup(f"""
   {t1.definition};
   {t2.definition};

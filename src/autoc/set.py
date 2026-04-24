@@ -11,6 +11,7 @@ class Set(Collection):
     super().__setup__()
     
     self.method("int", "put", {"target": inout(self), "element": self.element})
+    self.method("int", "remove", {"target": inout(self), "element": self.element})
 
     # TODO more to come
 

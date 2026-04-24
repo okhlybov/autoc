@@ -193,6 +193,20 @@ class Set(_StructRenderer, Set):
         }} else return 0;
       """
     
+    with self.remove as f:
+      _destroy = self.element.destroy(target_i) if self.element.destructible else str()
+      f.external = f"""
+        size_t index;
+        assert(target);
+        assert({self.is_element(f.element)});
+        if({self.locate_element(f.target, "&index", f.element)}) {{
+          {_destroy};
+          {self.element.mark_deleted(target_i)};
+          --target->size;
+          return 1;
+        }} else return 0;
+      """
+    
     with self.method(self.element_view, ("find", "view"), {"target": self, "element": self.element}) as f:
       f.external = f"""
         size_t index;
