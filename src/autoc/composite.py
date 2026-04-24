@@ -253,7 +253,7 @@ class Method(Function, Entity):
     if self.public:
       return "/** @public */\n"
     else:
-      return "/** @private */\n"
+      return "/** @internal */\n"
 
   __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
   

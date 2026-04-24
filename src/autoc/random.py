@@ -17,7 +17,7 @@ class StaticSeeder(Entity):
 
 #
 hash = Code(dependencies=[std.linkage, std.size_t], interface="""
-  /** @private */
+  /** @internal */
   AUTOC_EXTERN
   size_t _autoc_hash(size_t);
 """, implementation="""

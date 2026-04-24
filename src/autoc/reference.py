@@ -23,7 +23,6 @@ class Reference(Composite, Pointer):
   def rvalue_type(self):
     return self.base
   
-  @cached_property
   def in_type(self):
     return self
   

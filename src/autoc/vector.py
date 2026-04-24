@@ -143,7 +143,7 @@ class Vector(_StructRenderer, Map, Sequence):
   def _render_struct(self, stream):
     super()._render_struct(stream)
     if self.public:
-      stream.append("/** @public */")
+      stream.append("/** @public */\n")
     stream.append(f"""typedef struct {{
       {Pointer(self.element)} elements; /**< @private */
       {self.index} size; /**< @private */
