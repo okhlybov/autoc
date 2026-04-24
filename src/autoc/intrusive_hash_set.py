@@ -59,13 +59,21 @@ class Set(_StructRenderer, Set):
         }}
       """
     
-    with self.method(None, ("manage", "storage"), {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="INTERNAL") as f:
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="PRIVATE") as f:
       f.external = f"""
         {_target.definition};
-        size_t index;
+        size_t index, new_capacity;
         assert(target);
-        if(!target->elements || (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity)) {{
-          {self.create_size(_target, "new_size")};
+        new_capacity = _autoc_ceil_power2(new_size);
+        if(
+          /* no memory has been allocated yet */
+          !target->elements ||
+          /* storge expansion attempt when the requested new size exceeds the capacity threshold */
+          (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity) ||
+          /* storage shrinking attempt when new capacity will actually be a step down from old capacity YET it's still large enough to accomodate all elements from old storage */
+          (new_size < target->size && new_capacity < target->capacity && new_capacity >= target->size) /* CHECKME */
+        ) {{
+          {self.create_size(_target, f.new_size)};
           if(target->elements) {{
             for(index = 0; index < target->capacity; ++index) {{
               if({self.is_element(target_i)}) {{
@@ -186,7 +194,7 @@ class Set(_StructRenderer, Set):
         assert(target);
         assert({self.is_element(f.element)});
         if(!{self.contains(f.target, f.element)}) {{
-          {self.manage_storage(f.target, "target->size+1")};
+          {self.resize(f.target, "target->size+1")};
           {self.element.copy(self.locate_slot(f.target, "&index", f.element), f.element)};
           ++target->size;
           return 1;
