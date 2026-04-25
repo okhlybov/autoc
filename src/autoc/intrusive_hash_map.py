@@ -130,7 +130,6 @@ class Map(_StructRenderer, Map):
       _element_p = entry.element_p.variable("element_p")
       _result = self.element.variable("result")
       f.external = f"""
-        size_t i;
         {_element_p.definition};
         {_result.definition};
         assert(target);

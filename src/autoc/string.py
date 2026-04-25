@@ -20,10 +20,14 @@ class String(Pointer, Map):
     with self.method(self, "new", {"source": self}) as f:
       f.inline = f"""
         assert(source);
-        return strdup(source);
+        #ifdef _MSC_VER
+          return _strdup(source);
+        #else
+          return strdup(source);
+        #endif
       """
       
-    with self.method(self, "free", {"target": inout(self)}) as f:
+    with self.method(None, "free", {"target": inout(self)}) as f:
       f.inline = f"""
         assert(target);
         if(target != _autoc_empty_string) free(target);
