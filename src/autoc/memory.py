@@ -9,7 +9,7 @@ import autoc.module
 class Manager(autoc.module.Code):
   
   def __init__(self):
-    super().__init__(dependencies=[autoc.std.malloc_h])
+    super().__init__(dependencies=[autoc.std.stdlib_h])
     
   def allocate(self, element, count=1, zero=False, cast=None):
     if isinstance(element, autoc.core.Type):
