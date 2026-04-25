@@ -47,45 +47,24 @@ class Set(_StructRenderer, Set):
     
     _target = self.variable("_target")
     
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="INTERNAL") as f:
       f.external = f"""
         size_t index;
         assert(target);
-        if(size) {{
-          {self.allocate(f.target, f"size/{self.capacity_threshold}")};
+        if(capacity) {{
+          {self.allocate(f.target, f.capacity)};
           for(index = 0; index < target->capacity; ++index) {self.element.mark_empty(target_i)};
         }} else {{
           {self.create(f.target)};
         }}
       """
-    
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="PRIVATE") as f:
+
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
       f.external = f"""
-        {_target.definition};
-        size_t index, new_capacity;
         assert(target);
-        new_capacity = _autoc_ceil_power2(new_size);
-        if(
-          /* no memory has been allocated yet */
-          !target->elements ||
-          /* storge expansion attempt when the requested new size exceeds the capacity threshold */
-          (new_size > target->size && new_size > {self.capacity_threshold}*target->capacity) ||
-          /* storage shrinking attempt when new capacity will actually be a step down from old capacity YET it's still large enough to accomodate all elements from old storage */
-          (new_size < target->size && new_capacity < target->capacity && new_capacity >= target->size) /* CHECKME */
-        ) {{
-          {self.create_size(_target, f.new_size)};
-          if(target->elements) {{
-            for(index = 0; index < target->capacity; ++index) {{
-              if({self.is_element(target_i)}) {{
-                {self.put(_target, target_i)};
-              }}
-            }}
-            {self.destroy(f.target)};
-          }}
-          *target = _target;
-        }}
+        {self.create_capacity(f.target, f"{f.size}/{self.capacity_threshold}")};
       """
-    
+
     with self.create as f:
       f.inline = f"""
         assert(target);
@@ -154,6 +133,30 @@ class Set(_StructRenderer, Set):
         abort(); /* not finding a suitable empty slot is a fatal error */
       """
 
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True) as f:
+      f.external = f"""
+        {_target.definition};
+        size_t index, _index, new_capacity;
+        assert(target);
+        new_capacity = _autoc_ceil_power2(new_size/{self.capacity_threshold}); /* predict new capacity after size changing respecting the desired capacity threshold */
+        if(new_capacity < target->capacity && new_capacity < target->size/{self.capacity_threshold}) new_capacity = target->capacity; /* prevent the new capacity to fall below minimum required for original set's elements */
+        if(new_capacity < 8) new_capacity = 8; /* enforce minimum viable capacity */
+        assert(target->size <= new_capacity); /* require the new capacity to be large enough for the set to contain all original elements */
+        if(new_capacity != target->capacity) {{
+          {self.create_capacity(_target, "new_capacity")};
+          if(target->elements) {{
+            for(index = 0; index < target->capacity; ++index) {{
+              if({self.is_element(target_i)}) {{
+                {self.element.copy(self.locate_slot(_target, "&_index", target_i), target_i)}; /* direct planting in order to prevent from triggering the subsequent resizings */
+              }}
+            }}
+            _target.size = target->size;
+            {self.destroy(f.target)};
+          }}
+          *target = _target;
+        }}
+      """
+    
     with self.contains as f:
       f.external = f"""
         size_t index;

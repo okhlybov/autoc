@@ -46,6 +46,13 @@ x.unit(f"{type.create_size}(): create empty set with zero size", f"""
   TEST_TRUE( {type.put(t, -1)} );
 """)
 
+x.unit(f"{type.create_size}(): shrink empty set", f"""
+  {type.create_size(t, 1024+11)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  {type.resize(t, 0)};
+""")
+
 
 x.setup(f"""
   {t.definition};
