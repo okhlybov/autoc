@@ -11,10 +11,14 @@ from autoc.range import Forward
 #
 class Set(_StructRenderer, Set):
   
-  def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], **kws):
+  def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set._ceil_power2], **kws)
     self._element_p = Pointer(self.element)
     self.capacity_threshold = capacity_threshold
+    self.is_empty = is_empty
+    self.is_deleted = is_deleted
+    self.mark_empty = mark_empty
+    self.mark_deleted = mark_deleted
     self.range = Range(self)
 
   def __setup__(self):
@@ -32,7 +36,7 @@ class Set(_StructRenderer, Set):
     
     with self.method("int", ("is", "element"), {"element": self.element}, visibility="INTERNAL", hidden=True) as f:
       f.external = f"""
-        return !({self.element.is_empty(f.element)} || {self.element.is_deleted(f.element)});
+        return !({self.is_empty(f.element)} || {self.is_deleted(f.element)});
       """
     
     with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="INTERNAL") as f:
@@ -53,7 +57,7 @@ class Set(_StructRenderer, Set):
         assert(target);
         if(capacity) {{
           {self.allocate(f.target, f.capacity)};
-          for(index = 0; index < target->capacity; ++index) {self.element.mark_empty(target_i)};
+          for(index = 0; index < target->capacity; ++index) {self.mark_empty(target_i)};
         }} else {{
           {self.create(f.target)};
         }}
@@ -62,7 +66,7 @@ class Set(_StructRenderer, Set):
     with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
       f.external = f"""
         assert(target);
-        {self.create_capacity(f.target, f"{f.size}/{self.capacity_threshold}")};
+        {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
       """
 
     with self.create as f:
@@ -85,16 +89,16 @@ class Set(_StructRenderer, Set):
           start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
           /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
           for(index = start; index < target->capacity; ++index) {{
-            if(!({self.element.is_empty(target_i)})) {{
-              if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+            if(!({self.is_empty(target_i)})) {{
+              if(!({self.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
                 _element = &{target_i};
                 goto stop;
               }}
             }} else goto stop;
           }}
           for(index = 0; index < start; ++index) {{
-            if(!({self.element.is_empty(target_i)})) {{
-              if(!({self.element.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+            if(!({self.is_empty(target_i)})) {{
+              if(!({self.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
                 _element = &{target_i};
                 goto stop;
               }}
@@ -138,8 +142,8 @@ class Set(_StructRenderer, Set):
         {_target.definition};
         size_t index, _index, new_capacity;
         assert(target);
-        new_capacity = _autoc_ceil_power2(new_size/{self.capacity_threshold}); /* predict new capacity after size changing respecting the desired capacity threshold */
-        if(new_capacity < target->capacity && new_capacity < target->size/{self.capacity_threshold}) new_capacity = target->capacity; /* prevent the new capacity to fall below minimum required for original set's elements */
+        new_capacity = _autoc_ceil_power2((size_t)(new_size/{self.capacity_threshold})); /* predict new capacity after size changing respecting the desired capacity threshold */
+        if(new_capacity < target->capacity && new_capacity < (size_t)(target->size/{self.capacity_threshold})) new_capacity = target->capacity; /* prevent the new capacity to fall below minimum required for original set's elements */
         if(new_capacity < 8) new_capacity = 8; /* enforce minimum viable capacity */
         assert(target->size <= new_capacity); /* require the new capacity to be large enough for the set to contain all original elements */
         if(new_capacity != target->capacity) {{
@@ -212,7 +216,7 @@ class Set(_StructRenderer, Set):
         assert({self.is_element(f.element)});
         if({self.locate_element(f.target, "&index", f.element)}) {{
           {_destroy};
-          {self.element.mark_deleted(target_i)};
+          {self.mark_deleted(target_i)};
           --target->size;
           return 1;
         }} else return 0;

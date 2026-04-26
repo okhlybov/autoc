@@ -6,28 +6,20 @@ from autoc.hash_map import _Entry
 from autoc.map import Map
 
 
-class _Entry(_Entry):
-  
-  def __init__(self, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
-    super().__init__(*args, **kws)
-    self.is_empty = Macro("int", {"entry": self}, is_empty)
-    self.is_deleted = Macro("int", {"entry": self}, is_deleted)
-    self.mark_empty = Macro(None, {"entry": inout(self)}, mark_empty)
-    self.mark_deleted = Macro(None, {"entry": inout(self)}, mark_deleted)
-    
-
 #
 class Map(_StructRenderer, Map):
   
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self._set = Set(self._decorate_component("set", abbreviate=True),
-        _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="INTERNAL",
-          is_empty=is_empty,
-          is_deleted=is_deleted,
-          mark_empty=mark_empty,
-          mark_deleted=mark_deleted
-    ), visibility="INTERNAL")
+    self._set = Set(
+      self._decorate_component("set", abbreviate=True),
+      _Entry(self._decorate_component("entry", abbreviate=True),self.element, self.index, visibility="INTERNAL"),
+      visibility="INTERNAL",
+      is_empty=Macro("int", {"entry": self.element}, lambda entry: is_empty(f"({entry})")),
+      mark_empty=Macro(None, {"entry": out(self.element)}, lambda entry: mark_empty(f"({entry})")),
+      is_deleted=Macro("int", {"entry": self.element}, lambda entry: is_deleted(f"({entry})")),
+      mark_deleted=Macro(None, {"entry": out(self.element)}, lambda entry: mark_deleted(f"({entry})")),
+    )
     self.depends(self._set)
 
   def __setup__(self):
@@ -151,8 +143,7 @@ class Map(_StructRenderer, Map):
         {entry.emplace_index(_entry, f.index)}; /* no element is required for the search operation */
         entry_p = {set.locate_element(_target, "&i", _entry)}; /* try to find an existing entry with the specified index */
         if(entry_p) {{
-          /* a set's entry with specified index already exists - replace its element's contents in-place */
-          {entry.replace_element(_entry_p, f.element)};
+          {entry.replace_element(_entry_p, f.element)}; /* a set's entry with specified index already exists - replace its element's contents in-place */
         }} else {{
           /* no entry with specified index exists in the set - put new fully initialized entry */
           {entry.emplace_element(_entry, f.element)}; /* set element field to finalize the entry */

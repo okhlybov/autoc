@@ -3,18 +3,14 @@ import autoc.std as std
 from autoc.intrusive_hash_set import Set
 
 
-class Primitive(std.Primitive):
-  def is_empty(self, element):
-    return f"{element} == INT_MIN /* EMPTY? */"
-  def mark_empty(self, element):
-    return f"{element} = INT_MIN /* EMPTY */"
-  def is_deleted(self, element):
-    return f"{element} == INT_MAX /* DELETED? */"
-  def mark_deleted(self, element):
-    return f"{element} = INT_MAX /* DELETED */"
+xs = {
+  "is_empty": lambda element: f"{element} == INT_MIN /* EMPTY? */",
+  "mark_empty": lambda element: f"{element} = INT_MIN /* EMPTY */",
+  "is_deleted": lambda element: f"{element} == INT_MAX /* DELETED? */",
+  "mark_deleted": lambda element: f"{element} = INT_MAX /* DELETED */",
+}
 
-  
-x = Type(type := Set("intrusive_int_hash_set", Primitive("int")))
+x = Type(type := Set("intrusive_int_hash_set", "int", **xs))
 
 t = type.variable("t")
 t1 = type.variable("t1")
