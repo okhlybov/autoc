@@ -62,3 +62,20 @@ x.unit(f"{type.resize}(): shrink empty set", f"""
   TEST_EQUAL( {type.size(t)}, 0 );
   {type.resize(t, 0)};
 """)
+
+x.unit(f"{type.remove}(): remove !existing element", f"""
+  {type.create(t)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_FALSE( {type.remove(t, s("hello"))} );
+""")
+
+x.unit(f"{type.remove}(): remove existing element", f"""
+  {type.create(t)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_TRUE( {type.put(t, s("hello"))} );
+  TEST_TRUE( {type.remove(t, s("hello"))} );
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+""")
