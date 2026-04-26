@@ -223,7 +223,7 @@ class Set(_StructRenderer, Set):
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
-        return {self.locate_element(f.target, "&index", f.element)};
+        return ({self.element_view}){self.locate_element(f.target, "&index", f.element)};
       """
     
     with self.copy as f:
