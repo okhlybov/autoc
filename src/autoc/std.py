@@ -1,5 +1,5 @@
 import re
-import autoc.core
+from autoc.core import Primitive, Macro, _type_cache
 from autoc.module import Entity, Code, SystemHeader
 
 
@@ -20,14 +20,15 @@ stdlib_h = Code(interface="""
 """)
 
 
-class Primitive(autoc.core.Primitive, Entity):
+class Primitive(Primitive, Entity):
   
   @classmethod
   def register(cls, name, matcher=None, dependencies=[]):
     obj = cls(name)
     obj.dependencies.update(dependencies)
-    if matcher is None: matcher = f"^{name}$"
-    autoc.core._type_cache.append((re.compile(matcher), obj))
+    if matcher is None:
+      matcher = f"^{name}$"
+    _type_cache.append((re.compile(matcher), obj))
     return obj
 
 
@@ -72,7 +73,8 @@ class Complex(Primitive):
   @property
   def orderable(self): return False
 
-  def _hash(self, result, parameters, **kws): return autoc.core.Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
+  def _hash(self, result, parameters, **kws):
+    return Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
   
   __definitions = Code(
     dependencies=[complex_h, tgmath_h],
