@@ -14,7 +14,7 @@ class _Entry(autoc.record.Record):
     
   def __setup__(self):
     super().__setup__()
-
+    
     _index = self.index.variable("target->index")
     _element = self.element.variable("target->element")
     

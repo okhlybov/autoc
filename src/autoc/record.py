@@ -19,43 +19,49 @@ class Record(_StructRenderer, Composite):
   def __setup__(self):
     super().__setup__()
     
+    # FIXME assert arguments when they are pointers
+    
     with self.create as f:
       code = []
-      code.append("assert(target);")
+      target = f"({f.target.bind(self)})"
       for field, type in self.fields.items():
-        code.append(type.create(type.variable(f"target->{field}")))
+        code.append(type.create(type.variable(f"{target}.{field}")))
         code.append(";")
       f.inline = code
     
     with self.destroy as f:
       code = []
-      code.append("assert(target);")
+      target = f"({f.target.bind(self)})"
       for field, type in self.fields.items():
         if type.destructible:
-          code.append(type.destroy(type.variable(f"target->{field}")))
+          code.append(type.destroy(type.variable(f"{target}.{field}")))
           code.append(";")
       f.inline = code
 
     with self.equal as f:
       xs = []
+      left = f"({f.left.bind(self)})"
+      right = f"({f.right.bind(self)})"
       for field, type in self.fields.items():
-        xs.append(str(type.equal(type.variable(f"left->{field}"), type.variable(f"right->{field}"))))
-      f.inline = ["assert(left); assert(right);", "return ", " && ".join(xs if xs else ["1"]), ";"]
+        xs.append(str(type.equal(type.variable(f"{left}.{field}"), type.variable(f"{right}.{field}"))))
+      f.inline = ["return ", " && ".join(xs if xs else ["1"]), ";"]
       
     with self.copy as f:
       code = []
-      code.append("assert(target); assert(source);")
+      target = f"({f.target.bind(self)})"
+      source = f"({f.source.bind(self)})"
       for field, type in self.fields.items():
-        code.append(type.copy(type.variable(f"target->{field}"), type.variable(f"source->{field}")))
+        code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
         code.append(";")
       f.inline = code
       
     with self.hash as f:
       code = []
+      target = f"({f.target.bind(self)})"
       state = self.hasher.state_t.variable("state")
-      code.append(f"{state.definition}; size_t result; assert(target); {self.hasher.create(state)};")
+      code.append(f"{state.definition}; size_t result; {self.hasher.create(state)};")
       for field, type in self.fields.items():
-        code.append(self.hasher.update(state, type.hash(type.variable(f"target->{field}"))))
+        code.append(self.hasher.update(state, type.hash(type.variable(f"{target}.{field}"))))
         code.append(";")
       code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
       f.inline = code
@@ -68,33 +74,33 @@ class Record(_StructRenderer, Composite):
       for field, type in self.fields.items():
         self._add_writer(type, field)
 
-  # FIXME use with:
   def _add_reader(self, type, field):
-    result = type.variable("result")
-    self.references.add(m := Method(type, self._getter_name(field), {"target": self}, visibility=self.visibility, linkage="INLINE", composite=self, code=f"""
-      {result.definition};
-      assert(target);
-      {type.copy(result, type.variable(f"target->{field}"))};
-      return {result};
-    """))
-    self._inline_policy(m)
+    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility) as f:
+      result = type.variable("result")
+      target = f"({f.target.bind(self)})"
+      f.inline = f"""
+        {result.definition};
+        {type.copy(result, type.variable(f"{target}.{field}"))};
+        return {result};
+      """
 
-  # FIXME use with:
   def _add_writer(self, type, field):
-    destroy_field = type.destroy(type.variable(f"target->{field}")) if type.destructible else str()
-    self.references.add(m := Method(None, self._setter_name(field), {"target": out(self), "value": type}, visibility=self.visibility, linkage="INLINE", composite=self, code=f"""
-      assert(target);
-      {destroy_field};
-      {type.copy(type.variable(f"target->{field}"), "value")};
-    """))
-    self._inline_policy(m)
+    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility) as f:
+      target = f"({f.target.bind(self)})"
+      destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
+      f.inline = f"""
+        {destroy_field};
+        {type.copy(type.variable(f"{target}.{field}"), "value")};
+      """
 
-  def _getter_name(self, field): return self.decorate(field)
+  def _getter_name(self, field):
+    return self.decorate(field)
     
-  def _setter_name(self, field): return self.decorate("set", field)
+  def _setter_name(self, field):
+    return self.decorate("set", field)
 
   def _render_struct(self, stream):
-    #super()._render_struct(stream)
+    super()._render_struct(stream)
     if self.public:
       stream.append("/** @public */\n")
     stream.append(f"typedef struct {self.name} {self.name};\n")
