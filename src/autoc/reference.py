@@ -8,8 +8,8 @@ from functools import cached_property
 #
 class Reference(Composite, Pointer):
   
-  def __init__(self, type, memory=autoc.memory.Manager(), dependencies=[], *args, **kws):
-    super().__init__(type, *args, dependencies=[*dependencies, std.assert_h, memory], **kws)
+  def __init__(self, type, *args, memory=autoc.memory.Manager(), dependencies=[], prefix=None, **kws):
+    super().__init__(type, *args, dependencies=[*dependencies, std.assert_h, memory], prefix=prefix if prefix else str(type), **kws)
     self.memory = memory
     self.depends(self.base)
     
@@ -21,6 +21,7 @@ class Reference(Composite, Pointer):
   def rvalue_type(self):
     return self.base
   
+  @property
   def in_type(self):
     return self
   
@@ -36,10 +37,11 @@ class Reference(Composite, Pointer):
 
     with self.method(self, "new", {}) as f:
       result = self.variable("result")
+      create = self.base.create(result) if self.base.constructible else str()
       f.inline = f"""
         {result.definition};
         result = {self.memory.allocate(self.base)}; assert(result);
-        {self.base.create(result)};
+        {create};
         return {result};
       """
     
@@ -153,10 +155,11 @@ class Shared(_StructRenderer, Reference):
     
     with self.new as f:
       result = self.variable("result")
+      create = self.base.create(result) if self.base.constructible else str()
       f.inline = f"""
         {result.definition};
         result = {self.memory.allocate(f"sizeof({self._storage})", cast=self.base)}; assert(result);
-        {self.base.create(result)};
+        {create};
         (({self._storage}*)result)->count = 1;
         return result;
       """
