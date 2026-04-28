@@ -18,13 +18,14 @@ class String(Pointer, Map):
     super().__setup__()
 
     with self.method(self, "new", {"source": self}) as f:
-      f.inline = f"""
-        assert(source);
-        #ifdef _MSC_VER
-          return _strdup(source);
-        #else
-          return strdup(source);
-        #endif
+      f.inline = """
+        if(source) {
+          #ifdef _MSC_VER
+            return _strdup(source);
+          #else
+            return strdup(source);
+          #endif
+        } else return (char*)_autoc_empty_string;
       """
       
     with self.method(None, "free", {"target": inout(self)}) as f:
