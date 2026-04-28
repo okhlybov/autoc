@@ -1,6 +1,6 @@
 import autoc.memory
 import autoc.std as std
-from autoc.core import *
+from autoc.core import inout, Pointer
 from autoc.composite import Composite, _StructRenderer
 from functools import cached_property
 
@@ -47,8 +47,8 @@ class Reference(Composite, Pointer):
     
     with self.method(self, "share", {"target": inout(self)}) as f:
       f.inline = f"""
-      assert(target);
-      return target;
+        assert(target);
+        return target;
       """
 
     with self.method(None, "free", {"target": inout(self)}) as f:
@@ -117,6 +117,7 @@ class Reference(Composite, Pointer):
   def _hash(self, result, parameters, **kws):
     with self.method(result, "hash_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
       f.inline = f"""
+        assert(target);
         return {self.base.hash(f.target)};
       """
     return f
