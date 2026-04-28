@@ -137,7 +137,7 @@ class Method(Function, Entity):
     super().__init__(result, name, parameters, *args, **kws)
     self.composite = composite
     self.linkage = linkage
-    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
+    self.visibility = visibility
     self.__abstract = abstract
     for x in [autoc.std.linkage, self.result] + self.types + dependencies:
       if isinstance(x, Entity):
@@ -197,20 +197,28 @@ class Method(Function, Entity):
 
   # FIXME visibility should be extracted into independent mixin class
 
+  @property
+  def visibility(self):
+    return self.__visibility
+  
+  @visibility.setter
+  def visibility(self, visibility):
+    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
+
   #
   @property
   def public(self):
-    return self.__visibility is Visibility.PUBLIC
+    return self.visibility is Visibility.PUBLIC
   
   #
   @property
   def private(self):
-    return self.__visibility is Visibility.PRIVATE
+    return self.visibility is Visibility.PRIVATE
 
   #
   @property
   def internal(self):
-    return self.__visibility is Visibility.INTERNAL
+    return self.visibility is Visibility.INTERNAL
 
   #
   def render_declarations(self, stream, header):
