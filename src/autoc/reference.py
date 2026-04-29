@@ -33,6 +33,22 @@ class Reference(Composite, Pointer):
   def inout_type(self):
     return self
 
+  def _proxy(self, identifier, proxy):
+    params = proxy.parameters.copy(); del params["target"]
+    m = self.method(self, identifier, params)
+    m.__proxy__ = proxy
+    return m
+
+  def proxy_new(self, identifier, proxy):
+    with self._proxy(identifier, proxy) as f:
+      result = self.variable("result")
+      f.inline = f"""
+        {result.definition};
+        result = {self.memory.allocate(self.base)}; assert(result);
+        {f.__proxy__(result, *f.arguments)};
+        return {result};
+      """
+
   def __setup__(self):
 
     with self.method(self, "new", {}) as f:
@@ -150,6 +166,17 @@ class Shared(_StructRenderer, Reference):
       {std.size_t} count;
     }} {self._storage};
     """)
+
+  def proxy_new(self, identifier, proxy):
+    with self._proxy(identifier, proxy) as f:
+      result = self.variable("result")
+      f.inline = f"""
+        {result.definition};
+        result = {self.memory.allocate(f"sizeof({self._storage})", cast=self.base)}; assert(result);
+        {f.__proxy__(result, *f.arguments)};
+        (({self._storage}*)result)->count = 1;
+        return {result};
+      """
 
   def __setup__(self):
     super().__setup__()
