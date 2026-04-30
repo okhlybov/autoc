@@ -119,11 +119,16 @@ class Callable:
     # Got to use property instead of attibute to avoid infinite recursion
 
   @property
-  def _result_c(self): return "void" if self.result is None else str(self.result)
+  def _result_c(self):
+    return "void" if self.result is None else str(self.result)
     
   #
   @property
-  def signature(self): return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
+  def signature(self):
+    return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
+  
+  def _typedef(self, name):
+    return "%s (*%s)(%s)" % (self._result_c, name, ", ".join([str(x) for x in self.types]))
   
   class Parameter:
     def __init__(self, type):
@@ -247,7 +252,8 @@ class Type(metaclass = _DoubleStepConstructor):
     # Used by the lookup mechanisms if hash-based containers
     self._lookup_hash = self.hash
     self._lookup_equal = self.equal
-    
+
+  #
   def variable(self, name):
     return Variable(self, name)
 

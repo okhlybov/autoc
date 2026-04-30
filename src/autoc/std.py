@@ -1,5 +1,5 @@
 import re
-from autoc.core import Primitive, Macro, _type_cache
+from autoc.core import Primitive, Macro, Pointer, Variable, Callable, _type_cache
 from autoc.module import Entity, Code, SystemHeader
 
 
@@ -30,6 +30,44 @@ class Primitive(Primitive, Entity):
       matcher = f"^{name}$"
     _type_cache.append((re.compile(matcher), obj))
     return obj
+
+
+# Pointer to function type constructed from any callable
+class Functional(Primitive, Entity):
+  
+  def __init__(self, name, callable, *args, **kws):
+    super().__init__(name, *args, **kws)
+    self.callable = callable
+    types = []
+    if callable.result:
+      types.append(callable.result)
+    for x in callable.types:
+      if isinstance(x, Entity):
+        types.append(x)
+      else:
+        # Pointer is a non-modularzed core type yet its base type can be
+        if isinstance(x, Pointer) and isinstance(x.base, Entity):
+          types.append(x.base)
+    self.dependencies.update(types)
+
+  def variable(self, name):
+    return Functional.Variable(self, name)
+  
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if not self.internal == header:
+      stream.append(f"typedef {self.callable._typedef(self.name)};")
+
+  class Call(Callable.Call):
+    def __str__(self):
+      return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
+
+  class Variable(Variable):
+    
+    #
+    def __call__(self, *arguments):
+      return Functional.Call(self, arguments)
+
 
 
 bool = Primitive.register("_Bool", matcher=r"^(bool|_Bool)$", dependencies=[stdbool_h])
