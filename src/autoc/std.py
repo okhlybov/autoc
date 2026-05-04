@@ -1,5 +1,5 @@
 import re
-from autoc.core import Primitive, Macro, Pointer, Variable, Callable, _type_cache
+from autoc.core import Primitive, Macro, Pointer, Variable, Function, _type_cache
 from autoc.module import Entity, Code, SystemHeader
 
 
@@ -37,11 +37,11 @@ class Functional(Primitive, Entity):
   
   def __init__(self, name, callable, *args, **kws):
     super().__init__(name, *args, **kws)
-    self.callable = callable
+    self.callable = Functional.Anonymous(callable)
     types = []
-    if callable.result:
-      types.append(callable.result)
-    for x in callable.types:
+    if self.callable.result:
+      types.append(self.callable.result)
+    for x in self.callable.types:
       if isinstance(x, Entity):
         types.append(x)
       else:
@@ -50,6 +50,9 @@ class Functional(Primitive, Entity):
           types.append(x.base)
     self.dependencies.update(types)
 
+  def __call__(self, *arguments):
+    return self.callable(*arguments)
+  
   def variable(self, name):
     return Functional.Variable(self, name)
   
@@ -58,16 +61,15 @@ class Functional(Primitive, Entity):
     if not self.internal == header:
       stream.append(f"typedef {self.callable._typedef(self.name)};")
 
-  class Call(Callable.Call):
-    def __str__(self):
-      return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
-
-  class Variable(Variable):
+  class Anonymous(Function):
     
-    #
-    def __call__(self, *arguments):
-      return Functional.Call(self, arguments)
+    def __init__(self, callable):
+      super().__init__(callable.result, None, callable.parameters)
 
+  class Variable(Variable, Function):
+    
+    def __init__(self, type, name, *args, **kws):
+      super().__init__(type, name, type.callable.result, name, type.callable.parameters, *args, **kws)
 
 
 bool = Primitive.register("_Bool", matcher=r"^(bool|_Bool)$", dependencies=[stdbool_h])
