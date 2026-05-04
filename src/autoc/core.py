@@ -1,24 +1,39 @@
 from enum import Enum, auto
-from collections.abc import Iterable, Callable
+from collections.abc import Iterable
 
 
 _type_cache = [] # [ (matcher, type) ]
 
 
-#
-def _type(obj):
+def __pointer2type(obj):
   if isinstance(obj, Pointer):
     if obj.indirection == 0:
       return obj.base
     else:
       return obj
-  if isinstance(obj, Type):
-    return obj
+  return None
+
+def __type2type(obj):
+  return obj if isinstance(obj, Type) else None
+
+
+def __str2type(obj):
   if isinstance(obj, str):
     for rx, type in _type_cache:
       if rx.match(str(obj)):
         return type
     return Primitive(obj)
+  return None
+
+
+_type_converters = [__type2type, __str2type, __pointer2type]
+
+
+#
+def _type(obj):
+  for c in _type_converters:
+    if x := c(obj):
+      return x
   raise TypeError(f"can not construct a Type from {obj}")
 
 
@@ -41,19 +56,23 @@ def _parameter(obj):
 
 
 #  
-def string(obj): return StrLiteral(obj)
+def string(obj):
+  return StrLiteral(obj)
 
 
 #
-def char(obj): return CharLiteral(obj)
+def char(obj):
+  return CharLiteral(obj)
 
 
 #
-def out(obj): return Callable.Out(obj)
+def out(obj):
+  return Callable.Out(obj)
 
 
 #
-def inout(obj): return Callable.InOut(obj)
+def inout(obj):
+  return Callable.InOut(obj)
 
 
 # Generic identifier's visibility
@@ -135,15 +154,19 @@ class Callable:
       self.type = _type(type)
       
   class In(Parameter):
-    def forward_type(self, type): return type.type_in(self.type)
+    def forward_type(self, type):
+      return type.type_in(self.type)
   
   class Out(Parameter):
-    def forward_type(self, type): return type.type_out(self.type)
+    def forward_type(self, type):
+      return type.type_out(self.type)
 
   class InOut(Parameter):
-    def forward_type(self, type): return type.type_inout(self.type)
+    def forward_type(self, type):
+      return type.type_inout(self.type)
 
   class Call(Value):
+    
     def __init__(self, callable, arguments, *args, **kws):
       super().__init__(callable.result, *args, **kws)
       self.callable = callable
@@ -152,6 +175,9 @@ class Callable:
       if not (nargs == nparams):
         raise ValueError(f"callable takes {nparams} arguments but {nargs} given")
       self.arguments = [_value(x) for x in arguments]
+      
+    def __call__(self, *arguments):
+      return self.callable.result(*arguments)
 
 
 #
