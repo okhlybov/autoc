@@ -1,5 +1,5 @@
 import re
-from autoc.core import Primitive, Macro, Pointer, Variable, Function, _type_cache
+from autoc.core import Primitive, Macro, Pointer, Variable, Value, Functional as _Functional, _type_cache
 from autoc.module import Entity, Code, SystemHeader
 
 
@@ -15,7 +15,9 @@ complex_h = SystemHeader("complex.h")
 inttypes_h = SystemHeader("inttypes.h")
 
 stdlib_h = Code(interface="""
-  #define _CRT_RAND_S
+  #ifdef _MSC_VER
+    #define _CRT_RAND_S
+  #endif
   #include <stdlib.h>
 """)
 
@@ -32,13 +34,13 @@ class Primitive(Primitive, Entity):
     return obj
 
 
-# Pointer to function type constructed from any callable
+# Pointer to C function type with signature borrowed from any callable
 class Functional(Primitive, Entity):
   
   def __init__(self, name, callable, *args, **kws):
     super().__init__(name, *args, **kws)
-    self.callable = Functional.Anonymous(callable)
     types = []
+    self.callable = _Functional(callable.result, callable.parameters)
     if self.callable.result:
       types.append(self.callable.result)
     for x in self.callable.types:
@@ -50,26 +52,39 @@ class Functional(Primitive, Entity):
           types.append(x.base)
     self.dependencies.update(types)
 
-  def __call__(self, *arguments):
-    return self.callable(*arguments)
+  def __call__(self, value, *arguments):
+    return Functional.Value(self.callable.result, value, self.callable(*arguments))
+  
+  @property
+  def signature(self):
+    return self.callable.signature
   
   def variable(self, name):
-    return Functional.Variable(self, name)
+    return Functional.Variable(self, name, self.callable)
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if not self.internal == header:
       stream.append(f"typedef {self.callable._typedef(self.name)};")
 
-  class Anonymous(Function):
+  class Value(Value):
     
-    def __init__(self, callable):
-      super().__init__(callable.result, None, callable.parameters)
+    def __init__(self, type, value, call):
+      super().__init__(type)
+      self.value = value
+      self.call = call
+      
+    def __str__(self):
+      return str(self.value) + str(self.call)
 
-  class Variable(Variable, Function):
+  class Variable(Variable):
     
-    def __init__(self, type, name, *args, **kws):
-      super().__init__(type, name, type.callable.result, name, type.callable.parameters, *args, **kws)
+    def __init__(self, type, name, callable, *args, **kws):
+      super().__init__(type, name, *args, **kws)
+      self.callable = callable
+      
+    def __call__(self, *arguments):
+      return Functional.Value(self.callable.result, self.name, self.callable(*arguments))
 
 
 bool = Primitive.register("_Bool", matcher=r"^(bool|_Bool)$", dependencies=[stdbool_h])

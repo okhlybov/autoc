@@ -13,6 +13,7 @@ def __pointer2type(obj):
       return obj
   return None
 
+
 def __type2type(obj):
   return obj if isinstance(obj, Type) else None
 
@@ -95,6 +96,7 @@ class Value:
       return "*"*x + str(self)
     raise ValueError(f"can not take address of the value {self} with &")
 
+
 #
 class Variable(Value):
   def __init__(self, type, name, *args, **kws):
@@ -117,7 +119,8 @@ class Variable(Value):
   def definition(self):
     return f"{self.type} {self.name}"
 
-#
+
+# Abstract callable with return type and input parameters
 class Callable:
   
   #
@@ -146,6 +149,7 @@ class Callable:
   def signature(self):
     return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
   
+  # Construct a C function type definition out of the callable signature
   def _typedef(self, name):
     return "%s (*%s)(%s)" % (self._result_c, name, ", ".join([str(x) for x in self.types]))
   
@@ -175,12 +179,12 @@ class Callable:
       if not (nargs == nparams):
         raise ValueError(f"callable takes {nparams} arguments but {nargs} given")
       self.arguments = [_value(x) for x in arguments]
-      
+
     def __call__(self, *arguments):
-      return self.callable.result(*arguments)
+      return self.type(self, *arguments)
 
 
-#
+# C code injector
 class Macro(Callable):
 
   #
@@ -188,34 +192,54 @@ class Macro(Callable):
     super().__init__(result, parameters, constraint=constraint, *args, **kws)
     self.emitter = emitter
 
-  def type_in(self, type): return type.rvalue_type
+  def type_in(self, type):
+    return type.rvalue_type
 
-  def type_out(self, type): return type.lvalue_type
+  def type_out(self, type):
+    return type.lvalue_type
 
-  def type_inout(self, type): return type.rvalue_type
+  def type_inout(self, type):
+    return type.rvalue_type
 
   #
-  def __call__(self, *arguments): return Macro.Call(self, arguments)
+  def __call__(self, *arguments):
+    return Macro.Call(self, arguments)
     
   class Call(Callable.Call):
     def __str__(self):
       return self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)])
 
 
-#
-class Function(Callable):
+# Anonymous C function with no body, only the callable signature
+# Suitable for handling C function pointers
+class Functional(Callable):
+
+  def type_in(self, type):
+    return type.in_type
+
+  def type_out(self, type):
+    return type.out_type
+  
+  def type_inout(self, type):
+    return type.inout_type
+  
+  #
+  def __call__(self, *arguments):
+    return Functional.Call(self, arguments)
+
+  class Call(Callable.Call):
+    def __str__(self):
+      return "(%s)" % (", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
+
+
+# Regular C function with body
+class Function(Functional):
 
   #
   def __init__(self, result, name, parameters, code=None, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
     self.name = str(name)
     self.code = code
-
-  def type_in(self, type): return type.in_type
-
-  def type_out(self, type): return type.out_type
-  
-  def type_inout(self, type): return type.inout_type
 
   #
   def __call__(self, *arguments):
@@ -241,9 +265,9 @@ class Function(Callable):
       case _: cs = [str(self.code)]
     return str().join([self.declaration, "{", *cs, "}\n"])
     
-  class Call(Callable.Call):
+  class Call(Functional.Call):
     def __str__(self):
-      return "%s(%s)" % (self.callable.name, ", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
+      return "%s%s" % (self.callable.name, super().__str__())
 
 
 #
