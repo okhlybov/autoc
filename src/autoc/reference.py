@@ -33,6 +33,9 @@ class Reference(Composite, Pointer):
   def inout_type(self):
     return self
 
+  def __getattr__(self, name):
+    return getattr(self.base, name)
+  
   def _proxy(self, identifier, proxy):
     params = proxy.parameters.copy(); del params["target"]
     m = self.method(self, identifier, params)
