@@ -17,6 +17,10 @@ class String(Pointer, Map):
   def __setup__(self):
     super().__setup__()
 
+    self.create = Macro.implement(self.create, lambda target: f"{target} = (char*)_autoc_empty_string")
+    self.destroy = Macro.implement(self.destroy, lambda target: str(self.free(target)))
+    self.copy = Macro.implement(self.copy, lambda target, source: f"{target} = {self.new(source)}")
+
     with self.method(self, "new", {"source": self}) as f:
       f.inline = """
         if(source) {
@@ -76,21 +80,21 @@ class String(Pointer, Map):
         return strchr(target, element) != NULL;
       """
       
-    with self.equal as f:
+    with self.implement(self.equal, "equal") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return !strcmp(left, right);
       """
 
-    with self.compare as f:
+    with self.implement(self.compare, "compare") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return strcmp(left, right);
       """
       
-    with self.hash as f:
+    with self.implement(self.hash, "hash") as f:
       f.external = """
         /* the djb2a algorithm */
         char c;
@@ -103,52 +107,11 @@ class String(Pointer, Map):
         return hash;
       """
       
+      
   @cached_property
   def in_type(self):
     return Pointer(self.base, constant=True)
 
-  @property
-  def constructible(self):
-    return True
-  
-  def _create(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: f"{target} = (char*)_autoc_empty_string") # trivial initialization with default value
-
-  @property
-  def destructible(self):
-    return True
-  
-  def _destroy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: str(self.free(target)))
-
-  @property
-  def copyable(self):
-    return True
-  
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {self.new(source)}")
-  
-  @property
-  def comparable(self):
-    return True
-  
-  def _equal(self, *args, **kws):
-    return super(Map, self)._equal(*args, **kws)
-
-  @property
-  def hashable(self):
-    return True
-  
-  def _hash(self, *args, **kws):
-    return super(Map, self)._hash(*args, **kws)
-
-  @property
-  def orderable(self):
-    return True
-
-  def _compare(self, *args, **kws):
-    return super(Map, self)._compare(*args, **kws)
-  
   __static = Code(interface=f"""
     /** @internal */
     extern const char* _autoc_empty_string;

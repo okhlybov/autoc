@@ -120,6 +120,15 @@ class Variable(Value):
     return f"{self.type} {self.name}"
 
 
+# Class defining the call interface
+class Signature:
+  
+  def __init__(self, result, parameters, constraint=lambda: True):
+    self.result = result
+    self.parameters = parameters
+    self.constraint = constraint
+
+
 # Abstract callable with return type and input parameters
 class Callable:
   
@@ -191,6 +200,10 @@ class Macro(Callable):
   def __init__(self, result, parameters, emitter, constraint=lambda: True, *args, **kws):
     super().__init__(result, parameters, constraint=constraint, *args, **kws)
     self.emitter = emitter
+
+  @classmethod
+  def implement(self, signature, emitter, *args, **kws):
+    return Macro(signature.result, signature.parameters, emitter, *args, constraint=signature.constraint, **kws)
 
   def type_in(self, type):
     return type.rvalue_type
@@ -292,16 +305,15 @@ class Type(metaclass = _DoubleStepConstructor):
   def __repr__(self): return f"{self} {super().__repr__()}"
 
   def __setup__(self):
-    self.create = self._create(None, {"target": out(self)}, constraint=lambda: self.constructible)
-    self.destroy = self._destroy(None, {"target": inout(self)}, constraint=lambda: self.destructible)
-    self.copy = self._copy(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
-    self.equal = self._equal("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
-    self.hash = self._hash("size_t", {"target": self}, constraint=lambda: self.hashable)
-    self.compare = self._compare("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
-
+    self.create = Signature(None, {"target": out(self)}, constraint=lambda: self.constructible)
+    self.destroy = Signature(None, {"target": inout(self)}, constraint=lambda: self.destructible)
+    self.copy = Signature(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
+    self.equal = Signature("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
+    self.hash = Signature("size_t", {"target": self}, constraint=lambda: self.hashable)
+    self.compare = Signature("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
     # Used by the lookup mechanisms if hash-based containers
-    self._lookup_hash = self.hash
-    self._lookup_equal = self.equal
+    self._lookup_hash = Macro.implement(self.hash, lambda target: str(self.hash(target)))
+    self._lookup_equal = Macro.implement(self.equal, lambda left, right: str(self.equal(left, right)))
 
   #
   def variable(self, name):
@@ -321,52 +333,47 @@ class Type(metaclass = _DoubleStepConstructor):
   @property
   def internal(self):
     return self.visibility is Visibility.INTERNAL
+  
+  @property
+  def constructible(self):
+    return hasattr(self, "create")
+
+  @property
+  def destructible(self):
+    return hasattr(self, "destroy")
+
+  @property
+  def copyable(self):
+    return hasattr(self, "copy")
+
+  @property
+  def comparable(self):
+    return hasattr(self, "equal")
+
+  @property
+  def hashable(self):
+    return hasattr(self, "hash")
+
+  @property
+  def orderable(self):
+    return hasattr(self, "compare")
 
 
 #
 class Primitive(Type):
   
-  @property
-  def constructible(self):
-    return True
-  
-  def _create(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: f"{target} = 0", **kws)
-
-  @property
-  def copyable(self):
-    return True
-  
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
-
-  @property
-  def comparable(self):
-    return True
-  
-  def _equal(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: f"({left} == {right})", **kws)
-
-  @property
-  def orderable(self):
-    return True
-  
-  def _compare(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))", **kws)
-
-  @property
-  def hashable(self):
-    return True
-  
-  def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target: f"(size_t)({target})", **kws)
+  def __setup__(self):
+    super().__setup__()
+    self.create = Macro.implement(self.create, lambda target: f"{target} = 0")
+    self.copy = Macro.implement(self.copy, lambda target, source: f"{target} = {source}")
+    self.equal = Macro.implement(self.equal, lambda left, right: f"({left} == {right})")
+    self.hash = Macro.implement(self.hash, lambda target: f"(size_t)({target})")
+    self.compare = Macro.implement(self.compare, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
 
   @property
   def destructible(self):
     return False
-  
-  def _destroy(self, result, parameters, **kws): pass
-  
+
   @property
   def rvalue_type(self):
     return self

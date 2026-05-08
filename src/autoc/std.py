@@ -125,11 +125,13 @@ class Complex(Primitive):
   def __init__(self, *args, **kws):
     super().__init__(*args, dependencies=[Complex.__definitions], **kws)
 
+  def __setup__(self):
+    super().__setup__()
+    self.hash = Macro.implement(self.hash, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))")
+  
   @property
-  def orderable(self): return False
-
-  def _hash(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda source: f"(size_t)(creal({source})) ^ (size_t)(cimag({source}))", **kws)
+  def orderable(self):
+    return False
   
   __definitions = Code(
     dependencies=[complex_h, tgmath_h],

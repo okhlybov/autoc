@@ -86,23 +86,17 @@ class Composite(Type, Entity):
     for entity in entities:
       self.dependencies.update([*entity.dependencies, *entity.references, entity])
 
-  def _create(self, result, parameters, **kws):
-    return self.method(result, "create", parameters, **kws)
-
-  def _destroy(self, result, parameters, **kws):
-    return self.method(result, "destroy", parameters, **kws)
-
-  def _copy(self, result, parameters, **kws):
-    return self.method(result, "copy", parameters, **kws)
-
-  def _equal(self, result, parameters, **kws):
-    return self.method(result, "equal", parameters, **kws)
-
-  def _compare(self, result, parameters, **kws):
-    return self.method(result, "compare", parameters, **kws)
-
-  def _hash(self, result, parameters, **kws):
-    return self.method(result, "hash", parameters, **kws)
+  def implement(self, callable, identifier, *args, **kws):
+    return self.method(callable.result, identifier, callable.parameters, *args, constraint=callable.constraint, **kws)
+  
+  def __setup__(self):
+    super().__setup__()
+    self.implement(self.create, "create")
+    self.implement(self.destroy, "destroy")
+    self.implement(self.copy, "copy")
+    self.implement(self.equal, "equal")
+    self.implement(self.compare, "compare")
+    self.implement(self.hash, "hash")
 
   @property
   def rvalue_type(self):
@@ -147,6 +141,10 @@ class Method(Function, Entity):
         if isinstance(x, Pointer) and isinstance(x.base, Entity):
           self.dependencies.add(x.base)
 
+  @classmethod
+  def implement(self, callable, name, *args, **kws):
+    return Method(callable.result, name, callable.parameters, *args, constraint=callable.constraint, **kws)
+  
   def __enter__(self):
     return self
   

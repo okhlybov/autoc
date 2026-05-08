@@ -53,6 +53,7 @@ class Reference(Composite, Pointer):
       """
 
   def __setup__(self):
+    super().__setup__()
 
     with self.method(self, "new", {}) as f:
       result = self.variable("result")
@@ -78,81 +79,60 @@ class Reference(Composite, Pointer):
         {self.memory.free(f.target)};
       """
 
-    super().__setup__()
-
-  @property
-  def constructible(self):
-    return self.base.constructible
-
-  def _create(self, result, parameters, **kws):
-    with self.method(result, "create_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+    with self.implement(self.create, "create_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
+        assert(target);
         *target = {self.new()};
       """
-    return f
-  
-  @property
-  def destructible(self):
-    return True
-  
-  def _destroy(self, result, parameters, **kws):
-    with self.method(result, "destroy_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+
+    with self.implement(self.destroy, "destroy_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         {self.free(f.target)};
       """
-    return f
 
-  @property
-  def copyable(self):
-    return True
-  
-  def _copy(self, result, parameters, **kws):
-    with self.method(result, "copy_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+    with self.implement(self.copy, "copy_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         assert(source);
         *target = {f.source};
       """
-    return f
 
-  @property
-  def comparable(self):
-    return self.base.comparable
-  
-  def _equal(self, result, parameters, **kws):
-    with self.method(result, "equal_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+    with self.implement(self.equal, "equal_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return {self.base.equal(f.left, f.right)};
       """
-    return f
-  
-  @property
-  def hashable(self):
-    return self.base.hashable
-  
-  def _hash(self, result, parameters, **kws):
-    with self.method(result, "hash_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+
+    with self.implement(self.hash, "hash_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         return {self.base.hash(f.target)};
       """
-    return f
 
-  @property
-  def orderable(self):
-    return self.base.orderable
-  
-  def _compare(self, result, parameters, **kws):
-    with self.method(result, "compare_", parameters, visibility="PRIVATE", hidden=True, **kws) as f:
+    with self.implement(self.compare, "compare_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return {self.base.compare(f.left, f.right)};
       """
-    return f
+
+  @property
+  def constructible(self):
+    return self.base.constructible
+
+  @property
+  def comparable(self):
+    return self.base.comparable
+  
+  @property
+  def hashable(self):
+    return self.base.hashable
+
+  @property
+  def orderable(self):
+    return self.base.orderable
 
 
 #
