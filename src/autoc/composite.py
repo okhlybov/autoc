@@ -44,6 +44,7 @@ class Composite(Type, Entity):
     self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
     self.__inline_policy = inline_methods
+    self.__methods = {}
 
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
@@ -70,8 +71,9 @@ class Composite(Type, Entity):
       composite=self,
       **kws
     )
-    self.references.add(m)
-    setattr(self, self._decorate_attribute(attribute if attribute else identifier), m)
+    slot = self._decorate_attribute(attribute if attribute else identifier)
+    self.__methods[slot] = m
+    setattr(self, slot, m)
     return m
 
   def _inline_policy(self, method):
@@ -86,17 +88,23 @@ class Composite(Type, Entity):
     for entity in entities:
       self.dependencies.update([*entity.dependencies, *entity.references, entity])
 
-  def implement(self, callable, identifier, *args, **kws):
+  def _method(self, callable, identifier, *args, **kws):
     return self.method(callable.result, identifier, callable.parameters, *args, constraint=callable.constraint, **kws)
   
+  def __register__(self):
+    super().__register__()
+    for m in self.__methods.values():
+      self.references.add(m)
+
   def __setup__(self):
     super().__setup__()
-    self.implement(self.create, "create")
-    self.implement(self.destroy, "destroy")
-    self.implement(self.copy, "copy")
-    self.implement(self.equal, "equal")
-    self.implement(self.compare, "compare")
-    self.implement(self.hash, "hash")
+    # Issue creation of real C functions
+    self._method(self.create, "create")
+    self._method(self.destroy, "destroy")
+    self._method(self.copy, "copy")
+    self._method(self.equal, "equal")
+    self._method(self.compare, "compare")
+    self._method(self.hash, "hash")
 
   @property
   def rvalue_type(self):

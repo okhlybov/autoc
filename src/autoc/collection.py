@@ -1,7 +1,7 @@
 import autoc.memory
 import autoc.hash
 import autoc.std as std
-from autoc.core import Pointer, Macro
+from autoc.core import Pointer
 from autoc.composite import Composite
 
 
@@ -13,8 +13,14 @@ class _Range:
     self.depends(iterable)
     iterable.references.add(self)
     
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def __setup__(self):
+    super().__setup__()
+    with self.copy as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        target = source;
+      """
 
 
 #

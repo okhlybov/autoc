@@ -4,13 +4,13 @@ from autoc.composite import Composite
 
 
 #
-class Range(Composite, Traitless):
+class Range(Traitless, Composite):
   
   def __init__(self, element, *args, **kws):
     super().__init__(*args, **kws)
     self.element = _type(element)
     self.element_view = Pointer(self.element, constant=True)
-  
+
 
 #
 class Input(Range):

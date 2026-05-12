@@ -57,33 +57,33 @@ class Array(Composite, Pointer):
         {self.memory.free(f.target)};
       """
 
-    with self.implement(self.create, "create_", visibility="PRIVATE", hidden=True) as f:
+    with self._method(self.create, "create_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         *target = NULL;
       """
 
-    with self.implement(self.destroy, "destroy_", visibility="PRIVATE", hidden=True) as f:
+    with self._method(self.destroy, "destroy_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         {self.free(f.target)};
       """
       
-    with self.implement(self.copy, "copy_", visibility="PRIVATE", hidden=True) as f:
+    with self._method(self.copy, "copy_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         assert(source);
         *target = {f.source};
       """
 
-    with self.implement(self.equal, "equal_", visibility="PRIVATE", hidden=True) as f:
+    with self._method(self.equal, "equal_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return left == right;
       """
 
-    with self.implement(self.hash, "hash_", visibility="PRIVATE", hidden=True) as f:
+    with self._method(self.hash, "hash_", visibility="PRIVATE", hidden=True) as f:
       f.inline = f"""
         assert(target);
         return (size_t){f.target};

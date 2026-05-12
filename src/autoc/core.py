@@ -284,15 +284,16 @@ class Function(Functional):
 
 
 #
-class _DoubleStepConstructor(type):
+class __Constructor(type):
   def __call__(cls, *args, **kws):
     obj = super().__call__(*args, **kws)
     obj.__setup__()
+    obj.__register__()
     return obj
 
 
 #
-class Type(metaclass = _DoubleStepConstructor):
+class Type(metaclass = __Constructor):
   
   def __init__(self, name, visibility="PUBLIC", *args, **kws):
     super().__init__(*args, **kws)
@@ -300,9 +301,11 @@ class Type(metaclass = _DoubleStepConstructor):
     self.indirection = 0
     self.visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
 
-  def __str__(self): return self.name
+  def __str__(self):
+    return self.name
 
-  def __repr__(self): return f"{self} {super().__repr__()}"
+  def __repr__(self):
+    return f"{self} {super().__repr__()}"
 
   def __setup__(self):
     self.create = Signature(None, {"target": out(self)}, constraint=lambda: self.constructible)
@@ -314,6 +317,12 @@ class Type(metaclass = _DoubleStepConstructor):
     # Used by the lookup mechanisms if hash-based containers
     self._lookup_hash = Macro.implement(self.hash, lambda target: str(self.hash(target)))
     self._lookup_equal = Macro.implement(self.equal, lambda left, right: str(self.equal(left, right)))
+
+  def __register__(self):
+    pass
+  
+  def as_macro(self, slot, emitter):
+    setattr(self, slot, Macro.implement(getattr(self, slot), emitter))
 
   #
   def variable(self, name):
@@ -364,11 +373,11 @@ class Primitive(Type):
   
   def __setup__(self):
     super().__setup__()
-    self.create = Macro.implement(self.create, lambda target: f"{target} = 0")
-    self.copy = Macro.implement(self.copy, lambda target, source: f"{target} = {source}")
-    self.equal = Macro.implement(self.equal, lambda left, right: f"({left} == {right})")
-    self.hash = Macro.implement(self.hash, lambda target: f"(size_t)({target})")
-    self.compare = Macro.implement(self.compare, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
+    self.as_macro("create", lambda target: f"{target} = 0")
+    self.as_macro("copy", lambda target, source: f"{target} = {source}")
+    self.as_macro("equal", lambda left, right: f"({left} == {right})")
+    self.as_macro("hash", lambda target: f"(size_t)({target})")
+    self.as_macro("compare", lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
 
   @property
   def destructible(self):

@@ -3,7 +3,7 @@ from autoc.module import Code
 from autoc.core import inout, Pointer, Macro
 from autoc.map import Map
 from functools import cached_property
-from autoc.collection import _Range as _CollectionRange
+from autoc.collection import _Range as CollectionRange
 from autoc.range import DirectAccess
 
 
@@ -80,21 +80,21 @@ class String(Pointer, Map):
         return strchr(target, element) != NULL;
       """
       
-    with self.implement(self.equal, "equal") as f:
+    with self._method(self.equal, "equal") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return !strcmp(left, right);
       """
 
-    with self.implement(self.compare, "compare") as f:
+    with self._method(self.compare, "compare") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return strcmp(left, right);
       """
       
-    with self.implement(self.hash, "hash") as f:
+    with self._method(self.hash, "hash") as f:
       f.external = """
         /* the djb2a algorithm */
         char c;
@@ -121,7 +121,7 @@ class String(Pointer, Map):
 
 
 #
-class Range(_CollectionRange, DirectAccess):
+class Range(CollectionRange, DirectAccess):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
