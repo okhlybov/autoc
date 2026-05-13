@@ -49,10 +49,10 @@ class Composite(Type, Entity):
 
   def __setattr__(self, name, value):
     if isinstance(value, Method):
-      self.__methods[name] = value
+      self.__methods[name] = value # Auto-register method objects
     else:
       if name in self.__methods:
-        del self.__methods[name]
+        del self.__methods[name] # Handle overrides of methods with non-methods (e.g. macros)
     super().__setattr__(name, value)
     
   def decorate(self, *args, **kws):
@@ -86,6 +86,7 @@ class Composite(Type, Entity):
   def as_method(self, identifier, *args, **kws):
     a = self._decorate_attribute(identifier)
     s = getattr(self, a)
+    delattr(self, a) # An attribute is expected to be set in method()
     return self.method(s.result, identifier, s.parameters, *args, constraint=s.constraint, **kws)
   
   def _inline_policy(self, method):
