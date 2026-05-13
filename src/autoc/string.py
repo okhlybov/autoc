@@ -106,7 +106,10 @@ class String(Pointer, Map):
         }
         return hash;
       """
-      
+
+  @property
+  def destructible(self):
+    return True
       
   @cached_property
   def in_type(self):
