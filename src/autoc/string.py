@@ -80,21 +80,21 @@ class String(Pointer, Map):
         return strchr(target, element) != NULL;
       """
       
-    with self._method(self.equal, "equal") as f:
+    with self.as_method("equal") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return !strcmp(left, right);
       """
 
-    with self._method(self.compare, "compare") as f:
+    with self.as_method("compare") as f:
       f.inline = f"""
         assert(left);
         assert(right);
         return strcmp(left, right);
       """
       
-    with self._method(self.hash, "hash") as f:
+    with self.as_method("hash") as f:
       f.external = """
         /* the djb2a algorithm */
         char c;

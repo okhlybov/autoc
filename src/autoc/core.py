@@ -321,8 +321,11 @@ class Type(metaclass = __Constructor):
   def __register__(self):
     pass
   
-  def as_macro(self, slot, emitter):
-    setattr(self, slot, Macro.implement(getattr(self, slot), emitter))
+  def as_macro(self, slot, emitter, *args, **kws):
+    s = getattr(self, slot)
+    m = Macro(s.result, s.parameters, emitter, *args, constraint=s.constraint, **kws)
+    setattr(self, slot, m)
+    return m
 
   #
   def variable(self, name):

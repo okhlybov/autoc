@@ -39,13 +39,22 @@ class Composite(Type, Entity):
   # Global decorator used by all Composite descentants unless overridden locally
   decorator = camel_decorator
   
+  __methods = {}
+  
   def __init__(self, name, *args, prefix=None, decorator=None, inline_methods=None, **kws):
     super().__init__(name, *args, **kws)
     self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
     self.__inline_policy = inline_methods
-    self.__methods = {}
 
+  def __setattr__(self, name, value):
+    if isinstance(value, Method):
+      self.__methods[name] = value
+    else:
+      if name in self.__methods:
+        del self.__methods[name]
+    super().__setattr__(name, value)
+    
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
     return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
@@ -71,11 +80,14 @@ class Composite(Type, Entity):
       composite=self,
       **kws
     )
-    slot = self._decorate_attribute(attribute if attribute else identifier)
-    self.__methods[slot] = m
-    setattr(self, slot, m)
+    setattr(self, self._decorate_attribute(attribute if attribute else identifier), m)
     return m
 
+  def as_method(self, identifier, *args, **kws):
+    a = self._decorate_attribute(identifier)
+    s = getattr(self, a)
+    return self.method(s.result, identifier, s.parameters, *args, constraint=s.constraint, **kws)
+  
   def _inline_policy(self, method):
     match self.__inline_policy:
       case True:
@@ -88,9 +100,6 @@ class Composite(Type, Entity):
     for entity in entities:
       self.dependencies.update([*entity.dependencies, *entity.references, entity])
 
-  def _method(self, callable, identifier, *args, **kws):
-    return self.method(callable.result, identifier, callable.parameters, *args, constraint=callable.constraint, **kws)
-  
   def __register__(self):
     super().__register__()
     for m in self.__methods.values():
@@ -99,12 +108,12 @@ class Composite(Type, Entity):
   def __setup__(self):
     super().__setup__()
     # Issue creation of real C functions
-    self._method(self.create, "create")
-    self._method(self.destroy, "destroy")
-    self._method(self.copy, "copy")
-    self._method(self.equal, "equal")
-    self._method(self.compare, "compare")
-    self._method(self.hash, "hash")
+    self.as_method("create")
+    self.as_method("destroy")
+    self.as_method("copy")
+    self.as_method("equal")
+    self.as_method("compare")
+    self.as_method("hash")
 
   @property
   def rvalue_type(self):

@@ -19,7 +19,7 @@ class _Range:
       f.code = f"""
         assert(target);
         assert(source);
-        target = source;
+        *target = *source;
       """
 
 
