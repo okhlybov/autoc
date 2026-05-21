@@ -348,8 +348,12 @@ class Type(metaclass = __Constructor):
   
   @property
   def constructible(self):
-    return hasattr(self, "create")
+    return hasattr(self, "create") and len(self.create.arguments) == 1 # Method has no custom parameters past target object
 
+  @property
+  def emplaceable(self):
+    return hasattr(self, "create") and len(self.create.arguments) >= 1 # Mathod is assumed to have at least one parameter, the target object, followed by arbitrary number of custom parameters
+  
   @property
   def destructible(self):
     return hasattr(self, "destroy")

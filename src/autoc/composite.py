@@ -1,12 +1,8 @@
 import re
 import autoc.std
-import autoc.core
 from autoc.core import *
 from enum import Enum, auto
 from autoc.module import Entity
-import autoc.std as std
-import autoc.memory
-import autoc.hash
 
 
 def _hidden_prefix(s, hidden):

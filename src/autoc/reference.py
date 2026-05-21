@@ -3,6 +3,7 @@ import autoc.std as std
 from autoc.core import inout, Pointer
 from autoc.composite import Composite, _StructRenderer
 from functools import cached_property
+from itertools import islice
 
 
 #
@@ -55,9 +56,10 @@ class Reference(Composite, Pointer):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(self, "new", {}) as f:
+    parameters = islice(dict(self.base.create.parameters), 1, None) if self.base.emplaceable else {}
+    with self.method(self, "new", parameters) as f:
       result = self.variable("result")
-      create = self.base.create(result) if self.base.constructible else str()
+      create = self.base.create(result, *f.arguments) if self.base.emplaceable else str()
       f.inline = f"""
         {result.definition};
         result = {self.memory.allocate(self.base)}; assert(result);

@@ -41,14 +41,6 @@ class Collection(Composite):
     self.method("int", "contains", {"target": self, "element": self.element})
 
   @property
-  def constructible(self):
-    return True
-  
-  @property
-  def destructible(self):
-    return True
-
-  @property
   def copyable(self):
     return self.element.copyable
   
