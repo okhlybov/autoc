@@ -11,14 +11,14 @@ class Type(_StructRenderer, Composite):
     
     with self.method(None, "create", {"target": out(self), "value": "int"}) as f:
       f.code = f"""
-        target->value = malloc(sizeof(int));
+        target->value = (int*)malloc(sizeof(int));
         *target->value = value;
       """
     with self.destroy as f:
       f.code = "free(target->value);"
     with self.copy as f:
       f.code = f"""
-        target->value = malloc(sizeof(int));
+        target->value = (int*)malloc(sizeof(int));
         *target->value = *source->value;
       """
     with self.equal as f:
