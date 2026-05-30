@@ -186,7 +186,7 @@ class Callable:
       nargs = len(arguments)
       nparams = len(self.callable.types)
       if not (nargs == nparams):
-        raise ValueError(f"callable takes {nparams} arguments but {nargs} given")
+        raise ValueError(f"callable {callable.signature} takes {nparams} arguments but {nargs} given")
       self.arguments = [_value(x) for x in arguments]
 
     def __call__(self, *arguments):
@@ -314,7 +314,7 @@ class Type(metaclass = __Constructor):
     self.equal = Signature("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.hash = Signature("size_t", {"target": self}, constraint=lambda: self.hashable)
     self.compare = Signature("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
-    # Used by the lookup mechanisms if hash-based containers
+    # Used by the lookup mechanisms of hash-based containers
     self._lookup_hash = Macro.implement(self.hash, lambda target: str(self.hash(target)))
     self._lookup_equal = Macro.implement(self.equal, lambda left, right: str(self.equal(left, right)))
 
@@ -428,12 +428,19 @@ class Pointer(Primitive):
     self.constant = constant
 
   @property
+  def in_type(self):
+    return Pointer(self.base, constant=True)
+    
+  @property
   def out_type(self):
     return Pointer(self)
 
   @property
   def inout_type(self):
     return self
+  
+  def as_const(self):
+    return Pointer(self.base, indirection=self.indirection, constant=True)
 
 
 #

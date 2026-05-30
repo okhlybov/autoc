@@ -10,23 +10,23 @@ class Type(_StructRenderer, Composite):
     super().__setup__()
     
     with self.method(None, "create", {"target": out(self), "value": "int"}) as f:
-      f.code = f"""
+      f.code = """
         target->value = (int*)malloc(sizeof(int));
         *target->value = value;
       """
     with self.destroy as f:
       f.code = "free(target->value);"
     with self.copy as f:
-      f.code = f"""
+      f.code = """
         target->value = (int*)malloc(sizeof(int));
         *target->value = *source->value;
       """
     with self.equal as f:
-      f.code = f"return *left->value == *right->value;"
+      f.code = "return *left->value == *right->value;"
     with self.compare as f:
-      f.code = f"return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
+      f.code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
     with self.hash as f:
-      f.code = f"return *target->value;"
+      f.code = "return *target->value;"
     
   def _render_struct(self, stream):
     stream.append(f"""
