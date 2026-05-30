@@ -91,10 +91,28 @@ class Value:
     self.type = None if type is None else _type(type)
 
   def bind(self, type):
-    x = self.type.indirection - type.indirection
-    if x >= 0:
-      return "*"*x + str(self)
-    raise ValueError(f"can not take address of the value {self} with &")
+    return Binding(self, type)
+
+
+#
+class Binding(Value):
+  
+  def __init__(self, value, type, *args, **kws):
+    if isinstance(v := _value(value), Binding):
+      i = v.indirection
+      v = v.value
+    else:
+      i = v.type.indirection
+    super().__init__(v.type, *args, **kws)
+    self.indirection = i - type.indirection
+    self.value = v
+    
+  def __str__(self):
+    if self.indirection >= 0:
+      return "*"*self.indirection + str(self.value)
+    elif self.indirection == -1:
+      return "&" + str(self.value)
+    raise ValueError(f"bad indirection level {self.indirection} for taking address of {self.value} with &")
 
 
 #
@@ -103,17 +121,11 @@ class Variable(Value):
     super().__init__(type, *args, **kws)
     self.name = str(name)
 
-  def __str__(self): return self.name
+  def __str__(self):
+    return self.name
 
-  def __repr__(self): return f"{repr(self.name)} :: {repr(self.type)}"
-
-  def bind(self, type):
-    x = self.type.indirection - type.indirection
-    if x >= 0:
-      return "*"*x + str(self)
-    elif x == -1:
-      return "&" + str(self)
-    raise ValueError(f"bad indirection level {x} for taking address of {self} with &")
+  def __repr__(self):
+    return f"{repr(self.name)} :: {repr(self.type)}"
 
   @property
   def definition(self):
@@ -219,6 +231,7 @@ class Macro(Callable):
     return Macro.Call(self, arguments)
     
   class Call(Callable.Call):
+    
     def __str__(self):
       return self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)])
 
@@ -241,8 +254,9 @@ class Functional(Callable):
     return Functional.Call(self, arguments)
 
   class Call(Callable.Call):
+    
     def __str__(self):
-      return "(%s)" % (", ".join([value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
+      return "(%s)" % (", ".join([str(value.bind(type)) for type, value in zip(self.callable.types, self.arguments)]))
 
 
 # Regular C function with body
