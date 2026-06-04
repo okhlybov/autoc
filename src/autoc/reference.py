@@ -47,9 +47,6 @@ class _Reference(Pointer, Composite):
 
     self.method(self, "share", {"target": inout(self)})
 
-    with self.method(None, "foo", {"target": self}) as f:
-      f.code = ""
-    
     self.create = Macro(None, {"target": out(self)} | self.new.parameters, lambda target, *arguments: f"{target} = {self.new(*arguments)}")
     
     self.as_macro("destroy", lambda target: str(self.free(target)))
