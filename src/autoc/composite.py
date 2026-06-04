@@ -35,10 +35,9 @@ class Composite(Type, Entity):
   # Global decorator used by all Composite descentants unless overridden locally
   decorator = camel_decorator
   
-  __methods = {}
-  
   def __init__(self, name, *args, prefix=None, decorator=None, inline_methods=None, **kws):
     super().__init__(name, *args, **kws)
+    self.__methods = {}
     self.prefix = prefix if prefix else self.name
     self.__decorator = decorator
     self.__inline_policy = inline_methods
@@ -47,7 +46,7 @@ class Composite(Type, Entity):
     if isinstance(value, Method):
       self.__methods[name] = value # Auto-register method objects
     else:
-      if name in self.__methods:
+      if hasattr(self, "_Composite__methods") and name in self.__methods:
         del self.__methods[name] # Handle overrides of methods with non-methods (e.g. macros)
     super().__setattr__(name, value)
     
