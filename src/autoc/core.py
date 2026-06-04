@@ -233,7 +233,7 @@ class Macro(Callable):
   class Call(Callable.Call):
     
     def __str__(self):
-      return self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)])
+      return str(self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
 
 
 # Anonymous C function with no body, only the callable signature
