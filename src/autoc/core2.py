@@ -118,6 +118,9 @@ class Variable(Value):
     super().__init__(type)
     self.name = str(name)
     
+  @property
+  def declaration_c(self):
+    return f"{self.type} {self.name}"
 
 #
 def out(obj):
@@ -129,12 +132,12 @@ def inout(obj):
   return Callable.InOut(obj)
 
 
-#
+# Basic callable descriptor
 class Callable:
   
-  def __init__(self, result, parameters, **kws):
+  def __init__(self, result, parameters):
     self.result = None if result is None or result == "void" else _type(result)
-    self.parameters = {str(n): _parameter(t).resolve(self) for n, t in parameters.items()}
+    self._parameters = parameters # Capture raw parameter description to be used in modeling of the descendant types
     
   @property
   def result_c(self):
@@ -160,10 +163,24 @@ class Callable:
     def resolve(self, callable):
       return callable.resolve_inout(self.type)
     
+
+class Parametrized(Callable):
+  
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
   
 #  
-class Macro(Callable):
+class Macro(Parametrized):
   
+  @classmethod
+  def of(self, callable, emitter, **kws):
+    return Macro(callable.result, callable._parameters, emitter, **kws)
+  
+  def __init__(self, result, parameters, emitter, **kws):
+    super().__init__(result, parameters, **kws)
+    self.emitter = emitter
+
   def resolve_in(self, type):
     return type.rvalue_type
   
@@ -175,7 +192,7 @@ class Macro(Callable):
   
   
 #
-class Functional(Callable):
+class Functional(Parametrized):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -194,6 +211,14 @@ class Functional(Callable):
 #
 class Function(Functional):
   
+  @classmethod
+  def of(self, callable, name, **kws):
+    return Function(callable.result, name, callable._parameters, **kws)
+
   def __init__(self, result, name, parameters, **kws):
     super().__init__(result, parameters, **kws)
     self.name = str(name)
+    
+  @property
+  def declaration_c(self):
+    return "%s %s(%s)" % (self.result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
