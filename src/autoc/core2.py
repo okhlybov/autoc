@@ -10,6 +10,9 @@ def _type(obj):
 def _value(obj):
   match obj:
     case Value(): return obj
+    case int(): return Literal("int", obj)
+    case float(): return Literal("double", obj)
+    case str(): return StringLiteral(obj)
   raise TypeError(f"{obj} is not convertible to Value")
 
 
@@ -104,10 +107,10 @@ class Indirection(Type):
       self.constant = True if constant is True else False
       
   def __str__(self):
-    return (f"const {self.type}" if self.constant else str(self.type)) + '*'*self.indirection
+    return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
   
 
-#
+# Abstract class for renderable contents, basically a str-like type
 class Statement:
 
   def __init__(self, contents, *args, **kws):
@@ -126,7 +129,7 @@ def _indifference(lt, rt):
   return _indirection(lt) - _indirection(rt)
 
 
-# Class representing a typed value of unspecified contents which can be passed to callable
+# Abstract class representing a typed value of unspecified contents which can be passed to callable
 class Value:
   
   def __init__(self, type, *args, **kws):
@@ -135,11 +138,11 @@ class Value:
 
   def bind(self, type):
     if (i := _indifference(self.type, type)) < 0:
-      raise ValueError(f"can not take address of {self} with & operator")
+      raise ValueError(f"can not dereference value {self} with & operator")
     return "*"*i
 
 
-# Class representing a typed value with renderable contents
+# Class representing a typed value with generic renderable contents
 class Expression(Value, Statement):
 
   def bind(self, type):
@@ -147,6 +150,34 @@ class Expression(Value, Statement):
 
 
 #
+Literal = Expression
+
+
+#
+def string(value):
+  return StringLiteral(value)
+
+
+#
+class StringLiteral(Literal):
+
+  def __init__(self, value, *args, **kws):
+    super().__init__(Indirection("char", constant=True), f"\"{value}\"")
+
+
+#
+def char(obj):
+  return CharacterLiteral(obj)
+
+
+#
+class CharacterLiteral(Literal):
+
+  def __init__(self, value, *args, **kws):
+    super().__init__("char", f"'{str(value)[0]}'")
+
+
+# Class for representing the C variable
 class Variable(Value):
   
   def __init__(self, type, name):
@@ -160,7 +191,7 @@ class Variable(Value):
     return f"&{self.name}" if i == -1 else "*"*i + self.name
     
   @property
-  def declaration_c(self):
+  def declaration(self):
     return f"{self.type} {self.name}"
 
 #
@@ -185,10 +216,10 @@ class Callable:
     return "void" if self.result is None else str(self.result)
 
   @property
-  def signature_c(self):
+  def signature(self):
     return "%s(%s)" % (self.result_c, ", ".join(str(t) for t in self.parameters.values()))
 
-  def _cast(self, contents):
+  def contents(self, contents):
     if self.result is None:
       return Statement(contents)
     else:
@@ -217,7 +248,13 @@ class Parametrized(Callable):
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
-  
+
+  def __call__(self, *arguments):
+    if (na := len(arguments)) != (np := len(self.parameters)):
+      raise TypeError(f"{self} takes {np} parameter(s) but {na} given")
+    return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
+
+
 #  
 class Macro(Parametrized):
   
@@ -240,7 +277,7 @@ class Macro(Parametrized):
     return type.rvalue_type
 
   def __call__(self, *arguments):
-    return self._cast("z")
+    return self.contents(self.emitter(*super().__call__(*arguments)))
   
 #
 class Functional(Parametrized):
@@ -269,7 +306,10 @@ class Function(Functional):
   def __init__(self, result, name, parameters, **kws):
     super().__init__(result, parameters, **kws)
     self.name = str(name)
-    
+
+  def __call__(self, *arguments):
+    return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
+
   @property
-  def declaration_c(self):
+  def declaration(self):
     return "%s %s(%s)" % (self.result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
