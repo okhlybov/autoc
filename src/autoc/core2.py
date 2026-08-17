@@ -208,8 +208,9 @@ def inout(obj):
 class Callable:
   
   def __init__(self, result, parameters):
-    self.result = None if result is None or result == "void" else _type(result)
-    self._parameters = parameters # Capture raw parameter description to be used in modeling of the descendant types
+    # Capture raw parameter description to be used in modeling of the descendant types
+    self._result = result
+    self._parameters = parameters
     
   @property
   def result_c(self):
@@ -247,6 +248,7 @@ class Parametrized(Callable):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
+    self.result = None if self._result is None or self._result == "void" else _parameter(self._result).resolve(self)
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
 
   def __call__(self, *arguments):
@@ -260,7 +262,7 @@ class Macro(Parametrized):
   
   @classmethod
   def of(self, callable, emitter, **kws):
-    return Macro(callable.result, callable._parameters, emitter, **kws)
+    return Macro(callable._result, callable._parameters, emitter, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
     super().__init__(result, parameters, **kws)
@@ -301,7 +303,7 @@ class Function(Functional):
   
   @classmethod
   def of(self, callable, name, **kws):
-    return Function(callable.result, name, callable._parameters, **kws)
+    return Function(callable._result, name, callable._parameters, **kws)
 
   def __init__(self, result, name, parameters, **kws):
     super().__init__(result, parameters, **kws)
