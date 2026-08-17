@@ -1,4 +1,8 @@
-_type_cache = [] # [ (matcher, type) ]
+import re
+
+
+_type_rxcache = [] # [ (rx, type) ]
+_type_cache = {} # { name: type }
 
 
 def _type2type(obj):
@@ -7,19 +11,19 @@ def _type2type(obj):
 
 def _str2type(obj):
   if isinstance(obj, str):
-    for rx, type in _type_cache:
-      if rx.match(str(obj)):
+    for rx, type in _type_rxcache:
+      if rx.match(obj):
+        _type_cache[type.name] = type
         return type
+    if obj in _type_cache:
+      return _type_cache[obj]
     return Primitive(obj)
   return None
 
 
-_type_converters = [_type2type, _str2type] # NOTE order matters
-
-
 #
 def _type(obj):
-  for c in _type_converters:
+  for c in [_type2type, _str2type]:
     if x := c(obj):
       return x
   raise TypeError(f"{obj} is not convertible to Type")
@@ -42,7 +46,7 @@ def _parameter(obj):
     case Callable.Parameter(): return obj
     case _: return Callable.In(obj)
 
-  
+
 class _MultiphaseConstructible(type):
 
   def __call__(cls, *args, **kws):
@@ -54,7 +58,41 @@ class _MultiphaseConstructible(type):
 #
 class Type(metaclass = _MultiphaseConstructible):
 
-  def __setup__(self): pass
+  def __setup__(self):
+    self.create = Callable(None, {"target": out(self)})
+    self.destroy = Callable(None, {"target": inout(self)})
+    self.copy = Callable(None, {"target": out(self), "source": self})
+    self.compare = Callable("int", {"left": self, "right": self})
+    self.order = Callable("int", {"left": self, "right": self})
+    self.hash = Callable("size_t", {"target": self})
+  
+  @property
+  def constructible(self):
+    return callable(self.create)
+  
+  @property
+  def default_constructible(self):
+    return self.constructible and len(self.create.parameters) == 1
+
+  @property
+  def destructible(self):
+    return callable(self.destroy)
+
+  @property
+  def copyable(self):
+    return callable(self.copy)
+  
+  @property
+  def comparable(self):
+    return callable(self.compare)
+  
+  @property
+  def orderable(self):
+    return callable(self.order)
+  
+  @property
+  def hashable(self):
+    return self.comparable and callable(self.hash)
   
   def variable(self, name):
     return Variable(self, name)
@@ -66,7 +104,17 @@ class Primitive(Type):
   def __init__(self, name, **kws):
     super().__init__(**kws)
     self.name = str(name)
+    if not self.name in _type_cache:
+      _type_cache[self.name] = self
 
+  def __setup__(self):
+    super().__setup__()
+    self.create = Macro.of(self.create, lambda target: f"{target} = 0")
+    self.copy = Macro.of(self.copy, lambda target, source: f"{target} = {source}")
+    self.compare = Macro.of(self.compare, lambda left, right: f"{left} == {right}")
+    self.order = Macro.of(self.order, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)")
+    self.hash = Macro.of(self.hash, lambda target: f"(size_t)({target})")
+    
   def __str__(self):
     return self.name
   

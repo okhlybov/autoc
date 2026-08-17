@@ -1,5 +1,5 @@
 import re
-from autoc2.core import Primitive as _Primitive, Macro, _type_cache
+from autoc2.core import Primitive as _Primitive, Macro, _type_rxcache
 from autoc.module import Entity, Code, SystemHeader
 
 
@@ -32,7 +32,7 @@ class Primitive(_Primitive, Entity):
     obj.dependencies.update(dependencies)
     if matcher is None:
       matcher = f"^{name}$"
-    _type_cache.append((re.compile(matcher), obj))
+    _type_rxcache.append((re.compile(matcher), obj))
     return obj
 
 
