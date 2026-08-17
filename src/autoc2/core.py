@@ -1,4 +1,4 @@
-import re
+from collections.abc import Iterable # substitute for missing iterable()
 
 
 _type_rxcache = [] # [ (rx, type) ]
@@ -140,37 +140,6 @@ class Primitive(Type):
 
 
 #
-class Composite(Type):
-
-  def __init__(self, name, **kws):
-    super().__init__(**kws)
-    self.name = str(name)
-
-  def __str__(self):
-    return self.name
-  
-  @property
-  def rvalue_type(self):
-    return self
-
-  @property
-  def lvalue_type(self):
-    return self
-
-  @property
-  def in_type(self):
-    return Indirection(self, constant=True)
-
-  @property
-  def out_type(self):
-    return Indirection(self)
-
-  @property
-  def inout_type(self):
-    return Indirection(self)
-
-
-#
 class Indirection(Type):
 
   def __init__(self, type, indirection=1, constant=None, **kws):
@@ -285,7 +254,8 @@ def inout(obj):
 # Basic callable descriptor
 class Callable:
   
-  def __init__(self, result, parameters):
+  def __init__(self, result, parameters, *args, **kws):
+    super().__init__(*args, **kws)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
     self._parameters = parameters
@@ -322,7 +292,7 @@ class Callable:
 
 
 #
-class Parametrized(Callable):
+class _Parametrized(Callable):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -336,7 +306,7 @@ class Parametrized(Callable):
 
 
 #  
-class Macro(Parametrized):
+class Macro(_Parametrized):
   
   @classmethod
   def of(self, callable, emitter, **kws):
@@ -354,16 +324,23 @@ class Macro(Parametrized):
     return type.lvalue_type
   
   def resolve_inout(self, type):
-    return type.rvalue_type
+    return type.lvalue_type
 
   def __call__(self, *arguments):
     return self.contents(self.emitter(*super().__call__(*arguments)))
-  
+
+
 #
-class Functional(Parametrized):
+class Function(_Parametrized):
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  @classmethod
+  def of(self, callable, name, **kws):
+    return Function(callable._result, name, callable._parameters, **kws)
+
+  def __init__(self, result, name, parameters, abstract=None, *args, **kws):
+    super().__init__(result, parameters, *args, **kws)
+    self.name = str(name)
+    self.__abstract = abstract
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
 
   def resolve_in(self, type):
@@ -375,21 +352,35 @@ class Functional(Parametrized):
   def resolve_inout(self, type):
     return type.inout_type
 
-
-#
-class Function(Functional):
-  
-  @classmethod
-  def of(self, callable, name, **kws):
-    return Function(callable._result, name, callable._parameters, **kws)
-
-  def __init__(self, result, name, parameters, **kws):
-    super().__init__(result, parameters, **kws)
-    self.name = str(name)
-
   def __call__(self, *arguments):
     return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
 
   @property
+  def abstract(self):
+    return not hasattr(self, "code") if self.__abstract is None else self.__abstract is True
+
+  def _declaration_c(self, render_names):
+    if render_names:
+      return "%s %s(%s)" % (self.result_c, self.name, ", ".join(f"{t} {n}" for n, t in self.parameters.items()))
+    else:
+      return "%s %s(%s)" % (self.result_c, self.name, ", ".join(str(t) for n, t in self.parameters.items()))
+
+  @property
+  def _body_c(self):
+    if self.abstract:
+      raise ValueError(f"can not render definition for abstract function {self.name}")
+    if not hasattr(self, "code"):
+      raise ValueError(f"missing body of non-abstract function {self.name}")
+    match self.code:
+      case Iterable(): cs = [str(x) for x in self.code]
+      case _ if callable(self.code): cs = [str(self.code())]
+      case _: cs = [str(self.code)]
+    return str().join(("{", *cs, "}"))
+
+  @property
   def declaration(self):
-    return "%s %s(%s)" % (self.result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
+    return self._declaration_c(False)
+
+  @property
+  def definition(self):
+    return self._declaration_c(True) + self._body_c
