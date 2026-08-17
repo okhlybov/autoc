@@ -1,14 +1,34 @@
+_type_cache = [] # [ (matcher, type) ]
+
+
+def _type2type(obj):
+  return obj if isinstance(obj, Type) else None
+
+
+def _str2type(obj):
+  if isinstance(obj, str):
+    for rx, type in _type_cache:
+      if rx.match(str(obj)):
+        return type
+    return Primitive(obj)
+  return None
+
+
+_type_converters = [_type2type, _str2type] # NOTE order matters
+
+
 #
 def _type(obj):
-  match obj:
-    case Type(): return obj
-    case str(): return Primitive(obj)
+  for c in _type_converters:
+    if x := c(obj):
+      return x
   raise TypeError(f"{obj} is not convertible to Type")
 
 
 #
 def _value(obj):
   match obj:
+    # TODO complex
     case Value(): return obj
     case int(): return Literal("int", obj)
     case float(): return Literal("double", obj)
@@ -23,9 +43,19 @@ def _parameter(obj):
     case _: return Callable.In(obj)
 
   
-#
-class Type:
+class _MultiphaseConstructible(type):
 
+  def __call__(cls, *args, **kws):
+    obj = super().__call__(*args, **kws)
+    obj.__setup__()
+    return obj
+
+
+#
+class Type(metaclass = _MultiphaseConstructible):
+
+  def __setup__(self): pass
+  
   def variable(self, name):
     return Variable(self, name)
 
