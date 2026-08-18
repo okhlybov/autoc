@@ -11,6 +11,14 @@ class Range(Composite):
     self.element = _type(element)
     self.element_view = Indirection(self.element, constant=True)
 
+  def __setup__(self):
+    super().__setup__()
+    self.create = None
+    self.destroy = None
+    self.equal = None
+    self.compare = None
+    self.hash = None
+
 
 #
 class Input(Range):

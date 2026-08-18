@@ -123,8 +123,8 @@ class Primitive(Type):
     super().__setup__()
     self.create = Macro.of(self.create, lambda target: f"{target} = 0")
     self.copy = Macro.of(self.copy, lambda target, source: f"{target} = {source}")
-    self.equal = Macro.of(self.equal, lambda left, right: f"{left} == {right}")
-    self.compare = Macro.of(self.compare, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)")
+    self.equal = Macro.of(self.equal, lambda left, right: f"({left} == {right})")
+    self.compare = Macro.of(self.compare, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
     self.hash = Macro.of(self.hash, lambda target: f"(size_t)({target})")
     
   def __str__(self):
@@ -149,44 +149,6 @@ class Primitive(Type):
   @property
   def inout_type(self):
     return Indirection(self)
-
-
-#
-class Indirection(Type):
-
-  def __init__(self, type, indirection=1, constant=None, **kws):
-    super().__init__(**kws)
-    if isinstance(t := _type(type), Indirection):
-      self.type = t.type
-      self.indirection = indirection + t.indirection
-      self.constant = t.constant if constant is None else constant
-    else:
-      self.type = t
-      self.indirection = indirection
-      self.constant = True if constant is True else False
-      
-  def __str__(self):
-    return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
-  
-  @property
-  def rvalue_type(self):
-    return self.type
-
-  @property
-  def lvalue_type(self):
-    return self.type
-
-  @property
-  def in_type(self):
-    return Indirection(self.type, constant=True)
-
-  @property
-  def out_type(self):
-    return self
-
-  @property
-  def inout_type(self):
-    return self
 
 
 # Abstract class for renderable contents, basically a str-like type
@@ -281,6 +243,58 @@ class Variable(Value):
   
 
 #
+class Indirection(Type):
+
+  def __init__(self, type, indirection=1, constant=None, **kws):
+    super().__init__(**kws)
+    if isinstance(t := _type(type), Indirection):
+      self.type = t.type
+      self.indirection = indirection + t.indirection
+      self.constant = t.constant if constant is None else constant
+    else:
+      self.type = t
+      self.indirection = indirection
+      self.constant = True if constant is True else False
+      
+  def __str__(self):
+    return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
+
+  #
+  def variable(self, name):
+    return Indirection.Variable(self, name)
+
+  class Variable(Variable):
+
+    def __init__(self, obj, name):
+    # It makes little to no sense to define variable of const type so drop constness qualifier if it is set
+      super().__init__(Indirection(obj.type, indirection=obj.indirection, constant=False), name)
+
+    @property
+    def definition(self):
+      return f"{super().definition} = 0"
+  
+  @property
+  def rvalue_type(self):
+    return self.type
+
+  @property
+  def lvalue_type(self):
+    return self.type
+
+  @property
+  def in_type(self):
+    return Indirection(self.type, constant=True)
+
+  @property
+  def out_type(self):
+    return self
+
+  @property
+  def inout_type(self):
+    return self
+
+
+  #
 def out(obj):
   return Callable.Out(obj)
 

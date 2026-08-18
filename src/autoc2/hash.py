@@ -26,14 +26,14 @@ class _IncrementalHasher(Code):
 class XorRot(_IncrementalHasher):
 
   def __init__(self, dependencies=tuple(), **kws):
-    super().__init__(dependencies=(*dependencies, _rotr_code))
-    self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotr({hash})")
+    super().__init__(dependencies=(*dependencies, _rotl_code))
+    self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotl({hash})")
     
 
-_rotr_code = Code(dependencies=(std.limits_h, std.size_t, std._linkage_code), interface=f"""
+_rotl_code = Code(dependencies=(std.limits_h, std.size_t, std._linkage_code), interface=f"""
     /** @internal */
     AUTOC_STATIC_INLINE
-    size_t _autoc_rotr(size_t value) {{
+    size_t _autoc_rotl(size_t value) {{
       return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));
     }}
   """)

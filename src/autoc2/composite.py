@@ -45,9 +45,9 @@ class Composite(Type, Entity):
     self.__methods = set()
 
   #
-  def method(self, result, identifier, parameters, visibility=None, linkage="external", hidden=False, dependencies=tuple(), attribute=None, function=std.Function, **kws):
+  def method(self, result, identifier, parameters, visibility=None, linkage="external", hidden=False, dependencies=tuple(), attribute=None, abstract=None, function=std.Function, **kws):
     if not visibility: visibility = self.visibility
-    m = function(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=(self, *dependencies), visibility=visibility, linkage=linkage)
+    m = function(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=(self, *dependencies), visibility=visibility, linkage=linkage, abstract=abstract if abstract else False)
     x = self._decorate_attribute(attribute if attribute else identifier)
     self.__methods.add(x) # Record attribute name which holds the method object
     setattr(self, x, m)

@@ -16,7 +16,7 @@ class _Range:
   def __setup__(self):
     super().__setup__()
     with self.copy as f:
-      f.code = f"""
+      f.inline_code = f"""
         assert(target);
         assert(source);
         *target = *source;
