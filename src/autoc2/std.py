@@ -80,37 +80,35 @@ double_t = Primitive.register("double_t", dependencies=math_h)
 class Complex(Primitive):
   
   def __init__(self, *args, **kws):
-    super().__init__(*args, dependencies=(Complex._interface_code,), **kws)
+    super().__init__(*args, dependencies=(_complex_code,), **kws)
 
   def __setup__(self):
     super().__setup__()
     self.hash = Macro.of(self.hash, lambda target: f"(size_t)(creal({target})) ^ (size_t)(cimag({target}))")
-  
-  @property
-  def orderable(self):
-    return False
-  
-  _interface_code = Code(
-    dependencies=(complex_h, tgmath_h),
-    interface="""
-      #ifdef __cplusplus
-        using autoc_double_complex_t = std::complex<double>;
-        using autoc_complex_t = autoc_double_complex_t;
-        using autoc_float_complex_t = std::complex<float>;
-        using autoc_long_double_complex_t = std::complex<long double>;
-        using autoc_long_complex_t = autoc_long_double_complex_t;
-      #else
-        #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
-          #error Visual Studio requires C++ compilation mode for complex numeric types
-        #endif
-        typedef float complex autoc_float_complex_t;
-        typedef double complex autoc_double_complex_t;
-        typedef autoc_double_complex_t autoc_complex_t;
-        typedef long double complex autoc_long_double_complex_t;
-        typedef autoc_long_double_complex_t autoc_long_complex_t;
+    self.compare = None
+
+
+_complex_code = Code(
+  dependencies=(complex_h, tgmath_h),
+  interface="""
+    #ifdef __cplusplus
+      using autoc_double_complex_t = std::complex<double>;
+      using autoc_complex_t = autoc_double_complex_t;
+      using autoc_float_complex_t = std::complex<float>;
+      using autoc_long_double_complex_t = std::complex<long double>;
+      using autoc_long_complex_t = autoc_long_double_complex_t;
+    #else
+      #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
+        #error Visual Studio requires C++ compilation mode for complex numeric types
       #endif
-    """
-  )
+      typedef float complex autoc_float_complex_t;
+      typedef double complex autoc_double_complex_t;
+      typedef autoc_double_complex_t autoc_complex_t;
+      typedef long double complex autoc_long_double_complex_t;
+      typedef autoc_long_double_complex_t autoc_long_complex_t;
+    #endif
+  """
+)
 
 
 long_double_complex = Complex.register("autoc_long_double_complex_t", matcher=r"^long\s+double\s+(complex|_Complex)$")
@@ -118,9 +116,9 @@ double_complex = Complex.register("autoc_double_complex_t", matcher=r"^double\s+
 float_complex = Complex.register("autoc_float_complex_t", matcher=r"^float\s+(complex|_Complex)$")
 complex = Complex.register("autoc_complex_t", matcher=r"^(complex|_Complex)$")
 
-intptr_t = Primitive.register("intptr_t", dependencies=[inttypes_h])
-intmax_t = Primitive.register("intmax_t", dependencies=[inttypes_h])
-uintmax_t = Primitive.register("uintmax_t", dependencies=[inttypes_h])
+intptr_t = Primitive.register("intptr_t", dependencies=inttypes_h)
+intmax_t = Primitive.register("intmax_t", dependencies=inttypes_h)
+uintmax_t = Primitive.register("uintmax_t", dependencies=inttypes_h)
 
 for bits in (8, 16, 32, 64):
   for prefix in ("int", "uint", "int_fast", "uint_fast", "int_least", "uint_least"):
@@ -151,9 +149,10 @@ class Function(_Function, Entity):
   def __init__(self, result, name, parameters, *args, visibility="public", linkage="external", dependencies=tuple(), **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self._depends(_linkage_code, self.result, *self.parameters.values(), *dependencies)
-    self.live = True # FIXME
-    self.visibility = visibility
+    self.live = True
     self.linkage = linkage
+    _visibility[visibility] # A value sanity check
+    self.visibility = visibility
 
   def _depends(self, *args):
       for obj in args:
@@ -163,6 +162,24 @@ class Function(_Function, Entity):
           case Entity(): self.dependencies.add(obj)
 
 
+  def __enter__(self):
+    return self
+  
+  def __exit__(self, *args):
+    return False
+
+  def _inline_code(self, obj):
+    self.linkage = "inline"
+    self.code = obj
+    
+  inline_code = property(fset=_inline_code)
+  
+  def _external_code(self, obj):
+    self.linkage = "external"
+    self.code = obj
+
+  external_code = property(fset=_external_code)
+  
   @property
   def external(self):
     return self.linkage == "external"
@@ -227,6 +244,10 @@ class Function(_Function, Entity):
 
   #
   def _render_decorator(self, stream):
-    stream.append(Function._linkage_c[self.linkage])
+    stream.append(_linkage_c[self.linkage])
 
-  _linkage_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}
+
+_visibility = {"public": True, "private": True, "internal": True}
+
+
+_linkage_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}

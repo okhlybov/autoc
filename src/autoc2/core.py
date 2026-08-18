@@ -52,6 +52,7 @@ class _MultiphaseConstructible(type):
   def __call__(cls, *args, **kws):
     obj = super().__call__(*args, **kws)
     obj.__setup__()
+    obj.__register__()
     return obj
 
 
@@ -62,9 +63,11 @@ class Type(metaclass = _MultiphaseConstructible):
     self.create = Callable(None, {"target": out(self)})
     self.destroy = Callable(None, {"target": inout(self)})
     self.copy = Callable(None, {"target": out(self), "source": self})
+    self.equal = Callable("int", {"left": self, "right": self})
     self.compare = Callable("int", {"left": self, "right": self})
-    self.order = Callable("int", {"left": self, "right": self})
     self.hash = Callable("size_t", {"target": self})
+  
+  def __register__(self): pass
   
   @property
   def constructible(self):
@@ -84,11 +87,11 @@ class Type(metaclass = _MultiphaseConstructible):
   
   @property
   def comparable(self):
-    return callable(self.compare)
+    return callable(self.equal)
   
   @property
   def orderable(self):
-    return callable(self.order)
+    return callable(self.compare)
   
   @property
   def hashable(self):
@@ -111,8 +114,8 @@ class Primitive(Type):
     super().__setup__()
     self.create = Macro.of(self.create, lambda target: f"{target} = 0")
     self.copy = Macro.of(self.copy, lambda target, source: f"{target} = {source}")
-    self.compare = Macro.of(self.compare, lambda left, right: f"{left} == {right}")
-    self.order = Macro.of(self.order, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)")
+    self.equal = Macro.of(self.equal, lambda left, right: f"{left} == {right}")
+    self.compare = Macro.of(self.compare, lambda left, right: f"{left} == {right} ? 0 : ({left} < {right} ? -1 : +1)")
     self.hash = Macro.of(self.hash, lambda target: f"(size_t)({target})")
     
   def __str__(self):
@@ -261,12 +264,12 @@ class Callable:
     self._parameters = parameters
     
   @property
-  def result_c(self):
+  def _result_c(self):
     return "void" if self.result is None else str(self.result)
 
   @property
   def signature(self):
-    return "%s(%s)" % (self.result_c, ", ".join(str(t) for t in self.parameters.values()))
+    return "%s(%s)" % (self._result_c, ", ".join(str(t) for t in self.parameters.values()))
 
   def contents(self, contents):
     if self.result is None:
@@ -310,7 +313,7 @@ class Macro(_Parametrized):
   
   @classmethod
   def of(self, callable, emitter, **kws):
-    return Macro(callable._result, callable._parameters, emitter, **kws)
+    return self(callable._result, callable._parameters, emitter, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
     super().__init__(result, parameters, **kws)
@@ -335,7 +338,7 @@ class Function(_Parametrized):
   
   @classmethod
   def of(self, callable, name, **kws):
-    return Function(callable._result, name, callable._parameters, **kws)
+    return self(callable._result, name, callable._parameters, **kws)
 
   def __init__(self, result, name, parameters, abstract=None, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
@@ -361,9 +364,9 @@ class Function(_Parametrized):
 
   def _declaration_c(self, render_names):
     if render_names:
-      return "%s %s(%s)" % (self.result_c, self.name, ", ".join(f"{t} {n}" for n, t in self.parameters.items()))
+      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(f"{t} {n}" for n, t in self.parameters.items()))
     else:
-      return "%s %s(%s)" % (self.result_c, self.name, ", ".join(str(t) for n, t in self.parameters.items()))
+      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
 
   @property
   def _body_c(self):
