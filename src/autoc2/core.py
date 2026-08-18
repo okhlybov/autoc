@@ -23,7 +23,7 @@ def _str2type(obj):
 
 #
 def _type(obj):
-  for c in [_type2type, _str2type]:
+  for c in (_type2type, _str2type):
     if x := c(obj):
       return x
   raise TypeError(f"{obj} is not convertible to Type")
@@ -36,7 +36,8 @@ def _value(obj):
     case Value(): return obj
     case int(): return Literal("int", obj)
     case float(): return Literal("double", obj)
-    case str(): return StringLiteral(obj)
+    #case str(): return StringLiteral(obj)
+    case str(): return Literal("int", obj)
   raise TypeError(f"{obj} is not convertible to Value")
 
 
@@ -59,6 +60,10 @@ class _MultiphaseConstructible(type):
 #
 class Type(metaclass = _MultiphaseConstructible):
 
+  def __init__(self, visibility="public", *args, **kws):
+    super().__init__(*args, **kws)
+    self.visibility = visibility
+    
   def __setup__(self):
     self.create = Callable(None, {"target": out(self)})
     self.destroy = Callable(None, {"target": inout(self)})
@@ -69,6 +74,10 @@ class Type(metaclass = _MultiphaseConstructible):
   
   def __register__(self): pass
   
+  @property
+  def public(self):
+    return self.visibility == "public"
+
   @property
   def constructible(self):
     return callable(self.create)
@@ -159,6 +168,26 @@ class Indirection(Type):
   def __str__(self):
     return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
   
+  @property
+  def rvalue_type(self):
+    return self.type
+
+  @property
+  def lvalue_type(self):
+    return self.type
+
+  @property
+  def in_type(self):
+    return Indirection(self.type, constant=True)
+
+  @property
+  def out_type(self):
+    return self
+
+  @property
+  def inout_type(self):
+    return self
+
 
 # Abstract class for renderable contents, basically a str-like type
 class Statement:
@@ -200,7 +229,10 @@ class Expression(Value, Statement):
 
 
 #
-Literal = Expression
+class Literal(Expression):
+  
+  def bind(self, type):
+    return self.contents
 
 
 #
@@ -241,8 +273,12 @@ class Variable(Value):
     return f"&{self.name}" if i == -1 else "*"*i + self.name
     
   @property
-  def declaration(self):
+  def definition(self):
     return f"{self.type} {self.name}"
+  
+  def __str__(self):
+    return self.name
+  
 
 #
 def out(obj):
@@ -280,6 +316,9 @@ class Callable:
   class Parameter:
     def __init__(self, type):
       self.type = _type(type)
+    def resolve(self, callable):
+      return self.type
+      
       
   class In(Parameter):
     def resolve(self, callable):
@@ -345,6 +384,8 @@ class Function(_Parametrized):
     self.name = str(name)
     self.__abstract = abstract
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
+    for x in self.arguments:
+      setattr(self, x.name, x)
 
   def resolve_in(self, type):
     return type.in_type

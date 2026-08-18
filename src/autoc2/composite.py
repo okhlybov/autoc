@@ -36,7 +36,6 @@ decorator = camel_decorator
 #
 class Composite(Type, Entity):
 
-  
   def __init__(self, name, prefix=None, decorator=None, visibility="public", *args, **kws):
     super().__init__(**kws)
     self.name = str(name)
@@ -45,6 +44,7 @@ class Composite(Type, Entity):
     self.decorator = decorator if decorator else sys.modules[__name__].decorator
     self.__methods = set()
 
+  #
   def method(self, result, identifier, parameters, visibility=None, linkage="external", hidden=False, dependencies=tuple(), attribute=None, function=std.Function, **kws):
     if not visibility: visibility = self.visibility
     m = function(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=(self, *dependencies), visibility=visibility, linkage=linkage)
@@ -53,12 +53,14 @@ class Composite(Type, Entity):
     setattr(self, x, m)
     return m
   
+  #
   def method_of(self, identifier, attribute=None, **kws):
     x = self._decorate_attribute(attribute if attribute else identifier)
     m = getattr(self, x)
     self.__methods.discard(x)
     delattr(self, x)
     return self.method(m._result, x, m._parameters, **kws)
+  
   #
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
@@ -74,6 +76,11 @@ class Composite(Type, Entity):
     match identifier:
       case str(): return identifier
       case list() | tuple(): return "_".join(identifier)
+
+  # 
+  def depends(self, *entities):
+    for entity in entities:
+      self.dependencies.update((*entity.dependencies, *entity.references, entity))
 
   def __str__(self):
     return self.name
@@ -112,3 +119,18 @@ class Composite(Type, Entity):
   @property
   def inout_type(self):
     return Indirection(self)
+  
+  
+class _StructRenderer:
+
+  def _render_struct(self, stream):
+    if not self.public:
+      stream.append("/** @internal */\n")
+  
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    # Structures are expected to be rendered in the interface header
+    # even for internal types since they can be a part of more acessible structures
+    # treated by the public inline code
+    if header:
+      self._render_struct(stream)
