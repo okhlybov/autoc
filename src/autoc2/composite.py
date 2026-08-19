@@ -84,9 +84,10 @@ class Composite(Type, _Traitful, Entity):
       case list() | tuple(): return "_".join(identifier)
 
   # 
-  def depends(self, *entities):
+  def depend(self, *entities):
     for entity in entities:
-      self.dependencies.update((*entity.dependencies, *entity.references, entity))
+      if isinstance(entity, Entity):
+        self.dependencies.update((*entity.dependencies, *entity.references, entity))
 
   def __str__(self):
     return self.name

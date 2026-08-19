@@ -1,5 +1,5 @@
 from autoc2.map import Map
-from autoc2.hash_map import _Entry
+from autoc2.hash_map import _Element
 from autoc2.core import out, Macro, Indirection
 from autoc2.intrusive_hash_set import Set
 from autoc2.composite import _StructRenderer
@@ -12,14 +12,14 @@ class Map(_StructRenderer, Map):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
       self._decorate_component("set", abbreviate=True),
-      _Entry(self._decorate_component("entry", abbreviate=True),self.element, self.index, visibility="internal"),
+      _Element(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       is_empty=Macro("int", {"entry": self.element}, lambda entry: is_empty(f"({entry})")),
       mark_empty=Macro(None, {"entry": out(self.element)}, lambda entry: mark_empty(f"({entry})")),
       is_deleted=Macro("int", {"entry": self.element}, lambda entry: is_deleted(f"({entry})")),
       mark_deleted=Macro(None, {"entry": out(self.element)}, lambda entry: mark_deleted(f"({entry})")),
     )
-    self.depends(self._set)
+    self.depend(self._set)
 
   def __setup__(self):
     super().__setup__()
@@ -119,16 +119,16 @@ class Map(_StructRenderer, Map):
 
     with self.get as f:
       _element_p = entry.element_p.variable("element_p")
-      _result = self.element.variable("result")
+      result = f.result.variable("result")
       f.code = f"""
         {_element_p.definition};
-        {_result.definition};
+        {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {_element_p} = {self.view(f.target, f.index)};
         if({_element_p}) {{
-          {self.element.copy(_result, _element_p)};
-          return {_result};
+          {self.element.copy(result, _element_p)};
+          return {result};
         }} else abort();
       """
      

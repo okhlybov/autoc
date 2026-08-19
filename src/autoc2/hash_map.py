@@ -4,7 +4,7 @@ from autoc2.core import inout, Macro, Indirection
 
 
 # Common entry implementation for hash maps backed by the hash-based sets
-class _Entry(Record):
+class _Element(Record):
   
   def __init__(self, name, element, index, *args, visibility, **kws):
     super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, **kws)
@@ -65,8 +65,8 @@ class _Entry(Record):
         {self.element.copy(_element, f.element)};
       """
 
-    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash(f"({target})->index")))
-    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal(f"({left})->index", f"({right})->index")))
+    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash(f"({target}).index")))
+    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal(f"({left}).index", f"({right}).index")))
   
   @property
   def constructible(self):

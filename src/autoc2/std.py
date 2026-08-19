@@ -169,17 +169,17 @@ class Function(_Function, Entity):
   def __exit__(self, *args):
     return False
 
-  def _inline_code(self, obj):
+  def __inline_code(self, obj):
     self.linkage = "inline"
     self.code = obj
     
-  inline_code = property(fset=_inline_code)
+  inline_code = property(fset=__inline_code)
   
-  def _external_code(self, obj):
+  def __external_code(self, obj):
     self.linkage = "external"
     self.code = obj
 
-  external_code = property(fset=_external_code)
+  external_code = property(fset=__external_code)
   
   @property
   def external(self):

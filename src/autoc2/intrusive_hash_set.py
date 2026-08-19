@@ -334,17 +334,16 @@ class Range(CollectionRange, Forward):
         assert(target);
         return target->front >= target->iterable->capacity;
       """
-
-    result = self.element.variable("result")
     
     with self.front as f:
+      result = f.result.variable("result")
       f.code = lambda: f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
         {self.element.copy(result, front_element)};
-        return result;
+        return {result};
       """
         
     with self.front_view as f:

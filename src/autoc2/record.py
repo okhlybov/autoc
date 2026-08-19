@@ -14,7 +14,7 @@ class Record(_StructRenderer, Composite):
     self.getters = getters
     self.setters = setters
     self.opaque = opaque
-    self.depends(*self.fields.values())
+    self.depend(*self.fields.values())
 
   def __setup__(self):
     super().__setup__()

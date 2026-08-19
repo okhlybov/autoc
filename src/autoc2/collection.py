@@ -10,7 +10,7 @@ class _Range:
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
     self.iterable = iterable
-    self.depends(iterable)
+    self.depend(iterable)
     iterable.references.add(self)
     
   def __setup__(self):
@@ -31,7 +31,7 @@ class Collection(Composite):
     # self.range=
     self.element = _type(element)
     self.element_view = Indirection(self.element, constant=True)
-    self.depends(self.element)
+    self.depend(self.element)
     self.memory = memory
     self.hasher = hasher
 
