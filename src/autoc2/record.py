@@ -77,7 +77,6 @@ class Record(_StructRenderer, Composite):
   def _add_reader(self, type, field):
     with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable) as f:
       result = f.result.variable("result")
-      print(type.__class__)
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
         {result.definition};
