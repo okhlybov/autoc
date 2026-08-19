@@ -122,6 +122,14 @@ class Type(metaclass = _MultiphaseConstructible):
   @property
   def public(self):
     return self.visibility == "public"
+  
+  @property
+  def private(self):
+    return self.visibility == "private"
+
+  @property
+  def internal(self):
+    return self.visibility == "internal"
 
   def variable(self, name):
     return Variable(self, name)

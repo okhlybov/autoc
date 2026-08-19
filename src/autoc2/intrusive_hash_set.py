@@ -3,8 +3,8 @@ from autoc2.hash import Xor
 from autoc2.range import Forward
 from autoc2.set import Set, _ceil_power2
 from autoc2.composite import _StructRenderer
-from autoc2.core import out, inout, Macro, Indirection, Callable
 from autoc2.collection import _Range as CollectionRange
+from autoc2.core import out, inout, Macro, Indirection, Callable
 
 
 #
