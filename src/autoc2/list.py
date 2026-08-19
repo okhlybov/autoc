@@ -15,6 +15,10 @@ class List(_StructRenderer, Sequence):
     self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
     
+  @property
+  def orderable(self):
+    return False # TODO
+
   def __setup__(self):
     super().__setup__()
 
@@ -83,7 +87,7 @@ class List(_StructRenderer, Sequence):
         }}
       """
 
-    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}) as f:
+    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
       f.code = f"""
         {self.node}* node;
         assert(target);
@@ -94,7 +98,7 @@ class List(_StructRenderer, Sequence):
         ++target->size;
       """
       
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}) as f:
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.copyable) as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -110,7 +114,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
     
-    with self.method(self.element, "front", {"target": self}) as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

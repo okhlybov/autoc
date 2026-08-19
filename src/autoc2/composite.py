@@ -2,7 +2,7 @@ import re
 import sys
 import autoc2.std as std
 from autoc.module import Entity
-from autoc2.core import Type, Indirection
+from autoc2.core import Type, Indirection, _Traitful
 
 
 def _hidden_prefix(s, hidden):
@@ -34,7 +34,7 @@ decorator = camel_decorator
 
 
 #
-class Composite(Type, Entity):
+class Composite(Type, _Traitful, Entity):
 
   def __init__(self, name, prefix=None, decorator=None, visibility="public", *args, **kws):
     super().__init__(**kws)
@@ -45,9 +45,15 @@ class Composite(Type, Entity):
     self.__methods = set()
 
   #
-  def method(self, result, identifier, parameters, visibility=None, linkage="external", hidden=False, dependencies=tuple(), attribute=None, abstract=None, function=std.Function, **kws):
-    if not visibility: visibility = self.visibility
-    m = function(result, self.decorate(identifier, hidden=hidden), parameters, dependencies=(self, *dependencies), visibility=visibility, linkage=linkage, abstract=abstract if abstract else False)
+  def method(self, result, identifier, parameters, hidden=False, dependencies=tuple(), attribute=None, abstract=None, function=std.Function, **kws):
+    m = function(
+      result,
+      self.decorate(identifier, hidden=hidden),
+      parameters,
+      dependencies=(self, *dependencies),
+      abstract=abstract if abstract else False,
+      **kws
+    )
     x = self._decorate_attribute(attribute if attribute else identifier)
     self.__methods.add(x) # Record attribute name which holds the method object
     setattr(self, x, m)
@@ -59,7 +65,7 @@ class Composite(Type, Entity):
     m = getattr(self, x)
     self.__methods.discard(x)
     delattr(self, x)
-    return self.method(m._result, x, m._parameters, **kws)
+    return self.method(m._result, x, m._parameters, constraint=m.constraint, **kws)
   
   #
   def decorate(self, *args, **kws):
@@ -119,8 +125,9 @@ class Composite(Type, Entity):
   @property
   def inout_type(self):
     return Indirection(self)
-  
-  
+
+
+#
 class _StructRenderer:
 
   def _render_struct(self, stream):

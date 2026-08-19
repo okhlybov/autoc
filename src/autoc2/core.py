@@ -48,6 +48,15 @@ def _parameter(obj):
     case _: return Callable.In(obj)
 
 
+#
+def _active(obj):
+  match obj:
+    case Callable(): return obj.active
+    case _ if callable(obj): return True
+  return False
+
+
+#
 class _MultiphaseConstructible(type):
 
   def __call__(cls, *args, **kws):
@@ -57,6 +66,38 @@ class _MultiphaseConstructible(type):
     return obj
 
 
+# Mixin for types which support all operations
+class _Traitful:
+  
+  @property
+  def constructible(self):
+    return True
+  
+  @property
+  def default_constructible(self):
+    return self.constructible and len(self.create.parameters) == 1
+
+  @property
+  def destructible(self):
+    return True
+
+  @property
+  def copyable(self):
+    return True
+  
+  @property
+  def comparable(self):
+    return True
+  
+  @property
+  def orderable(self):
+    return True
+  
+  @property
+  def hashable(self):
+    return True
+  
+
 #
 class Type(metaclass = _MultiphaseConstructible):
 
@@ -65,12 +106,12 @@ class Type(metaclass = _MultiphaseConstructible):
     self.visibility = visibility
     
   def __setup__(self):
-    self.create = Callable(None, {"target": out(self)})
-    self.destroy = Callable(None, {"target": inout(self)})
-    self.copy = Callable(None, {"target": out(self), "source": self})
-    self.equal = Callable("int", {"left": self, "right": self})
-    self.compare = Callable("int", {"left": self, "right": self})
-    self.hash = Callable("size_t", {"target": self})
+    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
+    self.destroy = Callable(None, {"target": inout(self)}, constraint=lambda: self.destructible)
+    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
+    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
+    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
+    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
   
   def __register__(self): pass
   
@@ -78,40 +119,12 @@ class Type(metaclass = _MultiphaseConstructible):
   def public(self):
     return self.visibility == "public"
 
-  @property
-  def constructible(self):
-    return callable(self.create)
-  
-  @property
-  def default_constructible(self):
-    return self.constructible and len(self.create.parameters) == 1
-
-  @property
-  def destructible(self):
-    return callable(self.destroy)
-
-  @property
-  def copyable(self):
-    return callable(self.copy)
-  
-  @property
-  def comparable(self):
-    return callable(self.equal)
-  
-  @property
-  def orderable(self):
-    return callable(self.compare)
-  
-  @property
-  def hashable(self):
-    return self.comparable and callable(self.hash)
-  
   def variable(self, name):
     return Variable(self, name)
 
 
 #
-class Primitive(Type):
+class Primitive(Type, _Traitful):
 
   def __init__(self, name, **kws):
     super().__init__(**kws)
@@ -130,6 +143,10 @@ class Primitive(Type):
   def __str__(self):
     return self.name
   
+  @property
+  def destructible(self):
+    return False # Primitive type almost always bears no destructor
+
   @property
   def rvalue_type(self):
     return self
@@ -307,12 +324,17 @@ def inout(obj):
 # Basic callable descriptor
 class Callable:
   
-  def __init__(self, result, parameters, *args, **kws):
+  def __init__(self, result, parameters, constraint=lambda: True, *args, **kws):
     super().__init__(*args, **kws)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
     self._parameters = parameters
+    self.constraint = constraint
     
+  @property
+  def active(self):
+    return self.constraint() is True
+
   @property
   def _result_c(self):
     return "void" if self.result is None else str(self.result)
@@ -356,6 +378,8 @@ class _Parametrized(Callable):
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
 
   def __call__(self, *arguments):
+    if not self.active:
+      raise ValueError(f"attempt to call disabled function {self}")
     if (na := len(arguments)) != (np := len(self.parameters)):
       raise TypeError(f"{self} takes {np} parameter(s) but {na} given")
     return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
@@ -365,8 +389,8 @@ class _Parametrized(Callable):
 class Macro(_Parametrized):
   
   @classmethod
-  def of(self, callable, emitter, **kws):
-    return self(callable._result, callable._parameters, emitter, **kws)
+  def of(self, callable, emitter, constraint=None, **kws):
+    return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
     super().__init__(result, parameters, **kws)
@@ -390,8 +414,8 @@ class Macro(_Parametrized):
 class Function(_Parametrized):
   
   @classmethod
-  def of(self, callable, name, **kws):
-    return self(callable._result, name, callable._parameters, **kws)
+  def of(self, callable, name, constraint=None, **kws):
+    return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
   def __init__(self, result, name, parameters, abstract=None, *args, **kws):
     super().__init__(result, parameters, *args, **kws)
@@ -426,9 +450,9 @@ class Function(_Parametrized):
   @property
   def _body_c(self):
     if self.abstract:
-      raise ValueError(f"can not render definition for abstract function {self.name}")
+      raise ValueError(f"attempt to render definition for abstract function {self}")
     if not hasattr(self, "code"):
-      raise ValueError(f"missing body of non-abstract function {self.name}")
+      raise ValueError(f"missing body of non-abstract function {self}")
     match self.code:
       case Iterable(): cs = [str(x) for x in self.code]
       case _ if callable(self.code): cs = [str(self.code())]

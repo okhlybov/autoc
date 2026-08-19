@@ -39,7 +39,7 @@ class Collection(Composite):
     super().__setup__()
     self.method("int", "empty", {"target": self})
     self.method(std.size_t, "size", {"target": self})
-    self.method("int", "contains", {"target": self, "element": self.element})
+    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable)
 
   @property
   def copyable(self):

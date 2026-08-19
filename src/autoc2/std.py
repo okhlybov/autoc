@@ -85,8 +85,10 @@ class Complex(Primitive):
   def __setup__(self):
     super().__setup__()
     self.hash = Macro.of(self.hash, lambda target: f"(size_t)(creal({target})) ^ (size_t)(cimag({target}))")
-    self.compare = None
 
+  @property
+  def orderable(self):
+    return False
 
 _complex_code = Code(
   dependencies=(complex_h, tgmath_h),
@@ -149,7 +151,6 @@ class Function(_Function, Entity):
   def __init__(self, result, name, parameters, *args, visibility="public", linkage="external", dependencies=tuple(), **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self._depends(_linkage_code, self.result, *self.parameters.values(), *dependencies)
-    self.live = True
     self.linkage = linkage
     _visibility[visibility] # A value sanity check
     self.visibility = visibility
@@ -206,15 +207,15 @@ class Function(_Function, Entity):
   
   #
   def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if self.live:
+    if self.active:
+      super().render_declarations(stream, header)
       if (header and not self.internal) or (not header and self.internal):
         self._render_declaration(stream)
 
   #
   def render_definitions(self, stream, header):
-    super().render_definitions(stream, header)
-    if self.live:
+    if self.active:
+      super().render_definitions(stream, header)
       if self.inline:
         if (header and not self.internal) or (not header and self.internal):
           self._render_definition(stream)
