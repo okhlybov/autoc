@@ -1,6 +1,6 @@
 import functools
-from autoc2.core import Type
 import autoc2.std as std
+from autoc2.core import Type
 from autoc.module import Code
 
 

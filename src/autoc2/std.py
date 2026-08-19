@@ -1,7 +1,7 @@
 import re
-from autoc2.core import Primitive as _Primitive, Function as _Function, Macro, Indirection, _type_rxcache
-from autoc.module import Entity, Code, SystemHeader
 from collections.abc import Iterable # substitute for missing iterable()
+from autoc.module import Entity, Code, SystemHeader
+from autoc2.core import Primitive as _Primitive, Function as _Function, Macro, Indirection, _type_rxcache
 
 
 math_h = SystemHeader("math.h")

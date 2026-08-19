@@ -1,10 +1,10 @@
-from autoc2.hash import XorRot
 import autoc2.std as std
-from autoc2.core import inout, _type, Callable
+from autoc2.hash import XorRot
 from autoc2.range import Forward
 from autoc2.collection import _Range
 from autoc2.sequence import Sequence
 from autoc2.composite import _StructRenderer
+from autoc2.core import inout, _type, Callable
 
 
 #
@@ -18,10 +18,10 @@ class List(_StructRenderer, Sequence):
   def __setup__(self):
     super().__setup__()
 
-    self.compare = None
+    #self.compare = None
     
-    front_element = self.element.variable("target->front->element")
     node_element = self.element.variable("node->element")
+    front_element = self.element.variable("target->front->element")
     target_element = self.element.variable("target_node->element")
     source_element = self.element.variable("source_node->element")
     

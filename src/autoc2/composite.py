@@ -1,8 +1,8 @@
 import re
 import sys
 import autoc2.std as std
-from autoc2.core import Type, Indirection, out, inout
 from autoc.module import Entity
+from autoc2.core import Type, Indirection
 
 
 def _hidden_prefix(s, hidden):

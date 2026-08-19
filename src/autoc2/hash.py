@@ -1,8 +1,8 @@
 import sys
-from autoc.module import Code
 import autoc2.std as std
-from autoc2.random import RandomSeeder
+from autoc.module import Code
 from autoc2.core import out, Macro
+from autoc2.random import RandomSeeder
 
 
 #

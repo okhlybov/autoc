@@ -1,6 +1,6 @@
-from autoc.module import Entity, Code
-import autoc2.std as std
 import functools
+import autoc2.std as std
+from autoc.module import Entity, Code
 
 
 #

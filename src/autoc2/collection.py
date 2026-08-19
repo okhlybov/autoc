@@ -1,8 +1,8 @@
-from autoc2.memory import Manager
-from autoc2.hash import Xor
 import autoc2.std as std
-from autoc2.core import Indirection, _type
+from autoc2.hash import Xor
+from autoc2.memory import Manager
 from autoc2.composite import Composite
+from autoc2.core import Indirection, _type
 
 
 class _Range:

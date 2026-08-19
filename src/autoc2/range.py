@@ -1,6 +1,6 @@
 import autoc2.std as std
-from autoc2.core import _type, inout, Indirection
 from autoc2.composite import Composite
+from autoc2.core import _type, inout, Indirection
 
 
 #
