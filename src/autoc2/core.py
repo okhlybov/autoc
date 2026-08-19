@@ -106,12 +106,16 @@ class Type(metaclass = _MultiphaseConstructible):
     self.visibility = visibility
     
   def __setup__(self):
+    # Basic methods
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
     self.destroy = Callable(None, {"target": inout(self)}, constraint=lambda: self.destructible)
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
     self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
+    # Methods used by the hash-based containers
+    self.hash_lookup_hash = lambda *args: self.hash(*args)
+    self.hash_lookup_equal = lambda *args: self.equal(*args)
   
   def __register__(self): pass
   
@@ -436,6 +440,9 @@ class Function(_Parametrized):
 
   def __call__(self, *arguments):
     return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
+
+  def __repr__(self):
+    return f"{self.name} {super().__repr__()}"
 
   @property
   def abstract(self):
