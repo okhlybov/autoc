@@ -11,7 +11,7 @@ class Sequence(Collection):
     r = range.variable("r")
     
     with self.contains as f:
-      f.external = f"""
+      f.code = f"""
         {r.definition};
         for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
           if({self.element.equal(range.front_view(r), f.element)}) return 1;
@@ -22,7 +22,7 @@ class Sequence(Collection):
     state = self.hasher.state_t.variable("state")
 
     with self.hash as f:
-      f.external = f"""
+      f.code = f"""
         size_t result;
         {r.definition};
         {state.definition};

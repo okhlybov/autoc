@@ -1,22 +1,22 @@
-import autoc.memory
-import autoc.hash
 import autoc.std as std
-from autoc.core import Pointer
+from autoc.hash import Xor
+from autoc.memory import Manager
 from autoc.composite import Composite
+from autoc.core import Indirection, _type
 
 
 class _Range:
 
   def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not(iterable.public)), visibility=iterable.visibility, **kws)
+    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
     self.iterable = iterable
-    self.depends(iterable)
+    self.depend(iterable)
     iterable.references.add(self)
     
   def __setup__(self):
     super().__setup__()
     with self.copy as f:
-      f.code = f"""
+      f.inline_code = f"""
         assert(target);
         assert(source);
         *target = *source;
@@ -26,11 +26,12 @@ class _Range:
 #
 class Collection(Composite):
   
-  def __init__(self, name, element, memory=autoc.memory.Manager(), hasher=autoc.hash.Xor(), dependencies=[], *args, **kws):
-    super().__init__(name, dependencies=[*dependencies, std.assert_h, memory, hasher], *args, **kws)
-    self.element = autoc.core._type(element)
-    self.element_view = Pointer(self.element, constant=True)
-    self.depends(self.element)
+  def __init__(self, name, element, memory=Manager(), hasher=Xor(), dependencies=tuple(), *args, **kws):
+    super().__init__(name, dependencies=(*dependencies, std.assert_h, memory, hasher), *args, **kws)
+    # self.range=
+    self.element = _type(element)
+    self.element_view = Indirection(self.element, constant=True)
+    self.depend(self.element)
     self.memory = memory
     self.hasher = hasher
 
@@ -38,7 +39,7 @@ class Collection(Composite):
     super().__setup__()
     self.method("int", "empty", {"target": self})
     self.method(std.size_t, "size", {"target": self})
-    self.method("int", "contains", {"target": self, "element": self.element})
+    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable)
 
   @property
   def copyable(self):
@@ -51,7 +52,3 @@ class Collection(Composite):
   @property
   def comparable(self):
     return self.element.comparable
-  
-  @property
-  def orderable(self):
-    return False

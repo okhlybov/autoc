@@ -1,17 +1,20 @@
-from autoc.module import Code
+import sys
 import autoc.std as std
-import autoc.random
+from autoc.module import Code
 from autoc.core import out, Macro
+from autoc.random import RandomSeeder
 
 
-seeder = autoc.random.RandomSeeder()
+#
+seeder = RandomSeeder()
 
 
+#
 class _IncrementalHasher(Code):
   
-  def __init__(self, seeder=None, dependencies=[], **kws):
-    self.seeder = seeder if seeder else autoc.hash.seeder
-    super().__init__(dependencies=[*dependencies, self.seeder], **kws)
+  def __init__(self, seeder=None, dependencies=tuple(), **kws):
+    self.seeder = seeder if seeder else sys.modules[__name__].seeder
+    super().__init__(dependencies=(*dependencies, self.seeder), **kws)
     self.state_t = std.size_t
     self.create = Macro(None, {"state": out(self.state_t)}, lambda state: f"{state} = {self.seeder.seed}")
     self.destroy = Macro(None, {"state": out(self.state_t)}, lambda source: str())
@@ -19,20 +22,21 @@ class _IncrementalHasher(Code):
     # self.update =
 
   
-# Incremental xor+shift hasher for ordered data types
-class XorShift(_IncrementalHasher):
+# Incremental xor+rot hasher for ordered data types
+class XorRot(_IncrementalHasher):
 
-  def __init__(self, dependencies=[], **kws):
-    super().__init__(dependencies=[*dependencies, XorShift.__rotr])
-    self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotr({hash})")
+  def __init__(self, dependencies=tuple(), **kws):
+    super().__init__(dependencies=(*dependencies, _rotl_code))
+    self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotl({hash})")
     
-  __rotr = autoc.module.Code(dependencies=[std.limits_h, std.size_t, std.linkage], interface=f"""
-      /** @internal */
-      AUTOC_STATIC_INLINE
-      size_t _autoc_rotr(size_t value) {{
-        return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));
-      }}
-    """)
+
+_rotl_code = Code(dependencies=(std.limits_h, std.size_t, std._linkage_code), interface=f"""
+    /** @internal */
+    AUTOC_STATIC_INLINE
+    size_t _autoc_rotl(size_t value) {{
+      return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));
+    }}
+  """)
     
     
 # Incremental xor hasher for unordered data types

@@ -1,8 +1,8 @@
 import re
-import autoc.std
-from autoc.core import *
-from enum import Enum, auto
+import sys
+import autoc.std as std
 from autoc.module import Entity
+from autoc.core import Type, Indirection, _Traitful, Macro
 
 
 def _hidden_prefix(s, hidden):
@@ -29,30 +29,54 @@ def camel_decorator(type, identifier, hidden=False):
   return _hidden_prefix("".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids]), hidden)
 
 
-#
-class Composite(Type, Entity):
- 
-  # Global decorator used by all Composite descentants unless overridden locally
-  decorator = camel_decorator
-  
-  def __init__(self, name, *args, prefix=None, decorator=None, inline_methods=None, **kws):
-    super().__init__(name, *args, **kws)
-    self.__methods = {}
-    self.prefix = prefix if prefix else self.name
-    self.__decorator = decorator
-    self.__inline_policy = inline_methods
+# Global decorator used by all Composite descentants unless overridden locally
+decorator = camel_decorator
 
-  def __setattr__(self, name, value):
-    if isinstance(value, Method):
-      self.__methods[name] = value # Auto-register method objects
-    else:
-      if hasattr(self, "_Composite__methods") and name in self.__methods:
-        del self.__methods[name] # Handle overrides of methods with non-methods (e.g. macros)
-    super().__setattr__(name, value)
+
+#
+class Composite(Type, _Traitful, Entity):
+
+  def __init__(self, name, prefix=None, decorator=None, visibility="public", *args, **kws):
+    super().__init__(**kws)
+    self.name = str(name)
+    self.prefix = prefix if prefix else self.name
+    self.visibility = visibility
+    self.decorator = decorator if decorator else sys.modules[__name__].decorator
+    self.__methods = set()
+
+  #
+  def method(self, result, identifier, parameters, hidden=False, dependencies=tuple(), attribute=None, abstract=None, function=std.Function, **kws):
+    m = function(
+      result,
+      self.decorate(identifier, hidden=hidden),
+      parameters,
+      dependencies=(self, *dependencies),
+      abstract=abstract if abstract else False,
+      **kws
+    )
+    x = self._decorate_attribute(attribute if attribute else identifier)
+    self.__methods.add(x) # Record attribute name which holds the method object
+    setattr(self, x, m)
+    return m
+  
+  #
+  def macro_of(self, attribute, *args, **kws):
+    m = getattr(self, attribute)
+    self.__methods.discard(attribute) # Needed if original value was a function
+    return Macro.of(m, *args, **kws)
     
+  #
+  def method_of(self, identifier, attribute=None, *args, **kws):
+    x = self._decorate_attribute(attribute if attribute else identifier)
+    m = getattr(self, x)
+    self.__methods.discard(x)
+    delattr(self, x)
+    return self.method(m._result, x, m._parameters, constraint=m.constraint, **kws)
+  
+  #
   def decorate(self, *args, **kws):
     identifier = args if len(args) > 1 else args[0]
-    return (Composite.decorator if self.__decorator is None else self.__decorator)(self, identifier, **kws)
+    return self.decorator(self, identifier, **kws)
 
   def _decorate_component(self, suffix, abbreviate=True):
     if abbreviate:
@@ -65,220 +89,54 @@ class Composite(Type, Entity):
       case str(): return identifier
       case list() | tuple(): return "_".join(identifier)
 
-  def method(self, result, identifier, parameters, visibility=None, hidden=False, dependencies=[], attribute=None, **kws):
-    m = Method(
-      result,
-      self.decorate(identifier, hidden=hidden),
-      parameters,
-      dependencies=[self, *dependencies],
-      visibility=self.visibility if visibility is None else visibility,
-      composite=self,
-      **kws
-    )
-    setattr(self, self._decorate_attribute(attribute if attribute else identifier), m)
-    return m
-
-  def as_method(self, identifier, *args, **kws):
-    a = self._decorate_attribute(identifier)
-    s = getattr(self, a)
-    delattr(self, a) # An attribute is expected to be set in method()
-    return self.method(s.result, identifier, s.parameters, *args, constraint=s.constraint, **kws)
-  
-  def _inline_policy(self, method):
-    match self.__inline_policy:
-      case True:
-        method.linkage = "INLINE"
-      case False:
-        method.linkage = "EXTERNAL"
-
   # 
-  def depends(self, *entities):
+  def depend(self, *entities):
     for entity in entities:
-      self.dependencies.update([*entity.dependencies, *entity.references, entity])
+      if isinstance(entity, Entity):
+        self.dependencies.update((*entity.dependencies, *entity.references, entity))
 
-  def __register__(self):
-    super().__register__()
-    for m in self.__methods.values():
-      self.references.add(m)
-
+  def __str__(self):
+    return self.name
+  
   def __setup__(self):
     super().__setup__()
-    # Issue creation of real C functions
-    self.as_method("create")
-    self.as_method("destroy")
-    self.as_method("copy")
-    self.as_method("equal")
-    self.as_method("compare")
-    self.as_method("hash")
+    self.method_of("create")
+    self.method_of("destroy")
+    self.method_of("copy")
+    self.method_of("equal")
+    self.method_of("compare")
+    self.method_of("hash")
+
+  def __register__(self):
+    # By recording the attribute names instead of real method objects makes it possible to
+    # disable object emitting by setting the respective attribute to None
+    # prior entering this method (__setup__ is a perfect place for this)
+    self.references.update([t for x in self.__methods if (t := getattr(self, x))])
 
   @property
   def rvalue_type(self):
-    return Pointer(self)
+    return self
 
   @property
   def lvalue_type(self):
-    return Pointer(self, constant=True)
+    return self
 
   @property
   def in_type(self):
-    return Pointer(self, constant=True)
+    return Indirection(self, constant=True)
 
   @property
   def out_type(self):
-    return Pointer(self)
+    return Indirection(self)
 
   @property
   def inout_type(self):
-    return Pointer(self)
+    return Indirection(self)
 
 
 #
-class Method(Function, Entity):
-
-  #
-  class Linkage(Enum):
-    EXTERNAL = auto()
-    INLINE = auto()
-
-  def __init__(self, result, name, parameters, *args, linkage="EXTERNAL", visibility="PUBLIC", abstract=None, dependencies=[], composite, **kws):
-    super().__init__(result, name, parameters, *args, **kws)
-    self.composite = composite
-    self.linkage = linkage
-    self.visibility = visibility
-    self.__abstract = abstract
-    for x in [autoc.std.linkage, self.result] + self.types + dependencies:
-      if isinstance(x, Entity):
-        self.dependencies.add(x)
-      else:
-        # Pointer is a non-modularzed core type yet its base type can be
-        if isinstance(x, Pointer) and isinstance(x.base, Entity):
-          self.dependencies.add(x.base)
-
-  @classmethod
-  def implement(self, callable, name, *args, **kws):
-    return Method(callable.result, name, callable.parameters, *args, constraint=callable.constraint, **kws)
-  
-  def __enter__(self):
-    return self
-  
-  def __exit__(self, *args):
-    self.composite._inline_policy(self)
-    return False
-
-  @property
-  def linkage(self):
-    return self.__linkage
-
-  @linkage.setter
-  def linkage(self, linkage):
-    self.__linkage = linkage if isinstance(linkage, Method.Linkage) else Method.Linkage[linkage]
-
-  #
-  @property
-  def live(self):
-    return self.constraint() is True
-
-  #
-  @property
-  def inline(self):
-    return self.linkage is Method.Linkage.INLINE
-
-  @inline.setter
-  def inline(self, code):
-    self.linkage = "INLINE"
-    self.code = code
-
-  #
-  @property
-  def external(self):
-    return self.linkage is Method.Linkage.EXTERNAL
-
-  @external.setter
-  def external(self, code):
-    self.linkage = "EXTERNAL"
-    self.code = code
-
-  #
-  @property
-  def abstract(self):
-    if self.__abstract is None:
-      return self.code is None
-    else:
-      return self.__abstract is True
-
-  # FIXME visibility should be extracted into independent mixin class
-
-  @property
-  def visibility(self):
-    return self.__visibility
-  
-  @visibility.setter
-  def visibility(self, visibility):
-    self.__visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
-
-  #
-  @property
-  def public(self):
-    return self.visibility is Visibility.PUBLIC
-  
-  #
-  @property
-  def private(self):
-    return self.visibility is Visibility.PRIVATE
-
-  #
-  @property
-  def internal(self):
-    return self.visibility is Visibility.INTERNAL
-
-  #
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if self.live:
-      if (header and not self.internal) or (not header and self.internal):
-        self._render_declaration(stream)
-
-  #
-  def render_definitions(self, stream, header):
-    super().render_definitions(stream, header)
-    if self.live:
-      if self.inline:
-        if (header and not self.internal) or (not header and self.internal):
-          self._render_definition(stream)
-      else:
-        if not header:
-          self._render_definition(stream)
-
-  #  
-  def _render_definition(self, stream):
-    if not self.external:
-      stream.append(self.__decorator)
-    stream.append(self.definition)
-
-  #
-  def _render_declaration(self, stream):
-    if not self.internal:
-      stream.append(self.description)
-    stream.append(self.__decorator)
-    stream.append(self.declaration)
-    stream.append(";\n")
-    
-  @property
-  def __decorator(self): return f"{Method.__spec[self.linkage]}\n"
-  
-  #
-  @property
-  def description(self):
-    if self.public:
-      return "/** @public */\n"
-    else:
-      return "/** @internal */\n"
-
-  __spec = {Linkage.INLINE: "AUTOC_STATIC_INLINE", Linkage.EXTERNAL: "AUTOC_EXTERN"}
-  
-  
 class _StructRenderer:
-  
+
   def _render_struct(self, stream):
     if not self.public:
       stream.append("/** @internal */\n")

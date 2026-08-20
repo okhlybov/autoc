@@ -1,18 +1,18 @@
 import functools
-import autoc.core
-import autoc.std
-import autoc.module
+import autoc.std as std
+from autoc.core import Type
+from autoc.module import Code
 
 
 # Generic C malloc()+free() memory manager
 @functools.cache
-class Manager(autoc.module.Code):
+class Manager(Code):
   
-  def __init__(self):
-    super().__init__(dependencies=[autoc.std.stdlib_h])
+  def __init__(self, *args, **kws):
+    super().__init__(*args, dependencies=(std.stdlib_h,), **kws)
     
   def allocate(self, element, count=1, zero=False, cast=None):
-    if isinstance(element, autoc.core.Type):
+    if isinstance(element, Type):
       type = element
       size = f"sizeof({type})"
     else:

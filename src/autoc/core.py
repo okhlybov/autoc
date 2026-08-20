@@ -1,304 +1,64 @@
-from enum import Enum, auto
-from collections.abc import Iterable
+from collections.abc import Iterable # substitute for missing iterable()
 
 
-_type_cache = [] # [ (matcher, type) ]
+_type_rxcache = [] # [ (rx, type) ]
+_type_cache = {} # { name: type }
 
 
-def __pointer2type(obj):
-  if isinstance(obj, Pointer):
-    if obj.indirection == 0:
-      return obj.base
-    else:
-      return obj
-  return None
-
-
-def __type2type(obj):
+def _type2type(obj):
   return obj if isinstance(obj, Type) else None
 
 
-def __str2type(obj):
+def _str2type(obj):
   if isinstance(obj, str):
-    for rx, type in _type_cache:
-      if rx.match(str(obj)):
+    for rx, type in _type_rxcache:
+      if rx.match(obj):
+        _type_cache[type.name] = type
         return type
+    if obj in _type_cache:
+      return _type_cache[obj]
     return Primitive(obj)
   return None
 
 
-_type_converters = [__type2type, __str2type, __pointer2type]
-
-
 #
 def _type(obj):
-  for c in _type_converters:
+  for c in (_type2type, _str2type):
     if x := c(obj):
       return x
-  raise TypeError(f"can not construct a Type from {obj}")
+  raise TypeError(f"{obj} is not convertible to Type")
 
 
 #
 def _value(obj):
   match obj:
+    # TODO complex
     case Value(): return obj
     case int(): return Literal("int", obj)
     case float(): return Literal("double", obj)
-    case str(): return Verbatim(obj)
-  raise TypeError(f"can not construct a Value from {obj}")
-  
+    #case str(): return StringLiteral(obj)
+    case str(): return Literal("int", obj)
+  raise TypeError(f"{obj} is not convertible to Value")
+
 
 #
 def _parameter(obj):
   match obj:
     case Callable.Parameter(): return obj
-    case Type() | str(): return Callable.In(obj)
-  raise TypeError(f"can not construct a callable Parameter from {obj}")
-
-
-#  
-def string(obj):
-  return StrLiteral(obj)
+    case _: return Callable.In(obj)
 
 
 #
-def char(obj):
-  return CharLiteral(obj)
+def _active(obj):
+  match obj:
+    case Callable(): return obj.active
+    case _ if callable(obj): return True
+  return False
 
 
 #
-def out(obj):
-  return Callable.Out(obj)
+class _MultiphaseConstructible(type):
 
-
-#
-def inout(obj):
-  return Callable.InOut(obj)
-
-
-# Generic identifier's visibility
-class Visibility(Enum):
-  PUBLIC = auto()
-  PRIVATE = auto()
-  INTERNAL = auto()
-
-
-#
-class Value:
-  
-  def __init__(self, type, *args, **kws):
-    super().__init__(*args, **kws)
-    self.type = None if type is None else _type(type)
-
-  def bind(self, type):
-    return Binding(self, type)
-
-
-#
-class Binding(Value):
-  
-  def __init__(self, value, type, *args, **kws):
-    if isinstance(v := _value(value), Binding):
-      i = v.indirection
-      v = v.value
-    else:
-      i = v.type.indirection
-    super().__init__(v.type, *args, **kws)
-    self.indirection = i - type.indirection
-    self.value = v
-    
-  def __str__(self):
-    if self.indirection >= 0:
-      return "*"*self.indirection + str(self.value)
-    elif self.indirection == -1:
-      return "&" + str(self.value)
-    raise ValueError(f"bad indirection level {self.indirection} for taking address of {self.value} with &")
-
-
-#
-class Variable(Value):
-  def __init__(self, type, name, *args, **kws):
-    super().__init__(type, *args, **kws)
-    self.name = str(name)
-
-  def __str__(self):
-    return self.name
-
-  def __repr__(self):
-    return f"{repr(self.name)} :: {repr(self.type)}"
-
-  @property
-  def definition(self):
-    return f"{self.type} {self.name}"
-
-
-# Class defining the call interface
-class Signature:
-  
-  def __init__(self, result, parameters, constraint=lambda: True):
-    self.result = result
-    self.parameters = parameters
-    self.constraint = constraint
-
-
-# Abstract callable with return type and input parameters
-class Callable:
-  
-  #
-  def __init__(self, result, parameters, constraint=lambda: True, *args, **kws):
-    super().__init__(*args, **kws)
-    self.parameters = {str(name): _parameter(type) for name, type in parameters.items()}
-    self.types = [parameter.forward_type(self) for parameter in self.parameters.values()]
-    self.arguments = [Variable(type, name) for type, name in zip(self.types, self.parameters.keys())]
-    for x in self.arguments:
-      setattr(self, x.name, x)
-    self.constraint = constraint
-    self.__result = result
-
-  @property      
-  def result(self):
-    r = self.__result
-    return _type(r) if not (r is None or r == "void") else None
-    # Got to use property instead of attibute to avoid infinite recursion
-
-  @property
-  def _result_c(self):
-    return "void" if self.result is None else str(self.result)
-    
-  #
-  @property
-  def signature(self):
-    return "%s(%s)" % (self._result_c, ", ".join([str(x) for x in self.types]))
-  
-  # Construct a C function type definition out of the callable signature
-  def _typedef(self, name):
-    return "%s (*%s)(%s)" % (self._result_c, name, ", ".join([str(x) for x in self.types]))
-  
-  class Parameter:
-    def __init__(self, type):
-      self.type = _type(type)
-      
-  class In(Parameter):
-    def forward_type(self, type):
-      return type.type_in(self.type)
-  
-  class Out(Parameter):
-    def forward_type(self, type):
-      return type.type_out(self.type)
-
-  class InOut(Parameter):
-    def forward_type(self, type):
-      return type.type_inout(self.type)
-
-  class Call(Value):
-    
-    def __init__(self, callable, arguments, *args, **kws):
-      super().__init__(callable.result, *args, **kws)
-      self.callable = callable
-      nargs = len(arguments)
-      nparams = len(self.callable.types)
-      if not (nargs == nparams):
-        raise ValueError(f"callable {callable.signature} takes {nparams} arguments but {nargs} given")
-      self.arguments = [_value(x) for x in arguments]
-
-    def __call__(self, *arguments):
-      return self.type(self, *arguments)
-
-
-# C code injector
-class Macro(Callable):
-
-  #
-  def __init__(self, result, parameters, emitter, constraint=lambda: True, *args, **kws):
-    super().__init__(result, parameters, constraint=constraint, *args, **kws)
-    self.emitter = emitter
-
-  @classmethod
-  def implement(self, signature, emitter, *args, **kws):
-    return Macro(signature.result, signature.parameters, emitter, *args, constraint=signature.constraint, **kws)
-
-  def type_in(self, type):
-    return type.rvalue_type
-
-  def type_out(self, type):
-    return type.lvalue_type
-
-  def type_inout(self, type):
-    return type.rvalue_type
-
-  #
-  def __call__(self, *arguments):
-    return Macro.Call(self, arguments)
-    
-  class Call(Callable.Call):
-    
-    def __str__(self):
-      return str(self.callable.emitter(*[value.bind(type) for type, value in zip(self.callable.types, self.arguments)]))
-
-
-# Anonymous C function with no body, only the callable signature
-# Suitable for handling C function pointers
-class Functional(Callable):
-
-  def type_in(self, type):
-    return type.in_type
-
-  def type_out(self, type):
-    return type.out_type
-  
-  def type_inout(self, type):
-    return type.inout_type
-  
-  #
-  def __call__(self, *arguments):
-    return Functional.Call(self, arguments)
-
-  class Call(Callable.Call):
-    
-    def __str__(self):
-      return "(%s)" % (", ".join([str(value.bind(type)) for type, value in zip(self.callable.types, self.arguments)]))
-
-
-# Regular C function with body
-class Function(Functional):
-
-  #
-  def __init__(self, result, name, parameters, code=None, *args, **kws):
-    super().__init__(result, parameters, *args, **kws)
-    self.name = str(name)
-    self.code = code
-
-  #
-  def __call__(self, *arguments):
-    return Function.Call(self, arguments)
-
-  #
-  def __str__(self):
-    return self.name
-    
-  #
-  @property
-  def declaration(self):
-    return "%s %s(%s)" % (self._result_c, self.name, ", ".join([f"{x.type} {x.name}" for x in self.arguments]))
-
-  #
-  @property
-  def definition(self):
-    if not isinstance(self.code, str) and not self.code:
-      raise ValueError(f"missing body of non-abstract function {self.name}()")
-    match self.code:
-      case Iterable(): cs = [str(x) for x in self.code]
-      case _ if callable(self.code): cs = [str(self.code())]
-      case _: cs = [str(self.code)]
-    return str().join([self.declaration, "{", *cs, "}\n"])
-    
-  class Call(Functional.Call):
-    def __str__(self):
-      return "%s%s" % (self.callable.name, super().__str__())
-
-
-#
-class __Constructor(type):
   def __call__(cls, *args, **kws):
     obj = super().__call__(*args, **kws)
     obj.__setup__()
@@ -306,103 +66,98 @@ class __Constructor(type):
     return obj
 
 
-#
-class Type(metaclass = __Constructor):
-  
-  def __init__(self, name, visibility="PUBLIC", *args, **kws):
-    super().__init__(*args, **kws)
-    self.name = str(name)
-    self.indirection = 0
-    self.visibility = visibility if isinstance(visibility, Visibility) else Visibility[visibility]
-
-  def __str__(self):
-    return self.name
-
-  def __repr__(self):
-    return f"{self} {super().__repr__()}"
-
-  def __setup__(self):
-    self.create = Signature(None, {"target": out(self)}, constraint=lambda: self.constructible)
-    self.destroy = Signature(None, {"target": inout(self)}, constraint=lambda: self.destructible)
-    self.copy = Signature(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
-    self.equal = Signature("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
-    self.hash = Signature("size_t", {"target": self}, constraint=lambda: self.hashable)
-    self.compare = Signature("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
-    # Used by the lookup mechanisms of hash-based containers
-    self._lookup_hash = Macro.implement(self.hash, lambda target: str(self.hash(target)))
-    self._lookup_equal = Macro.implement(self.equal, lambda left, right: str(self.equal(left, right)))
-
-  def __register__(self):
-    pass
-  
-  def as_macro(self, slot, emitter, *args, **kws):
-    s = getattr(self, slot)
-    m = Macro(s.result, s.parameters, emitter, *args, constraint=s.constraint, **kws)
-    setattr(self, slot, m)
-    return m
-
-  #
-  def variable(self, name):
-    return Variable(self, name)
-
-  #
-  @property
-  def public(self):
-    return self.visibility is Visibility.PUBLIC
-  
-  #
-  @property
-  def private(self):
-    return self.visibility is Visibility.PRIVATE
-  
-  #
-  @property
-  def internal(self):
-    return self.visibility is Visibility.INTERNAL
+# Mixin for types which support all operations
+class _Traitful:
   
   @property
   def constructible(self):
-    return hasattr(self, "create") and len(self.create.arguments) == 1 # Method has no custom parameters past target object
-
-  @property
-  def emplaceable(self):
-    return hasattr(self, "create") and len(self.create.arguments) >= 1 # Mathod is assumed to have at least one parameter, the target object, followed by arbitrary number of custom parameters
+    return True
   
   @property
+  def default_constructible(self):
+    return self.constructible and len(self.create.parameters) == 1
+
+  @property
   def destructible(self):
-    return hasattr(self, "destroy")
+    return True
 
   @property
   def copyable(self):
-    return hasattr(self, "copy")
-
+    return True
+  
   @property
   def comparable(self):
-    return hasattr(self, "equal")
-
-  @property
-  def hashable(self):
-    return hasattr(self, "hash")
-
+    return True
+  
   @property
   def orderable(self):
-    return hasattr(self, "compare")
+    return True
+  
+  @property
+  def hashable(self):
+    return True
+  
+
+#
+class Type(metaclass = _MultiphaseConstructible):
+
+  def __init__(self, visibility="public", *args, **kws):
+    super().__init__(*args, **kws)
+    self.visibility = visibility
+    
+  def __setup__(self):
+    # Basic methods
+    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
+    self.destroy = Callable(None, {"target": inout(self)}, constraint=lambda: self.destructible)
+    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
+    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
+    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
+    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
+    # Methods used by the hash-based containers
+    self.hash_lookup_hash = lambda *args: self.hash(*args)
+    self.hash_lookup_equal = lambda *args: self.equal(*args)
+  
+  def __register__(self): pass
+  
+  @property
+  def public(self):
+    return self.visibility == "public"
+  
+  @property
+  def private(self):
+    return self.visibility == "private"
+
+  @property
+  def internal(self):
+    return self.visibility == "internal"
+
+  def variable(self, name):
+    return Variable(self, name)
 
 
 #
-class Primitive(Type):
-  
+class Primitive(Type, _Traitful):
+
+  def __init__(self, name, **kws):
+    super().__init__(**kws)
+    self.name = str(name)
+    if not self.name in _type_cache:
+      _type_cache[self.name] = self
+
   def __setup__(self):
     super().__setup__()
-    self.as_macro("create", lambda target: f"{target} = 0")
-    self.as_macro("copy", lambda target, source: f"{target} = {source}")
-    self.as_macro("equal", lambda left, right: f"({left} == {right})")
-    self.as_macro("hash", lambda target: f"(size_t)({target})")
-    self.as_macro("compare", lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
-
+    self.create = Macro.of(self.create, lambda target: f"{target} = 0")
+    self.copy = Macro.of(self.copy, lambda target, source: f"{target} = {source}")
+    self.equal = Macro.of(self.equal, lambda left, right: f"({left} == {right})")
+    self.compare = Macro.of(self.compare, lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
+    self.hash = Macro.of(self.hash, lambda target: f"(size_t)({target})")
+    
+  def __str__(self):
+    return self.name
+  
   @property
   def destructible(self):
-    return False
+    return False # Primitive type almost always bears no destructor
 
   @property
   def rvalue_type(self):
@@ -418,102 +173,311 @@ class Primitive(Type):
 
   @property
   def out_type(self):
-    return Pointer(self)
+    return Indirection(self)
 
   @property
   def inout_type(self):
-    return Pointer(self)
+    return Indirection(self)
+
+
+# Abstract class for renderable contents, basically a str-like type
+class Statement:
+
+  def __init__(self, contents, *args, **kws):
+    super().__init__(*args, **kws)
+    self.contents = str(contents)
+
+  def __str__(self):
+    return self.contents
+
+
+def _indirection(obj):
+  return t.indirection if isinstance(t := _type(obj), Indirection) else 0
+
+
+def _indifference(lt, rt):
+  return _indirection(lt) - _indirection(rt)
+
+
+# Abstract class representing a typed value of unspecified contents which can be passed to callable
+class Value:
+  
+  def __init__(self, type, *args, **kws):
+    super().__init__(*args, **kws)
+    self.type = _type(type)
+
+  def bind(self, type):
+    if (i := _indifference(self.type, type)) < 0:
+      raise ValueError(f"can not dereference value {self} with & operator")
+    return "*"*i
+
+
+# Class representing a typed value with generic renderable contents
+class Expression(Value, Statement):
+
+  def bind(self, type):
+    return super().bind(type) + self.contents
 
 
 #
-class Pointer(Primitive):
+class Literal(Expression):
   
-  def __init__(self, type, *args, indirection=1, constant=False, **kws):
-    i = indirection
-    t = _type(type)
-    if isinstance(t, Pointer):
-      i += t.indirection
-      t = t.base
-    signature = "const " if constant else str()
-    signature += t.name + "*"*i
-    super().__init__(signature, *args, **kws)
-    self.base = t
-    self.indirection = i
-    self.constant = constant
+  def bind(self, type):
+    return self.contents
+
+
+#
+def string(value):
+  return StringLiteral(value)
+
+
+#
+class StringLiteral(Literal):
+
+  def __init__(self, value, *args, **kws):
+    super().__init__(Indirection("char", constant=True), f"\"{value}\"")
+
+
+#
+def char(obj):
+  return CharacterLiteral(obj)
+
+
+#
+class CharacterLiteral(Literal):
+
+  def __init__(self, value, *args, **kws):
+    super().__init__("char", f"'{str(value)[0]}'")
+
+
+# Class for representing the C variable
+class Variable(Value):
+  
+  def __init__(self, type, name):
+    super().__init__(type)
+    self.name = str(name)
+
+  def bind(self, type):
+    i = _indifference(self.type, type)
+    if i < -1:
+      raise ValueError(f"too many & addressing operations requested for {self}")
+    return f"&{self.name}" if i == -1 else "*"*i + self.name
+    
+  @property
+  def definition(self):
+    return f"{self.type} {self.name}"
+  
+  def __str__(self):
+    return self.name
+  
+
+#
+class Indirection(Type):
+
+  def __init__(self, type, *args, indirection=1, constant=None, **kws):
+    super().__init__(*args, **kws)
+    if isinstance(t := _type(type), Indirection):
+      self.type = t.type
+      self.indirection = indirection + t.indirection
+      self.constant = t.constant if constant is None else constant
+    else:
+      self.type = t
+      self.indirection = indirection
+      self.constant = True if constant is True else False
+      
+  def __str__(self):
+    return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
+
+  #
+  def variable(self, name):
+    return Indirection.Variable(self, name)
+
+  class Variable(Variable):
+
+    def __init__(self, obj, name):
+    # It makes little to no sense to define variable of const type so drop constness qualifier if it is set
+      super().__init__(Indirection(obj.type, indirection=obj.indirection, constant=False), name)
+
+    @property
+    def definition(self):
+      return f"{super().definition} = 0"
+  
+  @property
+  def rvalue_type(self):
+    return self.type
+
+  @property
+  def lvalue_type(self):
+    return self.type
 
   @property
   def in_type(self):
-    return Pointer(self.base, constant=True)
-    
+    return Indirection(self.type, constant=True)
+
   @property
   def out_type(self):
-    return Pointer(self)
+    return self
 
   @property
   def inout_type(self):
     return self
-  
-  def as_const(self):
-    return Pointer(self.base, indirection=self.indirection, constant=True)
+
+
+  #
+def out(obj):
+  return Callable.Out(obj)
 
 
 #
-class Verbatim(str):
-
-  def bind(self, type):
-    return self
+def inout(obj):
+  return Callable.InOut(obj)
 
 
-#
-class Literal(Value):
+# Basic callable descriptor
+class Callable:
   
-  def __init__(self, type, value, *args, **kws):
-    super().__init__(type, *args, **kws)
-    self.value = value
-
-  def __str__(self):
-    return str(self.value)
-  
-  
-#
-class StrLiteral(Literal):
-  
-  type = Pointer("char")
-  
-  def __init__(self, value, *args, **kws):
-    super().__init__(StrLiteral.type, str(value), *args, **kws)
+  def __init__(self, result, parameters, constraint=lambda: True, *args, **kws):
+    super().__init__(*args, **kws)
+    # Capture raw parameter description to be used in modeling of the descendant types
+    self._result = result
+    self._parameters = parameters
+    self.constraint = constraint
     
-  def __str__(self):
-    return f'"{self.value}"'
-  
-  
-#
-class CharLiteral(Literal):
-  
-  def __init__(self, value, *args, **kws):
-    super().__init__("char", str(value)[0], *args, **kws)
+  @property
+  def active(self):
+    return self.constraint() is True
+
+  @property
+  def _result_c(self):
+    return "void" if self.result is None else str(self.result)
+
+  @property
+  def signature(self):
+    return "%s(%s)" % (self._result_c, ", ".join(str(t) for t in self.parameters.values()))
+
+  def contents(self, contents):
+    if self.result is None:
+      return Statement(contents)
+    else:
+      return Expression(self.result, contents)
+
+  class Parameter:
+    def __init__(self, type):
+      self.type = _type(type)
+    def resolve(self, callable):
+      return self.type
+      
+      
+  class In(Parameter):
+    def resolve(self, callable):
+      return callable.resolve_in(self.type)
     
-  def __str__(self):
-    return f"'{self.value}'"
+  class Out(Parameter):
+    def resolve(self, callable):
+      return callable.resolve_out(self.type)
+  
+  class InOut(Parameter):
+    def resolve(self, callable):
+      return callable.resolve_inout(self.type)
+
+
+#
+class _Parametrized(Callable):
+  
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    self.result = None if self._result is None or self._result == "void" else _parameter(self._result).resolve(self)
+    self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
+
+  def __call__(self, *arguments):
+    if not self.active:
+      raise ValueError(f"attempt to call disabled function {self}")
+    if (na := len(arguments)) != (np := len(self.parameters)):
+      raise TypeError(f"{self} takes {np} parameter(s) but {na} given")
+    return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
+
+
+#  
+class Macro(_Parametrized):
+  
+  @classmethod
+  def of(self, callable, emitter, constraint=None, **kws):
+    return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, **kws)
+  
+  def __init__(self, result, parameters, emitter, **kws):
+    super().__init__(result, parameters, **kws)
+    self.emitter = emitter
 
  
+  def resolve_in(self, type):
+    return type.rvalue_type
+  
+  def resolve_out(self, type):
+    return type.lvalue_type
+  
+  def resolve_inout(self, type):
+    return type.lvalue_type
+
+  def __call__(self, *arguments):
+    return self.contents(self.emitter(*super().__call__(*arguments)))
+
+
 #
-class Traitless:
+class Function(_Parametrized):
+  
+  @classmethod
+  def of(self, callable, name, constraint=None, **kws):
+    return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
+
+  def __init__(self, result, name, parameters, abstract=None, *args, **kws):
+    super().__init__(result, parameters, *args, **kws)
+    self.name = str(name)
+    self.__abstract = abstract
+    self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
+    for x in self.arguments:
+      setattr(self, x.name, x)
+
+  def resolve_in(self, type):
+    return type.in_type
+  
+  def resolve_out(self, type):
+    return type.out_type
+  
+  def resolve_inout(self, type):
+    return type.inout_type
+
+  def __call__(self, *arguments):
+    return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
+
+  def __repr__(self):
+    return f"{self.name} {super().__repr__()}"
+
   @property
-  def constructible(self):
-    return False
+  def abstract(self):
+    return not hasattr(self, "code") if self.__abstract is None else self.__abstract is True
+
+  def _declaration_c(self, render_names):
+    if render_names:
+      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(f"{t} {n}" for n, t in self.parameters.items()))
+    else:
+      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
+
   @property
-  def copyable(self):
-    return False
+  def _body_c(self):
+    if self.abstract:
+      raise ValueError(f"attempt to render definition for abstract function {self}")
+    if not hasattr(self, "code"):
+      raise ValueError(f"missing body of non-abstract function {self}")
+    match self.code:
+      case Iterable(): cs = [str(x) for x in self.code]
+      case _ if callable(self.code): cs = [str(self.code())]
+      case _: cs = [str(self.code)]
+    return str().join(("{", *cs, "}"))
+
   @property
-  def orderable(self):
-    return False
+  def declaration(self):
+    return self._declaration_c(False)
+
   @property
-  def comparable(self):
-    return False
-  @property
-  def destructible(self):
-    return False
-  @property
-  def hashable(self):
-    return False
+  def definition(self):
+    return self._declaration_c(True) + self._body_c

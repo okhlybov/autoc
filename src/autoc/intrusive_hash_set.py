@@ -1,46 +1,56 @@
-import autoc.core
-import autoc.hash
 import autoc.std as std
-from autoc.set import Set
-from autoc.core import out, inout, Pointer
+from autoc.hash import Xor
+from autoc.range import Forward
+from autoc.set import Set, _ceil_power2
 from autoc.composite import _StructRenderer
 from autoc.collection import _Range as CollectionRange
-from autoc.range import Forward
+from autoc.core import out, inout, Macro, Indirection, Callable
+
+
+class _Macro(Macro):
+
+  def __init__(self, result, parameters, emitter, **kws):
+    # Wrap the passthough arguments in () to circumvent operation proirity issues for user-supplied code
+    super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kws)
 
 
 #
 class Set(_StructRenderer, Set):
   
-  def __init__(self, *args, capacity_threshold=0.75, hasher=autoc.hash.Xor(), dependencies=[], is_empty, is_deleted, mark_empty, mark_deleted, **kws):
-    super().__init__(*args, hasher=hasher, dependencies=[*dependencies, autoc.set._ceil_power2], **kws)
-    self._element_p = Pointer(self.element)
+  def __init__(self, *args, capacity_threshold=0.75, hasher=Xor(), dependencies=tuple(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
+    super().__init__(*args, hasher=hasher, dependencies=(*dependencies, _ceil_power2), **kws)
+    self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
-    self.is_empty = is_empty
-    self.is_deleted = is_deleted
-    self.mark_empty = mark_empty
-    self.mark_deleted = mark_deleted
+    self.is_empty = _Macro("int", {"entry": self.element}, is_empty)
+    self.is_deleted = _Macro("int", {"entry": self.element}, is_deleted)
+    self.mark_empty = _Macro(None, {"entry": out(self.element)}, mark_empty)
+    self.mark_deleted = _Macro(None, {"entry": out(self.element)}, mark_deleted)
     self.range = Range(self)
+
+  @property
+  def orderable(self):
+    return False
 
   def __setup__(self):
     super().__setup__()
     
     target_i = self.element.variable("target->elements[index]")
     source_i = self.element.variable("source->elements[index]")
-    target_elements = Pointer(self.element).variable("target->elements")
+    target_elements = self._element_p.variable("target->elements")
     
     with self.size as f:
-      f.inline = f"""
+      f.inline_code = f"""
       assert(target);
       return target->size;
     """
     
-    with self.method("int", ("is", "element"), {"element": self.element}, visibility="INTERNAL", hidden=True) as f:
-      f.external = f"""
+    with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True) as f:
+      f.code = f"""
         return !({self.is_empty(f.element)} || {self.is_deleted(f.element)});
       """
     
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="INTERNAL") as f:
-      f.external = f"""
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+      f.code = f"""
         assert(target);
         assert(capacity > 0);
         target->size = 0;
@@ -51,8 +61,8 @@ class Set(_StructRenderer, Set):
     
     _target = self.variable("_target")
     
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="INTERNAL") as f:
-      f.external = f"""
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+      f.code = f"""
         size_t index;
         assert(target);
         if(capacity) {{
@@ -64,20 +74,20 @@ class Set(_StructRenderer, Set):
       """
 
     with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
       """
 
     with self.create as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         target->elements = NULL;
         target->capacity = target->size = 0;
       """
     
-    with self.method(self._element_p, ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="INTERNAL", hidden=True) as f:
-      f.external = f"""
+    with self.method(Callable.Parameter(self._element_p), ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable) as f:
+      f.code = f"""
         size_t index, start;
         {self._element_p} _element = NULL;
         assert(target);
@@ -86,11 +96,11 @@ class Set(_StructRenderer, Set):
         /* linear probing */
         if(target->elements) {{
           assert(target->capacity > 0);
-          start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+          start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
           /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
           for(index = start; index < target->capacity; ++index) {{
             if(!({self.is_empty(target_i)})) {{
-              if(!({self.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+              if(!({self.is_deleted(target_i)}) && {self.element.hash_lookup_equal(target_i, f.element)}) {{
                 _element = &{target_i};
                 goto stop;
               }}
@@ -98,7 +108,7 @@ class Set(_StructRenderer, Set):
           }}
           for(index = 0; index < start; ++index) {{
             if(!({self.is_empty(target_i)})) {{
-              if(!({self.is_deleted(target_i)}) && {self.element._lookup_equal(target_i, f.element)}) {{
+              if(!({self.is_deleted(target_i)}) && {self.element.hash_lookup_equal(target_i, f.element)}) {{
                 _element = &{target_i};
                 goto stop;
               }}
@@ -111,8 +121,8 @@ class Set(_StructRenderer, Set):
         return NULL;
       """
     
-    with self.method(self._element_p, ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="INTERNAL", hidden=True) as f:
-      f.external = f"""
+    with self.method(Callable.Parameter(self._element_p), ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable) as f:
+      f.code = f"""
         size_t index, start;
         assert(target);
         assert(_index);
@@ -120,7 +130,7 @@ class Set(_StructRenderer, Set):
         assert(target->size < target->capacity);
         assert({self.is_element(f.element)});
         /* linear probing */
-        start = {self.element._lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+        start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
         /* lookup terminator for non-existing entry is either empty or deleted slot */
         for(index = start; index < target->capacity; ++index) {{
           if(!{self.is_element(target_i)}) {{
@@ -137,8 +147,8 @@ class Set(_StructRenderer, Set):
         abort(); /* not finding a suitable empty slot is a fatal error */
       """
 
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True) as f:
-      f.external = f"""
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, constraint=lambda: self.element.copyable) as f:
+      f.code = f"""
         {_target.definition};
         size_t index, _index, new_capacity;
         assert(target);
@@ -162,7 +172,7 @@ class Set(_StructRenderer, Set):
       """
     
     with self.contains as f:
-      f.external = f"""
+      f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
@@ -171,7 +181,7 @@ class Set(_StructRenderer, Set):
     
     with self.destroy as f:
       if self.element.destructible:
-        f.external = f"""
+        f.code = f"""
           size_t index;
           assert(target);
           if(target->elements) {{
@@ -182,7 +192,7 @@ class Set(_StructRenderer, Set):
           }}
         """
       else:
-        f.external = f"""
+        f.code = f"""
           assert(target);
           if(target->elements) {{
             {self.memory.free(target_elements)};
@@ -190,13 +200,13 @@ class Set(_StructRenderer, Set):
         """
 
     with self.empty as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
     
     with self.put as f:
-      f.external = f"""
+      f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
@@ -210,7 +220,7 @@ class Set(_StructRenderer, Set):
     
     with self.remove as f:
       _destroy = self.element.destroy(target_i) if self.element.destructible else str()
-      f.external = f"""
+      f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
@@ -223,7 +233,7 @@ class Set(_StructRenderer, Set):
       """
     
     with self.method(self.element_view, ("find", "view"), {"target": self, "element": self.element}) as f:
-      f.external = f"""
+      f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
@@ -231,7 +241,7 @@ class Set(_StructRenderer, Set):
       """
     
     with self.copy as f:
-      f.external = f"""
+      f.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -247,7 +257,7 @@ class Set(_StructRenderer, Set):
     r = range.variable("r")
     
     with self.equal as f:
-      f.external = f"""
+      f.code = f"""
         {r.definition};
         assert(left);
         assert(right);
@@ -262,7 +272,7 @@ class Set(_StructRenderer, Set):
     state = self.hasher.state_t.variable("state")
     
     with self.hash as f:
-      f.external = f"""
+      f.code = f"""
         size_t result;
         {r.definition};
         {state.definition};
@@ -296,55 +306,55 @@ class Range(CollectionRange, Forward):
     if header:
       stream.append(f"""
         typedef struct {{
-          {Pointer(self.iterable, constant=True)} iterable; /**< @private */
+          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
           {std.size_t} front; /**< @private */
         }} {self.name};
       """)
 
   def _copy(self, result, parameters, **kws):
-    return autoc.core.Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
 
   def __setup__(self):
     super().__setup__()
     
     front_element = self.element.variable("target->iterable->elements[target->front]")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="INTERNAL") as f:
-      f.external = lambda: f"""
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal") as f:
+      f.code = lambda: f"""
         assert(target);
         while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
       """
     
-    with self.method(self, "new", {"iterable" : self.iterable}) as f:
-      f.external = f"""
-        {self} result;
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+      result = f.result.variable("result")
+      f.code = f"""
+        {result.definition};
         assert(iterable);
         result.iterable = iterable;
         result.front = 0;
         {self.next("&result")};
-        return result;
+        return {result};
       """
 
     with self.empty as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         return target->front >= target->iterable->capacity;
       """
-
-    result = self.element.variable("result")
     
     with self.front as f:
-      f.external = lambda: f"""
+      result = f.result.variable("result")
+      f.code = lambda: f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
         {self.element.copy(result, front_element)};
-        return result;
+        return {result};
       """
         
     with self.front_view as f:
-      f.external = lambda: f"""
+      f.code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
@@ -352,7 +362,7 @@ class Range(CollectionRange, Forward):
       """
     
     with self.move_front as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         ++target->front;

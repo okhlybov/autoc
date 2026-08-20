@@ -1,9 +1,8 @@
-from autoc.core import out, inout, Macro, Pointer
-from autoc.composite import _StructRenderer
-import autoc.std as std
-from autoc.intrusive_hash_set import Set
-from autoc.hash_map import _Entry
 from autoc.map import Map
+from autoc.hash_map import _Entry
+from autoc.core import out, Macro, Indirection
+from autoc.intrusive_hash_set import Set
+from autoc.composite import _StructRenderer
 
 
 #
@@ -13,14 +12,18 @@ class Map(_StructRenderer, Map):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
       self._decorate_component("set", abbreviate=True),
-      _Entry(self._decorate_component("entry", abbreviate=True),self.element, self.index, visibility="INTERNAL"),
-      visibility="INTERNAL",
-      is_empty=Macro("int", {"entry": self.element}, lambda entry: is_empty(f"({entry})")),
-      mark_empty=Macro(None, {"entry": out(self.element)}, lambda entry: mark_empty(f"({entry})")),
-      is_deleted=Macro("int", {"entry": self.element}, lambda entry: is_deleted(f"({entry})")),
-      mark_deleted=Macro(None, {"entry": out(self.element)}, lambda entry: mark_deleted(f"({entry})")),
+      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
+      visibility="internal",
+      is_empty=is_empty,
+      mark_empty=mark_empty,
+      is_deleted=is_deleted,
+      mark_deleted=mark_deleted,
     )
-    self.depends(self._set)
+    self.depend(self._set)
+
+  @property
+  def orderable(self):
+    return False
 
   def __setup__(self):
     super().__setup__()
@@ -31,45 +34,45 @@ class Map(_StructRenderer, Map):
     _right = self.variable("right->set")
     
     with self.create as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         {self._set.create(_target)};
       """
     
     with self.destroy as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         {self._set.destroy(_target)};
       """
     
     with self.copy as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         assert(source);
         {self._set.copy(_target, _source)};
       """
         
     with self.equal as f:
-      f.external = f"""
+      f.code = f"""
         assert(left);
         assert(right);
         return {self._set.equal(_left, _right)};
       """
     
     with self.hash as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         return {self._set.hash(_target)};
       """
     
     with self.empty as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         return {self._set.empty(_target)};
       """
     
     with self.size as f:
-      f.external = f"""
+      f.code = f"""
         assert(target);
         return {self._set.size(_target)};
       """
@@ -77,13 +80,13 @@ class Map(_StructRenderer, Map):
     set = self._set
     entry = set.element
     _entry = entry.variable("entry")
-    _entry_p = Pointer(entry).variable("entry_p")
+    _entry_p = Indirection(entry).variable("entry_p")
     
     range = set.range
     r = range.variable("r")
     
     with self.contains as f:
-      f.external = f"""
+      f.code = f"""
         {r.definition};
         assert(target);
         for(r = {range.new(_target)}; !{range.empty(r)}; {range.move_front(r)}) {{
@@ -95,7 +98,7 @@ class Map(_StructRenderer, Map):
     # FIXME get rid of the transient entry creation in the following code
       
     with self.indexed as f:
-      f.external = f"""
+      f.code = f"""
         int result;
         {_entry.definition};
         assert(target);
@@ -106,7 +109,7 @@ class Map(_StructRenderer, Map):
       """
     
     with self.view as f:
-      f.external = f"""
+      f.code = f"""
         size_t i;
         {_entry.definition};
         {_entry_p.definition};
@@ -120,21 +123,21 @@ class Map(_StructRenderer, Map):
 
     with self.get as f:
       _element_p = entry.element_p.variable("element_p")
-      _result = self.element.variable("result")
-      f.external = f"""
+      result = f.result.variable("result")
+      f.code = f"""
         {_element_p.definition};
-        {_result.definition};
+        {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
-        {_element_p} = {self.view(f.target, f.index)};
+        {_element_p} = ({_element_p.type}){self.view(f.target, f.index)};
         if({_element_p}) {{
-          {self.element.copy(_result, _element_p)};
-          return {_result};
+          {self.element.copy(result, _element_p)};
+          return {result};
         }} else abort();
       """
      
     with self.set as f:
-      f.external = f"""
+      f.code = f"""
         size_t i;
         {_entry.definition};
         {_entry_p.definition};

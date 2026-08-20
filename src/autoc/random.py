@@ -1,26 +1,21 @@
-from autoc.module import Entity, Code
-import autoc.std as std
 import functools
+import autoc.std as std
+from autoc.module import Entity, Code
 
 
 #
+@functools.cache
 class StaticSeeder(Entity):
   
   def __init__(self, value=0):
     super().__init__()
-    self.value = value
-    
-  @property
-  def seed(self):
-    return self.value
+    self.seed = value
   
 
 #
-hash = Code(dependencies=[std.linkage, std.size_t], interface="""
+hash = Code(dependencies=(std._linkage_code, std.size_t), interface="""
   /** @internal */
-  AUTOC_EXTERN
-  size_t _autoc_hash(size_t);
-""", implementation="""
+  AUTOC_STATIC_INLINE
   size_t _autoc_hash(size_t key) {
     /*
       Thomas Wang's mixing
@@ -104,5 +99,5 @@ class RandomSeeder(Code):
           _autoc_seed = _autoc_hash(time(NULL) ^ getpid() ^ clock());
         #endif
       }
-    """, dependencies=[std.linkage, std.stdlib_h, hash])
+    """, dependencies=(std._linkage_code, std.stdlib_h, hash))
     self.seed = "_autoc_seed"

@@ -1,65 +1,68 @@
-import autoc.core
-import autoc.hash
 import autoc.std as std
-from autoc.core import inout
+from autoc.hash import XorRot
 from autoc.range import Forward
-from autoc.collection import _Range as CollectionRange
+from autoc.collection import _Range
 from autoc.sequence import Sequence
 from autoc.composite import _StructRenderer
+from autoc.core import inout, _type, Callable
 
 
 #
 class List(_StructRenderer, Sequence):
   
-  def __init__(self, *args, hasher=autoc.hash.XorShift(), **kws):
+  def __init__(self, *args, hasher=XorRot(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
-    self.node = autoc.core._type(self._decorate_component("node"))
+    self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
     
+  @property
+  def orderable(self):
+    return False # TODO
+
   def __setup__(self):
     super().__setup__()
+
+    node_element = self.element.variable("node->element")
+    front_element = self.element.variable("target->front->element")
+    target_element = self.element.variable("target_node->element")
+    source_element = self.element.variable("source_node->element")
+    
+    with self.size as f:
+      f.inline_code = f"""
+        assert(target);
+        return target->size;
+      """
     
     with self.empty as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert((target->size == 0) == (target->front == NULL));
         return target->size == 0;
       """
     
     with self.create as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         target->front = NULL;
         target->size = 0;
       """
     
     with self.destroy as f:
-      f.external = f"""
+      f.code = f"""
         {self.node}* node;
         assert(target);
         node = target->front;
         while(node) {{
-          {self.node}* _node = node;
+          {self.node}* _node;
+           _node = node;
           {self.element.destroy(node_element) if self.element.destructible else str()};
           node = node->next;
           {self.memory.free("_node")};
         }}
       """
     
-    with self.size as f:
-      f.inline = f"""
-        assert(target);
-        return target->size;
-      """
-    
-    front_element = self.element.variable("target->front->element")
-    node_element = self.element.variable("node->element")
-    target_element = self.element.variable("target_node->element")
-    source_element = self.element.variable("source_node->element")
-    result = self.element.variable("result")
-    
     with self.copy as f:
-      f.external = f"""
+      f.code = f"""
         size_t size;
         {self.node}* target_node;
         {self.node}* source_node;
@@ -68,7 +71,8 @@ class List(_StructRenderer, Sequence):
         target->front = NULL;
         target->size = size = {self.size("source")};
         while(size--) {{
-          {self.node}* node = {self.memory.allocate(self.node)}; assert(node);
+          {self.node}* node;
+          node = {self.memory.allocate(self.node)}; assert(node);
           node->next = target->front;
           target->front = node;
         }}
@@ -81,18 +85,20 @@ class List(_StructRenderer, Sequence):
         }}
       """
 
-    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}) as f:
-      f.external = f"""
+    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+      f.code = f"""
+        {self.node}* node;
         assert(target);
-        {self.node}* node = {self.memory.allocate(self.node)}; assert(node);
+        node = {self.memory.allocate(self.node)}; assert(node);
         {self.element.copy(node_element, f.element)};
         node->next = target->front;
         target->front = node;
         ++target->size;
       """
       
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}) as f:
-      f.external = f"""
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.copyable) as f:
+      result = f.result.variable("result")
+      f.code = f"""
         {self.node}* node;
         {result.definition};
         assert(target);
@@ -106,8 +112,9 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
     
-    with self.method(self.element, "front", {"target": self}) as f:
-      f.external = f"""
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
@@ -116,7 +123,7 @@ class List(_StructRenderer, Sequence):
       """
 
     with self.method(self.element_view, ("front", "view"), {"target": self}) as f:
-      f.external = f"""
+      f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return ({f.result})&{front_element};
@@ -126,7 +133,7 @@ class List(_StructRenderer, Sequence):
     rt = self.node.variable("rt->element")
     
     with self.equal as f:
-      f.external = f"""
+      f.code = f"""
         assert(left);
         assert(right);
         if(left->size == right->size) {{
@@ -165,7 +172,7 @@ class List(_StructRenderer, Sequence):
 
 
 #
-class Range(CollectionRange, Forward):
+class Range(_Range, Forward):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -179,42 +186,42 @@ class Range(CollectionRange, Forward):
   def __setup__(self):
     super().__setup__()
     
-    with self.method(self, "new", {"iterable" : self.iterable}) as f:
-      f.inline = f"""
-        {self} result;
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
         assert(iterable);
         result.front = iterable->front;
-        return result;
+        return {result};
       """
 
     with self.empty as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return !target->front;
       """
 
-    result = self.element.variable("result")
     front_element = self.element.variable("target->front->element")
     
     with self.front as f:
-      f.inline = f"""
+      result = f.result.variable("result")
+      f.inline_code = f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
         {self.element.copy(result, front_element)};
-        return result;
+        return {result};
       """
 
     with self.front_view as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return ({self.iterable.element_view})&target->front->element;
       """
     
-    self.move_front.linkage = "INLINE"
     with self.move_front as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         target->front = target->front->next;

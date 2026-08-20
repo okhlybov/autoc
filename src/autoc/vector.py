@@ -1,49 +1,52 @@
-import autoc.hash
 import autoc.std as std
-from autoc.range import DirectAccess
-from autoc.core import out, inout, Pointer, Macro
-from autoc.composite import _StructRenderer
-from autoc.collection import _Range as CollectionRange
-from autoc.sequence import Sequence
 from autoc.map import Map
+from autoc.hash import XorRot
+from autoc.sequence import Sequence
+from autoc.range import DirectAccess
+from autoc.composite import _StructRenderer
+from autoc.core import out, Macro, Callable, Indirection
+from autoc.collection import _Range as CollectionRange
 
 
 #
 class Vector(_StructRenderer, Map, Sequence):
 
-  def __init__(self, name, element, hasher=autoc.hash.XorShift(), **kws):
+  def __init__(self, name, element, hasher=XorRot(), **kws):
     super().__init__(name, element, std.size_t, hasher=hasher, **kws)
     self.range = Range(self)
 
+  @property
+  def orderable(self):
+    return False # TODO
+  
   def __setup__(self):
     super().__setup__()
     
-    source_i = self.element.variable("source->elements[index]")
-    target_i = self.element.variable("target->elements[index]")
     left_i = self.element.variable("left->elements[index]")
     right_i = self.element.variable("right->elements[index]")
-    result = self.element.variable("result")
+    source_i = self.element.variable("source->elements[index]")
+    target_i = self.element.variable("target->elements[index]")
 
     with self.empty as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
     
     with self.indexed as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return index < target->size;
       """
     
     with self.size as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return target->size;
       """
     
-    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="PRIVATE") as f:
-      f.external = f"""
+    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private") as f:
+      f.code = f"""
         assert(target);
         if(capacity > 0) {{
           target->elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->elements);
@@ -52,8 +55,8 @@ class Vector(_StructRenderer, Map, Sequence):
       """
     
     # TODO make use of zero initializable feature of primitives
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}) as f:
-      f.external = f"""
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible) as f:
+      f.code = f"""
         assert(target);
         if(size > 0) {{
           {self.index} index;
@@ -66,19 +69,20 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     with self.get as f:
-      f.inline = f"""
+      result = f.result.variable("result")
+      f.inline_code = f"""
         {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {self.element.copy(result, target_i)};
-        return result;
+        return {result};
       """
     
     # FIXME explicit casting here and ithere in the respective Range type is a kind of hack to deal with double pointer types
     # Normally Pointer type should be responsible for handling the per-indirection constness flags
     
     with self.view as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         return ({f.result})&{target_i};
@@ -87,7 +91,7 @@ class Vector(_StructRenderer, Map, Sequence):
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
     with self.set as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {destroy_i};
@@ -95,7 +99,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     with self.create as f:
-      f.inline = """
+      f.inline_code = """
         assert(target);
         target->elements = NULL;
         target->size = 0;
@@ -103,7 +107,7 @@ class Vector(_StructRenderer, Map, Sequence):
     
     with self.destroy as f:
       if self.element.destructible:
-        f.external = f"""
+        f.code = f"""
           {self.index} index;
           assert(target);
           if(target->size > 0) {{
@@ -112,14 +116,14 @@ class Vector(_StructRenderer, Map, Sequence):
           }}
         """
       else:
-        f.external = f"""
+        f.inline_code = f"""
           assert(target);
           if(target->size > 0) {self.memory.free("target->elements")};
         """
 
     # FIXME should come from sequence    
     with self.equal as f:
-      f.external = f"""
+      f.code = f"""
         assert(left);
         assert(right);
         if(left->size == right->size) {{
@@ -132,7 +136,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     with self.copy as f:
-      f.external = f"""
+      f.code = f"""
         {self.index} index;
         assert(target);
         assert(source);
@@ -145,7 +149,7 @@ class Vector(_StructRenderer, Map, Sequence):
     if self.public:
       stream.append("/** @public */\n")
     stream.append(f"""typedef struct {{
-      {Pointer(self.element)} elements; /**< @private */
+      {Indirection(self.element)} elements; /**< @private */
       {self.index} size; /**< @private */
     }} {self.name};
     """)
@@ -159,7 +163,7 @@ class Range(CollectionRange, DirectAccess):
     if header:
       stream.append(f"""
         typedef struct {{
-          {Pointer(self.iterable, constant=True)} iterable; /**< @private */
+          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
           {self.iterable.index} front, back; /**< @private */
         }} {self.name};
       """)
@@ -170,78 +174,79 @@ class Range(CollectionRange, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(self, "new", {"iterable" : self.iterable}) as f:
-      f.inline = f"""
-        {self} result;
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
         assert(iterable);
         result.iterable = iterable;
         result.front = 0;
         result.back = iterable->size;
-        return result;
+        return {result};
       """
 
     with self.empty as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
     with self.front as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
     with self.front_view as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
     with self.move_front as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         ++target->front;
       """
 
     with self.back as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
     with self.back_view as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
     with self.move_back as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         --target->back;
       """
 
     with self.get as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
       assert(target);
       return {self.iterable.get("target->iterable", "target->front + index")};
     """
 
     with self.view as f:
-      f.inline = lambda: f"""
+      f.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
     with self.size as f:
-      f.inline = f"""
+      f.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

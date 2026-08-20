@@ -1,20 +1,20 @@
-import autoc.hash
-from autoc.composite import Composite, Method, _StructRenderer
-from autoc.core import out
 import autoc.std as std
+from autoc.hash import XorRot
+from autoc.core import out, _type
+from autoc.composite import Composite, _StructRenderer
 
 
 #
 class Record(_StructRenderer, Composite):
   
-  def __init__(self, name, fields, hasher=autoc.hash.XorShift(), getters=True, setters=True, opaque=True, dependencies=[], *args, **kws):
-    super().__init__(name, *args, dependencies=[*dependencies, std.assert_h, hasher], **kws)
-    self.fields = {str(name): autoc.core._type(type) for name, type in fields.items()}
+  def __init__(self, name, fields, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=tuple(), *args, **kws):
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
+    self.fields = {str(name): _type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters
     self.setters = setters
     self.opaque = opaque
-    self.depends(*self.fields.values())
+    self.depend(*self.fields.values())
 
   def __setup__(self):
     super().__setup__()
@@ -27,7 +27,7 @@ class Record(_StructRenderer, Composite):
       for field, type in self.fields.items():
         code.append(type.create(type.variable(f"{target}.{field}")))
         code.append(";")
-      f.inline = code
+      f.inline_code = code
     
     with self.destroy as f:
       code = []
@@ -36,7 +36,7 @@ class Record(_StructRenderer, Composite):
         if type.destructible:
           code.append(type.destroy(type.variable(f"{target}.{field}")))
           code.append(";")
-      f.inline = code
+      f.inline_code = code
 
     with self.equal as f:
       xs = []
@@ -44,7 +44,7 @@ class Record(_StructRenderer, Composite):
       right = f"({f.right.bind(self)})"
       for field, type in self.fields.items():
         xs.append(str(type.equal(type.variable(f"{left}.{field}"), type.variable(f"{right}.{field}"))))
-      f.inline = ["return ", " && ".join(xs if xs else ["1"]), ";"]
+      f.inline_code = ["return ", " && ".join(xs if xs else ["1"]), ";"]
       
     with self.copy as f:
       code = []
@@ -53,7 +53,7 @@ class Record(_StructRenderer, Composite):
       for field, type in self.fields.items():
         code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
         code.append(";")
-      f.inline = code
+      f.inline_code = code
       
     with self.hash as f:
       code = []
@@ -64,7 +64,7 @@ class Record(_StructRenderer, Composite):
         code.append(self.hasher.update(state, type.hash(type.variable(f"{target}.{field}"))))
         code.append(";")
       code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
-      f.inline = code
+      f.inline_code = code
 
     if self.getters:
       for field, type in self.fields.items():
@@ -75,20 +75,20 @@ class Record(_StructRenderer, Composite):
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility) as f:
-      result = type.variable("result")
+    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable) as f:
+      result = f.result.variable("result")
       target = f"({f.target.bind(self)})"
-      f.inline = f"""
+      f.inline_code = f"""
         {result.definition};
         {type.copy(result, type.variable(f"{target}.{field}"))};
         return {result};
       """
 
   def _add_writer(self, type, field):
-    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility) as f:
+    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable) as f:
       target = f"({f.target.bind(self)})"
       destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
-      f.inline = f"""
+      f.inline_code = f"""
         {destroy_field};
         {type.copy(type.variable(f"{target}.{field}"), "value")};
       """

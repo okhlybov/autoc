@@ -1,5 +1,5 @@
-from autoc.core import inout
 import autoc.std as std
+from autoc.core import inout
 from autoc.module import Code
 from autoc.collection import Collection
 
@@ -10,14 +10,14 @@ class Set(Collection):
   def __setup__(self):
     super().__setup__()
     
-    self.method("int", "put", {"target": inout(self), "element": self.element})
-    self.method("int", "remove", {"target": inout(self), "element": self.element})
+    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable)
+    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable)
 
     # TODO more to come
 
 
 #
-_ceil_power2 = Code(dependencies=[std.size_t, std.linkage], definitions="""
+_ceil_power2 = Code(dependencies=(std.size_t, std._linkage_code), definitions="""
   AUTOC_EXTERN
   size_t _autoc_ceil_power2(size_t value);
 """, implementation="""
