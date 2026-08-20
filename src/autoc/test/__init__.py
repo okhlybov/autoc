@@ -6,7 +6,7 @@ import autoc.composite
 codes = set()
 
 
-autoc.composite.Composite.decorator = autoc.composite.snake_decorator
+autoc.composite.decorator = autoc.composite.snake_decorator
 
 
 def _import_modules(package):

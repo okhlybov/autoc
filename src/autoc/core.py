@@ -449,6 +449,9 @@ class Function(_Parametrized):
   def __call__(self, *arguments):
     return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
 
+  def __str__(self):
+    return self.name
+
   def __repr__(self):
     return f"{self.name} {super().__repr__()}"
 
