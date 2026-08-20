@@ -7,6 +7,13 @@ from autoc2.collection import _Range as CollectionRange
 from autoc2.core import out, inout, Macro, Indirection, Callable
 
 
+class _Macro(Macro):
+
+  def __init__(self, result, parameters, emitter, **kws):
+    # Wrap the passthough arguments in () to circumvent operation proirity issues for user-supplied code
+    super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kws)
+
+
 #
 class Set(_StructRenderer, Set):
   
@@ -14,10 +21,10 @@ class Set(_StructRenderer, Set):
     super().__init__(*args, hasher=hasher, dependencies=(*dependencies, _ceil_power2), **kws)
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
-    self.is_empty = is_empty
-    self.is_deleted = is_deleted
-    self.mark_empty = mark_empty
-    self.mark_deleted = mark_deleted
+    self.is_empty = _Macro("int", {"entry": self.element}, is_empty)
+    self.is_deleted = _Macro("int", {"entry": self.element}, is_deleted)
+    self.mark_empty = _Macro(None, {"entry": out(self.element)}, mark_empty)
+    self.mark_deleted = _Macro(None, {"entry": out(self.element)}, mark_deleted)
     self.range = Range(self)
 
   @property
