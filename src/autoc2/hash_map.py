@@ -4,13 +4,13 @@ from autoc2.core import inout, Macro, Indirection
 
 
 # Common entry implementation for hash maps backed by the hash-based sets
-class _Element(Record):
+class _Entry(Record):
   
   def __init__(self, name, element, index, *args, visibility, **kws):
     super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, **kws)
+    self.index = self.fields["index"]
     self.element = self.fields["element"]
     self.element_p = Indirection(self.element, constant=True)
-    self.index = self.fields["index"]
     
   def __setup__(self):
     super().__setup__()
@@ -65,8 +65,8 @@ class _Element(Record):
         {self.element.copy(_element, f.element)};
       """
 
-    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash(f"({target}).index")))
-    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal(f"({left}).index", f"({right}).index")))
+    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash( self.variable(f"(({target}).index)") )))
+    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.variable(f"(({left}).index)"), self.variable(f"(({right}).index)") )))
   
   @property
   def constructible(self):
