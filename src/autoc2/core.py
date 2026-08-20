@@ -274,8 +274,8 @@ class Variable(Value):
 #
 class Indirection(Type):
 
-  def __init__(self, type, indirection=1, constant=None, **kws):
-    super().__init__(**kws)
+  def __init__(self, type, *args, indirection=1, constant=None, **kws):
+    super().__init__(*args, **kws)
     if isinstance(t := _type(type), Indirection):
       self.type = t.type
       self.indirection = indirection + t.indirection

@@ -2,7 +2,7 @@ import re
 import sys
 import autoc2.std as std
 from autoc.module import Entity
-from autoc2.core import Type, Indirection, _Traitful
+from autoc2.core import Type, Indirection, _Traitful, Macro
 
 
 def _hidden_prefix(s, hidden):
@@ -60,7 +60,13 @@ class Composite(Type, _Traitful, Entity):
     return m
   
   #
-  def method_of(self, identifier, attribute=None, **kws):
+  def macro_of(self, attribute, *args, **kws):
+    m = getattr(self, attribute)
+    self.__methods.discard(attribute) # Needed if original value was a function
+    return Macro.of(m, *args, **kws)
+    
+  #
+  def method_of(self, identifier, attribute=None, *args, **kws):
     x = self._decorate_attribute(attribute if attribute else identifier)
     m = getattr(self, x)
     self.__methods.discard(x)
