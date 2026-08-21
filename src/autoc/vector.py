@@ -85,7 +85,7 @@ class Vector(_StructRenderer, Map, Sequence):
       f.inline_code = f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
-        return ({f.result})&{target_i};
+        return {target_i.bind(f.result)};
       """
 
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()

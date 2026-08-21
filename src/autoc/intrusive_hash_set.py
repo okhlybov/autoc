@@ -358,7 +358,7 @@ class Range(CollectionRange, Forward):
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
-        return ({self.iterable.element_view})&{front_element};
+        return {front_element.bind(self.iterable.element_view)};
       """
     
     with self.move_front as f:

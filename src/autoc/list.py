@@ -126,7 +126,7 @@ class List(_StructRenderer, Sequence):
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return ({f.result})&{front_element};
+        return {front_element.bind(f.result)};
       """
     
     lt = self.node.variable("lt->element")

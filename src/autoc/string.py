@@ -10,7 +10,7 @@ from autoc.collection import _Range as CollectionRange
 class String(Indirection, Map):
   
   def __init__(self, name, *args, **kws):
-    super().__init__("char", name, self, std.size_t, prefix=name, dependencies=(std.string_h, _static_code))
+    super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.string_h, _static_code))
     self.range = Range(self)
 
   def __setup__(self):
@@ -19,7 +19,7 @@ class String(Indirection, Map):
     self.destroy = self.macro_of("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_of("copy", lambda target, source: f"{target} = {self.new(source)}")
 
-    with self.method(self, "new", {"source": self}) as f:
+    with self.method(Callable.Parameter(self), "new", {"source": self}) as f:
       f.inline_code = """
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
@@ -89,7 +89,7 @@ class String(Indirection, Map):
       f.inline_code = f"""
         assert(left);
         assert(right);
-        return !strcmp(left, right);
+        return strcmp(left, right) == 0;
       """
 
     with self.method_of("compare") as f:
@@ -113,13 +113,21 @@ class String(Indirection, Map):
       """
 
   @property
+  def rvalue_type(self):
+    return self
+
+  @property
+  def lvalue_type(self):
+    return self
+
+  @property
+  def view_type(self):
+    return Indirection(self.type, constant=True)
+
+  @property
   def destructible(self):
     return True
       
-  #@cached_property
-  #def in_type(self):
-  #  return Indirection(self.base, constant=True)
-
 _static_code = Code(interface=f"""
   /** @internal */
   extern const char* _autoc_empty_string;

@@ -316,7 +316,7 @@ class Indirection(Type):
 
   @property
   def out_type(self):
-    return self
+    return Indirection(self.type, indirection=2)
 
   @property
   def inout_type(self):
