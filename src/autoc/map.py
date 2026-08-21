@@ -15,7 +15,7 @@ class Map(Collection):
     self.method("int", "indexed", {"target": self, "index": self.index})
     self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: self.element.copyable)
     self.method(self.element, "get", {"target": self, "index": self.index})
-    self.method(self.element_view, "view", {"target": self, "index": self.index}, constraint=lambda: self.element.copyable)
+    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=lambda: self.element.copyable)
     
   @property
   def copyable(self):

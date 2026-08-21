@@ -133,6 +133,10 @@ class Composite(Type, _Traitful, Entity):
   def inout_type(self):
     return Indirection(self)
 
+  @property
+  def view_type(self):
+    return Indirection(self, constant=True)
+
 
 #
 class _StructRenderer:

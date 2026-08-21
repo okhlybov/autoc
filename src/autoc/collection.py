@@ -30,7 +30,6 @@ class Collection(Composite):
     super().__init__(name, dependencies=(*dependencies, std.assert_h, memory, hasher), *args, **kws)
     # self.range=
     self.element = _type(element)
-    self.element_view = Indirection(self.element, constant=True)
     self.depend(self.element)
     self.memory = memory
     self.hasher = hasher

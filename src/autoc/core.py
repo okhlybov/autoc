@@ -179,6 +179,10 @@ class Primitive(Type, _Traitful):
   def inout_type(self):
     return Indirection(self)
 
+  @property
+  def view_type(self):
+    return Indirection(self, constant=True)
+
 
 # Abstract class for renderable contents, basically a str-like type
 class Statement:
@@ -321,6 +325,10 @@ class Indirection(Type):
   @property
   def inout_type(self):
     return self
+
+  #@property
+  #def view_type(self):
+  #  return Indirection(self.type, constant=True)
 
 
   #

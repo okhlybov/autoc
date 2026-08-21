@@ -122,7 +122,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element_view, ("front", "view"), {"target": self}) as f:
+    with self.method(self.element.view_type, ("front", "view"), {"target": self}) as f:
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -214,10 +214,11 @@ class Range(_Range, Forward):
       """
 
     with self.front_view as f:
+      front_element = self.iterable.element.variable("target->front->element")
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return ({self.iterable.element_view})&target->front->element;
+        return {front_element.bind(f.result)};
       """
     
     with self.move_front as f:

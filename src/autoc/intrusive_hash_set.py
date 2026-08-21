@@ -232,12 +232,12 @@ class Set(_StructRenderer, Set):
         }} else return 0;
       """
     
-    with self.method(self.element_view, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
       f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
-        return ({self.element_view}){self.locate_element(f.target, "&index", f.element)};
+        return {self.locate_element(f.target, "&index", f.element).bind(f.result)};
       """
     
     with self.copy as f:
@@ -358,7 +358,7 @@ class Range(CollectionRange, Forward):
         assert(target);
         assert(!{self.empty(f.target)});
         assert({self.iterable.is_element(front_element)});
-        return {front_element.bind(self.iterable.element_view)};
+        return {front_element.bind(self.iterable.element.view_type)};
       """
     
     with self.move_front as f:
