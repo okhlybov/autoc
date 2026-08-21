@@ -51,6 +51,7 @@ x.unit(f"{type.create_size}(): shrink empty set", f"""
 
 
 x.setup(f"""
+  int i;
   {t.definition};
   {type.create(t)};
 """)
@@ -121,16 +122,17 @@ x.unit(f"{type.contains}(): failed lookup in !empty set", f"""
 x.unit(f"{type.put}(): put to empty set triggering storage expansion", f"""
   TEST_TRUE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 0 );
-  for(int i = -1; i < 33; ++i) {{
+  for(i = -1; i < 33; ++i) {{
     TEST_TRUE( {type.put(t, "i")} );
   }}
   TEST_EQUAL( {type.size(t)}, 34 );
 """)
 
 x.setup(f"""
+  int i;
   {t.definition};
   {type.create(t)};
-  for(int i = -8; i < 8; ++i) {{
+  for(i = -8; i < 8; ++i) {{
     TEST_TRUE( {type.put(t, "i")} );
   }}
 """)
@@ -145,7 +147,7 @@ x.unit(f"{type.hash}(): hash of !empty set", f"""
 
 x.unit(f"{type.range}(): traverse !empty set", f"""
   {r.definition};
-  int i = 0;
+  i = 0;
   for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) ++i;
   TEST_EQUAL( i, 16 );
 """)
@@ -158,7 +160,7 @@ x.unit(f"{type.copy}(): copy !empty set", f"""
 """)
 
 x.unit(f"{type.contains}(): contains all elements", f"""
-  for(int i = -8; i < 8; ++i) {{
+  for(i = -8; i < 8; ++i) {{
     TEST_TRUE( {type.contains(t, "i")} );
   }}
   TEST_FALSE( {type.contains(t, 88)} );
@@ -176,11 +178,12 @@ x.unit(f"{type.remove}(): remove existing element", f"""
 """)
 
 x.setup(f"""
+  int i;
   {t1.definition};
   {t2.definition};
   {type.create(t1)};
   {type.create(t2)};
-  for(int i = -8; i <= 8; ++i) {{
+  for(i = -8; i <= 8; ++i) {{
     TEST_TRUE( {type.put(t1, "+i")} );
     TEST_TRUE( {type.put(t2, "-i")} );
   }}

@@ -15,7 +15,7 @@ x.setup(f"""
   {type.create(t)};
 """)
 x.cleanup(f"""
-  // {type.destroy(t)};
+  // {{type.destroy(t)}};
 """)
 
 x.unit(f"{type.create}(): default create record", "")
@@ -32,8 +32,8 @@ x.setup(f"""
   {type.create(t2)};
 """)
 x.cleanup(f"""
-  // {type.destroy(t1)};
-  // {type.destroy(t2)};
+  // {{type.destroy(t1)}};
+  // {{type.destroy(t2)}};
 """)
 
 x.unit(f"{type.equal}(): compare equal default created records", f"""
