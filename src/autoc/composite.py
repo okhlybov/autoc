@@ -63,7 +63,8 @@ class Composite(Type, _Traitful, Entity):
   def macro_of(self, attribute, *args, **kws):
     m = getattr(self, attribute)
     self.__methods.discard(attribute) # Needed if original value was a function
-    return Macro.of(m, *args, **kws)
+    setattr(self, attribute, x := Macro.of(m, *args, **kws))
+    return x
     
   #
   def method_of(self, identifier, attribute=None, *args, **kws):
@@ -71,7 +72,7 @@ class Composite(Type, _Traitful, Entity):
     m = getattr(self, x)
     self.__methods.discard(x)
     delattr(self, x)
-    return self.method(m._result, x, m._parameters, constraint=m.constraint, **kws)
+    return self.method(m._result, identifier, m._parameters, constraint=m.constraint, attribute=attribute, **kws)
   
   #
   def decorate(self, *args, **kws):
