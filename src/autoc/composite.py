@@ -58,12 +58,18 @@ class Composite(Type, _Traitful, Entity):
     self.__methods.add(x) # Record attribute name which holds the method object
     setattr(self, x, m)
     return m
+
+  #
+  def macro(self, attribute, *args, macro=Macro, **kws):
+    self.__methods.discard(attribute) # Needed if original value was a function
+    setattr(self, attribute, x := macro(*args, **kws))
+    return x
   
   #
-  def macro_of(self, attribute, *args, **kws):
-    m = getattr(self, attribute)
+  def macro_of(self, attribute, *args, macro=Macro, **kws):
     self.__methods.discard(attribute) # Needed if original value was a function
-    setattr(self, attribute, x := Macro.of(m, *args, **kws))
+    m = getattr(self, attribute)
+    setattr(self, attribute, x := macro.of(m, *args, **kws))
     return x
     
   #

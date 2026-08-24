@@ -1,7 +1,7 @@
-import autoc.std as std
-from autoc.core import Indirection, Callable, inout
-from autoc.composite import Composite
+from itertools import islice
 from autoc.memory import Manager
+from autoc.composite import Composite
+from autoc.core import Indirection, Callable, out, inout
 
 
 #  
@@ -12,17 +12,14 @@ class _Reference(Indirection, Composite):
     
   def __setup__(self):
     super().__setup__()
-    
-    self.method(Callable.Parameter(self), "new", {}) # TODO constructor parameters
-  
-    self.macro_of("create", lambda target, *args: f"{target} = {self.new(*args)}")
-    
+
+    self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)})
+    self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
+
     self.method(Callable.Parameter(self), "share", {"source": inout(self)})
-      
     self.macro_of("copy", lambda target, source: f"{target} = {self.share(source)}")
     
     self.method(None, "free", {"target": inout(self)})
-    
     self.macro_of("destroy", lambda target: self.free(target))
     
     # Delete self attributes which arent handled by the class to force proxying
@@ -58,7 +55,7 @@ class Raw(_Reference):
       f.inline_code = f"""
         {result.definition};
         {result} = {self.memory.allocate(self.type)}; assert({result});
-        {self.type.create(result)};
+        {self.type.create(result, *f.arguments)};
         return {result};
       """
       
