@@ -1,6 +1,6 @@
 from itertools import islice
 from autoc.memory import Manager
-from autoc.composite import Composite
+from autoc.composite import Composite, _StructRenderer
 from autoc.core import Indirection, Callable, out, inout
 
 
@@ -17,10 +17,10 @@ class _Reference(Indirection, Composite):
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
     self.method(Callable.Parameter(self), "share", {"source": inout(self)})
-    self.macro_of("copy", lambda target, source: f"{target} = {self.share(source)}")
+    self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
     self.method(None, "free", {"target": inout(self)})
-    self.macro_of("destroy", lambda target: self.free(target))
+    self.macro_from("destroy", lambda target: self.free(target))
     
     # Delete self attributes which arent handled by the class to force proxying
     del self.equal
@@ -50,7 +50,6 @@ class Raw(_Reference):
     super().__setup__()
     
     with self.new as f:
-      # TODO extra parameters
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
@@ -71,4 +70,50 @@ class Raw(_Reference):
         {self.type.destroy(f.target) if self.type.destructible else str()};
         {self.memory.free(f.target)};
       """
+
+
+#
+class Arc(_StructRenderer, _Reference):
+  
+  def __init__(self, *args, memory=Manager(), **kws):
+    super().__init__(*args, **kws)
+    self.memory = memory
+    self._layout = self._decorate_component("layout")
+    
+  def __setup__(self):
+    super().__setup__()
+    
+    with self.new as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {self._layout}* storage;
+        storage = {self.memory.allocate(f"sizeof({self._layout})", cast=self._layout)}; assert(storage);
+        {self.type.create("storage->value", *f.arguments)};
+        storage->count = 1;
+        return ({f.result})storage;
+      """
       
+    with self.share as f:
+      f.inline_code = f"""
+        assert(source);
+        ++(({self._layout}*){f.source})->count;
+        return {f.source};
+      """
+      
+    with self.free as f:
+      f.code = f"""
+        assert({f.target});
+        if(--(({self._layout}*){f.target})->count == 0) {{
+          {self.type.destroy(f.target) if self.type.destructible else str()};
+          {self.memory.free(f.target)};
+        }}
+      """
+
+  def _render_struct(self, stream):
+    super()._render_struct(stream)
+    stream.append("/** @internal */\n")
+    stream.append(f"""typedef struct {{
+      {self.type} value;
+      unsigned count;
+    }} {self._layout};
+    """)      
