@@ -326,12 +326,8 @@ class Indirection(Type):
   def inout_type(self):
     return self
 
-  #@property
-  #def view_type(self):
-  #  return Indirection(self.type, constant=True)
 
-
-  #
+#
 def out(obj):
   return Callable.Out(obj)
 
