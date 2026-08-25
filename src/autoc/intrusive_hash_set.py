@@ -17,7 +17,7 @@ class _Macro(Macro):
 #
 class Set(_StructRenderer, Set):
   
-  def __init__(self, *args, capacity_threshold=0.75, hasher=Xor(), dependencies=tuple(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
+  def __init__(self, *args, capacity_threshold=0.75, hasher=Xor(), dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, hasher=hasher, dependencies=(*dependencies, _ceil_power2), **kws)
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold

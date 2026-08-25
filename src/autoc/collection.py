@@ -26,7 +26,7 @@ class _Range:
 #
 class Collection(Composite):
   
-  def __init__(self, name, element, memory=Manager(), hasher=Xor(), dependencies=tuple(), *args, **kws):
+  def __init__(self, name, element, memory=Manager(), hasher=Xor(), dependencies=(), *args, **kws):
     super().__init__(name, dependencies=(*dependencies, std.assert_h, memory, hasher), *args, **kws)
     # self.range=
     self.element = _type(element)

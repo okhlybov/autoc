@@ -12,7 +12,7 @@ seeder = RandomSeeder()
 #
 class _IncrementalHasher(Code):
   
-  def __init__(self, seeder=None, dependencies=tuple(), **kws):
+  def __init__(self, seeder=None, dependencies=(), **kws):
     self.seeder = seeder if seeder else sys.modules[__name__].seeder
     super().__init__(dependencies=(*dependencies, self.seeder), **kws)
     self.state_t = std.size_t
@@ -25,7 +25,7 @@ class _IncrementalHasher(Code):
 # Incremental xor+rot hasher for ordered data types
 class XorRot(_IncrementalHasher):
 
-  def __init__(self, dependencies=tuple(), **kws):
+  def __init__(self, dependencies=(), **kws):
     super().__init__(dependencies=(*dependencies, _rotl_code))
     self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotl({hash})")
     

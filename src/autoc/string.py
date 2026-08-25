@@ -15,9 +15,9 @@ class String(Indirection, Map):
 
   def __setup__(self):
     super().__setup__()
-    self.create = self.macro_of("create", lambda target: f"{target} = (char*)_autoc_empty_string")
-    self.destroy = self.macro_of("destroy", lambda target: str(self.free(target)))
-    self.copy = self.macro_of("copy", lambda target, source: f"{target} = {self.new(source)}")
+    self.create = self.macro_from("create", lambda target: f"{target} = (char*)_autoc_empty_string")
+    self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
+    self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")
 
     with self.method(Callable.Parameter(self), "new", {"source": self}) as f:
       f.inline_code = """
@@ -85,21 +85,21 @@ class String(Indirection, Map):
         return strchr(target, element) != NULL;
       """
       
-    with self.method_of("equal") as f:
+    with self.method_from("equal") as f:
       f.inline_code = f"""
         assert(left);
         assert(right);
         return strcmp(left, right) == 0;
       """
 
-    with self.method_of("compare") as f:
+    with self.method_from("compare") as f:
       f.inline_code = f"""
         assert(left);
         assert(right);
         return strcmp(left, right);
       """
       
-    with self.method_of("hash") as f:
+    with self.method_from("hash") as f:
       f.code = """
         /* the djb2a algorithm */
         char c;

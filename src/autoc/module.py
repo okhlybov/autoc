@@ -306,11 +306,11 @@ class Entity:
   __total_references = None
   __total_dependencies = None
   
-  def __init__(self, *args, dependencies=[], references=[], **kws):
+  def __init__(self, *args, dependencies=(), references=(), **kws):
     super().__init__(*args, **kws)
     self.references = set()
     self.references.update(references)
-    self.dependencies = _DependencySet(self, dependencies)
+    self.dependencies = _DependencySet(self)
     self.dependencies.update(dependencies)
 
   def __lt__(self, other):
@@ -332,14 +332,19 @@ class Entity:
     if self not in entities:
       entities.add(self)
       for ref in self.references:
-        ref.collect_references(entities)
+        # FIXME the module should not accept non-entities at all
+        # This should be fixed in the module's consumers
+        if isinstance(ref, Entity):
+          ref.collect_references(entities)
     return entities
 
   def collect_dependencies(self, entities):
     if self not in entities:
       entities.add(self)
       for dep in self.dependencies:
-        dep.collect_dependencies(entities)
+        # FIXME
+        if isinstance(dep, Entity):
+          dep.collect_dependencies(entities)
     return entities
 
   @property

@@ -7,7 +7,7 @@ from autoc.composite import Composite, _StructRenderer
 #
 class Record(_StructRenderer, Composite):
   
-  def __init__(self, name, fields, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=tuple(), *args, **kws):
+  def __init__(self, name, fields, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), *args, **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
     self.fields = {str(name): _type(type) for name, type in fields.items()}
     self.hasher = hasher

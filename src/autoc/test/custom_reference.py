@@ -1,6 +1,7 @@
-from autoc.reference import Shared
+from autoc.reference import Arc
 from autoc.test import Type as _Type
 from autoc.test.custom_composite import type
 
 
-#x = _Type(type := Shared(type, prefix="custom"))
+# FIXME
+# x = _Type(type := Arc(type, prefix="custom"))

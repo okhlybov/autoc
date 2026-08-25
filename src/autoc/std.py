@@ -35,7 +35,7 @@ def _iterable(obj):
 class Primitive(_Primitive, Entity):
   
   @classmethod
-  def register(cls, name, matcher=None, dependencies=tuple()):
+  def register(cls, name, matcher=None, dependencies=()):
     obj = cls(name)
     obj.dependencies.update(_iterable(dependencies))
     if matcher is None:
@@ -148,7 +148,7 @@ _linkage_code = Code(interface="""
 #
 class Function(_Function, Entity):
 
-  def __init__(self, result, name, parameters, *args, visibility="public", linkage="external", dependencies=tuple(), **kws):
+  def __init__(self, result, name, parameters, *args, visibility="public", linkage="external", dependencies=(), **kws):
     super().__init__(result, name, parameters, *args, **kws)
     self._depends(_linkage_code, self.result, *self.parameters.values(), *dependencies)
     self.linkage = linkage

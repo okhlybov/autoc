@@ -66,14 +66,14 @@ class Composite(Type, _Traitful, Entity):
     return x
   
   #
-  def macro_of(self, attribute, *args, macro=Macro, **kws):
+  def macro_from(self, attribute, *args, macro=Macro, **kws):
     self.__methods.discard(attribute) # Needed if original value was a function
     m = getattr(self, attribute)
     setattr(self, attribute, x := macro.of(m, *args, **kws))
     return x
     
   #
-  def method_of(self, identifier, attribute=None, *args, **kws):
+  def method_from(self, identifier, attribute=None, *args, **kws):
     x = self._decorate_attribute(attribute if attribute else identifier)
     m = getattr(self, x)
     self.__methods.discard(x)
@@ -107,12 +107,12 @@ class Composite(Type, _Traitful, Entity):
   
   def __setup__(self):
     super().__setup__()
-    self.method_of("create")
-    self.method_of("destroy")
-    self.method_of("copy")
-    self.method_of("equal")
-    self.method_of("compare")
-    self.method_of("hash")
+    self.method_from("create")
+    self.method_from("destroy")
+    self.method_from("copy")
+    self.method_from("equal")
+    self.method_from("compare")
+    self.method_from("hash")
 
   def __register__(self):
     # By recording the attribute names instead of real method objects makes it possible to
