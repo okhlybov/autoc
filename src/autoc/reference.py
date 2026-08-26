@@ -1,3 +1,4 @@
+import autoc.std as std
 from itertools import islice
 from autoc.memory import Manager
 from autoc.composite import Composite, _StructRenderer
@@ -45,6 +46,7 @@ class Raw(_Reference):
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
     self.memory = memory
+    self.dependencies.update((self.memory, std.assert_h))
     
   def __setup__(self):
     super().__setup__()
@@ -78,6 +80,7 @@ class Arc(_StructRenderer, _Reference):
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
     self.memory = memory
+    self.dependencies.update((self.memory, std.assert_h))
     self._layout = self._decorate_component("layout")
     
   def __setup__(self):
