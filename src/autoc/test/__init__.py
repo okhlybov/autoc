@@ -53,9 +53,11 @@ class Unit(autoc.module.Code):
 
 class Type(Unit):
 
-  def __init__(self, type, dependencies=[]):
+  def __init__(self, type, dependencies=[], name=None):
     self.type = autoc.core._type(type)
-    super().__init__(f"code_{self.type.name}", dependencies=[*dependencies, self.type])
+    if name is None:
+      name = self.type.name
+    super().__init__(f"code_{name}", dependencies=[*dependencies, self.type])
     self._setup = str()
     self._cleanup = str()
     self.codes = []

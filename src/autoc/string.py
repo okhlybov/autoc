@@ -2,8 +2,8 @@ import autoc.std as std
 from autoc.map import Map
 from autoc.module import Code
 from autoc.range import DirectAccess
+from autoc.collection import Range as _Range
 from autoc.core import inout, Indirection, Callable
-from autoc.collection import _Range as CollectionRange
 
 
 #
@@ -137,7 +137,7 @@ _static_code = Code(interface=f"""
 
 
 #
-class Range(CollectionRange, DirectAccess):
+class Range(_Range, DirectAccess):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

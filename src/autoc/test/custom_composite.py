@@ -36,7 +36,7 @@ class Type(_StructRenderer, Composite):
     """)
     
 
-x = _Type(type := Type("custom"))
+x = _Type(type := Type("custom_composite"))
 
 t = type.variable("t")
 t2 = type.variable("t2")

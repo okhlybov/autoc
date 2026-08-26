@@ -84,11 +84,11 @@ class Arc(_StructRenderer, _Reference):
     super().__setup__()
     
     with self.new as f:
-      result = f.result.variable("result")
+      value = self.type.variable("storage->value")
       f.inline_code = f"""
         {self._layout}* storage;
         storage = {self.memory.allocate(f"sizeof({self._layout})", cast=self._layout)}; assert(storage);
-        {self.type.create("storage->value", *f.arguments)};
+        {self.type.create(value, *f.arguments)};
         storage->count = 1;
         return ({f.result})storage;
       """

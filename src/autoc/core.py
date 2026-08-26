@@ -420,6 +420,9 @@ class Macro(_Parametrized):
 
   def __call__(self, *arguments):
     return self.contents(self.emitter(*super().__call__(*arguments)))
+  
+  def __str__(self):
+    return "->"
 
 
 #
