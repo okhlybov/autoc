@@ -1,4 +1,5 @@
 import sys
+import autoc.core
 import autoc.std as std
 from autoc.module import Code
 from autoc.core import out, Macro
@@ -30,7 +31,7 @@ class XorRot(_IncrementalHasher):
     self.update = Macro(None, {"state": out(self.state_t), "hash": std.size_t}, lambda state, hash: f"{state} ^= _autoc_rotl({hash})")
     
 
-_rotl_code = Code(dependencies=(std.limits_h, std.size_t, std._linkage_code), interface=f"""
+_rotl_code = Code(dependencies=(std.limits_h, std.size_t, autoc.core._linkage_code), interface=f"""
     /** @internal */
     AUTOC_STATIC_INLINE
     size_t _autoc_rotl(size_t value) {{

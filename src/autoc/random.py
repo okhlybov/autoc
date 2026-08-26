@@ -1,4 +1,5 @@
 import functools
+import autoc.core
 import autoc.std as std
 from autoc.module import Entity, Code
 
@@ -13,7 +14,7 @@ class StaticSeeder(Entity):
   
 
 #
-hash = Code(dependencies=(std._linkage_code, std.size_t), interface="""
+hash = Code(dependencies=(autoc.core._linkage_code, std.size_t), interface="""
   /** @internal */
   AUTOC_STATIC_INLINE
   size_t _autoc_hash(size_t key) {
@@ -99,5 +100,5 @@ class RandomSeeder(Code):
           _autoc_seed = _autoc_hash(time(NULL) ^ getpid() ^ clock());
         #endif
       }
-    """, dependencies=(std._linkage_code, std.stdlib_h, hash))
+    """, dependencies=(autoc.core._linkage_code, std.stdlib_h, hash))
     self.seed = "_autoc_seed"

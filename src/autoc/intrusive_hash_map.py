@@ -1,6 +1,6 @@
 from autoc.map import Map
 from autoc.hash_map import _Entry
-from autoc.core import out, Macro, Indirection
+from autoc.core import Indirection
 from autoc.intrusive_hash_set import Set
 from autoc.composite import _StructRenderer
 
@@ -19,7 +19,7 @@ class Map(_StructRenderer, Map):
       is_deleted=is_deleted,
       mark_deleted=mark_deleted,
     )
-    self.depend(self._set)
+    self.dependencies.add(self._set)
 
   @property
   def orderable(self):

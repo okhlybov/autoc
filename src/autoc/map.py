@@ -8,7 +8,7 @@ class Map(Collection):
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, *args, **kws)
     self.index = _type(index)
-    self.depend(self.index)
+    self.dependencies.add(self.index)
 
   def __setup__(self):
     super().__setup__()

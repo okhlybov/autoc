@@ -1,8 +1,6 @@
 import re
 import sys
-import autoc.std as std
-from autoc.module import Entity
-from autoc.core import Type, Indirection, _Traitful, Macro
+from autoc.core import Type, Indirection, _Traitful, Macro, Function
 
 
 def _hidden_prefix(s, hidden):
@@ -34,51 +32,46 @@ decorator = camel_decorator
 
 
 #
-class Composite(Type, _Traitful, Entity):
+class Composite(Type, _Traitful):
 
-  def __init__(self, name, prefix=None, decorator=None, visibility="public", *args, **kws):
-    super().__init__(**kws)
+  def __init__(self, name, *args, prefix=None, decorator=None, **kws):
+    super().__init__(*args, **kws)
     self.name = str(name)
     self.prefix = prefix if prefix else self.name
-    self.visibility = visibility
     self.decorator = decorator if decorator else sys.modules[__name__].decorator
-    self.__methods = set()
+    self.__attributes = set()
 
   #
-  def method(self, result, identifier, parameters, hidden=False, dependencies=tuple(), attribute=None, abstract=None, function=std.Function, **kws):
-    m = function(
+  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, **kws):
+    x = Function(
       result,
       self.decorate(identifier, hidden=hidden),
       parameters,
-      dependencies=(self, *dependencies),
+      *args,
       abstract=abstract if abstract else False,
       **kws
     )
-    x = self._decorate_attribute(attribute if attribute else identifier)
-    self.__methods.add(x) # Record attribute name which holds the method object
-    setattr(self, x, m)
-    return m
+    # Method by itself does not depend on its owning type - only though explicit parameters
+    attribute = self._decorate_attribute(attribute if attribute else identifier)
+    self.__attributes.add(attribute) # Record attribute name which holds the method object
+    setattr(self, attribute, x)
+    return x
 
   #
-  def macro(self, attribute, *args, macro=Macro, **kws):
-    self.__methods.discard(attribute) # Needed if original value was a function
-    setattr(self, attribute, x := macro(*args, **kws))
+  def macro(self, attribute, *args, **kws):
+    self.__attributes.add(attribute) # Record attribute name which holds the method object
+    setattr(self, attribute, x := Macro(*args, **kws))
     return x
   
   #
-  def macro_from(self, attribute, *args, macro=Macro, **kws):
-    self.__methods.discard(attribute) # Needed if original value was a function
+  def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
-    setattr(self, attribute, x := macro.of(m, *args, **kws))
-    return x
+    return self.macro(attribute, m._result, m._parameters, *args, **kws)
     
   #
-  def method_from(self, identifier, attribute=None, *args, **kws):
-    x = self._decorate_attribute(attribute if attribute else identifier)
-    m = getattr(self, x)
-    self.__methods.discard(x)
-    delattr(self, x)
-    return self.method(m._result, identifier, m._parameters, constraint=m.constraint, attribute=attribute, **kws)
+  def method_from(self, identifier, *args, attribute=None, **kws):
+    m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
+    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, **kws)
   
   #
   def decorate(self, *args, **kws):
@@ -97,11 +90,6 @@ class Composite(Type, _Traitful, Entity):
       case list() | tuple(): return "_".join(identifier)
 
   # 
-  def depend(self, *entities):
-    for entity in entities:
-      if isinstance(entity, Entity):
-        self.dependencies.update((*entity.dependencies, *entity.references, entity))
-
   def __str__(self):
     return self.name
   
@@ -118,7 +106,7 @@ class Composite(Type, _Traitful, Entity):
     # By recording the attribute names instead of real method objects makes it possible to
     # disable object emitting by setting the respective attribute to None
     # prior entering this method (__setup__ is a perfect place for this)
-    self.references.update([t for x in self.__methods if (t := getattr(self, x))])
+    self.references.update( [t for x in self.__attributes if hasattr(self, x) and not (t := getattr(self, x)) is None] )
 
   @property
   def rvalue_type(self):

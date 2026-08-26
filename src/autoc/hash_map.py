@@ -6,7 +6,7 @@ from autoc.core import inout, Macro, Indirection
 # Common entry implementation for hash maps backed by the hash-based sets
 class _Entry(Record):
   
-  def __init__(self, name, element, index, *args, visibility, **kws):
+  def __init__(self, name, element, index, visibility, *args, **kws):
     super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, **kws)
     self.index = self.fields["index"]
     self.element = self.fields["element"]

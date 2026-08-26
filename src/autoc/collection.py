@@ -1,17 +1,17 @@
 import autoc.std as std
 from autoc.hash import Xor
+from autoc.core import _type
 from autoc.memory import Manager
 from autoc.composite import Composite
-from autoc.core import Indirection, _type
 
 
-class _Range:
+class Range:
 
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
     self.iterable = iterable
-    self.depend(iterable)
     iterable.references.add(self)
+    self.dependencies.add(iterable)
     
   def __setup__(self):
     super().__setup__()
@@ -26,13 +26,13 @@ class _Range:
 #
 class Collection(Composite):
   
-  def __init__(self, name, element, memory=Manager(), hasher=Xor(), dependencies=(), *args, **kws):
-    super().__init__(name, dependencies=(*dependencies, std.assert_h, memory, hasher), *args, **kws)
+  def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)
     # self.range=
     self.element = _type(element)
-    self.depend(self.element)
     self.memory = memory
     self.hasher = hasher
+    self.dependencies.add(self.element)
 
   def __setup__(self):
     super().__setup__()

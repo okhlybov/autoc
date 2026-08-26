@@ -332,10 +332,7 @@ class Entity:
     if self not in entities:
       entities.add(self)
       for ref in self.references:
-        # FIXME the module should not accept non-entities at all
-        # This should be fixed in the module's consumers
-        if isinstance(ref, Entity):
-          ref.collect_references(entities)
+        ref.collect_references(entities)
     return entities
 
   def collect_dependencies(self, entities):
@@ -343,8 +340,7 @@ class Entity:
       entities.add(self)
       for dep in self.dependencies:
         # FIXME
-        if isinstance(dep, Entity):
-          dep.collect_dependencies(entities)
+        dep.collect_dependencies(entities)
     return entities
 
   @property

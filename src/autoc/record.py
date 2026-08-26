@@ -7,14 +7,14 @@ from autoc.composite import Composite, _StructRenderer
 #
 class Record(_StructRenderer, Composite):
   
-  def __init__(self, name, fields, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), *args, **kws):
+  def __init__(self, name, fields, *args, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
     self.fields = {str(name): _type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters
     self.setters = setters
     self.opaque = opaque
-    self.depend(*self.fields.values())
+    self.dependencies.update(self.fields.values())
 
   def __setup__(self):
     super().__setup__()

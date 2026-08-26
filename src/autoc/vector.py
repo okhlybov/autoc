@@ -4,8 +4,8 @@ from autoc.hash import XorRot
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
 from autoc.composite import _StructRenderer
+from autoc.collection import Range as _Range
 from autoc.core import out, Macro, Callable, Indirection
-from autoc.collection import _Range as CollectionRange
 
 
 #
@@ -156,7 +156,7 @@ class Vector(_StructRenderer, Map, Sequence):
 
 
 #
-class Range(CollectionRange, DirectAccess):
+class Range(_Range, DirectAccess):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

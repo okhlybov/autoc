@@ -3,7 +3,7 @@ from autoc.hash import Xor
 from autoc.range import Forward
 from autoc.set import Set, _ceil_power2
 from autoc.composite import _StructRenderer
-from autoc.collection import _Range as CollectionRange
+from autoc.collection import Range as _Range
 from autoc.core import out, inout, Macro, Indirection, Callable
 
 
@@ -299,7 +299,7 @@ class Set(_StructRenderer, Set):
 
 
 #
-class Range(CollectionRange, Forward):
+class Range(_Range, Forward):
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

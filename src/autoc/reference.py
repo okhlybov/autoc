@@ -7,7 +7,7 @@ from autoc.core import Indirection, Callable, out, inout
 #  
 class _Reference(Indirection, Composite):
   
-  def __init__(self, type, name=None, *args, **kws):
+  def __init__(self, type, *args, name=None, **kws):
     super().__init__(type, type.name if name is None else name, *args, **kws)
     
   def __setup__(self):

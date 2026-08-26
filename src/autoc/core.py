@@ -1,3 +1,4 @@
+import autoc.module
 from collections.abc import Iterable # substitute for missing iterable()
 
 
@@ -36,8 +37,7 @@ def _value(obj):
     case Value(): return obj
     case int(): return Literal("int", obj)
     case float(): return Literal("double", obj)
-    #case str(): return StringLiteral(obj)
-    case str(): return Literal("int", obj)
+    case str(): return Literal("int", obj) # FIXME actually this should be borrowing the target's type
   raise TypeError(f"{obj} is not convertible to Value")
 
 
@@ -46,14 +46,6 @@ def _parameter(obj):
   match obj:
     case Callable.Parameter(): return obj
     case _: return Callable.In(obj)
-
-
-#
-def _active(obj):
-  match obj:
-    case Callable(): return obj.active
-    case _ if callable(obj): return True
-  return False
 
 
 #
@@ -99,9 +91,9 @@ class _Traitful:
   
 
 #
-class Type(metaclass = _MultiphaseConstructible):
+class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
 
-  def __init__(self, visibility="public", *args, **kws):
+  def __init__(self, *args, visibility="public", **kws):
     super().__init__(*args, **kws)
     self.visibility = visibility
     
@@ -288,6 +280,7 @@ class Indirection(Type):
       self.type = t
       self.indirection = indirection
       self.constant = True if constant is True else False
+    self.dependencies.add(self.type)
       
   def __str__(self):
     return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
@@ -340,7 +333,7 @@ def inout(obj):
 # Basic callable descriptor
 class Callable:
   
-  def __init__(self, result, parameters, constraint=lambda: True, *args, **kws):
+  def __init__(self, result, parameters, *args, constraint=lambda: True, **kws):
     super().__init__(*args, **kws)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
@@ -386,12 +379,15 @@ class Callable:
 
 
 #
-class _Parametrized(Callable):
+class _Parametrized(Callable, autoc.module.Entity):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self.result = None if self._result is None or self._result == "void" else _parameter(self._result).resolve(self)
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
+    self.dependencies.update(self.parameters.values())
+    if not self.result is None:
+      self.dependencies.add(self.result)
 
   def __call__(self, *arguments):
     if not self.active:
@@ -433,9 +429,11 @@ class Function(_Parametrized):
   def of(self, callable, name, constraint=None, **kws):
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
-  def __init__(self, result, name, parameters, abstract=None, *args, **kws):
-    super().__init__(result, parameters, *args, **kws)
+  def __init__(self, result, name, parameters, visibility="public", linkage="external", abstract=None, dependencies=(), **kws):
+    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), **kws)
     self.name = str(name)
+    self.linkage = linkage
+    self.visibility = visibility
     self.__abstract = abstract
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
     for x in self.arguments:
@@ -488,3 +486,108 @@ class Function(_Parametrized):
   @property
   def definition(self):
     return self._declaration_c(True) + self._body_c
+
+  def __enter__(self):
+    return self
+  
+  def __exit__(self, *args):
+    return False
+
+  def __inline_code(self, obj):
+    self.linkage = "inline"
+    self.code = obj
+    
+  inline_code = property(fset=__inline_code)
+  
+  def __external_code(self, obj):
+    self.linkage = "external"
+    self.code = obj
+
+  external_code = property(fset=__external_code)
+  
+  @property
+  def external(self):
+    return self.linkage == "external"
+
+  @property
+  def inline(self):
+    return self.linkage == "inline"
+
+  @property
+  def public(self):
+    return self.visibility == "public"
+
+  @property
+  def private(self):
+    return self.visibility == "private"
+
+  @property
+  def internal(self):
+    return self.visibility == "internal"
+
+  @property
+  def declaration(self):
+    return self._declaration_c(self.public)
+  
+  #
+  def render_declarations(self, stream, header):
+    if self.active:
+      super().render_declarations(stream, header)
+      if (header and not self.internal) or (not header and self.internal):
+        self._render_declaration(stream)
+
+  #
+  def render_definitions(self, stream, header):
+    if self.active:
+      super().render_definitions(stream, header)
+      if self.inline:
+        if (header and not self.internal) or (not header and self.internal):
+          self._render_definition(stream)
+      else:
+        if not header:
+          self._render_definition(stream)
+
+  #  
+  def _render_definition(self, stream):
+    if not self.abstract:
+      stream.append(self.definition)
+
+  #
+  def _render_declaration(self, stream):
+    if not self.internal:
+      self._render_description(stream)
+    self._render_decorator(stream)
+    stream.append(self.declaration)
+    stream.append(";\n")
+
+  #
+  def _render_description(self, stream):
+    if self.public:
+      stream.append("/* @public */\n")
+    elif not self.internal:
+      stream.append("/* @private */\n")
+
+  #
+  def _render_decorator(self, stream):
+    stream.append(_linkage_spec_c[self.linkage])
+
+
+_linkage_spec_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}
+
+
+_linkage_code = autoc.module.Code(interface="""
+  #ifndef AUTOC_EXTERN
+    #ifdef __cplusplus
+      #define AUTOC_EXTERN extern "C"
+    #else
+      #define AUTOC_EXTERN extern
+    #endif
+  #endif
+  #ifndef AUTOC_STATIC_INLINE
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+      #define AUTOC_STATIC_INLINE static inline
+    #else
+      #define AUTOC_STATIC_INLINE static
+    #endif
+  #endif
+""")

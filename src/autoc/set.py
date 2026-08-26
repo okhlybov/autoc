@@ -1,3 +1,4 @@
+import autoc.core
 import autoc.std as std
 from autoc.core import inout
 from autoc.module import Code
@@ -17,7 +18,7 @@ class Set(Collection):
 
 
 #
-_ceil_power2 = Code(dependencies=(std.size_t, std._linkage_code), definitions="""
+_ceil_power2 = Code(dependencies=(std.size_t, autoc.core._linkage_code), definitions="""
   AUTOC_EXTERN
   size_t _autoc_ceil_power2(size_t value);
 """, implementation="""
