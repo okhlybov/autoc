@@ -12,6 +12,7 @@ def interpolate(template, **items):
 def generate(project):
   items = dict(project=project, module=project)
   pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
+  pathlib.Path(".vscode").mkdir(parents=True, exist_ok=True)
   for file, template in {
     "cmake/AutoC.cmake": _autoc_cmake,
     "CMakeLists.txt": _cmakelists_txt,
@@ -19,6 +20,7 @@ def generate(project):
     f"{project}.c": _project_c,
     f"{project}.py": _project_py,
     f"{project}.code-workspace": _code_workspace,
+    ".vscode/launch.json": _launch_json,
     ".gitignore": _gitignore,
   }.items():
     with open(file, "w") as f:
@@ -29,10 +31,11 @@ _project_py = """
 import sys
 import autoc.module
 import autoc.cmake
+import autoc.string
 
 
 with autoc.module.Module(sys.argv[1]) as m:
-  pass
+  m.add(autoc.string.String("Str"))
 
 
 autoc.cmake.CMake(m)
@@ -40,10 +43,14 @@ autoc.cmake.CMake(m)
 
 
 _project_c = """
+#include <stdio.h>
 #include "@module@_auto.h"
 
 
 int main(int argc, char** argv) {
+  char* s = StrNew("@project@");
+  printf("Hello, %s!\\n", s);
+  StrFree(s);
   return 0;
 }
 """
@@ -53,6 +60,21 @@ _code_workspace = """{
   "folders": [
     {
       "path": "."
+    }
+  ]
+}"""
+
+
+_launch_json = """{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "CMake Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "args": [],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }"""
