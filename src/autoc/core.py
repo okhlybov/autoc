@@ -100,7 +100,7 @@ class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
   def __setup__(self):
     # Basic methods
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
-    self.destroy = Callable(None, {"target": inout(self)}, constraint=lambda: self.destructible)
+    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible)
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)

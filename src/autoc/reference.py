@@ -17,10 +17,10 @@ class _Reference(Indirection, Composite):
     self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)})
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
-    self.method(Callable.Parameter(self), "share", {"source": inout(self)})
-    self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
+    self.method(self, "share", {"source": self})
+    self.macro_from("copy", lambda target, source: f"{target} = ({self}){self.share(source)}")
     
-    self.method(None, "free", {"target": inout(self)})
+    self.method(None, "free", {"target": self})
     self.macro_from("destroy", lambda target: self.free(target))
     
     # Delete self attributes which arent handled by the class to force proxying
@@ -108,7 +108,7 @@ class Arc(_StructRenderer, _Reference):
         assert({f.target});
         if(--(({self._layout}*){f.target})->count == 0) {{
           {self.type.destroy(f.target) if self.type.destructible else str()};
-          {self.memory.free(f.target)};
+          {self.memory.free(f"({self._layout}*){f.target}")};
         }}
       """
 
