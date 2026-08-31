@@ -70,7 +70,7 @@ class Raw(_Reference):
       f.code = f"""
         assert({f.target});
         {self.type.destroy(f.target) if self.type.destructible else str()};
-        {self.memory.free(f.target)};
+        {self.memory.free(f"({self._layout}*){f.target}")};
       """
 
 

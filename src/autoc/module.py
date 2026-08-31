@@ -405,7 +405,7 @@ class _DependencySet(set):
 
 #
 class Code(Entity):
-  def __init__(self, interface=None, implementation=None, definitions=None, *args, **kws):
+  def __init__(self, *args, interface=None, implementation=None, definitions=None, **kws):
     super().__init__(*args, **kws)
     self.__interface = interface
     self.__definitions = definitions

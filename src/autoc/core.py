@@ -249,8 +249,8 @@ class CharacterLiteral(Literal):
 # Class for representing the C variable
 class Variable(Value):
   
-  def __init__(self, type, name):
-    super().__init__(type)
+  def __init__(self, type, name, **kws):
+    super().__init__(type, **kws)
     self.name = str(name)
 
   def bind(self, type):
