@@ -24,7 +24,6 @@ r = range.variable("r")
 
 x.setup(f"""
   {t.definition};
-  {r.definition};
   {z.definition};
   {xtype.create(z)};
 """)
@@ -56,6 +55,16 @@ x.unit(f"{type.create_size}(): shrink empty set", f"""
   {type.resize(t, 0)};
 """)
 
+x.setup(f"""
+  {t.definition};
+  {z.definition};
+  {xtype.create(z)};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+  {xtype.destroy(z)};
+""")
 
 x.unit(f"{type.hash}(): hash of !empty set", f"""
   TEST_TRUE( {type.empty(t)} );
