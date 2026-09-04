@@ -1,12 +1,12 @@
 import autoc.core
 import autoc.module
-import autoc.composite
+import autoc.core
 
 
 codes = set()
 
 
-autoc.composite.decorator = autoc.composite.snake_decorator
+autoc.core.decorator = autoc.core.snake_decorator
 
 
 def _import_modules(package):

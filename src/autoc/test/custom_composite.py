@@ -1,6 +1,5 @@
 from autoc.test import Type as _Type
-from autoc.core import out
-from autoc.composite import Composite, _StructRenderer
+from autoc.core import Composite, _StructRenderer, out
 
 
 # Custom composite value type

@@ -1,8 +1,8 @@
 from autoc.map import Map
 from autoc.hash_map import _Entry
 from autoc.core import Indirection
+from autoc.core import _StructRenderer
 from autoc.intrusive_hash_set import Set
-from autoc.composite import _StructRenderer
 
 
 #

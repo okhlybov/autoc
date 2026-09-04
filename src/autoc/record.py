@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.hash import XorRot
 from autoc.core import out, _type
-from autoc.composite import Composite, _StructRenderer
+from autoc.core import Composite, _StructRenderer
 
 
 #

@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.hash import XorRot
 from autoc.range import Forward
 from autoc.sequence import Sequence
-from autoc.composite import _StructRenderer
+from autoc.core import _StructRenderer
 from autoc.collection import Range as _Range
 from autoc.core import inout, _type, Callable
 

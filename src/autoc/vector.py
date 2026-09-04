@@ -3,9 +3,8 @@ from autoc.map import Map
 from autoc.hash import XorRot
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.composite import _StructRenderer
 from autoc.collection import Range as _Range
-from autoc.core import out, Macro, Callable, Indirection
+from autoc.core import out, Macro, Callable, Indirection, _StructRenderer
 
 
 #

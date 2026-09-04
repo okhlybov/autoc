@@ -1,8 +1,7 @@
 import autoc.std as std
 from itertools import islice
 from autoc.memory import Manager
-from autoc.composite import Composite, _StructRenderer
-from autoc.core import Indirection, Callable, out, inout
+from autoc.core import Composite, _StructRenderer, Indirection, Callable, out
 
 
 #  

@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.hash import Xor
 from autoc.core import _type
 from autoc.memory import Manager
-from autoc.composite import Composite
+from autoc.core import Composite
 
 
 class Range:
