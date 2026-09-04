@@ -37,6 +37,10 @@ class _Reference(Indirection, Composite):
   @property
   def lvalue_type(self):
     return self
+  
+  @property
+  def view_type(self):
+    return self.constness(True)
 
 
 #
@@ -103,7 +107,7 @@ class Arc(_StructRenderer, _Reference):
       """
       
     with self.free as f:
-      f.code = f"""
+      f.inline_code = f"""
         assert({f.target});
         if(--(({self._layout}*){f.target})->count == 0) {{
           {self.type.destroy(f.target) if self.type.destructible else str()};

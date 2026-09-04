@@ -1,0 +1,73 @@
+from autoc.test import *
+from autoc.intrusive_hash_set import Set
+from autoc.test.custom_composite_arc import type
+
+xs = dict(
+  is_empty=lambda element: f"{element} == ({type})(size_t)2 /* empty? */",
+  mark_empty=lambda element: f"{element} = ({type})(size_t)2 /* empty! */",
+  is_deleted=lambda element: f"{element} == ({type})(size_t)1 /* deleted? */",
+  mark_deleted=lambda element: f"{element} = ({type})(size_t)1 /* deleted! */",
+)
+
+x = Type(type := Set("intrusive_custom_composite_arc_hash_set", type, **xs))
+
+t = type.variable("t")
+t1 = type.variable("t1")
+t2 = type.variable("t2")
+
+xtype = type.element
+z = xtype.variable("z")
+
+range = type.range
+r = range.variable("r")
+
+
+x.setup(f"""
+  {t.definition};
+  {r.definition};
+  {z.definition};
+  {xtype.create(z, 3)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+  {xtype.destroy(z)};
+""")
+
+x.unit(f"{type.create_size}(): create empty set with preferred capacity", f"""
+  {type.create_size(t, 1024+11)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_TRUE( {type.put(t, z)} );
+  TEST_FALSE( {type.empty(t)} );
+""")
+
+x.unit(f"{type.create_size}(): create empty set with zero size", f"""
+  {type.create_size(t, 0)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_TRUE( {type.put(t, z)} );
+  TEST_FALSE( {type.empty(t)} );
+""")
+
+x.unit(f"{type.create_size}(): shrink empty set", f"""
+  {type.create_size(t, 1024+11)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  {type.resize(t, 0)};
+""")
+
+
+x.unit(f"{type.hash}(): hash of !empty set", f"""
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_TRUE( {type.put(t, z)} );
+  {type.hash(t)};
+""")
+
+x.unit(f"{type.put}(): repeated put", f"""
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_TRUE( {type.put(t, z)} );
+  TEST_FALSE( {type.put(t, z)} );
+  TEST_EQUAL( {type.size(t)}, 1);
+""")

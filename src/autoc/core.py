@@ -433,6 +433,10 @@ class Indirection(Type):
     return (f"const {self.type}" if self.constant else str(self.type)) + "*"*self.indirection
 
   #
+  def constness(self, value):
+    return Indirection(self.type, indirection=self.indirection, constant=value)
+  
+  #
   def variable(self, name):
     return Indirection.Variable(self, name)
 
@@ -440,7 +444,7 @@ class Indirection(Type):
 
     def __init__(self, obj, name):
     # It makes little to no sense to define variable of const type so drop constness qualifier if it is set
-      super().__init__(Indirection(obj.type, indirection=obj.indirection, constant=False), name)
+      super().__init__(obj.constness(False), name)
 
     @property
     def definition(self):
