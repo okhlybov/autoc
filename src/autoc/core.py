@@ -206,7 +206,11 @@ class _Named(Type):
 
   def _decorate_component(self, suffix, abbreviate=True):
     if abbreviate:
-      return f"{self.decorate(None, hidden=True)}{suffix[0]}"
+      if isinstance(suffix, str):
+        x = suffix[0]
+      else:
+        x = "".join([x[0] for x in suffix])
+      return f"{self.decorate(None, hidden=True)}{x}"
     else:
       return self.decorate(suffix)
   
