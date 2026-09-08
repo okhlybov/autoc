@@ -52,6 +52,11 @@ class Backward(Input):
 
 
 #
+class Bidirectional(Forward, Backward):
+  pass
+
+
+#
 class DirectAccess(Forward, Backward):
 
   def __setup__(self):

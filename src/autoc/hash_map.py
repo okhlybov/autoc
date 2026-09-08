@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.record import Record
-from autoc.core import inout, Macro, Indirection
+from autoc.core import inout, Macro, Indirection, Callable
 
 
 # Common entry implementation for hash maps backed by the hash-based sets
@@ -19,13 +19,13 @@ class _Entry(Record):
     _index = self.index.variable("target->index")
     _element = self.element.variable("target->element")
 
-    with self.method(self.element_p, ("element", "view"), {"target": self}, hidden=True, visibility="internal") as f:
+    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal") as f:
       f.code = f"""
         assert(target);
         return &target->element;
       """
 
-    with self.method(self.index_p, ("index", "view"), {"target": self}, hidden=True, visibility="internal") as f:
+    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal") as f:
       f.code = f"""
         assert(target);
         return &target->index;
@@ -72,8 +72,8 @@ class _Entry(Record):
         {self.element.copy(_element, f.element)};
       """
 
-    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash( self.variable(f"(({target}).index)") )))
-    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.variable(f"(({left}).index)"), self.variable(f"(({right}).index)") )))
+    self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash( self.index.variable(f"(({target}).index)") )))
+    self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.index.variable(f"(({left}).index)"), self.index.variable(f"(({right}).index)") )))
   
   @property
   def constructible(self):
