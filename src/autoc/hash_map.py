@@ -11,19 +11,26 @@ class _Entry(Record):
     self.index = self.fields["index"]
     self.element = self.fields["element"]
     self.element_p = Indirection(self.element, constant=True)
-    
+    self.index_p = Indirection(self.index, constant=True)
+
   def __setup__(self):
     super().__setup__()
-    
+
     _index = self.index.variable("target->index")
     _element = self.element.variable("target->element")
-    
+
     with self.method(self.element_p, ("element", "view"), {"target": self}, hidden=True, visibility="internal") as f:
       f.code = f"""
         assert(target);
         return &target->element;
       """
-    
+
+    with self.method(self.index_p, ("index", "view"), {"target": self}, hidden=True, visibility="internal") as f:
+      f.code = f"""
+        assert(target);
+        return &target->index;
+      """
+
     with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable) as f:
       f.code = f"""
         assert(target);

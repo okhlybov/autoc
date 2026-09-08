@@ -1,7 +1,9 @@
 from autoc.map import Map
 from autoc.hash_map import _Entry
 from autoc.core import Indirection
-from autoc.core import _StructRenderer
+from autoc.core import _StructRenderer, Callable
+from autoc.collection import Range as _Range
+from autoc.range import Forward
 from autoc.intrusive_hash_set import Set
 
 
@@ -20,6 +22,7 @@ class Map(_StructRenderer, Map):
       mark_deleted=mark_deleted,
     )
     self.dependencies.add(self._set)
+    self.range = Range(self)
 
   @property
   def orderable(self):
@@ -128,7 +131,6 @@ class Map(_StructRenderer, Map):
         {_element_p.definition};
         {result.definition};
         assert(target);
-        assert({self.indexed(f.target, f.index)});
         {_element_p} = ({_element_p.type}){self.view(f.target, f.index)};
         if({_element_p}) {{
           {self.element.copy(result, _element_p)};
@@ -164,3 +166,78 @@ class Map(_StructRenderer, Map):
       {self._set.variable("set").definition}; /**< @private */
     }} {self.name};
     """)
+
+
+#
+class Range(_Range, Forward):
+
+  def __init__(self, iterable, *args, **kws):
+    super().__init__(iterable, *args, **kws)
+    self._range = iterable._set.range
+    self._entry = iterable._set.element
+    self.index = iterable.index
+    self.dependencies.update((self._entry, self._range))
+
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      stream.append(f"""
+        typedef struct {{
+          {self._range.name} range; /**< @private */
+        }} {self.name};
+      """)
+
+  def __setup__(self):
+    super().__setup__()
+
+    _target_range = self._range.variable("target->range")
+
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+      result = f.result.variable("result")
+      f.code = f"""
+        {result.definition};
+        assert(iterable);
+        result.range = {self._range.new(f"&{f.iterable}->set")};
+        return {result};
+      """
+
+    with self.empty as f:
+      f.code = f"""
+        assert(target);
+        return {self._range.empty(_target_range)};
+      """
+
+    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}) as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.index_view(self._range.front_view(_target_range))};
+      """
+
+    with self.front as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.element_view(self._range.front_view(_target_range)).bind(f.result)};
+      """
+
+    with self.front_view as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.element_view(self._range.front_view(_target_range))};
+      """
+
+    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable) as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.index_view(self._range.front_view(_target_range)).bind(f.result)};
+      """
+
+    with self.move_front as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self._range.move_front(_target_range)};
+      """
