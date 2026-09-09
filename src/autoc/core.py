@@ -54,7 +54,7 @@ def _parameter(obj):
 def _result(obj):
   match obj:
     case Callable.Parameter(): return obj
-    case _: return Callable.Parameter(_type(obj)) # The result is owned by the caller - no parameter passing semantics apply to it
+    case _: return Callable.Result(_type(obj)) # The result is a value owned by the caller - pairs with the view_type used for borrowing
 
 
 #
@@ -139,6 +139,11 @@ class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
 
   def variable(self, name):
     return Variable(self, name)
+
+  @property
+  def value_type(self):
+    # A value of a type is by default its rvalue - pointer-backed types override this
+    return self.rvalue_type
 
 
 def _hidden_prefix(s, hidden):
@@ -473,6 +478,11 @@ class Indirection(Type):
     return self.type
 
   @property
+  def value_type(self):
+    # A value of a pointer-backed type is the pointer itself - it must not be dereferenced
+    return self
+
+  @property
   def lvalue_type(self):
     return self.type
 
@@ -551,6 +561,10 @@ class Callable:
     def resolve(self, callable):
       return callable.resolve_inout(self.type)
 
+  class Result(Parameter):
+    def resolve(self, callable):
+      return callable.resolve_result(self.type)
+
 
 #
 class _Parametrized(Callable, autoc.module.Entity):
@@ -592,6 +606,9 @@ class Macro(_Parametrized):
   def resolve_inout(self, type):
     return type.lvalue_type
 
+  def resolve_result(self, type):
+    return type.value_type
+
   def __call__(self, *arguments):
     return self.contents(self.emitter(*super().__call__(*arguments)))
   
@@ -624,6 +641,9 @@ class Function(_Parametrized):
   
   def resolve_inout(self, type):
     return type.inout_type
+
+  def resolve_result(self, type):
+    return type.value_type
 
   def __call__(self, *arguments):
     return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
