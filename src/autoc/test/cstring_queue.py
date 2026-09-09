@@ -35,8 +35,13 @@ x.unit(f"{type.enqueue}(): enqueue to empty queue", f"""
   {type.enqueue(t, s("hello"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  char* v;
+  v = {type.front(t)};
+  TEST_EQUAL_CHARS( v, {s("hello")} );
+  {cstring.destroy("v")};
+  v = {type.back(t)};
+  TEST_EQUAL_CHARS( v, {s("hello")} );
+  {cstring.destroy("v")};
 """)
 
 x.unit(f"{type.copy}(): copy empty queue", f"""
@@ -60,8 +65,13 @@ x.cleanup(f"""
 x.unit(f"{type.empty}(): test !empty queue", f"""
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  char* v;
+  v = {type.front(t)};
+  TEST_EQUAL_CHARS( v, {s("hello")} );
+  {cstring.destroy("v")};
+  v = {type.back(t)};
+  TEST_EQUAL_CHARS( v, {s("hello")} );
+  {cstring.destroy("v")};
 """)
 
 x.unit(f"{type.contains}(): contained in !empty queue", f"""
@@ -80,8 +90,13 @@ x.unit(f"{type.enqueue}(): enqueue to !empty queue", f"""
   {type.enqueue(t, s("world"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 2 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("world")} );
+  char* v;
+  v = {type.front(t)};
+  TEST_EQUAL_CHARS( v, {s("hello")} );
+  {cstring.destroy("v")};
+  v = {type.back(t)};
+  TEST_EQUAL_CHARS( v, {s("world")} );
+  {cstring.destroy("v")};
 """)
 
 x.unit(f"{type.dequeue}(): dequeue the only element emptying the queue", f"""
@@ -147,8 +162,13 @@ x.unit(f"{type.copy}(): copy !empty queue", f"""
   TEST_TRUE( {type.equal(t1, t2)} );
   TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
   TEST_EQUAL( {type.size(t2)}, 3 );
-  TEST_EQUAL_CHARS( {type.front(t2)}, {s("one")} );
-  TEST_EQUAL_CHARS( {type.back(t2)}, {s("three")} );
+  char* v;
+  v = {type.front(t2)};
+  TEST_EQUAL_CHARS( v, {s("one")} );
+  {cstring.destroy("v")};
+  v = {type.back(t2)};
+  TEST_EQUAL_CHARS( v, {s("three")} );
+  {cstring.destroy("v")};
 """)
 
 x.setup(f"""

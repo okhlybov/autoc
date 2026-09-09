@@ -35,8 +35,8 @@ x.unit(f"{type.push_back}(): push to empty deque", f"""
   {type.push_back(t, s("hello"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("hello")} );
 """)
 
 x.unit(f"{type.push_front}(): push to empty deque", f"""
@@ -44,8 +44,8 @@ x.unit(f"{type.push_front}(): push to empty deque", f"""
   {type.push_front(t, s("hello"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("hello")} );
 """)
 
 
@@ -61,8 +61,8 @@ x.cleanup(f"""
 x.unit(f"{type.empty}(): test !empty deque", f"""
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("hello")} );
 """)
 
 x.unit(f"{type.front_view}(): front view from !empty deque", f"""
@@ -89,16 +89,16 @@ x.unit(f"{type.push_front}(): push to !empty deque", f"""
   {type.push_front(t, s("world"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 2 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("world")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("world")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("hello")} );
 """)
 
 x.unit(f"{type.push_back}(): push to !empty deque", f"""
   {type.push_back(t, s("world"))};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 2 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("world")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("world")} );
 """)
 
 x.unit(f"{type.pop_front}(): pop from !empty deque", f"""
@@ -108,7 +108,7 @@ x.unit(f"{type.pop_front}(): pop from !empty deque", f"""
   TEST_EQUAL_CHARS( v, {s("world")} );
   {cstring.destroy("v")};
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.front(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.front_view(t)}, {s("hello")} );
 """)
 
 x.unit(f"{type.pop_back}(): pop from !empty deque", f"""
@@ -118,7 +118,7 @@ x.unit(f"{type.pop_back}(): pop from !empty deque", f"""
   TEST_EQUAL_CHARS( v, {s("world")} );
   {cstring.destroy("v")};
   TEST_EQUAL( {type.size(t)}, 1 );
-  TEST_EQUAL_CHARS( {type.back(t)}, {s("hello")} );
+  TEST_EQUAL_CHARS( {type.back_view(t)}, {s("hello")} );
 """)
 
 x.unit(f"{type.pop_front}(): pop the only element emptying the deque", f"""
@@ -214,8 +214,8 @@ x.unit(f"{type.copy}(): copy !empty deque", f"""
   TEST_TRUE( {type.equal(t1, t2)} );
   TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
   TEST_EQUAL( {type.size(t2)}, 3 );
-  TEST_EQUAL_CHARS( {type.front(t2)}, {s("one")} );
-  TEST_EQUAL_CHARS( {type.back(t2)}, {s("three")} );
+  TEST_EQUAL_CHARS( {type.front_view(t2)}, {s("one")} );
+  TEST_EQUAL_CHARS( {type.back_view(t2)}, {s("three")} );
 """)
 
 x.setup(f"""

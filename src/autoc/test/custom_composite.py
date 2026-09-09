@@ -69,4 +69,5 @@ x.unit(f"{type.move}(): move value", f"""
   {type.move(t2, t)};
   TEST_TRUE( *t2.value == -1 );
   TEST_TRUE( t.value == NULL );
+  {type.destroy(t2)};
 """)
