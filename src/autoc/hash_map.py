@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.record import Record
-from autoc.core import inout, Macro, Indirection, Callable
+from autoc.core import inout, Macro, Callable
 
 
 # Common entry implementation for hash maps backed by the hash-based sets
@@ -10,8 +10,8 @@ class _Entry(Record):
     super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, **kws)
     self.index = self.fields["index"]
     self.element = self.fields["element"]
-    self.element_p = Indirection(self.element, constant=True)
-    self.index_p = Indirection(self.index, constant=True)
+    self.element_p = self.element.view_type
+    self.index_p = self.index.view_type
 
   def __setup__(self):
     super().__setup__()
@@ -22,13 +22,13 @@ class _Entry(Record):
     with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal") as f:
       f.code = f"""
         assert(target);
-        return &target->element;
+        return {self.element.variable("target->element").bind(f.result)};
       """
 
     with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal") as f:
       f.code = f"""
         assert(target);
-        return &target->index;
+        return {self.index.variable("target->index").bind(f.result)};
       """
 
     with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable) as f:

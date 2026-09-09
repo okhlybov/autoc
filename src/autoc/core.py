@@ -474,6 +474,11 @@ class Indirection(Type):
   def inout_type(self):
     return self
 
+  @property
+  def view_type(self):
+    # A view of a pointer-backed type is the pointer itself with const data - no extra indirection
+    return Indirection(self.type, indirection=self.indirection, constant=True)
+
 
 #
 def out(obj):

@@ -121,10 +121,6 @@ class String(Indirection, Map):
     return self
 
   @property
-  def view_type(self):
-    return Indirection(self.type, constant=True)
-
-  @property
   def destructible(self):
     return True
       
