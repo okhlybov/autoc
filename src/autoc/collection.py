@@ -46,14 +46,17 @@ class Collection(Composite):
     self.method(std.size_t, "size", {"target": self})
     self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable)
 
+  # NOTE
+  # Elementwise value operations (copy, equal, hashing) derive their traits from the element.
+  # Move does not: it transfers the storage handle and resets the moved-from container to
+  # its empty state without ever touching the elements, so containers are movable regardless
+  # of the element moveability. The latter constrains only the elementwise move-out
+  # operations (pop, dequeue and friends).
+
   @property
   def copyable(self):
     return self.element.copyable
-  
-  @property
-  def moveable(self):
-    return self.element.moveable
-  
+
   @property
   def hashable(self):
     return self.element.hashable
