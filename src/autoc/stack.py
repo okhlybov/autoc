@@ -87,7 +87,7 @@ class Stack(_StructRenderer, Collection):
         {self._list.push_front(_target, f.element)};
       """
 
-    with self.method(Callable.Parameter(self.element), "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
       f.code = f"""
         assert(target);
         return {self._list.pop_front(_target)};

@@ -87,7 +87,7 @@ class Queue(_StructRenderer, Collection):
         {self._deque.push_back(_target, f.element)};
       """
 
-    with self.method(Callable.Parameter(self.element), "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
       f.code = f"""
         assert(target);
         return {self._deque.pop_front(_target)};
