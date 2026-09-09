@@ -1,10 +1,9 @@
 from autoc.map import Map
-from autoc.hash_map import _Entry
-from autoc.core import Indirection
-from autoc.core import _StructRenderer, Callable
-from autoc.collection import Range as _Range
 from autoc.range import Forward
+from autoc.hash_map import _Entry
 from autoc.intrusive_hash_set import Set
+from autoc.collection import Range as _Range
+from autoc.core import Indirection, _StructRenderer, Callable
 
 
 #
@@ -13,8 +12,8 @@ class Map(_StructRenderer, Map):
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
-      self._decorate_component("set", abbreviate=True),
-      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
+      self._decorate_component("set"),
+      _Entry(self._decorate_component("entry"), self.element, self.index, visibility="internal"),
       visibility="internal",
       is_empty=is_empty,
       mark_empty=mark_empty,

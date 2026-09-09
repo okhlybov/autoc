@@ -1,9 +1,8 @@
 import autoc.std as std
 from autoc.range import Forward
-from autoc.core import _StructRenderer
 from autoc.set import Set, _ceil_power2
 from autoc.collection import Range as _Range
-from autoc.core import out, inout, Macro, Indirection, Callable
+from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer
 
 
 class _Macro(Macro):

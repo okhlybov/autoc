@@ -1,8 +1,7 @@
 from autoc.deque import Deque
-from autoc.collection import Collection, Range as _Range
 from autoc.range import Forward
-from autoc.core import _StructRenderer, Callable, Indirection
-from autoc.core import inout
+from autoc.collection import Collection, Range as _Range
+from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
@@ -10,7 +9,7 @@ class Queue(_StructRenderer, Collection):
 
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._deque = Deque(self._decorate_component("deque", abbreviate=False), self.element, visibility="internal")
+    self._deque = Deque(self._decorate_component("deque"), self.element, visibility="internal")
     self.dependencies.add(self._deque)
 
   @property

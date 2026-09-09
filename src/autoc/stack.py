@@ -1,8 +1,7 @@
 from autoc.list import List
-from autoc.collection import Collection, Range as _Range
 from autoc.range import Forward
-from autoc.core import _StructRenderer, Callable, Indirection
-from autoc.core import inout
+from autoc.collection import Collection, Range as _Range
+from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
@@ -10,7 +9,7 @@ class Stack(_StructRenderer, Collection):
 
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._list = List(self._decorate_component("list", abbreviate=False), self.element, visibility="internal")
+    self._list = List(self._decorate_component("list"), self.element, visibility="internal")
     self.dependencies.add(self._list)
 
   @property
