@@ -51,6 +51,13 @@ def _parameter(obj):
 
 
 #
+def _result(obj):
+  match obj:
+    case Callable.Parameter(): return obj
+    case _: return Callable.Parameter(_type(obj)) # The result is owned by the caller - no parameter passing semantics apply to it
+
+
+#
 class _MultiphaseConstructible(type):
 
   def __call__(cls, *args, **kws):
@@ -550,7 +557,7 @@ class _Parametrized(Callable, autoc.module.Entity):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self.result = None if self._result is None or self._result == "void" else _parameter(self._result).resolve(self)
+    self.result = None if self._result is None or self._result == "void" else _result(self._result).resolve(self)
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
     self.dependencies.update(self.parameters.values())
     if not self.result is None:

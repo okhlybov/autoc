@@ -67,7 +67,7 @@ class Raw(_Reference):
     with self.share as f:
       f.inline_code = f"""
         assert(source);
-        return {f.source};
+        return ({self}){f.source};
       """
       
     with self.free as f:
@@ -104,7 +104,7 @@ class Arc(_StructRenderer, _Reference):
       f.inline_code = f"""
         assert(source);
         ++(({self._layout}*){f.source})->count;
-        return {f.source};
+        return ({self}){f.source};
       """
       
     with self.free as f:
