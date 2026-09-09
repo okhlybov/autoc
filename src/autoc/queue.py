@@ -1,6 +1,7 @@
 from autoc.deque import Deque
-from autoc.collection import Collection
-from autoc.core import _StructRenderer, Callable
+from autoc.collection import Collection, Range as _Range
+from autoc.range import Forward
+from autoc.core import _StructRenderer, Callable, Indirection
 from autoc.core import inout
 
 
@@ -105,6 +106,8 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.back(_target)};
       """
 
+    self.range = Range(self)
+
   def _render_struct(self, stream):
     super()._render_struct(stream)
     if self.public:
@@ -113,3 +116,65 @@ class Queue(_StructRenderer, Collection):
       {self._deque.variable("deque").definition}; /**< @private */
     }} {self.name};
     """)
+
+
+#
+class Range(_Range, Forward):
+
+  # The range traverses the queue in FIFO order - from front to back
+
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      stream.append(f"""
+        typedef struct {{
+          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+          {self.iterable._deque.node}* front; /**< @private */
+          {self.iterable._deque.node}* back; /**< @private */
+        }} {self.name};
+      """)
+
+  def __setup__(self):
+    super().__setup__()
+
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(iterable);
+        result.front = iterable->deque.front;
+        result.back = iterable->deque.back;
+        return {result};
+      """
+
+    with self.empty as f:
+      f.inline_code = f"""
+        assert(target);
+        return !target->front || !target->back || target->front == target->back->next;
+      """
+
+    front_element = self.iterable.element.variable("target->front->element")
+
+    with self.front as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.element.copy(result, front_element)};
+        return {result};
+      """
+
+    with self.front_view as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {front_element.bind(f.result)};
+      """
+
+    with self.move_front as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        target->front = target->front->next;
+      """

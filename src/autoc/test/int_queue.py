@@ -135,6 +135,40 @@ x.unit(f"{type.enqueue}/{type.dequeue}(): FIFO over multiple elements", f"""
 """)
 
 
+range = type.range
+r = range.variable("r")
+
+x.setup(f"""
+  {r.definition};
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{range}(): traverse empty queue", f"""
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) {{
+    TEST_FALSE( {range.empty(r)} );
+  }}
+  TEST_TRUE( {range.empty(r)} );
+""")
+
+x.unit(f"{range}(): traverse queue in FIFO order", f"""
+  const int expected[] = {{1, 2, 3}};
+  int i = 0;
+  {type.enqueue(t, 1)};
+  {type.enqueue(t, 2)};
+  {type.enqueue(t, 3)};
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) {{
+    TEST_FALSE( {range.empty(r)} );
+    TEST_EQUAL( {range.front(r)}, expected[i++] );
+  }}
+  TEST_TRUE( {range.empty(r)} );
+  TEST_EQUAL( i, 3 );
+""")
+
+
 t1 = type.variable("t1")
 t2 = type.variable("t2")
 
