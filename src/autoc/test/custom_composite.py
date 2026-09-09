@@ -13,22 +13,28 @@ class Type(_StructRenderer, Composite):
         target->value = (int*)malloc(sizeof(int));
         *target->value = value;
       """
+
     with self.destroy as f:
       f.code = "free(target->value);"
+
     with self.copy as f:
       f.code = """
         target->value = (int*)malloc(sizeof(int));
         *target->value = *source->value;
       """
+
     with self.move as f:
       f.code = """
         target->value = source->value;
         source->value = NULL;
       """
+
     with self.equal as f:
       f.code = "return *left->value == *right->value;"
+
     with self.compare as f:
       f.code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
+      
     with self.hash as f:
       f.code = "return *target->value;"
     
