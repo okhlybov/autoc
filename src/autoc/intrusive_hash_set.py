@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.hash import Xor
 from autoc.range import Forward
 from autoc.core import _StructRenderer
 from autoc.set import Set, _ceil_power2
@@ -17,8 +16,8 @@ class _Macro(Macro):
 #
 class Set(_StructRenderer, Set):
   
-  def __init__(self, *args, capacity_threshold=0.75, hasher=Xor(), dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
-    super().__init__(*args, hasher=hasher, dependencies=(*dependencies, _ceil_power2), **kws)
+  def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
+    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
     self.is_empty = _Macro("int", {"entry": self.element}, is_empty)

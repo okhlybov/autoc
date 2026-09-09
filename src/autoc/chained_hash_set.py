@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.hash import Xor
 from autoc.range import Forward
 from autoc.core import _StructRenderer
 from autoc.set import Set, _ceil_power2
@@ -10,8 +9,8 @@ from autoc.core import inout, out, _type, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
-  def __init__(self, *args, capacity_threshold=1.0, hasher=Xor(), dependencies=(), **kws):
-    super().__init__(*args, hasher=hasher, dependencies=(*dependencies, _ceil_power2), **kws)
+  def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
+    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self._bucket_p = Indirection(self._node_p)

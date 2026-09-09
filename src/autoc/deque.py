@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.hash import XorRot
 from autoc.range import Bidirectional
 from autoc.sequence import Sequence
 from autoc.core import _StructRenderer
@@ -10,8 +9,8 @@ from autoc.core import inout, _type, Callable
 #
 class Deque(_StructRenderer, Sequence):
 
-  def __init__(self, *args, hasher=XorRot(), **kws):
-    super().__init__(*args, hasher=hasher, **kws)
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
     self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
 

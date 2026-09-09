@@ -1,6 +1,5 @@
 import autoc.std as std
 from autoc.map import Map
-from autoc.hash import XorRot
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
 from autoc.collection import Range as _Range
@@ -10,8 +9,8 @@ from autoc.core import out, Macro, Callable, Indirection, _StructRenderer
 #
 class Vector(_StructRenderer, Map, Sequence):
 
-  def __init__(self, name, element, hasher=XorRot(), **kws):
-    super().__init__(name, element, std.size_t, hasher=hasher, **kws)
+  def __init__(self, name, element, **kws):
+    super().__init__(name, element, std.size_t, **kws)
     self.range = Range(self)
 
   @property
