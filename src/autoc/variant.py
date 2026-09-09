@@ -47,7 +47,7 @@ class Variant(_StructRenderer, Composite):
     with self.copy as f:
       target = f"({f.target.bind(self)})"
       source = f"({f.source.bind(self)})"
-      code = [f"assert({f.target});", f"assert({f.source});", self._destroy_active(target), f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
+      code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
       for index, (name, type) in enumerate(self.alternatives.items()):
         code.append(f"case {index}: {{{type.copy(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
       code.append("}")
@@ -56,10 +56,11 @@ class Variant(_StructRenderer, Composite):
     with self.move as f:
       target = f"({f.target.bind(self)})"
       source = f"({f.source.bind(self)})"
-      code = [f"assert({f.target});", f"assert({f.source});", self._destroy_active(target), f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
+      code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
       for index, (name, type) in enumerate(self.alternatives.items()):
         code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
       code.append("}")
+      code.append(f"{source}.tag = -1; /* the moved-from variant is left in the empty state */")
       f.inline_code = code
 
     with self.hash as f:
