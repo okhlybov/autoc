@@ -20,6 +20,11 @@ class Type(_StructRenderer, Composite):
         target->value = (int*)malloc(sizeof(int));
         *target->value = *source->value;
       """
+    with self.move as f:
+      f.code = """
+        target->value = source->value;
+        source->value = NULL;
+      """
     with self.equal as f:
       f.code = "return *left->value == *right->value;"
     with self.compare as f:
@@ -57,4 +62,11 @@ x.unit(f"{type.copy}(): copy value", f"""
   {type.copy(t2, t)};
   TEST_TRUE( {type.equal(t2, t)} );
   {type.destroy(t2)};
+""")
+
+x.unit(f"{type.move}(): move value", f"""
+  {t2.definition};
+  {type.move(t2, t)};
+  TEST_TRUE( *t2.value == -1 );
+  TEST_TRUE( t.value == NULL );
 """)

@@ -253,6 +253,17 @@ class Set(_StructRenderer, Set):
         }}
       """
 
+    with self.move as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        target->elements = source->elements;
+        target->capacity = source->capacity;
+        target->size = source->size;
+        source->elements = NULL;
+        source->capacity = source->size = 0;
+      """
+
     range = self.range
     r = range.variable("r")
     

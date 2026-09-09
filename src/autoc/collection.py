@@ -22,6 +22,13 @@ class Range:
         *target = *source;
       """
 
+    with self.move as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(source);
+        *target = *source;
+      """
+
 
 #
 class Collection(Composite):
@@ -43,6 +50,10 @@ class Collection(Composite):
   @property
   def copyable(self):
     return self.element.copyable
+  
+  @property
+  def moveable(self):
+    return self.element.moveable
   
   @property
   def hashable(self):

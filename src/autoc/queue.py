@@ -55,6 +55,13 @@ class Queue(_StructRenderer, Collection):
         {self._deque.copy(_target, _source)};
       """
 
+    with self.move as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        {self._deque.move(_target, _source)};
+      """
+
     with self.equal as f:
       f.code = f"""
         assert(left);
@@ -80,7 +87,7 @@ class Queue(_StructRenderer, Collection):
         {self._deque.push_back(_target, f.element)};
       """
 
-    with self.method(Callable.Parameter(self.element), "dequeue", {"target": inout(self)}, constraint=lambda: self.element.copyable) as f:
+    with self.method(Callable.Parameter(self.element), "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
       f.code = f"""
         assert(target);
         return {self._deque.pop_front(_target)};

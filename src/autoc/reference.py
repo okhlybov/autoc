@@ -18,6 +18,7 @@ class _Reference(Indirection, Composite):
 
     self.method(self, "share", {"source": self})
     self.macro_from("copy", lambda target, source: f"{target} = ({self}){self.share(source)}")
+    self.macro_from("move", lambda target, source: f"{target} = ({self}){source}")
     
     self.method(None, "free", {"target": self})
     self.macro_from("destroy", lambda target: self.free(target))

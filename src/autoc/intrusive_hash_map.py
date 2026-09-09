@@ -54,6 +54,13 @@ class Map(_StructRenderer, Map):
         assert(source);
         {self._set.copy(_target, _source)};
       """
+
+    with self.move as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        {self._set.move(_target, _source)};
+      """
         
     with self.equal as f:
       f.code = f"""

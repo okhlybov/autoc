@@ -88,6 +88,17 @@ class Deque(_StructRenderer, Sequence):
         }}
       """
 
+    with self.move as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        target->front = source->front;
+        target->back = source->back;
+        target->size = source->size;
+        source->front = source->back = NULL;
+        source->size = 0;
+      """
+
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
       f.code = f"""
         {self.node}* node;
@@ -101,7 +112,7 @@ class Deque(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(Callable.Parameter(self.element), ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.copyable) as f:
+    with self.method(Callable.Parameter(self.element), ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -109,8 +120,7 @@ class Deque(_StructRenderer, Sequence):
         assert(target);
         assert(!{self.empty(f.target)});
         node = target->front;
-        {self.element.copy(result, node_element)};
-        {self.element.destroy(node_element) if self.element.destructible else str()};
+        {self.element.move(result, node_element)};
         target->front = node->next;
         if(target->front) target->front->prev = NULL; else target->back = NULL;
         {self.memory.free("node")};
@@ -131,7 +141,7 @@ class Deque(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(Callable.Parameter(self.element), ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.copyable) as f:
+    with self.method(Callable.Parameter(self.element), ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -139,8 +149,7 @@ class Deque(_StructRenderer, Sequence):
         assert(target);
         assert(!{self.empty(f.target)});
         node = target->back;
-        {self.element.copy(result, node_element)};
-        {self.element.destroy(node_element) if self.element.destructible else str()};
+        {self.element.move(result, node_element)};
         target->back = node->prev;
         if(target->back) target->back->next = NULL; else target->front = NULL;
         {self.memory.free("node")};

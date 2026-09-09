@@ -143,6 +143,16 @@ class Vector(_StructRenderer, Map, Sequence):
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
 
+    with self.move as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        target->elements = source->elements;
+        target->size = source->size;
+        source->elements = NULL;
+        source->size = 0;
+      """
+
   def _render_struct(self, stream):
     super()._render_struct(stream)
     if self.public:

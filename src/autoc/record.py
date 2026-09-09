@@ -54,7 +54,16 @@ class Record(_StructRenderer, Composite):
         code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
         code.append(";")
       f.inline_code = code
-      
+
+    with self.move as f:
+      code = []
+      target = f"({f.target.bind(self)})"
+      source = f"({f.source.bind(self)})"
+      for field, type in self.fields.items():
+        code.append(type.move(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
+        code.append(";")
+      f.inline_code = code
+
     with self.hash as f:
       code = []
       target = f"({f.target.bind(self)})"
@@ -131,6 +140,10 @@ class Record(_StructRenderer, Composite):
   @property
   def copyable(self):
     return all(type.copyable for type in self.fields.values())
+
+  @property
+  def moveable(self):
+    return all(type.moveable for type in self.fields.values())
 
   @property
   def hashable(self):

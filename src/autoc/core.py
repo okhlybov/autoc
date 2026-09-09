@@ -78,6 +78,10 @@ class _Traitful:
   @property
   def copyable(self):
     return True
+
+  @property
+  def moveable(self):
+    return True
   
   @property
   def comparable(self):
@@ -104,6 +108,7 @@ class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
     self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible)
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
+    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable)
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
     self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
@@ -242,6 +247,7 @@ class Primitive(_Named, _Traitful):
     super().__setup__()
     self.macro_from("create", lambda target: f"{target} = 0")
     self.macro_from("copy", lambda target, source: f"{target} = {source}")
+    self.macro_from("move", lambda target, source: f"{target} = {source}")
     self.macro_from("equal", lambda left, right: f"({left} == {right})")
     self.macro_from("compare", lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
     self.macro_from("hash", lambda target: f"(size_t)({target})")
@@ -283,6 +289,7 @@ class Composite(_Named, _Traitful):
     self.method_from("create")
     self.method_from("destroy")
     self.method_from("copy")
+    self.method_from("move")
     self.method_from("equal")
     self.method_from("compare")
     self.method_from("hash")

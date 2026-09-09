@@ -18,6 +18,7 @@ class String(Indirection, Map):
     self.create = self.macro_from("create", lambda target: f"{target} = (char*)_autoc_empty_string")
     self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")
+    self.move = self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = (char*)_autoc_empty_string")
 
     with self.method(Callable.Parameter(self), "new", {"source": self}) as f:
       f.inline_code = """
