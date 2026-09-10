@@ -1,3 +1,4 @@
+import autoc.core
 import autoc.std as std
 from autoc.map import Map
 from autoc.module import Code
@@ -125,9 +126,9 @@ class String(Indirection, Map):
   def destructible(self):
     return True
       
-_static_code = Code(interface=f"""
+_static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
   /** @internal */
-  extern const char* _autoc_empty_string;
+  AUTOC_EXTERN const char* _autoc_empty_string;
 """, implementation=f"""
   const char* _autoc_empty_string = "";
 """)
