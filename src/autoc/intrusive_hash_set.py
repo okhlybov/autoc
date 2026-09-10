@@ -258,8 +258,7 @@ class Set(_StructRenderer, Set):
         target->elements = source->elements;
         target->capacity = source->capacity;
         target->size = source->size;
-        source->elements = NULL;
-        source->capacity = source->size = 0;
+        {self.create(f.source)};
       """
 
     range = self.range

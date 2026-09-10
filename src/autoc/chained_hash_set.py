@@ -205,8 +205,7 @@ class Set(_StructRenderer, Set):
         target->buckets = source->buckets;
         target->capacity = source->capacity;
         target->size = source->size;
-        source->buckets = NULL;
-        source->capacity = source->size = 0;
+        {self.create(f.source)};
       """
 
     range = self.range

@@ -89,8 +89,7 @@ class List(_StructRenderer, Sequence):
         assert(source);
         target->front = source->front;
         target->size = source->size;
-        source->front = NULL;
-        source->size = 0;
+        {self.create(f.source)};
       """
 
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:

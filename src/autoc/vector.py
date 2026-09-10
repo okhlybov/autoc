@@ -148,8 +148,7 @@ class Vector(_StructRenderer, Map, Sequence):
         assert(source);
         target->elements = source->elements;
         target->size = source->size;
-        source->elements = NULL;
-        source->size = 0;
+        {self.create(f.source)};
       """
 
   def _render_struct(self, stream):

@@ -93,8 +93,7 @@ class Deque(_StructRenderer, Sequence):
         target->front = source->front;
         target->back = source->back;
         target->size = source->size;
-        source->front = source->back = NULL;
-        source->size = 0;
+        {self.create(f.source)};
       """
 
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:

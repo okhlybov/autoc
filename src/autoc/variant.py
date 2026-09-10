@@ -60,7 +60,7 @@ class Variant(_StructRenderer, Composite):
       for index, (name, type) in enumerate(self.alternatives.items()):
         code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
       code.append("}")
-      code.append(f"{source}.tag = -1; /* the moved-from variant is left in the empty state */")
+      code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
       f.inline_code = code
 
     with self.hash as f:
