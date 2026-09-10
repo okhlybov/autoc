@@ -17,14 +17,14 @@ class _Reference(Indirection, Composite):
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
     self.method(self, "share", {"source": self})
-    self.macro_from("copy", lambda target, source: f"{target} = ({self}){self.share(source)}")
+    self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
     self.method(None, "free", {"target": self})
     self.macro_from("destroy", lambda target: self.free(target))
     
     # A moved-from reference is nulled so that destroying it afterwards is a safe no-op
     # The underlying free guards on the pointer being NULL
-    self.macro_from("move", lambda target, source: f"{target} = ({self}){source}, {source} = NULL")
+    self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = NULL")
     
     # Delete self attributes which arent handled by the class to force proxying
     del self.equal
