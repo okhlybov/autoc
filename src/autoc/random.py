@@ -48,7 +48,7 @@ class RandomSeeder(Code):
   def __init__(self):
     super().__init__(interface="""
       /** @internal */
-      AUTOC_EXTERN unsigned _autoc_seed;
+      AUTOC_EXTERN size_t _autoc_seed;
       /** @internal */
       AUTOC_EXTERN
         void
@@ -57,7 +57,7 @@ class RandomSeeder(Code):
       #endif
       _autoc_randomize_seed(void);
     """, implementation="""
-      unsigned _autoc_seed = 1;
+      size_t _autoc_seed = 1;
       #include <time.h>
       #ifdef _WIN32
         #include <process.h>
@@ -84,21 +84,63 @@ class RandomSeeder(Code):
       #else
         _Pragma("_autoc_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
       #endif
-      void _autoc_randomize_seed() {
+      // FIXME review and reconsider the seed generation changes below
+      static unsigned _autoc_entropy_word(void) {
         #if defined(__cplusplus) &&  __cplusplus >= 201103L
-          _autoc_seed = std::random_device()();
+          return std::random_device()();
         #elif defined(__POCC__)
           /* Pelles C check comes first as it might define _MSC_VER as well */
-          _rand_s(&_autoc_seed);
+          unsigned word;
+          _rand_s(&word);
+          return word;
         #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)) /* Intel compilers define _MSC_VER on Windows yet their CRTs lack rand_s() */
-          rand_s(&_autoc_seed);
+          unsigned word;
+          rand_s(&word);
+          return word;
         #elif _POSIX_C_SOURCE >= 199309L
           struct timespec ts;
           clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
-          _autoc_seed = _autoc_hash(ts.tv_nsec ^ getpid());
+          return (unsigned)(ts.tv_nsec ^ getpid());
         #else
-          _autoc_seed = _autoc_hash(time(NULL) ^ getpid() ^ clock());
+          return (unsigned)(time(NULL) ^ getpid() ^ clock());
         #endif
       }
-    """, dependencies=(autoc.core._linkage_code, std.stdlib_h, hash))
+      void _autoc_randomize_seed() {
+        _autoc_seed = (size_t)_autoc_entropy_word();
+        if(sizeof(size_t) > sizeof(unsigned)) {
+          _autoc_seed <<= (sizeof(size_t) - sizeof(unsigned))*CHAR_BIT;
+          _autoc_seed ^= (size_t)_autoc_entropy_word();
+        }
+        _autoc_seed = _autoc_hash(_autoc_seed);
+      }
+    """, dependencies=(autoc.core._linkage_code, std.stdlib_h, std.size_t, std.limits_h, hash))
     self.seed = "_autoc_seed"
+
+
+#
+# Pointer-address-bound pseudo-random priority generator: derives a stable pseudo-random
+# size_t value solely from an object address mixed with the per-process seed. The address
+# is expected to remain unchanged during the whole lifetime of the object which makes the
+# value reusable on demand without any explicit storage. Note that the generator provides
+# statistical (not cryptographic) randomization thus a strong hasher is advised
+@functools.cache
+class Randomizer(Code):
+
+  def __init__(self, dependencies=(), **kws):
+    self._entity_t = autoc.core.Indirection("void", constant=True)
+    super().__init__(interface=f"""
+      /** @internal */
+      AUTOC_STATIC_INLINE
+      size_t _autoc_random_priority(const void* entity) {{
+        return _autoc_hash(_autoc_seed ^ (size_t)entity);
+      }}
+    """, dependencies=(*dependencies, autoc.core._linkage_code, std.size_t, RandomSeeder(), hash))
+
+  # Entity is either a bare C side expression rendered as is or a typed value
+  # of pointer type subjected to the regular indirection calculation
+  def priority(self, entity):
+    if isinstance(entity, str):
+      value = entity
+    else:
+      value = entity.bind(self._entity_t)
+    return f"_autoc_random_priority({value})"
