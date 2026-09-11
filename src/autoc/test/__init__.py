@@ -87,6 +87,8 @@ class Type(Unit):
 
 code = autoc.module.Code(
   interface=r"""
+    #include <stdlib.h>
+    #include <stdio.h>
     #define TEST_MESSAGE(s) fprintf(stdout, "*** %s\\n", s); fflush(stdout);
     #define TEST_ASSERT(x) if(x) {} else condition_failure("evaluated to FALSE", #x, __FILE__, __LINE__)
     #define TEST_TRUE(x) if(x) {} else condition_failure("expected TRUE but got FALSE", #x, __FILE__, __LINE__)
@@ -101,10 +103,9 @@ code = autoc.module.Code(
     void equality_failure(const char* message, const char* x, const char* y, const char* file, int line);
     void run_code(void(*code)());
     void run_codes();
+    extern int run, failed;
   """,
-  definitions=r"""
-    #include <stdlib.h>
-    #include <stdio.h>
+  implementation=r"""
     int failure;
     void condition_failure(const char* message, const char* condition, const char* file, int line) {
       fprintf(stdout, "*** %s : %s (%s:%d)\n", condition, message, file, line);

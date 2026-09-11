@@ -31,7 +31,7 @@ class _Builder(list):
 #
 class Module:
 
-  source_count = 1
+  source_count = None
   source_threshold = None
   __entities = None
   __header = None

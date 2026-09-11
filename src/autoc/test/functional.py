@@ -34,7 +34,7 @@ helpers = Code(
     AUTOC_STATIC_INLINE void functional_touch() { ++functional_calls; }
     AUTOC_STATIC_INLINE int functional_apply(unary_op f, int x) { return f(x); }
   """,
-  definitions="""
+  implementation="""
     int functional_calls = 0;
   """,
   dependencies=(autoc.core._linkage_code, unary)
