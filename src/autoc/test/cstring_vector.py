@@ -57,3 +57,34 @@ x.unit(f"{type.hash}(): contains string", f"""
   TEST_TRUE( {type.contains(t, s("abC"))});
   TEST_FALSE( {type.contains(t, s("abc"))});
 """)
+
+x.setup(f"""
+  {t.definition};
+  {type.create_size(t, 4)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.sort}(): sort strings", f"""
+  {type.set(t, 0, s("pear"))};
+  {type.set(t, 1, s("apple"))};
+  {type.set(t, 2, s("orange"))};
+  {type.set(t, 3, s("banana"))};
+  {type.sort(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_EQUAL_CHARS( {type.view(t, 0)}, {s("apple")} );
+  TEST_EQUAL_CHARS( {type.view(t, 1)}, {s("banana")} );
+  TEST_EQUAL_CHARS( {type.view(t, 2)}, {s("orange")} );
+  TEST_EQUAL_CHARS( {type.view(t, 3)}, {s("pear")} );
+""")
+
+x.unit(f"{type.sort}(): sort reverse sorted strings", f"""
+  {type.set(t, 0, s("d"))};
+  {type.set(t, 1, s("c"))};
+  {type.set(t, 2, s("b"))};
+  {type.set(t, 3, s("a"))};
+  {type.sort(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_EQUAL_CHARS( {type.view(t, 0)}, {s("a")} );
+""")
