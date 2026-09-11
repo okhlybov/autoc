@@ -103,8 +103,23 @@ class _Traitful:
     return True
   
 
+class _Visible:
+  
+  @property
+  def public(self):
+    return self.visibility == "public"
+  
+  @property
+  def private(self):
+    return self.visibility == "private"
+
+  @property
+  def internal(self):
+    return self.visibility == "internal"
+
+
 #
-class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
+class Type(autoc.module.Entity, _Visible, metaclass=_MultiphaseConstructible):
 
   def __init__(self, *args, visibility="public", **kws):
     super().__init__(*args, **kws)
@@ -125,18 +140,6 @@ class Type(autoc.module.Entity, metaclass=_MultiphaseConstructible):
   
   def __register__(self): pass
   
-  @property
-  def public(self):
-    return self.visibility == "public"
-  
-  @property
-  def private(self):
-    return self.visibility == "private"
-
-  @property
-  def internal(self):
-    return self.visibility == "internal"
-
   def variable(self, name):
     return Variable(self, name)
 
@@ -542,6 +545,10 @@ class Callable:
     else:
       return Expression(self.result, contents)
 
+  # Create function type borrowing the signature
+  def functional(self, name):
+    return Functional.of(name, self)
+  
   class Parameter:
     def __init__(self, type):
       self.type = _type(type)
@@ -585,6 +592,58 @@ class _Parametrized(Callable, autoc.module.Entity):
     return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
 
 
+class _Functional:
+
+  def resolve_in(self, type):
+    return type.in_type
+  
+  def resolve_out(self, type):
+    return type.out_type
+  
+  def resolve_inout(self, type):
+    return type.inout_type
+
+  def resolve_result(self, type):
+    return type.value_type
+
+  def __str__(self):
+    return self.name
+
+
+# Pointer-to-function type
+class Functional(Primitive, _Functional, _Parametrized, _Visible):
+
+  @classmethod
+  def of(self, name, callable, *args, **kws):
+    return self(callable._result, name, callable._parameters, *args, **kws)
+
+  def __init__(self, result, name, parameters, *args, **kws):
+    super().__init__(name, result, parameters, *args, **kws)
+
+  #
+  def render_declarations(self, stream, header):
+    if self.active:
+      super().render_declarations(stream, header)
+      if (header and not self.internal) or (not header and self.internal):
+        if self.public:
+          stream.append("/** @public */\n")
+        elif not self.internal:
+          stream.append("/** @private */\n")
+        stream.append(f"typedef {self._result_c} (*{self.name})({", ".join(str(t) for t in self.parameters.values())});\n")
+
+  @property
+  def orderable(self):
+    return False
+
+  def variable(self, name):
+    return Functional.Variable(self, name)
+
+  class Variable(Variable):
+
+    def __call__(self, *arguments):
+      return self.type.contents(f"{self.name}(" + ", ".join(self.type(*arguments)) + ")")
+
+
 #  
 class Macro(_Parametrized):
   
@@ -617,7 +676,7 @@ class Macro(_Parametrized):
 
 
 #
-class Function(_Parametrized):
+class Function(_Functional, _Parametrized, _Visible):
   
   @classmethod
   def of(self, callable, name, constraint=None, **kws):
@@ -633,23 +692,8 @@ class Function(_Parametrized):
     for x in self.arguments:
       setattr(self, x.name, x)
 
-  def resolve_in(self, type):
-    return type.in_type
-  
-  def resolve_out(self, type):
-    return type.out_type
-  
-  def resolve_inout(self, type):
-    return type.inout_type
-
-  def resolve_result(self, type):
-    return type.value_type
-
   def __call__(self, *arguments):
     return self.contents(f"{self.name}(" + ", ".join(super().__call__(*arguments)) + ")")
-
-  def __str__(self):
-    return self.name
 
   def __repr__(self):
     return f"{self.name} {super().__repr__()}"
@@ -674,7 +718,7 @@ class Function(_Parametrized):
       case Iterable(): cs = [str(x) for x in self.code]
       case _ if callable(self.code): cs = [str(self.code())]
       case _: cs = [str(self.code)]
-    return str().join(("{", *cs, "}"))
+    return str().join(("{", *cs, "}\n"))
 
   @property
   def declaration(self):
@@ -709,18 +753,6 @@ class Function(_Parametrized):
   @property
   def inline(self):
     return self.linkage == "inline"
-
-  @property
-  def public(self):
-    return self.visibility == "public"
-
-  @property
-  def private(self):
-    return self.visibility == "private"
-
-  @property
-  def internal(self):
-    return self.visibility == "internal"
 
   @property
   def declaration(self):
@@ -760,9 +792,9 @@ class Function(_Parametrized):
   #
   def _render_description(self, stream):
     if self.public:
-      stream.append("/* @public */\n")
+      stream.append("/** @public */\n")
     elif not self.internal:
-      stream.append("/* @private */\n")
+      stream.append("/** @private */\n")
 
   #
   def _render_decorator(self, stream):

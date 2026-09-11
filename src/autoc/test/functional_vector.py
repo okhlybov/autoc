@@ -1,13 +1,14 @@
 from autoc.test import *
 from autoc.vector import Vector
-from autoc.test.callback import unary, helpers
+from autoc.test.functional import unary, helpers
 
-x = Type(type := Vector("callback_vector", unary), dependencies=[helpers])
+
+x = Type(type := Vector("functional_vector", unary), dependencies=[helpers])
 
 t = type.variable("t")
 t2 = type.variable("t2")
 
-v = unary.variable("v")
+f = unary.variable("f")
 
 
 x.setup(f"""
@@ -31,30 +32,26 @@ x.unit(f"{type.create_size}(): default initializes elements with null pointers",
 """)
 
 x.unit(f"{type.set}(): set element then call through the view", f"""
+  {f.definition};
   {type.create_size(t, 2)};
-  {type.set(t, 0, "callback_double")};
-  TEST_EQUAL( {unary.call(type.view(t, 0), 21)}, 42 );
+  {type.set(t, 0, "functional_double")};
+  {f} = *{type.view(t, 0)};
+  TEST_EQUAL( {f(21)}, 42 );
 """)
 
 x.unit(f"{type.get}(): get element then call the returned value", f"""
+  {f.definition};
   {type.create_size(t, 2)};
-  {type.set(t, 0, "callback_double")};
-  TEST_EQUAL( {unary.call(type.get(t, 0), 4)}, 8 );
-""")
-
-x.unit(f"{unary}: call through a variable of the callback type", f"""
-  {v.definition};
-  {v} = callback_negate;
-  TEST_EQUAL( {v(7)}, -7 );
-  {v} = callback_double;
-  TEST_EQUAL( {v(7)}, 14 );
+  {type.set(t, 0, "functional_double")};
+  {f} = {type.get(t, 0)};
+  TEST_EQUAL( {f(4)}, 8 );
 """)
 
 x.unit(f"{type.contains}(): contained element", f"""
   {type.create_size(t, 2)};
-  {type.set(t, 0, "callback_double")};
-  TEST_TRUE( {type.contains(t, "callback_double")} );
-  TEST_FALSE( {type.contains(t, "callback_negate")} );
+  {type.set(t, 0, "functional_double")};
+  TEST_TRUE( {type.contains(t, "functional_double")} );
+  TEST_FALSE( {type.contains(t, "functional_negate")} );
 """)
 
 
@@ -69,21 +66,24 @@ x.cleanup(f"""
   {type.destroy(t2)};
 """)
 
-x.unit(f"{type.copy}(): copy vector of callbacks", f"""
+x.unit(f"{type.copy}(): copy vector of functionals", f"""
+  {f.definition};
   {type.create_size(t, 2)};
-  {type.set(t, 0, "callback_double")};
-  {type.set(t, 1, "callback_negate")};
+  {type.set(t, 0, "functional_double")};
+  {type.set(t, 1, "functional_negate")};
   {type.copy(t2, t)};
   TEST_TRUE( {type.equal(t, t2)} );
   TEST_EQUAL( {type.hash(t)}, {type.hash(t2)} );
-  TEST_EQUAL( {unary.call(type.view(t2, 0), 3)}, 6 );
-  TEST_EQUAL( {unary.call(type.view(t2, 1), 3)}, -3 );
+  {f} = *{type.view(t2, 0)};
+  TEST_EQUAL( {f(3)}, 6 );
+  {f} = *{type.view(t2, 1)};
+  TEST_EQUAL( {f(3)}, -3 );
 """)
 
 x.unit(f"{type.set}(): overwrite element", f"""
   {type.create_size(t, 2)};
-  {type.set(t, 0, "callback_double")};
-  {type.set(t, 0, "callback_negate")};
-  TEST_TRUE( {type.contains(t, "callback_negate")} );
-  TEST_FALSE( {type.contains(t, "callback_double")} );
+  {type.set(t, 0, "functional_double")};
+  {type.set(t, 0, "functional_negate")};
+  TEST_TRUE( {type.contains(t, "functional_negate")} );
+  TEST_FALSE( {type.contains(t, "functional_double")} );
 """)
