@@ -14,7 +14,7 @@ class Set(Collection):
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable)
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable)
 
-    # TODO more to come
+    # TODO pop, ...
 
 
 #

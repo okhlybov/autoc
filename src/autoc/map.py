@@ -12,10 +12,10 @@ class Map(Collection):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "indexed", {"target": self, "index": self.index})
-    self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: self.element.copyable)
-    self.method(self.element, "get", {"target": self, "index": self.index})
-    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=lambda: self.element.copyable)
+    self.method("int", "indexed", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable)
+    self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: self.index.comparable and self.element.copyable)
+    self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable and self.element.copyable)
+    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable)
     
   @property
   def copyable(self):

@@ -103,8 +103,12 @@ class _Traitful:
     return True
   
 
-class _Visible:
-  
+class _VisibilityManager:
+
+  def __init__(self, *args, visibility="public", **kws):
+    super().__init__(*args, **kws)
+    self.visibility = visibility
+
   @property
   def public(self):
     return self.visibility == "public"
@@ -119,12 +123,8 @@ class _Visible:
 
 
 #
-class Type(autoc.module.Entity, _Visible, metaclass=_MultiphaseConstructible):
+class Type(autoc.module.Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
 
-  def __init__(self, *args, visibility="public", **kws):
-    super().__init__(*args, **kws)
-    self.visibility = visibility
-    
   def __setup__(self):
     # Basic methods
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
@@ -611,7 +611,7 @@ class _Functional:
 
 
 # Pointer-to-function type
-class Functional(Primitive, _Functional, _Parametrized, _Visible):
+class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
 
   @classmethod
   def of(self, name, callable, *args, **kws):
@@ -676,17 +676,16 @@ class Macro(_Parametrized):
 
 
 #
-class Function(_Functional, _Parametrized, _Visible):
+class Function(_Functional, _Parametrized, _VisibilityManager):
   
   @classmethod
   def of(self, callable, name, constraint=None, **kws):
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
-  def __init__(self, result, name, parameters, visibility="public", linkage="external", abstract=None, dependencies=(), **kws):
+  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), **kws):
     super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), **kws)
     self.name = str(name)
     self.linkage = linkage
-    self.visibility = visibility
     self.__abstract = abstract
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
     for x in self.arguments:

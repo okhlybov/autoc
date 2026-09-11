@@ -23,9 +23,9 @@ class Sequence(Collection):
         return 0;
       """
 
-    state = self.hasher.state_t.variable("state")
 
     with self.hash as f:
+      state = self.hasher.state_t.variable("state")
       f.code = f"""
         size_t result;
         {r.definition};
