@@ -20,7 +20,7 @@ def configure_module(module):
   _import_modules(autoc.test)
   code = []
   code.append("void run_codes() {\n")
-  for c in codes:
+  for c in sorted(codes):
     module.add(c)
     code.append(f"run_code({c.name});\n")
   code.append("}")

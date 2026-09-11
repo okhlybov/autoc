@@ -31,18 +31,18 @@ class _Builder(list):
 #
 class Module:
 
-  source_count = None
-  source_threshold = None
   __entities = None
   __header = None
   __sources = None
   __digests = None
   __total_entities = None
 
-  def __init__(self, name, stateful=True, *args, **kws):
+  def __init__(self, name, *args, stateful=True, source_count=None, source_threshold=None, **kws):
     super().__init__(*args, **kws)
     self.name = str(name)
     self.stateful = stateful
+    self.source_count = source_count
+    self.source_threshold = source_threshold
 
   @property
   def entities(self):
@@ -75,12 +75,20 @@ class Module:
     return self.__digests
 
   def render(self):
+    previous = set(self.digests) # File names produced by the previous generation run
     self.distribute_entities()
     self.header.render()
     for source in self.sources:
       source.render()
     if self.stateful:
       _State(self).collect().write()
+      # Remove outputs of the previous run which are no longer produced
+      produced = {self.header.file_name, *(source.file_name for source in self.sources)}
+      for file_name in previous - produced:
+        try:
+          os.unlink(file_name)
+        except OSError:
+          pass
     return self
 
   @property
@@ -100,7 +108,7 @@ class Module:
       else:
         total_complexity = sum(e.complexity for e in self.total_entities)
         self.source_count = int((total_complexity / self.source_threshold) + 0.999)  # ceil
-    for e in self.total_entities:
+    for e in sorted(self.total_entities):
       self.sources.sort(key=lambda s: s.complexity)
       self.sources[0].add(e)
 
@@ -189,6 +197,10 @@ class _SmartRenderer:
       self.__digest = stream.digest
     finally:
       stream.close()
+    # The freshly rendered contents are verified against the hash sums recorded
+    # by the previous generation run rather than against the on-disk data since
+    # the generated sources are expected to be post-processed (pretty-printed)
+    # by external tools which must not be undone by the idempotent re-runs
     if not os.path.exists(self.file_name) or self.module.digests.get(self.file_name) != self.__digest:
       os.replace(path, self.file_name)
     else:
@@ -305,6 +317,7 @@ class Entity:
   __position = None
   __total_references = None
   __total_dependencies = None
+  __order_key = None
   
   def __init__(self, *args, dependencies=(), references=(), **kws):
     super().__init__(*args, **kws)
@@ -313,8 +326,22 @@ class Entity:
     self.dependencies = _DependencySet(self)
     self.dependencies.update(dependencies)
 
+  @property
+  def _order_key(self):
+    # Total order over entities: topological position first, then the rendered
+    # contents - this keeps the generation deterministic across the processes
+    # by eliminating the set iteration order from the output
+    if self.__order_key is None:
+      self.__order_key = (
+        self.position,
+        str().join(self._header_declarations),
+        str().join(self._source_declarations),
+        str().join(self._source_definitions)
+      )
+    return self.__order_key
+
   def __lt__(self, other):
-    return self.position < other.position
+    return self._order_key < other._order_key
 
   @property
   def total_references(self):

@@ -1,4 +1,5 @@
 tmp
 build
 test.cmake
-test_auto.*
+test.state
+test_auto*
