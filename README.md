@@ -18,7 +18,7 @@ C has no standard containers, and the usual workarounds each hurt in a familiar 
 
 `autoc` takes the fourth road: the container is written *once*, generically, against a strict value-semantics protocol — and a generator stamps out a specialized, fully typed C implementation for each `(container, element type)` pair you use. You get the code you would have written by hand (arguably better), with none of the macro or `void*` compromises.
 
-Generated code is ordinary C targeting C23. It has **no runtime library, nothing to link, no macros to consume** — you `#include` a header and compile the sources. Headers are C++-safe (`extern "C"` guarded). The project validates its own output by compiling and running the generated test suites under multiple compilers (MSVC and Pelles C at present).
+Generated code is ordinary C targeting ANSI C. It has **no runtime library, nothing to link, no macros to consume** — you `#include` a header and compile the sources. Headers are C++-safe (`extern "C"` guarded). The project validates its own output by compiling and running the generated test suites under multiple compilers (MSVC and Pelles C at present).
 
 ## Quick start
 
@@ -237,6 +237,8 @@ consumed 23
 | `autoc.hash_map` | `_Entry` | shared key→value entry record for map implementations |
 | `autoc.chained_hash_set` | `Set` | bucket-chaining hash set — no sentinel values, stable element references, safe default |
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
+| `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
+| `autoc.treap_map` | `Map` | ordered map over the treap set — iterates in key order, supports lexicographic comparison |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
 | `autoc.record` | `Record` | user-defined field aggregates |

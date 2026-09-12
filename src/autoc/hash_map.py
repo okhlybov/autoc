@@ -74,7 +74,20 @@ class _Entry(Record):
 
     self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash( self.index.variable(f"(({target}).index)") )))
     self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.index.variable(f"(({left}).index)"), self.index.variable(f"(({right}).index)") )))
+
+    # The entries are identified by their indices alone so the ordered containers holding them
+    # must compare them by the index as well
+    with self.compare as f:
+      f.code = f"""
+        assert(left);
+        assert(right);
+        return {self.index.compare(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
+      """
   
+  @property
+  def orderable(self):
+    return True # the entries are ordered by their indices alone - the element is the payload
+
   @property
   def constructible(self):
     return False
