@@ -224,24 +224,27 @@ class Vector(_StructRenderer, Map, Sequence):
           if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
         """
 
+    # FIXME traits below must be handled by constraint, not the code branch
+
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
     if self.element.swappable:
-      with self.method(None, "reverse", {"target": inout(self)}) as f:
+      with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
         f.code = f"""
           size_t i;
           assert(target);
           for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
         """
 
-      with self.method("int", ("is", "sorted"), {"target": self}) as f:
-        f.code = f"""
-          size_t index;
-          assert(target);
-          for(index = 1; index < target->size; ++index) {{
-            if({self.element.compare(self.element.variable("target->elements[index]"), self.element.variable("target->elements[index-1]"))} < 0) return 0;
-          }}
-          return 1;
-        """
+      if self.element.orderable:
+        with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+          f.code = f"""
+            size_t index;
+            assert(target);
+            for(index = 1; index < target->size; ++index) {{
+              if({self.element.compare(self.element.variable("target->elements[index]"), self.element.variable("target->elements[index-1]"))} < 0) return 0;
+            }}
+            return 1;
+          """
 
   def _render_struct(self, stream):
     super()._render_struct(stream)

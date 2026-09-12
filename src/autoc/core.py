@@ -660,6 +660,10 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
   def __init__(self, result, name, parameters, *args, **kws):
     super().__init__(name, result, parameters, *args, **kws)
 
+  def __setup__(self):
+    super().__setup__()
+    self.compare = None # Function pointers are not orderable
+
   #
   def render_declarations(self, stream, header):
     if self.active:
