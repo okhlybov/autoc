@@ -96,8 +96,8 @@ _complex_code = Code(
       using autoc_double_complex_t = std::complex<double>;
       using autoc_long_double_complex_t = std::complex<long double>;
     #else
-      #if defined(_MSC_VER) && (!defined(__clang__) || !defined(__INTEL_COMPILER) || !defined(__INTEL_LLVM_COMPILER) || !defined(__POCC__))
-        #error Visual Studio requires C++ compilation mode for complex numeric types
+      #if defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__POCC__)
+        #error MSVC C compiler does not support C99 _Complex types. Compile as C++ or use a different compiler.
       #endif
       typedef float complex autoc_float_complex_t;
       typedef double complex autoc_double_complex_t;

@@ -64,42 +64,48 @@ class RandomSeeder(Code):
       #else
         #include <unistd.h>
       #endif
-      #if defined(__cplusplus)
-        #if __cplusplus >= 201103L
-          #include <random>
-        #endif
-        static struct _seed {
-          _seed() { _autoc_randomize_seed(); }
-        } _seed;
-      #elif defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)
+      #if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__ARMCC_VERSION) || defined(__ARMCC_COMPILER_VERSION) || defined(__xlC__)
         void _autoc_randomize_seed(void) __attribute__((__constructor__));
       #elif defined(__PGI) || defined(__NVCOMPILER)
         #pragma init (_autoc_randomize_seed)
       #elif defined(__POCC__)
         #pragma startup _autoc_randomize_seed
+      #elif defined(__BORLANDC__)
+        #pragma startup _autoc_randomize_seed 100
       #elif defined(_MSC_VER)
         #pragma section(".CRT$XCU", read)
         __declspec(allocate(".CRT$XCU"))
         void (*my_init)(void) = _autoc_randomize_seed;
       #else
-        _Pragma("_autoc_randomize_seed() will not be be called automatically; either call it manually or compile this source as C++ in order to actually yield random seed")
+        _Pragma("warning: _autoc_randomize_seed() will not be called automatically; call it manually from main() or compile as C++")
       #endif
-      // FIXME review and reconsider the seed generation changes below
       static unsigned _autoc_entropy_word(void) {
-        #if defined(__cplusplus) &&  __cplusplus >= 201103L
-          return std::random_device()();
-        #elif defined(__POCC__)
+        #if defined(__POCC__)
           /* Pelles C check comes first as it might define _MSC_VER as well */
           unsigned word;
           _rand_s(&word);
           return word;
-        #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER)) /* Intel compilers define _MSC_VER on Windows yet their CRTs lack rand_s() */
+        #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+          /* Intel compilers define _MSC_VER on Windows yet their CRTs lack rand_s() */
           unsigned word;
           rand_s(&word);
           return word;
-        #elif _POSIX_C_SOURCE >= 199309L
+        #elif defined(__MINGW32__) || defined(__MINGW64__)
+          /* MinGW-w64 with UCRT provides rand_s via <stdlib.h> */
+          #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201410L || defined(_UCRT)
+            unsigned word;
+            rand_s(&word);
+            return word;
+          #else
+            return (unsigned)(time(NULL) ^ getpid() ^ clock());
+          #endif
+        #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
           struct timespec ts;
-          clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+          #if defined(CLOCK_REALTIME)
+            clock_gettime(CLOCK_REALTIME, &ts);
+          #else
+            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+          #endif
           return (unsigned)(ts.tv_nsec ^ getpid());
         #else
           return (unsigned)(time(NULL) ^ getpid() ^ clock());

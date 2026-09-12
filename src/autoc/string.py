@@ -34,8 +34,15 @@ class String(Indirection, Map):
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
             return strdup(source);
-          #elif defined(_MSC_VER)
+          #elif defined(__POCC__)
+            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER */
+            return strdup(source);
+          #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
             return _strdup(source);
+          #elif defined(__MINGW32__) || defined(__MINGW64__)
+            return strdup(source);
+          #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE)
+            return strdup(source);
           #else
             size_t n;
             char *s;

@@ -852,7 +852,7 @@ _linkage_code = autoc.module.Code(interface="""
     #endif
   #endif
   #ifndef AUTOC_STATIC_INLINE
-    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__ARMCC_VERSION) || defined(__ARMCC_COMPILER_VERSION)
       #define AUTOC_STATIC_INLINE static inline
     #else
       #define AUTOC_STATIC_INLINE static
