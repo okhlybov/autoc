@@ -103,3 +103,38 @@ x.unit(f"{type.sort}(): sort permutation of 64 elements", f"""
   for(i = 0; i < 64; ++i) sum += {type.get(t, "i")};
   TEST_EQUAL( sum, 2016 );
 """)
+
+
+x.setup(f"""
+  int i;
+  {t.definition};
+  {type.create_size(t, 8)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.reverse}(): reverse descending vector into ascending", f"""
+  for(i = 0; i < 8; ++i) {type.set(t, "i", "8 - i")};
+  {type.reverse(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, i + 1 );
+""")
+
+x.unit(f"{type.reverse}(): reverse twice restores the original", f"""
+  for(i = 0; i < 8; ++i) {type.set(t, "i", "i*3 % 8")};
+  {type.reverse(t)};
+  {type.reverse(t)};
+  for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, i*3 % 8 );
+""")
+
+x.unit(f"{type.reverse}(): reverse empty and single element vectors", f"""
+  {type.destroy(t)};
+  {type.create(t)};
+  {type.reverse(t)};
+  TEST_TRUE( {type.empty(t)} );
+  {type.create_size(t, 1)};
+  {type.set(t, 0, 5)};
+  {type.reverse(t)};
+  TEST_EQUAL( {type.get(t, 0)}, 5 );
+""")

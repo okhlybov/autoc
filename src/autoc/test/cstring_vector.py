@@ -88,3 +88,14 @@ x.unit(f"{type.sort}(): sort reverse sorted strings", f"""
   TEST_TRUE( {type.is_sorted(t)} );
   TEST_EQUAL_CHARS( {type.view(t, 0)}, {s("a")} );
 """)
+
+
+x.unit(f"{type.reverse}(): reverse strings", f"""
+  {type.set(t, 0, s("d"))};
+  {type.set(t, 1, s("c"))};
+  {type.set(t, 2, s("b"))};
+  {type.set(t, 3, s("a"))};
+  {type.reverse(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_EQUAL_CHARS( {type.view(t, 0)}, {s("a")} );
+""")

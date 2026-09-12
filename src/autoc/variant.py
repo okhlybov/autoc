@@ -53,15 +53,16 @@ class Variant(_StructRenderer, Composite):
       code.append("}")
       f.inline_code = code
 
-    with self.move as f:
-      target = f"({f.target.bind(self)})"
-      source = f"({f.source.bind(self)})"
-      code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
-      for index, (name, type) in enumerate(self.alternatives.items()):
-        code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
-      code.append("}")
-      code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
-      f.inline_code = code
+    if self.moveable:
+      with self.move as f:
+        target = f"({f.target.bind(self)})"
+        source = f"({f.source.bind(self)})"
+        code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
+        for index, (name, type) in enumerate(self.alternatives.items()):
+          code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
+        code.append("}")
+        code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
+        f.inline_code = code
 
     with self.hash as f:
       target = f"({f.target.bind(self)})"
@@ -154,6 +155,10 @@ class Variant(_StructRenderer, Composite):
   @property
   def moveable(self):
     return all(type.moveable for type in self.alternatives.values())
+
+  @property
+  def swappable(self):
+    return all(type.swappable for type in self.alternatives.values())
 
   @property
   def hashable(self):

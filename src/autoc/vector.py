@@ -153,9 +153,11 @@ class Vector(_StructRenderer, Map, Sequence):
 
     # Sorting is defined only for the orderable element types as it is entirely built on top of the element comparison.
     # The algorithm is a quicksort with the median-of-three pivot and the insertion sort applied to the small ranges.
-    # The exchange based implementation makes the sort work uniformly for the value types: the resources
-    # held by the elements are correctly released and reacquired on every assignment.
-    if self.element.orderable:
+    # The swap based implementation leverages the element's swappability: swapping exchanges the representations of two
+    # complete values so both sides remain valid afterwards - unlike move it requires no pristine state to be left behind.
+    # The sort cluster exchanges the elements so it requires swappability in addition to orderability
+    # while the pivot is still copied out so the copyability is required as well
+    if self.element.orderable and self.element.copyable and self.element.swappable:
       element_i = self.element.variable("target->elements[i]")
       element_j = self.element.variable("target->elements[j]")
       element_lo = self.element.variable("target->elements[lo]")
@@ -163,23 +165,7 @@ class Vector(_StructRenderer, Map, Sequence):
       element_hi = self.element.variable("target->elements[hi]")
       element_prev = self.element.variable("target->elements[j-1]")
       pivot = self.element.variable("pivot")
-      temp = self.element.variable("temp")
-      destroy_i = f"{self.element.destroy(element_i)};" if self.element.destructible else str()
-      destroy_j = f"{self.element.destroy(element_j)};" if self.element.destructible else str()
       destroy_pivot = f"{self.element.destroy(pivot)};" if self.element.destructible else str()
-      destroy_temp = f"{self.element.destroy(temp)};" if self.element.destructible else str()
-
-      with self.method(None, "exchange", {"target": inout(self), "i": self.index, "j": self.index}, hidden=True, visibility="internal") as f:
-        f.code = f"""
-          {temp.definition};
-          assert(target);
-          {self.element.copy(temp, element_i)};
-          {destroy_i}
-          {self.element.copy(element_i, element_j)};
-          {destroy_j}
-          {self.element.copy(element_j, temp)};
-          {destroy_temp}
-        """
 
       with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal") as f:
         f.code = f"""
@@ -187,7 +173,7 @@ class Vector(_StructRenderer, Map, Sequence):
           assert(target);
           for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
             for(j = i; j > {f.lo} && {self.element.compare(element_prev, element_j)} > 0; --j) {{
-              {self.exchange(f.target, "j - 1", "j")};
+              {self.element.swap(element_prev, element_j)};
             }}
           }}
         """
@@ -204,10 +190,10 @@ class Vector(_StructRenderer, Map, Sequence):
             }}
             mid = {f.lo} + ({f.hi} - {f.lo})/2;
             /* median of three orders the lo, mid and hi elements protecting against the sorted inputs */
-            if({self.element.compare(element_mid, element_lo)} < 0) {self.exchange(f.target, "mid", "lo")};
+            if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
             if({self.element.compare(element_hi, element_mid)} < 0) {{
-              {self.exchange(f.target, "hi", "mid")};
-              if({self.element.compare(element_mid, element_lo)} < 0) {self.exchange(f.target, "mid", "lo")};
+              {self.element.swap(element_hi, element_mid)};
+              if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
             }}
             {self.element.copy(pivot, element_mid)};
             i = {f.lo};
@@ -216,7 +202,7 @@ class Vector(_StructRenderer, Map, Sequence):
               while({self.element.compare(element_i, pivot)} < 0) ++i;
               while({self.element.compare(element_j, pivot)} > 0) --j;
               if(i >= j) break;
-              {self.exchange(f.target, "i", "j")};
+              {self.element.swap(element_i, element_j)};
               ++i;
               --j;
             }}
@@ -236,6 +222,15 @@ class Vector(_StructRenderer, Map, Sequence):
         f.code = f"""
           assert(target);
           if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
+        """
+
+    # Reversal is a pure exchange loop so it requires nothing but the element swappability
+    if self.element.swappable:
+      with self.method(None, "reverse", {"target": inout(self)}) as f:
+        f.code = f"""
+          size_t i;
+          assert(target);
+          for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
         """
 
       with self.method("int", ("is", "sorted"), {"target": self}) as f:

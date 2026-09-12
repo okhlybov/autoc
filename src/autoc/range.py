@@ -9,10 +9,15 @@ class Range(Composite):
     super().__init__(*args, **kws)
     self.element = _type(element)
 
+  @property
+  def swappable(self):
+    return False # ranges are non-owning cursors - swapping is indistinguishable from copying
+
   def __setup__(self):
     super().__setup__()
     self.create = None
     self.destroy = None
+    self.swap = None
     self.equal = None
     self.compare = None
     self.hash = None

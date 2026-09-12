@@ -1,7 +1,7 @@
 import autoc.std as std
 from itertools import islice
 from autoc.memory import Manager
-from autoc.core import Composite, _StructRenderer, Indirection, Callable, out
+from autoc.core import Composite, _StructRenderer, Indirection, Callable, out, inout
 
 
 #  
@@ -25,6 +25,16 @@ class _Reference(Indirection, Composite):
     # A moved-from reference is nulled so that destroying it afterwards is a safe no-op
     # The underlying free guards on the pointer being NULL
     self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = NULL")
+    # Swapping exchanges the handles without touching the reference counts on either side
+    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))})
+    with self.swap as f:
+      f.inline_code = f"""
+        {self} temp;
+        temp = *left;
+        *left = *right;
+        *right = temp;
+      """
+
     
     # Delete self attributes which arent handled by the class to force proxying
     del self.equal

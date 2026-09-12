@@ -20,6 +20,14 @@ class String(Indirection, Map):
     self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")
     self.move = self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = (char*)_autoc_empty_string")
+    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))})
+    with self.swap as f:
+      f.inline_code = """
+        char* temp;
+        temp = *left;
+        *left = *right;
+        *right = temp;
+      """
 
     with self.method(Callable.Parameter(self), "new", {"source": self}) as f:
       f.inline_code = """

@@ -88,8 +88,21 @@ class _Traitful:
 
   @property
   def moveable(self):
+    # A type is movable when it either supplies its own move or when the move is derivable:
+    # the default construction manufactures the pristine shell which the swap then exchanges
+    # with the source leaving the source in the pristine state as well
+    move = getattr(self, "move", None)
+    if isinstance(move, Macro) or (isinstance(move, Function) and not move.abstract):
+      return True
+    return self.default_constructible and self.swappable
+
+  # Swappability is the weaker exchange trait: swapping exchanges the representations of two
+  # complete values so both sides remain valid afterwards - unlike move it requires no pristine
+  # state to be left behind and is therefore available to some types which are not moveable
+  @property
+  def swappable(self):
     return True
-  
+
   @property
   def comparable(self):
     return True
@@ -131,6 +144,7 @@ class Type(autoc.module.Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible)
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
     self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable)
+    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable)
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
     self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
@@ -263,6 +277,10 @@ class Primitive(_Named, _Traitful):
     self.macro_from("create", lambda target: f"{target} = 0")
     self.macro_from("copy", lambda target, source: f"{target} = {source}")
     self.macro_from("move", lambda target, source: f"{target} = {source}")
+    # The swap is expanded inline at the call sites as a scoped block - the temporary is
+    # confined by the block scope keeping the macro hygienic and the generated source
+    # free of the per-primitive swap function traces
+    self.macro_from("swap", lambda left, right: f"{{ {self} temp = {left}; {left} = {right}; {right} = temp; }}")
     self.macro_from("equal", lambda left, right: f"({left} == {right})")
     self.macro_from("compare", lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
     self.macro_from("hash", lambda target: f"(size_t)({target})")
@@ -305,6 +323,28 @@ class Composite(_Named, _Traitful):
     self.method_from("destroy")
     self.method_from("copy")
     self.method_from("move")
+    # The swap is hidden into the translation unit - primitives themselves do not expose it publicly
+    self.method_from("swap", hidden=True, visibility="internal")
+    with self.swap as f:
+      # Exchanging the whole representations keeps both values valid - for the containers
+      # this is the O(1) bookkeeping exchange regardless of the element type
+      f.code = f"""
+        {self} temp;
+        temp = *left;
+        *left = *right;
+        *right = temp;
+      """
+
+    # The move is derived for the types capable of manufacturing the pristine shell by the
+    # default construction and exchanging the contents by swapping - the explicit move
+    # definitions of the concrete types take precedence
+    if self.default_constructible and self.swappable:
+      with self.move as f:
+        f.code = f"""
+          {self.create(f.target)};
+          {self.swap(f.target, f.source)};
+        """
+
     self.method_from("equal")
     self.method_from("compare")
     self.method_from("hash")
