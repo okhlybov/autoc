@@ -33,8 +33,8 @@ class Variant(_StructRenderer, Composite):
       target = f"({f.target.bind(self)})"
       f.inline_code = self._destroy_active(target)
 
-    if self.comparable:
-      with self.equal as f:
+    with self.equal as f:
+      def _equal(f=f):
         left = f"({f.left.bind(self)})"
         right = f"({f.right.bind(self)})"
         code = [f"if({left}.tag != {right}.tag) return 0;"]
@@ -43,17 +43,19 @@ class Variant(_StructRenderer, Composite):
           code.append(f"case {index}: return {type.equal(type.variable(f"{left}.value.{name}"), type.variable(f"{right}.value.{name}"))};")
         code.append("default: return 1; /* both empty */")
         code.append("}")
-        f.inline_code = code
+        return str().join([str(x) for x in code])
+      f.inline_code = _equal
 
-    if self.copyable:
-      with self.copy as f:
+    with self.copy as f:
+      def _copy(f=f):
         target = f"({f.target.bind(self)})"
         source = f"({f.source.bind(self)})"
         code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
         for index, (name, type) in enumerate(self.alternatives.items()):
           code.append(f"case {index}: {{{type.copy(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
         code.append("}")
-        f.inline_code = code
+        return str().join([str(x) for x in code])
+      f.inline_code = _copy
 
     with self.move as f:
       def _move(f=f):
@@ -68,8 +70,8 @@ class Variant(_StructRenderer, Composite):
         return str().join([str(x) for x in code])
       f.inline_code = _move
 
-    if self.hashable:
-      with self.hash as f:
+    with self.hash as f:
+      def _hash(f=f):
         target = f"({f.target.bind(self)})"
         state = self.hasher.state_t.variable("state")
         code = [f"{state.definition}; size_t result; {self.hasher.create(state)};", f"assert({f.target});"]
@@ -80,7 +82,8 @@ class Variant(_StructRenderer, Composite):
           code.append(f"case {index}: {{{self.hasher.update(state, type.hash(type.variable(f"{target}.value.{name}")))};}} break;")
         code.append("}")
         code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
-        f.inline_code = code
+        return str().join([str(x) for x in code])
+      f.inline_code = _hash
 
     with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility) as f:
       target = f"({f.target.bind(self)})"
