@@ -240,6 +240,7 @@ consumed 23
 | `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
 | `autoc.treap_map` | `Map` | ordered map over the treap set — iterates in key order, supports lexicographic comparison |
 | `autoc.tiered_vector` | `TieredVector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
+| `autoc.priority_queue` | `PriorityQueue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
 | `autoc.record` | `Record` | user-defined field aggregates |
