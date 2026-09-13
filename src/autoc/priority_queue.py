@@ -16,10 +16,6 @@ class PriorityQueue(_StructRenderer, Collection):
     super().__init__(name, element, **kws)
     self._element_p = Indirection(self.element)
 
-  @property
-  def orderable(self):
-    return False # the heap is consumed by the priority, not searched by the value
-
   def __setup__(self):
     super().__setup__()
 

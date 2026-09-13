@@ -76,23 +76,26 @@ class _Traitful:
   
   @property
   def default_constructible(self):
-    return self.constructible and len(self.create.parameters) == 1
+    return self.constructible and self.create is not None and len(self.create.parameters) == 1
 
   @property
   def destructible(self):
     return True
 
+  # The value traits are derived from the presence of the operation implementations:
+  # a type carries whatever operations it has actually defined and nothing else. The
+  # optimistic defaults would render the declarations without the bodies crashing the
+  # generation or linking for the types which never supplied them
   @property
   def copyable(self):
-    return True
+    return _defined(getattr(self, "copy", None))
 
   @property
   def moveable(self):
     # A type is movable when it either supplies its own move or when the move is derivable:
     # the default construction manufactures the pristine shell which the swap then exchanges
     # with the source leaving the source in the pristine state as well
-    move = getattr(self, "move", None)
-    if isinstance(move, Macro) or (isinstance(move, Function) and not move.abstract):
+    if _defined(getattr(self, "move", None)):
       return True
     return self.default_constructible and self.swappable
 
@@ -105,16 +108,22 @@ class _Traitful:
 
   @property
   def comparable(self):
-    return True
-  
+    return _defined(getattr(self, "equal", None))
+
   @property
   def orderable(self):
-    return True
-  
+    return _defined(getattr(self, "compare", None))
+
   @property
   def hashable(self):
-    return True
-  
+    return _defined(getattr(self, "hash", None))
+
+  # The zero representation of the value is a valid pristine state which makes the bulk
+  # default initialization possible through the zeroed allocations alone
+  @property
+  def zero_initializable(self):
+    return False
+
 
 class _VisibilityManager:
 
@@ -288,6 +297,12 @@ class Primitive(_Named, _Traitful):
   @property
   def destructible(self):
     return False # Primitive type almost always bears no destructor
+
+  @property
+  def zero_initializable(self):
+    # The zero representation of a primitive is a valid pristine shell - the destructor
+    # bearing descendants must override this along with declaring their empty state
+    return True
 
   @property
   def rvalue_type(self):
@@ -717,6 +732,12 @@ class Macro(_Parametrized):
   
   def __str__(self):
     return "->"
+
+
+def _defined(operation):
+  # An operation is defined when it carries its implementation - either the macro emitter
+  # or the function body
+  return isinstance(operation, Macro) or (isinstance(operation, Function) and hasattr(operation, "code"))
 
 
 #

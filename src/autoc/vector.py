@@ -13,10 +13,6 @@ class Vector(_StructRenderer, Map, Sequence):
     super().__init__(name, element, std.size_t, **kws)
     self.range = Range(self)
 
-  @property
-  def orderable(self):
-    return False # TODO
-  
   def __setup__(self):
     super().__setup__()
     
@@ -52,19 +48,32 @@ class Vector(_StructRenderer, Map, Sequence):
         target->size = capacity;
       """
     
-    # TODO make use of zero initializable feature of primitives
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible) as f:
-      f.code = f"""
-        assert(target);
-        if(size > 0) {{
+    # The zero initializable elements are default initialized by the zeroed allocation alone
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable) as f:
+      if self.element.zero_initializable:
+        f.code = f"""
+          assert(target);
+          if(size > 0) {{
+            target->elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->elements);
+            target->size = size;
+          }} else {{
+            target->elements = NULL;
+            target->size = 0;
+          }}
+        """
+      else:
+        f.code = f"""
           {self.index} index;
-          {self.allocate(*f.arguments)};
-          for(index = 0; index < size; ++index) {self.element.create(target_i)};
-        }} else {{
-          target->elements = NULL;
-          target->size = 0;
-        }}
-      """
+          assert(target);
+          if(size > 0) {{
+            {self.index} index;
+            {self.allocate(*f.arguments)};
+            for(index = 0; index < size; ++index) {self.element.create(target_i)};
+          }} else {{
+            target->elements = NULL;
+            target->size = 0;
+          }}
+        """
 
     with self.get as f:
       result = f.result.variable("result")
@@ -120,18 +129,19 @@ class Vector(_StructRenderer, Map, Sequence):
         """
 
     # FIXME should come from sequence    
-    with self.equal as f:
-      f.code = f"""
-        assert(left);
-        assert(right);
-        if(left->size == right->size) {{
-          {self.index} index;
-          for(index = 0; index < left->size; ++index) {{
-            if(!{self.element.equal(left_i, right_i)}) return 0;
-          }}
-          return 1;
-        }} else return 0;
-      """
+    if self.comparable:
+      with self.equal as f:
+        f.code = f"""
+          assert(left);
+          assert(right);
+          if(left->size == right->size) {{
+            {self.index} index;
+            for(index = 0; index < left->size; ++index) {{
+              if(!{self.element.equal(left_i, right_i)}) return 0;
+            }}
+            return 1;
+          }} else return 0;
+        """
 
     with self.copy as f:
       f.code = f"""

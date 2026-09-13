@@ -25,10 +25,6 @@ class TieredVector(_StructRenderer, Map, Sequence):
     self._chunk_pp = Indirection(self._chunk_p)
     self.range = Range(self)
 
-  @property
-  def orderable(self):
-    return False # TODO
-
   def __setup__(self):
     super().__setup__()
 
@@ -152,17 +148,36 @@ class TieredVector(_StructRenderer, Map, Sequence):
         {self.element.copy(self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]"), f.element)};
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible) as f:
-      f.code = f"""
-        size_t index;
-        assert(target);
-        {self.create(f.target)};
-        for(index = 0; index < {f.size}; ++index) {{
-          {self.extend(f.target)};
-          {self.element.create(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"))};
-          ++target->size;
-        }}
-      """
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable) as f:
+      if self.element.zero_initializable:
+        # The chunked zeroed allocation is the default initialization - no per element operations
+        f.code = f"""
+          size_t index, needed;
+          assert(target);
+          if({f.size} > 0) {{
+            needed = ({f.size} + {self.chunk_mask}) >> {self.chunk_shift};
+            target->chunks = {self.memory.allocate(self._chunk_p, "needed")}; assert(target->chunks);
+            target->chunk_capacity = needed;
+            for(index = 0; index < needed; ++index) {{
+              target->chunks[index] = {self.memory.allocate(self.element, f"{1 << self.chunk_shift}", zero=True)};
+            }}
+            target->chunk_count = needed;
+            target->size = {f.size};
+          }} else {{
+            {self.create(f.target)};
+          }}
+        """
+      else:
+        f.code = f"""
+          size_t index;
+          assert(target);
+          {self.create(f.target)};
+          for(index = 0; index < {f.size}; ++index) {{
+            {self.extend(f.target)};
+            {self.element.create(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"))};
+            ++target->size;
+          }}
+        """
 
     with self.copy as f:
       f.code = f"""
@@ -188,18 +203,19 @@ class TieredVector(_StructRenderer, Map, Sequence):
         {self.create(f.source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
-        size_t index;
-        assert(left);
-        assert(right);
-        if(left->size == right->size) {{
-          for(index = 0; index < left->size; ++index) {{
-            if(!{self.element.equal(self.element.variable(f"left->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"), self.element.variable(f"right->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))}) return 0;
-          }}
-          return 1;
-        }} else return 0;
-      """
+    if self.comparable:
+      with self.equal as f:
+        f.code = f"""
+          size_t index;
+          assert(left);
+          assert(right);
+          if(left->size == right->size) {{
+            for(index = 0; index < left->size; ++index) {{
+              if(!{self.element.equal(self.element.variable(f"left->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"), self.element.variable(f"right->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))}) return 0;
+            }}
+            return 1;
+          }} else return 0;
+        """
 
     # The sort cluster mirrors the vector one - the quicksort with the median-of-three pivot
     # and the insertion sort for the small ranges - with the element access redirected

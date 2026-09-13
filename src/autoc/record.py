@@ -21,13 +21,14 @@ class Record(_StructRenderer, Composite):
     
     # FIXME assert arguments when they are pointers
     
-    with self.create as f:
-      code = []
-      target = f"({f.target.bind(self)})"
-      for field, type in self.fields.items():
-        code.append(type.create(type.variable(f"{target}.{field}")))
-        code.append(";")
-      f.inline_code = code
+    if self.constructible:
+      with self.create as f:
+        code = []
+        target = f"({f.target.bind(self)})"
+        for field, type in self.fields.items():
+          code.append(type.create(type.variable(f"{target}.{field}")))
+          code.append(";")
+        f.inline_code = code
     
     with self.destroy as f:
       code = []
@@ -38,22 +39,24 @@ class Record(_StructRenderer, Composite):
           code.append(";")
       f.inline_code = code
 
-    with self.equal as f:
-      xs = []
-      left = f"({f.left.bind(self)})"
-      right = f"({f.right.bind(self)})"
-      for field, type in self.fields.items():
-        xs.append(str(type.equal(type.variable(f"{left}.{field}"), type.variable(f"{right}.{field}"))))
-      f.inline_code = ["return ", " && ".join(xs if xs else ["1"]), ";"]
+    if self.comparable:
+      with self.equal as f:
+        xs = []
+        left = f"({f.left.bind(self)})"
+        right = f"({f.right.bind(self)})"
+        for field, type in self.fields.items():
+          xs.append(str(type.equal(type.variable(f"{left}.{field}"), type.variable(f"{right}.{field}"))))
+        f.inline_code = ["return ", " && ".join(xs if xs else ["1"]), ";"]
       
-    with self.copy as f:
-      code = []
-      target = f"({f.target.bind(self)})"
-      source = f"({f.source.bind(self)})"
-      for field, type in self.fields.items():
-        code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
-        code.append(";")
-      f.inline_code = code
+    if self.copyable:
+      with self.copy as f:
+        code = []
+        target = f"({f.target.bind(self)})"
+        source = f"({f.source.bind(self)})"
+        for field, type in self.fields.items():
+          code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
+          code.append(";")
+        f.inline_code = code
 
     with self.move as f:
       def _move(f=f):
@@ -67,16 +70,17 @@ class Record(_StructRenderer, Composite):
         return str().join([str(x) for x in code])
       f.inline_code = _move
 
-    with self.hash as f:
-      code = []
-      target = f"({f.target.bind(self)})"
-      state = self.hasher.state_t.variable("state")
-      code.append(f"{state.definition}; size_t result; {self.hasher.create(state)};")
-      for field, type in self.fields.items():
-        code.append(self.hasher.update(state, type.hash(type.variable(f"{target}.{field}"))))
-        code.append(";")
-      code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
-      f.inline_code = code
+    if self.hashable:
+      with self.hash as f:
+        code = []
+        target = f"({f.target.bind(self)})"
+        state = self.hasher.state_t.variable("state")
+        code.append(f"{state.definition}; size_t result; {self.hasher.create(state)};")
+        for field, type in self.fields.items():
+          code.append(self.hasher.update(state, type.hash(type.variable(f"{target}.{field}"))))
+          code.append(";")
+        code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
+        f.inline_code = code
 
     if self.getters:
       for field, type in self.fields.items():
