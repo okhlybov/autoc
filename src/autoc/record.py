@@ -55,15 +55,17 @@ class Record(_StructRenderer, Composite):
         code.append(";")
       f.inline_code = code
 
-    if self.moveable:
-      with self.move as f:
+    with self.move as f:
+      def _move(f=f):
+        # Built lazily: the fields of the non movable records have their moves inactive
         code = []
         target = f"({f.target.bind(self)})"
         source = f"({f.source.bind(self)})"
         for field, type in self.fields.items():
           code.append(type.move(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
           code.append(";")
-        f.inline_code = code
+        return str().join([str(x) for x in code])
+      f.inline_code = _move
 
     with self.hash as f:
       code = []

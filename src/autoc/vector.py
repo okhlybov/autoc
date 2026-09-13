@@ -151,100 +151,99 @@ class Vector(_StructRenderer, Map, Sequence):
         {self.create(f.source)};
       """
 
-    # Sorting is defined only for the orderable element types as it is entirely built on top of the element comparison.
-    # The algorithm is a quicksort with the median-of-three pivot and the insertion sort applied to the small ranges.
-    # The swap based implementation leverages the element's swappability: swapping exchanges the representations of two
-    # complete values so both sides remain valid afterwards - unlike move it requires no pristine state to be left behind.
-    # The sort cluster exchanges the elements so it requires swappability in addition to orderability
-    # while the pivot is still copied out so the copyability is required as well
-    if self.element.orderable and self.element.copyable and self.element.swappable:
-      element_i = self.element.variable("target->elements[i]")
-      element_j = self.element.variable("target->elements[j]")
-      element_lo = self.element.variable("target->elements[lo]")
-      element_mid = self.element.variable("target->elements[mid]")
-      element_hi = self.element.variable("target->elements[hi]")
-      element_prev = self.element.variable("target->elements[j-1]")
-      pivot = self.element.variable("pivot")
-      destroy_pivot = f"{self.element.destroy(pivot)};" if self.element.destructible else str()
+    # Sorting is defined for the orderable, copyable and swappable element types: the sort exchanges
+    # the elements so it requires swappability in addition to orderability while the pivot is still
+    # copied out so the copyability is required as well. The algorithm is a quicksort with the
+    # median-of-three pivot and the insertion sort applied to the small ranges. The swap based
+    # implementation leverages the element's swappability: swapping exchanges the representations of
+    # two complete values so both sides remain valid afterwards - unlike move it requires no pristine
+    # state to be left behind.
+    # The bodies are constructed lazily because they call the element operations which are inactive
+    # for the types the respective constraints disallow
+    sort_constraint = lambda: self.element.orderable and self.element.copyable and self.element.swappable
 
-      with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal") as f:
-        f.code = f"""
-          size_t i, j;
-          assert(target);
-          for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
-            for(j = i; j > {f.lo} && {self.element.compare(element_prev, element_j)} > 0; --j) {{
-              {self.element.swap(element_prev, element_j)};
-            }}
+    element_i = self.element.variable("target->elements[i]")
+    element_j = self.element.variable("target->elements[j]")
+    element_lo = self.element.variable("target->elements[lo]")
+    element_mid = self.element.variable("target->elements[mid]")
+    element_hi = self.element.variable("target->elements[hi]")
+    element_prev = self.element.variable("target->elements[j-1]")
+    pivot = self.element.variable("pivot")
+
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        size_t i, j;
+        assert(target);
+        for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
+          for(j = i; j > {f.lo} && {self.element.compare(element_prev, element_j)} > 0; --j) {{
+            {self.element.swap(element_prev, element_j)};
           }}
-        """
+        }}
+      """
 
-      with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal") as f:
-        f.code = f"""
-          size_t i, j, mid;
-          {pivot.definition};
-          assert(target);
-          while({f.lo} < {f.hi}) {{
-            if({f.hi} - {f.lo} < 16) {{ /* small ranges are insertion sorted */
-              {self.sort_insertion(f.target, f.lo, f.hi)};
-              return;
-            }}
-            mid = {f.lo} + ({f.hi} - {f.lo})/2;
-            /* median of three orders the lo, mid and hi elements protecting against the sorted inputs */
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        size_t i, j, mid;
+        {pivot.definition};
+        assert(target);
+        while({f.lo} < {f.hi}) {{
+          if({f.hi} - {f.lo} < 16) {{ /* small ranges are insertion sorted */
+            {self.sort_insertion(f.target, f.lo, f.hi)};
+            return;
+          }}
+          mid = {f.lo} + ({f.hi} - {f.lo})/2;
+          /* median of three orders the lo, mid and hi elements protecting against the sorted inputs */
+          if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
+          if({self.element.compare(element_hi, element_mid)} < 0) {{
+            {self.element.swap(element_hi, element_mid)};
             if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
-            if({self.element.compare(element_hi, element_mid)} < 0) {{
-              {self.element.swap(element_hi, element_mid)};
-              if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
-            }}
-            {self.element.copy(pivot, element_mid)};
-            i = {f.lo};
-            j = {f.hi};
-            while(i <= j) {{
-              while({self.element.compare(element_i, pivot)} < 0) ++i;
-              while({self.element.compare(element_j, pivot)} > 0) --j;
-              if(i >= j) break;
-              {self.element.swap(element_i, element_j)};
-              ++i;
-              --j;
-            }}
-            {destroy_pivot}
-            /* recursing into the smaller part and iterating over the larger one bounds the recursion depth */
-            if(j - {f.lo} < {f.hi} - i) {{
-              {self.sort_range(f.target, f.lo, "j")};
-              {f.lo} = i;
-            }} else {{
-              {self.sort_range(f.target, "i", f.hi)};
-              {f.hi} = j;
-            }}
           }}
-        """
+          {self.element.copy(pivot, element_mid)};
+          i = {f.lo};
+          j = {f.hi};
+          while(i <= j) {{
+            while({self.element.compare(element_i, pivot)} < 0) ++i;
+            while({self.element.compare(element_j, pivot)} > 0) --j;
+            if(i >= j) break;
+            {self.element.swap(element_i, element_j)};
+            ++i;
+            --j;
+          }}
+          {str(self.element.destroy(pivot)) + ";" if self.element.destructible else str()}
+          /* recursing into the smaller part and iterating over the larger one bounds the recursion depth */
+          if(j - {f.lo} < {f.hi} - i) {{
+            {self.sort_range(f.target, f.lo, "j")};
+            {f.lo} = i;
+          }} else {{
+            {self.sort_range(f.target, "i", f.hi)};
+            {f.hi} = j;
+          }}
+        }}
+      """
 
-      with self.method(None, "sort", {"target": inout(self)}) as f:
-        f.code = f"""
-          assert(target);
-          if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
-        """
-
-    # FIXME traits below must be handled by constraint, not the code branch
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        assert(target);
+        if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
+      """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    if self.element.swappable:
-      with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
-        f.code = f"""
-          size_t i;
-          assert(target);
-          for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
-        """
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
+      f.code = lambda: f"""
+        size_t i;
+        assert(target);
+        for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
+      """
 
-      if self.element.orderable:
-        with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
-          f.code = f"""
-            size_t index;
-            assert(target);
-            for(index = 1; index < target->size; ++index) {{
-              if({self.element.compare(self.element.variable("target->elements[index]"), self.element.variable("target->elements[index-1]"))} < 0) return 0;
-            }}
-            return 1;
-          """
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+      f.code = lambda: f"""
+        size_t index;
+        assert(target);
+        for(index = 1; index < target->size; ++index) {{
+          if({self.element.compare(self.element.variable("target->elements[index]"), self.element.variable("target->elements[index-1]"))} < 0) return 0;
+        }}
+        return 1;
+      """
 
   def _render_struct(self, stream):
     super()._render_struct(stream)

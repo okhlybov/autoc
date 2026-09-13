@@ -53,8 +53,9 @@ class Variant(_StructRenderer, Composite):
       code.append("}")
       f.inline_code = code
 
-    if self.moveable:
-      with self.move as f:
+    with self.move as f:
+      def _move(f=f):
+        # Built lazily: the alternatives of the non movable variants have their moves inactive
         target = f"({f.target.bind(self)})"
         source = f"({f.source.bind(self)})"
         code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
@@ -62,7 +63,8 @@ class Variant(_StructRenderer, Composite):
           code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
         code.append("}")
         code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
-        f.inline_code = code
+        return str().join([str(x) for x in code])
+      f.inline_code = _move
 
     with self.hash as f:
       target = f"({f.target.bind(self)})"
