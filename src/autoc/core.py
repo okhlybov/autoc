@@ -147,17 +147,20 @@ class _VisibilityManager:
 #
 class Documented(autoc.module.Entity, _VisibilityManager):
 
+  # The class level defaults keep the brief and the description resolvable through
+  # the regular attribute lookup alone - the __getattr__ based proxies (the references)
+  # would recurse infinitely on the hasattr probes
+  brief = None
+  description = None
+
   def __init__(self, *args, brief=None, description=None, **kws):
     super().__init__(*args, **kws)
-    # CHECKME per class defined attinutes should take precedence when constuctor-supplied are None
+    # The constructor supplied documentation takes precedence while the per class
+    # defined documentation shows through when the constructor passes none
     if brief:
       self.brief = brief
-    elif not hasattr(self, "brief"):
-      self.brief = None
     if description:
       self.description = description
-    elif not hasattr(self, "description"):
-      self.description = None
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -424,6 +427,11 @@ class Composite(_Named, _Traitful):
 
 
 class _StructRenderer:
+
+  def _render_struct(self, stream):
+    # The overridable hook rendering the type structure - the container overrides
+    # render their node and container typedefs here
+    pass
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -874,17 +882,10 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
 
   #
   def _render_declaration(self, stream):
-    if not self.internal:
-      self._render_description(stream)
+    # The visibility and the documentation are rendered by the Documented base
     self._render_decorator(stream)
     stream.append(self.declaration)
     stream.append(";\n")
-
-  def _render_description(self, stream):
-    if self.public:
-      stream.append("/** @public */\n")
-    elif not self.internal:
-      stream.append("/** @private */\n")
 
   #
   def _render_decorator(self, stream):

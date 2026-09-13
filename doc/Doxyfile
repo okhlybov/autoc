@@ -1,0 +1,19 @@
+# Doxygen configuration for the autoc reference manual.
+# Usage: python doc.py && doxygen Doxyfile
+PROJECT_NAME           = "autoc"
+PROJECT_NUMBER         = 3.0.0
+PROJECT_BRIEF          = "C source code generation from Python"
+INPUT                  = doc_auto.h
+OUTPUT_DIRECTORY       = reference
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+GENERATE_LATEX         = NO
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+OPTIMIZE_OUTPUT_FOR_C  = YES
+MAX_INITIALIZER_LINES  = 0
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+SHOW_INCLUDE_FILES     = NO
+SORT_BRIEF_DOCS        = YES

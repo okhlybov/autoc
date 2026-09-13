@@ -11,8 +11,8 @@ class Vector(_StructRenderer, Map, Sequence):
 
   brief = "The sized direct-access container: the storage is allocated upfront for the given number of the elements and never reallocated; the sort, the reversal and the binary search operate in place."
 
-  def __init__(self, name, element, **kws):
-    super().__init__(name, element, std.size_t, **kws)
+  def __init__(self, name, element, *args, description=None, **kws):
+    super().__init__(name, element, std.size_t, description=description, **kws)
     self.range = Range(self)
 
   def __setup__(self):

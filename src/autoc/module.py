@@ -108,6 +108,8 @@ class Module:
       else:
         total_complexity = sum(e.complexity for e in self.total_entities)
         self.source_count = int((total_complexity / self.source_threshold) + 0.999)  # ceil
+    if self.source_count == 0:
+      return # the header-only module holds no translation units
     for e in sorted(self.total_entities):
       self.sources.sort(key=lambda s: s.complexity)
       self.sources[0].add(e)
