@@ -7,6 +7,8 @@ from autoc.core import _StructRenderer, Callable, Indirection, inout
 #
 class Queue(_StructRenderer, Collection):
 
+  brief = "The first-in first-out container over the internal deque: the elements are consumed in their arrival order."
+
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self._deque = Deque(self._decorate_component("deque"), self.element, visibility="internal")
@@ -81,7 +83,7 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.contains(_target, f.element)};
       """
 
-    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Appends the element at the back of the queue.") as f:
       f.code = f"""
         assert(target);
         {self._deque.push_back(_target, f.element)};
@@ -93,13 +95,13 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.pop_front(_target)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the element to be dequeued next.") as f:
       f.code = f"""
         assert(target);
         return {self._deque.front(_target)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the most recently enqueued element.") as f:
       f.code = f"""
         assert(target);
         return {self._deque.back(_target)};
@@ -121,6 +123,8 @@ class Queue(_StructRenderer, Collection):
 class Range(_Range, Forward):
 
   # The range traverses the queue in FIFO order - from front to back
+
+  brief = "The forward traversal from the front to the back of the queue."
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

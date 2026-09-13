@@ -7,6 +7,8 @@ from autoc.core import inout, _type, Callable, _StructRenderer
 
 #
 class List(_StructRenderer, Sequence):
+
+  brief = "The singly linked list: the constant time insertion and removal at the front with the stable element addresses."
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -92,7 +94,7 @@ class List(_StructRenderer, Sequence):
         {self.create(f.source)};
       """
 
-    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Inserts the element at the front.") as f:
       f.code = f"""
         {self.node}* node;
         assert(target);
@@ -103,7 +105,7 @@ class List(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Removes and returns the front element.") as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -118,7 +120,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
     
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the front element.") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
@@ -128,7 +130,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("front", "view"), {"target": self}) as f:
+    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Returns the constant view of the front element.") as f:
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -179,7 +181,9 @@ class List(_StructRenderer, Sequence):
 
 #
 class Range(_Range, Forward):
-  
+
+  brief = "The forward traversal over the list elements."
+
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:

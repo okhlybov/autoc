@@ -7,6 +7,8 @@ from autoc.core import _StructRenderer, Callable, Indirection, inout
 #
 class Stack(_StructRenderer, Collection):
 
+  brief = "The last-in first-out container over the internal list."
+
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self._list = List(self._decorate_component("list"), self.element, visibility="internal")
@@ -81,19 +83,19 @@ class Stack(_StructRenderer, Collection):
         return {self._list.hash(_target)};
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Pushes the element onto the stack.") as f:
       f.code = f"""
         assert(target);
         {self._list.push_front(_target, f.element)};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Removes and returns the top element.") as f:
       f.code = f"""
         assert(target);
         return {self._list.pop_front(_target)};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the top element without popping it.") as f:
       f.code = f"""
         assert(target);
         return {self._list.front(_target)};
@@ -103,8 +105,6 @@ class Stack(_StructRenderer, Collection):
 
   def _render_struct(self, stream):
     super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
     stream.append(f"""typedef struct {{
       {self._list.variable("list").definition}; /**< @private */
     }} {self.name};
@@ -117,6 +117,7 @@ class Range(_Range, Forward):
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
+      stream.append("/** The forward traversal from the top to the bottom of the stack. */\n")
       stream.append(f"""
         typedef struct {{
           {Indirection(self.iterable, constant=True)} iterable; /**< @private */

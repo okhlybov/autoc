@@ -8,6 +8,8 @@ from autoc.core import Indirection, _StructRenderer, Callable
 
 #
 class Map(_StructRenderer, Map):
+
+  brief = "The flat open addressing hash map over the internal entry set: the entries are keyed by the index alone and the slot states are encoded by the sentinel values."
   
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
@@ -187,6 +189,7 @@ class Range(_Range, Forward):
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
+      stream.append("/** The forward traversal over the held entries. */\n")
       stream.append(f"""
         typedef struct {{
           {self._range.name} range; /**< @private */

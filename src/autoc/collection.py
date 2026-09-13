@@ -1,10 +1,12 @@
 import autoc.std as std
 from autoc.hash import Xor
 from autoc.memory import Manager
-from autoc.core import Composite, _type
+from autoc.core import Composite, Documented, _type
 
 
-class Range:
+class Range(Documented):
+
+  brief = "Generic container contents traverser."
 
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
@@ -42,9 +44,9 @@ class Collection(Composite):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "empty", {"target": self})
-    self.method(std.size_t, "size", {"target": self})
-    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable)
+    self.method("int", "empty", {"target": self}, brief="Checks whether the container holds no elements.")
+    self.method(std.size_t, "size", {"target": self}, brief="Returns the number of the elements held.")
+    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Checks whether the element is held by the container.")
 
   @property
   def copyable(self):

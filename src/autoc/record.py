@@ -6,6 +6,8 @@ from autoc.core import Composite, _StructRenderer
 
 #
 class Record(_StructRenderer, Composite):
+
+  brief = "" # TODO
   
   def __init__(self, name, fields, *args, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
@@ -98,7 +100,7 @@ class Record(_StructRenderer, Composite):
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable, brief="Returns a copy of the " + str(field) + " field.") as f:
       result = f.result.variable("result")
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
@@ -108,7 +110,7 @@ class Record(_StructRenderer, Composite):
       """
 
   def _add_writer(self, type, field):
-    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief="Destroys the current " + str(field) + " value and sets the new one.") as f:
       target = f"({f.target.bind(self)})"
       destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
       f.inline_code = f"""

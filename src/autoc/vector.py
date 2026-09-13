@@ -9,6 +9,8 @@ from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 #
 class Vector(_StructRenderer, Map, Sequence):
 
+  brief = "The sized direct-access container: the storage is allocated upfront for the given number of the elements and never reallocated; the sort, the reversal and the binary search operate in place."
+
   def __init__(self, name, element, **kws):
     super().__init__(name, element, std.size_t, **kws)
     self.range = Range(self)
@@ -49,7 +51,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Creates the vector holding the given number of the zero or default initialized elements.") as f:
       if self.element.zero_initializable:
         f.code = f"""
           assert(target);
@@ -231,21 +233,21 @@ class Vector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint) as f:
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sorts the elements in the ascending order: the quicksort with the median-of-three pivot and the insertion sort for the small ranges. Not stable.") as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverses the elements in place.") as f:
       f.code = lambda: f"""
         size_t i;
         assert(target);
         for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
       """
 
-    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Checks whether the elements are in the ascending order.") as f:
       f.code = lambda: f"""
         size_t index;
         assert(target);
@@ -256,7 +258,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     # The binary search operations require the vector sorted in the ascending order
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Returns the position of the first element not less than the given one. The vector must be sorted ascending.") as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -270,7 +272,7 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Returns the position of the first element strictly greater than the given one. The vector must be sorted ascending.") as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -284,7 +286,7 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Checks whether the sorted vector holds the element.") as f:
       f.code = lambda f=f: f"""
         size_t low;
         assert(target);
@@ -305,7 +307,9 @@ class Vector(_StructRenderer, Map, Sequence):
 
 #
 class Range(_Range, DirectAccess):
-  
+
+  brief = "The direct-access bidirectional traversal over the vector elements."
+
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:

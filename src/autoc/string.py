@@ -9,6 +9,8 @@ from autoc.core import inout, Indirection, Callable
 
 #
 class String(Indirection, Map):
+
+  brief = "The dynamically sized string over the char buffer: the empty state is represented by the shared sentinel so the destruction and the moves never touch the heap for the empty strings."
   
   def __init__(self, name, *args, **kws):
     super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.string_h, _static_code))

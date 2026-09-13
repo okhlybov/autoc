@@ -6,20 +6,22 @@ from autoc.core import Composite, _StructRenderer, Indirection, Callable, out, i
 
 #  
 class _Reference(Indirection, Composite):
-  
+
+  brief = "" # TODO
+
   def __init__(self, type, *args, name=None, **kws):
     super().__init__(type, type.name if name is None else name, *args, **kws)
     
   def __setup__(self):
     super().__setup__()
 
-    self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)})
+    self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)}, brief="Acquires a new reference by constructing the referenced value in the fresh storage.")
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
-    self.method(self, "share", {"source": self})
+    self.method(self, "share", {"source": self}, brief="Shares the referenced object: the reference count is incremented for the counted references.")
     self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
-    self.method(None, "free", {"target": self})
+    self.method(None, "free", {"target": self}, brief="Releases the reference: the object is destroyed when the last reference is dropped. Passing NULL is a safe no-op.")
     self.macro_from("destroy", lambda target: self.free(target))
     
     # A moved-from reference is nulled so that destroying it afterwards is a safe no-op
@@ -60,6 +62,8 @@ class _Reference(Indirection, Composite):
 #
 class Raw(_Reference):
   
+  brief = "" # TODO
+
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
     self.memory = memory
@@ -87,7 +91,7 @@ class Raw(_Reference):
       f.code = f"""
         if({f.target}) {{
           {self.type.destroy(f.target) if self.type.destructible else str()};
-          {self.memory.free(f"({self._layout}*){f.target}")};
+          {self.memory.free(f.target)};
         }}
       """
 
@@ -95,6 +99,8 @@ class Raw(_Reference):
 #
 class Arc(_StructRenderer, _Reference):
   
+  brief = "" # TODO
+
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
     self.memory = memory

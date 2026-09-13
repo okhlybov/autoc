@@ -9,6 +9,8 @@ from autoc.core import Indirection, Callable, _StructRenderer
 #
 class Map(_StructRenderer, Map):
 
+  brief = "The hash map with the separate chaining collision resolution over the internal entry set: the entries are keyed by the index alone."
+
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
@@ -178,6 +180,8 @@ class Map(_StructRenderer, Map):
 #
 class Range(_Range, Forward):
 
+  brief = "The forward traversal over the held entries."
+
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable, *args, **kws)
     self._range = iterable._set.range
@@ -187,12 +191,11 @@ class Range(_Range, Forward):
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {self._range.name} range; /**< @private */
-        }} {self.name};
-      """)
+    stream.append(f"""
+      typedef struct {{
+        {self._range.name} range; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

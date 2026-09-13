@@ -10,6 +10,8 @@ from autoc.core import Indirection, Callable
 #
 class Map(_StructRenderer, Map):
 
+  brief = "The ordered map over the internal treap set of the key-value entries: the entries are keyed by the index alone, iterated in the key order with the expected logarithmic operations."
+
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
@@ -193,6 +195,8 @@ class Map(_StructRenderer, Map):
 
 #
 class Range(_Range, Forward):
+
+  brief = "The forward traversal over the entries in the key order."
 
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable, *args, **kws)

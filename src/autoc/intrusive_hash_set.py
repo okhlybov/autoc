@@ -7,6 +7,8 @@ from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer
 
 class _Macro(Macro):
 
+  brief = "The flat open addressing hash set with the linear probing: the elements are stored by value in one contiguous array and the empty and the deleted slot states are encoded by the sentinel values supplied at the instantiation."
+
   def __init__(self, result, parameters, emitter, **kws):
     # Wrap the passthough arguments in () to circumvent operation proirity issues for user-supplied code
     super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kws)
@@ -230,7 +232,7 @@ class Set(_StructRenderer, Set):
         }} else return 0;
       """
     
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Returns the constant view of the found element, or NULL when absent.") as f:
       f.code = f"""
         size_t index;
         assert(target);
@@ -312,6 +314,7 @@ class Range(_Range, Forward):
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
+      stream.append("/** The forward traversal over the held elements slot by slot. */\n")
       stream.append(f"""
         typedef struct {{
           {Indirection(self.iterable, constant=True)} iterable; /**< @private */

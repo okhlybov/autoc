@@ -5,6 +5,8 @@ from autoc.collection import Collection
 
 #
 class PriorityQueue(_StructRenderer, Collection):
+
+  brief = "The binary heap over the flat array: the elements are consumed in the priority order with the top being the greatest per the element comparison. The duplicate priorities are allowed."
   # The extraction-ordered container: the elements are consumed in the priority order -
   # top returns the greatest element per the element comparison. The binary heap over the
   # flat array gives the guaranteed O(log n) push/pop with the contiguous cache friendly
@@ -142,7 +144,7 @@ class PriorityQueue(_StructRenderer, Collection):
         }}
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Pushes the element into the queue, growing the storage when full.") as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size == target->capacity) {self._grow(f.target)};
@@ -151,7 +153,7 @@ class PriorityQueue(_StructRenderer, Collection):
         {self.sift_up(f.target, "target->size - 1")};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Removes and returns the greatest element.") as f:
       result = f.result.variable("result")
       f.code = lambda f=f: f"""
         {result.definition};
@@ -166,7 +168,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable) as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Returns the greatest element without removing it.") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -176,7 +178,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Returns the constant view of the greatest element.") as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -185,8 +187,6 @@ class PriorityQueue(_StructRenderer, Collection):
 
   def _render_struct(self, stream):
     super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
     stream.append(f"""typedef struct {{
       {self._element_p} elements; /**< @private */
       {std.size_t} capacity; /**< @private */

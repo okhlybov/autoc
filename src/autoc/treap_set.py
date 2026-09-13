@@ -9,6 +9,8 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
+  brief = "The treap: the randomized binary search tree holding the elements in the key order with the expected logarithmic operations and the iteration in the sorted order."
+
   def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, randomizer), **kws)
     self.node = _type(self._decorate_component("node"))
@@ -189,7 +191,7 @@ class Set(_StructRenderer, Set):
         return 1;
       """
 
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Returns the constant view of the found element, or NULL when absent.") as f:
       f.code = f"""
         {self.node}* n;
         int order;
@@ -467,7 +469,7 @@ class Set(_StructRenderer, Set):
 
     # The consuming implementations of the algebraic operations: both operands are merged
     # at the node level and the other set is left empty
-    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Merges every element of the other set into the target through the split and the merge node operations in the expected O(m log(n/m)). Both sets are consumed and the other set is left empty.") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -486,7 +488,7 @@ class Set(_StructRenderer, Set):
         return target->size - previous;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Removes every element of the other set from the target through the split based recursion in the expected O(m log(n/m)). Both sets are consumed and the other set is left empty.") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -510,7 +512,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keeps only the elements present in both sets through the split based recursion in the expected O(m log(n/m)). Both sets are consumed and the other set is left empty.") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -529,7 +531,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keeps only the elements present in exactly one of the sets through the split based recursion in the expected O(m log(n/m)). Both sets are consumed and the other set is left empty.") as f:
       f.code = f"""
         size_t previous, other_size;
         assert(target);
@@ -591,6 +593,8 @@ class Set(_StructRenderer, Set):
 
 #
 class Range(_Range, Forward):
+
+  brief = "The forward traversal over the elements in the key order."
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

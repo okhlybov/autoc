@@ -28,10 +28,10 @@ class Input(Range):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "empty", {"target": self})
-    self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable)
-    self.method(self.element.view_type, ("front", "view"), {"target": self})
-    self.method(None, ("move", "front"), {"target": inout(self)})
+    self.method("int", "empty", {"target": self}, brief="Checks whether the range is exhausted.")
+    self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the current element.")
+    self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Returns the constant view of the current element.")
+    self.method(None, ("move", "front"), {"target": inout(self)}, brief="Advances to the next element.")
 
 
 #
@@ -51,9 +51,9 @@ class Backward(Input):
 
   def __setup__(self):
     super().__setup__()
-    self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable)
-    self.method(self.element.view_type, ("back", "view"), {"target": self})
-    self.method(None, ("move", "back"), {"target": inout(self)})
+    self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Returns the last element.")
+    self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Returns the constant view of the last element.")
+    self.method(None, ("move", "back"), {"target": inout(self)}, brief="Moves back to the previous element.")
 
 
 #
@@ -66,6 +66,6 @@ class DirectAccess(Forward, Backward):
 
   def __setup__(self):
     super().__setup__()
-    self.method(self.element, "get", {"target": self, "index": std.size_t}, constraint=lambda: self.element.copyable)
-    self.method(self.element.view_type, "view", {"target": self,  "index": std.size_t})
-    self.method(std.size_t, "size", {"target": self})
+    self.method(self.element, "get", {"target": self, "index": std.size_t}, constraint=lambda: self.element.copyable, brief="Returns the element at the offset from the front.")
+    self.method(self.element.view_type, "view", {"target": self,  "index": std.size_t}, brief="Returns a view of the element at specified index.")
+    self.method(std.size_t, "size", {"target": self}, brief="Returns the number of the elements remaining.")

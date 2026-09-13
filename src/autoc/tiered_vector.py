@@ -8,6 +8,9 @@ from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 
 #
 class TieredVector(_StructRenderer, Map, Sequence):
+
+  brief = "The append-optimized direct-access container: the elements are stored in the fixed size chunks addressed through the chunk table giving the amortized constant time append, the stable element addresses and the teardown proportional to the chunk count rather than the element count."
+
   # The append-optimized direct-access container: the elements are stored in fixed size
   # chunks addressed through the chunk table which makes the growth allocation-only
   # (no element copying, stable element addresses) while keeping the O(1) indexed access
@@ -100,7 +103,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
           }}
         """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Appends the element at the end, growing the storage by one chunk when full.") as f:
       f.code = f"""
         assert(target);
         {self.extend(f.target)};
@@ -108,7 +111,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Removes and returns the last element.") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -148,7 +151,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         {self.element.copy(self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]"), f.element)};
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Creates the vector pre-allocated to the given size with the zero or default initialized elements.") as f:
       if self.element.zero_initializable:
         # The chunked zeroed allocation is the default initialization - no per element operations
         f.code = f"""
@@ -321,6 +324,8 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
 #
 class Range(_Range, DirectAccess):
+
+  brief = "The direct-access bidirectional traversal over the chunked elements."
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

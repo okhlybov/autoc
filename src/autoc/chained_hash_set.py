@@ -8,6 +8,8 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
+  brief = "The hash set with the separate chaining collision resolution: the elements are held in the dynamically allocated nodes with no sentinel values required from the element type and the element addresses stable across the unrelated operations."
+
   def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
     self.node = _type(self._decorate_component("node"))
@@ -165,7 +167,7 @@ class Set(_StructRenderer, Set):
         return 0;
       """
 
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Returns the constant view of the found element, or NULL when absent.") as f:
       f.code = f"""
         size_t bucket;
         {self.node}* n;
@@ -268,6 +270,7 @@ class Range(_Range, Forward):
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
+      stream.append("/** The forward traversal over the set elements bucket by bucket. */\n")
       stream.append(f"""
         typedef struct {{
           {Indirection(self.iterable, constant=True)} iterable; /**< @private */

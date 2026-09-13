@@ -7,12 +7,14 @@ from autoc.collection import Collection
 
 #
 class Set(Collection):
-  
+
+  brief = "" # TODO
+
   def __setup__(self):
     super().__setup__()
-    
-    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable)
-    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable)
+
+    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Puts the element into the set. Returns 1 when inserted, 0 when already present.")
+    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Removes the element from the set. Returns 1 when removed, 0 when absent.")
 
     # The algebraic operations are composed entirely out of the protocol primitives so every
     # set implementation inherits them. They mutate the target in place and return the number
@@ -24,7 +26,7 @@ class Set(Collection):
     temp = self.variable("temp")
     algebra_constraint = lambda: self.element.copyable and self.element.comparable
 
-    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint) as f:
+    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Merges every element of the other set into the target. Returns the number added. The other set is left intact, except the treap implementation which consumes it.") as f:
       f.code = lambda f=f: f"""
         size_t added;
         {r.definition};
@@ -38,7 +40,7 @@ class Set(Collection):
         return added;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint) as f:
+    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Removes every element of the other set from the target. Returns the number removed. The other set is left intact, except the treap implementation which consumes it.") as f:
       f.code = lambda f=f: f"""
         size_t removed;
         {r.definition};
@@ -57,14 +59,14 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint) as f:
+    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Removes every element of the target absent from the other set. Returns the number removed. The other set is left intact, except the treap implementation which consumes it.") as f:
       f.code = lambda f=f: f"""
         size_t removed;
         {r.definition};
         {temp.definition};
         assert(target);
         assert({f.other});
-        if(target == {f.other}) return 0; /* nothing is removed intersecting with self */
+        if(target == {f.other}) return 0;
         {self.create(temp)};
         {self.copy(temp, f.target)};
         removed = 0;
@@ -75,7 +77,7 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint) as f:
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Exchanges the membership keeping the uncommon elements. Returns the number of the elements added or removed. The other set is left intact, except the treap implementation which consumes it.") as f:
       f.code = lambda f=f: f"""
         size_t changed;
         {r.definition};
@@ -95,7 +97,7 @@ class Set(Collection):
         return changed;
       """
 
-    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable) as f:
+    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Checks whether the target is a subset of the other set.") as f:
       f.code = lambda f=f: f"""
         {r.definition};
         assert(target);
@@ -106,7 +108,7 @@ class Set(Collection):
         return 1;
       """
 
-    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable) as f:
+    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Checks whether the target is a superset of the other set.") as f:
       f.code = lambda f=f: f"""
         {r.definition};
         assert(target);
@@ -117,7 +119,7 @@ class Set(Collection):
         return 1;
       """
 
-    # TODO pop, ...
+      # TODO pop, ...
 
 
 #

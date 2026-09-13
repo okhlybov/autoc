@@ -96,12 +96,12 @@ class Variant(_StructRenderer, Composite):
       self._add_writer(type, name, index)
 
   def _add_predicate(self, name, index):
-    with self.method("int", ("is", name), {"target": self}, visibility=self.visibility) as f:
+    with self.method("int", ("is", name), {"target": self}, visibility=self.visibility, brief="Checks whether the variant holds the " + name + " alternative.") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"return {target}.tag == {index};"
 
   def _add_reader(self, type, name, index):
-    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief="Returns a copy of the held " + name + " value, aborting when the variant holds a different alternative.") as f:
       result = f.result.variable("result")
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
@@ -112,7 +112,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_view(self, type, name, index):
-    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility) as f:
+    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility, brief="Returns the constant view of the held " + name + " value, aborting when the variant holds a different alternative.") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
         assert({target}.tag == {index});
@@ -120,7 +120,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_writer(self, type, name, index):
-    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief="Destroys the currently held value and sets the " + name + " alternative from the given value.") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
         {self._destroy_active(target)};
