@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.map import Map
-from autoc.range import Forward
+from autoc.range import DirectAccess
 from autoc.sequence import Sequence
 from autoc.collection import Range as _Range
 from autoc.core import inout, out, Indirection, _StructRenderer, Callable
@@ -215,9 +215,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
 
 #
-class Range(_Range, Forward):
-
-  # TODO direct access
+class Range(_Range, DirectAccess):
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -225,14 +223,12 @@ class Range(_Range, Forward):
       stream.append(f"""
         typedef struct {{
           {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {std.size_t} front; /**< @private */
+          {std.size_t} front, back; /**< @private */
         }} {self.name};
       """)
 
   def __setup__(self):
     super().__setup__()
-
-    front_element = self.element.variable(f"target->iterable->chunks[target->front >> {self.iterable.chunk_shift}][target->front & {self.iterable.chunk_mask}]")
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
       result = f.result.variable("result")
@@ -241,30 +237,28 @@ class Range(_Range, Forward):
         assert(iterable);
         result.iterable = iterable;
         result.front = 0;
+        result.back = iterable->size;
         return {result};
       """
 
     with self.empty as f:
       f.inline_code = f"""
         assert(target);
-        return target->front >= target->iterable->size;
+        return target->front >= target->back;
       """
 
     with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
-        {result.definition};
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        {self.element.copy(result, front_element)};
-        return {result};
+        return {self.iterable.get("target->iterable", "target->front")};
       """
 
     with self.front_view as f:
-      f.inline_code = f"""
+      f.inline_code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return {front_element.bind(self.iterable.element.view_type)};
+        return {self.iterable.view("target->iterable", "target->front")};
       """
 
     with self.move_front as f:
@@ -272,4 +266,44 @@ class Range(_Range, Forward):
         assert(target);
         assert(!{self.empty(f.target)});
         ++target->front;
+      """
+
+    with self.back as f:
+      f.inline_code = lambda: f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self.iterable.get("target->iterable", "target->back-1")};
+      """
+
+    with self.back_view as f:
+      f.inline_code = lambda: f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self.iterable.view("target->iterable", "target->back-1")};
+      """
+
+    with self.move_back as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        --target->back;
+      """
+
+    with self.get as f:
+      f.inline_code = lambda: f"""
+      assert(target);
+      return {self.iterable.get("target->iterable", "target->front + index")};
+    """
+
+    with self.view as f:
+      f.inline_code = lambda: f"""
+        assert(target);
+        return {self.iterable.view("target->iterable", "target->front + index")};
+      """
+
+    with self.size as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(target->back >= target->front);
+        return target->back - target->front;
       """

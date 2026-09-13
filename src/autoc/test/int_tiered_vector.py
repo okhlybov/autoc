@@ -128,3 +128,24 @@ x.unit(f"{range}(): traverse across chunks", f"""
   }}
   TEST_EQUAL( i, 50 );
 """)
+
+
+x.unit(f"{range}(): traverse across chunks backward", f"""
+  for(i = 0; i < 50; ++i) {type.push(t, "i")};
+  i = 50;
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_back(r)}) {{
+    --i;
+    TEST_EQUAL( {range.back(r)}, i );
+  }}
+  TEST_EQUAL( i, 0 );
+""")
+
+x.unit(f"{range}(): direct access by offset and range size", f"""
+  for(i = 0; i < 50; ++i) {type.push(t, "i")};
+  {r} = {range.new(t)};
+  TEST_EQUAL( {range.size(r)}, 50 );
+  TEST_EQUAL( {range.get(r, 0)}, 0 );
+  TEST_EQUAL( {range.get(r, 16)}, 16 ); /* the offset crossing the chunk boundary */
+  TEST_EQUAL( *{range.view(r, 49)}, 49 );
+  TEST_EQUAL( {range.front(r)}, {range.get(r, 0)} );
+""")
