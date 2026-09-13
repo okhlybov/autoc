@@ -256,3 +256,95 @@ x.unit(f"{type.compare}(): compare prefix set", f"""
   TEST_TRUE( {type.compare(t1, t2)} < 0 );
   TEST_TRUE( {type.compare(t2, t1)} > 0 );
 """)
+
+
+# The algebraic operations: both operands are consumed and the other set is left empty
+o = type.variable("o")
+
+
+x.setup(f"""
+  {r.definition};
+  {t.definition};
+  {o.definition};
+  {type.create(t)};
+  {type.create(o)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+  {type.destroy(o)};
+""")
+
+x.unit(f"{type.union}(): union consumes the other set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 3)}; {type.put(o, 4)}; {type.put(o, 5)};
+  TEST_EQUAL( {type.union(t, o)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_TRUE( {type.contains(t, 4)} );
+  TEST_TRUE( {type.contains(t, 5)} );
+  TEST_TRUE( {type.empty(o)} );
+""")
+
+x.unit(f"{type.union}(): union iterates in the sorted order afterwards", f"""
+  {type.put(t, 5)}; {type.put(t, 1)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 4)};
+  {type.union(t, o)};
+  {{
+    int previous = 0;
+    int count = 0;
+    for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_front(r)}) {{
+      TEST_TRUE( {range.front(r)} > previous );
+      previous = {range.front(r)};
+      ++count;
+    }}
+    TEST_EQUAL( count, 5 );
+  }}
+""")
+
+x.unit(f"{type.difference}(): difference removes the common elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.difference(t, o)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_TRUE( {type.contains(t, 1)} );
+  TEST_TRUE( {type.empty(o)} );
+""")
+
+x.unit(f"{type.intersection}(): intersection keeps the common elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.intersection(t, o)}, 1 );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_TRUE( {type.contains(t, 2)} );
+  TEST_TRUE( {type.contains(t, 3)} );
+  TEST_TRUE( {type.empty(o)} );
+""")
+
+x.unit(f"{type.symmetric_difference}(): keeps the uncommon elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.symmetric_difference(t, o)}, 3 );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_TRUE( {type.contains(t, 1)} );
+  TEST_TRUE( {type.contains(t, 4)} );
+""")
+
+x.unit(f"{type.difference}(): difference with self empties the set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  TEST_EQUAL( {type.difference(t, t)}, 2 );
+  TEST_TRUE( {type.empty(t)} );
+""")
+
+x.unit(f"{type.intersection}(): intersection with self changes nothing", f"""
+  {type.put(t, 1)};
+  TEST_EQUAL( {type.intersection(t, t)}, 0 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+""")
+
+x.unit(f"{type.is_subset}(): subset relations survive the algebra", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  {type.put(o, 1)}; {type.put(o, 2)}; {type.put(o, 3)};
+  {type.union(t, o)};
+  TEST_TRUE( {type.is_subset(o, t)} ); /* the emptied set is the subset of everything */
+  TEST_TRUE( {type.is_superset(t, o)} );
+  TEST_TRUE( {type.empty(o)} );
+""")

@@ -3,7 +3,7 @@ from autoc.random import Randomizer
 from autoc.range import Forward
 from autoc.set import Set
 from autoc.collection import Range as _Range
-from autoc.core import inout, _type, _StructRenderer, Indirection, Callable, Expression
+from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable, Expression
 
 
 #
@@ -254,6 +254,304 @@ class Set(_StructRenderer, Set):
           if(order) return order;
         }}
         return {range.empty(rl)} ? ({range.empty(rr)} ? 0 : -1) : +1;
+      """
+
+    # The treap algebra: the split and the merge node operations give the O(m log(n/m))
+    # implementations of the algebraic operations. Both operands are consumed - their nodes
+    # are reused without copying and the other set is left empty. The parent links and the
+    # element resources are maintained throughout
+
+    with self.method(self._node_p, ("merge", "nodes"), {"left": Callable.Parameter(self._node_p), "right": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+      f.code = f"""
+        if(!{f.left}) return {f.right};
+        if(!{f.right}) return {f.left};
+        if({self.randomizer.priority(str(f.left))} > {self.randomizer.priority(str(f.right))}) {{
+          {f.left}->right = {self.merge_nodes(f"{f.left}->right", f.right)};
+          if({f.left}->right) {f.left}->right->parent = {f.left};
+          return {f.left};
+        }}
+        {f.right}->left = {self.merge_nodes(f.left, f"{f.right}->left")};
+        if({f.right}->left) {f.right}->left->parent = {f.right};
+        return {f.right};
+      """
+
+    with self.method(None, ("split", "nodes"), {"tree": Callable.Parameter(self._node_p), "key": self.element, "left": out(Indirection(self._node_p)), "right": out(Indirection(self._node_p))}, hidden=True, visibility="internal") as f:
+      f.code = f"""
+        assert({f.left});
+        assert({f.right});
+        if(!{f.tree}) {{
+          *{f.left} = *{f.right} = NULL;
+          return;
+        }}
+        if({self.element.compare(self.element.variable(f"{f.tree}->element"), f.key)} < 0) {{
+          {self.split_nodes(f"{f.tree}->right", f.key, f"&{f.tree}->right", f.right)};
+          if({f.tree}->right) {f.tree}->right->parent = {f.tree};
+          *{f.left} = {f.tree};
+        }} else {{
+          {self.split_nodes(f"{f.tree}->left", f.key, f.left, f"&{f.tree}->left")};
+          if({f.tree}->left) {f.tree}->left->parent = {f.tree};
+          *{f.right} = {f.tree};
+        }}
+      """
+
+    with self.method("int", ("discard", "equal"), {"root": inout(Indirection(self._node_p)), "key": self.element}, hidden=True, visibility="internal") as f:
+      destroy_element = str(self.element.destroy(self.element.variable("n->element"))) + ";" if self.element.destructible else str()
+      f.code = f"""
+        int order;
+        {self.node}* n;
+        {self.node}* parent;
+        {self.node}* merged;
+        n = *{f.root};
+        parent = NULL;
+        while(n) {{
+          order = {self.element.compare(self.element.variable("n->element"), f.key)};
+          if(order == 0) break;
+          parent = n;
+          n = order > 0 ? n->left : n->right;
+        }}
+        if(!n) return 0;
+        merged = {self.merge_nodes("n->left", "n->right")};
+        if(parent) {{
+          if(parent->left == n) parent->left = merged; else parent->right = merged;
+          if(merged) merged->parent = parent;
+        }} else {{
+          *{f.root} = merged;
+          if(merged) merged->parent = NULL;
+        }}
+        {destroy_element}
+        {self.memory.free("n")};
+        return 1;
+      """
+
+    with self.method(None, ("destroy", "root"), {"root": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+      destroy_element = str(self.element.destroy(self.element.variable("n->element"))) + ";" if self.element.destructible else str()
+      f.code = f"""
+        {self.node}* n;
+        {self.node}* p;
+        if({f.root}) {f.root}->parent = NULL; /* detached trees carry stale root parents */
+        n = {f.root};
+        while(n) {{
+          if(n->left) {{
+            n = n->left;
+          }} else if(n->right) {{
+            n = n->right;
+          }} else {{
+            p = n->parent;
+            if(p) {{
+              if(p->left == n) p->left = NULL; else p->right = NULL;
+            }}
+            {destroy_element}
+            {self.memory.free("n")};
+            n = p;
+          }}
+        }}
+      """
+
+    with self.method(std.size_t, "count", {"node": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+      f.code = f"""
+        if(!{f.node}) return 0;
+        return 1 + {self.count(f"{f.node}->left")} + {self.count(f"{f.node}->right")};
+      """
+
+    with self.method(self._node_p, ('union', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      f.code = lambda f=f: f"""
+        {self.node}* low;
+        {self.node}* high;
+        {self.node}* swap;
+        int taken;
+        if(!{f.a}) {{
+          return {f.b};
+        }}
+        if(!{f.b}) return {f.a};
+        if({self.randomizer.priority(str(f.a))} < {self.randomizer.priority(str(f.b))}) {{
+          {self.node}* swap = {f.a};
+          {f.a} = {f.b};
+          {f.b} = swap;
+        }}
+        {self.split_nodes(f.b, self.element.variable(f"{f.a}->element"), "&low", "&high")};
+        taken = {self.discard_equal("&high", self.element.variable(f"{f.a}->element"))};
+        {f.a}->left = {self.union_nodes(f"{f.a}->left", "low")};
+        {f.a}->right = {self.union_nodes(f"{f.a}->right", "high")};
+        if({f.a}->left) {f.a}->left->parent = {f.a};
+        if({f.a}->right) {f.a}->right->parent = {f.a};
+        return {f.a};
+      """
+
+    with self.method(self._node_p, ('intersection', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      f.code = lambda f=f: f"""
+        {self.node}* low;
+        {self.node}* high;
+        {self.node}* swap;
+        int taken;
+        if(!{f.a}) {{
+          {self.destroy_root(f.b)};
+          return NULL;
+        }}
+        if(!{f.b}) {{
+          {self.destroy_root(f.a)};
+          return NULL;
+        }}
+        if({self.randomizer.priority(str(f.a))} < {self.randomizer.priority(str(f.b))}) {{
+          {self.node}* swap = {f.a};
+          {f.a} = {f.b};
+          {f.b} = swap;
+        }}
+        {self.split_nodes(f.b, self.element.variable(f"{f.a}->element"), "&low", "&high")};
+        taken = {self.discard_equal("&high", self.element.variable(f"{f.a}->element"))};
+        {f.a}->left = {self.intersection_nodes(f"{f.a}->left", "low")};
+        {f.a}->right = {self.intersection_nodes(f"{f.a}->right", "high")};
+        if({f.a}->left) {f.a}->left->parent = {f.a};
+        if({f.a}->right) {f.a}->right->parent = {f.a};
+        if(taken) return {f.a};
+        {self.node}* left_result = {f.a}->left;
+        {self.node}* right_result = {f.a}->right;
+        {str(self.element.destroy(self.element.variable(f"{f.a}->element"))) + ";" if self.element.destructible else str()}
+        {self.memory.free(f.a)};
+        return {self.merge_nodes("left_result", "right_result")};
+      """
+
+    with self.method(self._node_p, ('difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      f.code = lambda f=f: f"""
+        {self.node}* low;
+        {self.node}* high;
+        {self.node}* swap;
+        int taken;
+        if(!{f.a}) {{
+          {self.destroy_root(f.b)};
+          return NULL;
+        }}
+        if(!{f.b}) return {f.a};
+        /* the difference is asymmetric - the priorities of a govern the recursion */
+        {self.split_nodes(f.b, self.element.variable(f"{f.a}->element"), "&low", "&high")};
+        taken = {self.discard_equal("&high", self.element.variable(f"{f.a}->element"))};
+        {f.a}->left = {self.difference_nodes(f"{f.a}->left", "low")};
+        {f.a}->right = {self.difference_nodes(f"{f.a}->right", "high")};
+        if({f.a}->left) {f.a}->left->parent = {f.a};
+        if({f.a}->right) {f.a}->right->parent = {f.a};
+        if(taken) {{
+          {self.node}* left_result = {f.a}->left;
+          {self.node}* right_result = {f.a}->right;
+          {str(self.element.destroy(self.element.variable(f"{f.a}->element"))) + ";" if self.element.destructible else str()}
+          {self.memory.free(f.a)};
+          return {self.merge_nodes("left_result", "right_result")};
+        }}
+        return {f.a};
+      """
+
+    with self.method(self._node_p, ('symmetric_difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      f.code = lambda f=f: f"""
+        {self.node}* low;
+        {self.node}* high;
+        {self.node}* swap;
+        int taken;
+        if(!{f.a}) {{
+          return {f.b};
+        }}
+        if(!{f.b}) return {f.a};
+        if({self.randomizer.priority(str(f.a))} < {self.randomizer.priority(str(f.b))}) {{
+          {self.node}* swap = {f.a};
+          {f.a} = {f.b};
+          {f.b} = swap;
+        }}
+        {self.split_nodes(f.b, self.element.variable(f"{f.a}->element"), "&low", "&high")};
+        taken = {self.discard_equal("&high", self.element.variable(f"{f.a}->element"))};
+        {f.a}->left = {self.symmetric_difference_nodes(f"{f.a}->left", "low")};
+        {f.a}->right = {self.symmetric_difference_nodes(f"{f.a}->right", "high")};
+        if({f.a}->left) {f.a}->left->parent = {f.a};
+        if({f.a}->right) {f.a}->right->parent = {f.a};
+        if(taken) {{
+          {self.node}* left_result = {f.a}->left;
+          {self.node}* right_result = {f.a}->right;
+          {str(self.element.destroy(self.element.variable(f"{f.a}->element"))) + ";" if self.element.destructible else str()}
+          {self.memory.free(f.a)};
+          return {self.merge_nodes("left_result", "right_result")};
+        }}
+        return {f.a};
+      """
+
+    # The consuming implementations of the algebraic operations: both operands are merged
+    # at the node level and the other set is left empty
+    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      f.code = f"""
+        size_t previous;
+        assert(target);
+        assert({f.other});
+        if(target == {f.other}) return 0;
+        previous = target->size;
+        target->root = {self.union_nodes("target->root", other_root)};
+        if(target->root) target->root->parent = NULL;
+        {f.other}->root = NULL;
+        {f.other}->size = 0;
+        target->size = {self.count("target->root")};
+        return target->size - previous;
+      """
+
+    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      f.code = f"""
+        size_t previous;
+        assert(target);
+        assert({f.other});
+        if(target == {f.other}) {{
+          previous = target->size;
+          {self.destroy(f.target)};
+          {self.create(f.target)};
+          return previous;
+        }}
+        previous = target->size;
+        target->root = {self.difference_nodes("target->root", other_root)};
+        if(target->root) target->root->parent = NULL;
+        {f.other}->root = NULL;
+        {f.other}->size = 0;
+        target->size = {self.count("target->root")};
+        return previous - target->size;
+      """
+
+    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      other_root = f"{f.other}->root"
+      f.code = f"""
+        size_t previous;
+        assert(target);
+        assert({f.other});
+        if(target == {f.other}) return 0;
+        previous = target->size;
+        target->root = {self.intersection_nodes("target->root", other_root)};
+        if(target->root) target->root->parent = NULL;
+        {f.other}->root = NULL;
+        {f.other}->size = 0;
+        target->size = {self.count("target->root")};
+        return previous - target->size;
+      """
+
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+      f.code = f"""
+        size_t previous, other_size;
+        assert(target);
+        assert({f.other});
+        if(target == {f.other}) {{
+          previous = target->size;
+          {self.destroy(f.target)};
+          {self.create(f.target)};
+          return previous;
+        }}
+        previous = target->size;
+        other_size = {f.other}->size;
+        target->root = {self.symmetric_difference_nodes("target->root", other_root)};
+        if(target->root) target->root->parent = NULL;
+        {f.other}->root = NULL;
+        {f.other}->size = 0;
+        target->size = {self.count("target->root")};
+        return other_size; /* every element of the other set is either added or causes a removal */
       """
 
     state = self.hasher.state_t.variable("state")

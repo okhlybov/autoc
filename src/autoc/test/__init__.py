@@ -124,6 +124,7 @@ code = autoc.module.Code(
       if(failure) ++failed;
     }
     int main(int argc, char** argv) {
+      setvbuf(stdout, NULL, _IONBF, 0);
       run_codes();
       if(failed) {
         printf("\n*** %d of %d unit(s) failed\n", failed, run);

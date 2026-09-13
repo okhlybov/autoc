@@ -181,3 +181,88 @@ x.unit(f"{type.equal}(): compare !equal sets of same size", f"""
   {type.put(t2, 1)};
   TEST_FALSE( {type.equal(t1, t2)} );
 """)
+
+
+# The algebraic operations
+t = type.variable("t")
+o = type.variable("o")
+
+
+x.setup(f"""
+  {t.definition};
+  {o.definition};
+  {type.create(t)};
+  {type.create(o)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+  {type.destroy(o)};
+""")
+
+x.unit(f"{type.union}(): union adds the elements of the other set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 3)}; {type.put(o, 4)}; {type.put(o, 5)};
+  TEST_EQUAL( {type.union(t, o)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_TRUE( {type.contains(t, 4)} );
+  TEST_TRUE( {type.contains(t, 5)} );
+  TEST_TRUE( {type.is_superset(t, o)} );
+""")
+
+x.unit(f"{type.union}(): union with self changes nothing", f"""
+  {type.put(t, 1)};
+  TEST_EQUAL( {type.union(t, t)}, 0 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+""")
+
+x.unit(f"{type.difference}(): difference removes the common elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.difference(t, o)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_TRUE( {type.contains(t, 1)} );
+  TEST_FALSE( {type.contains(t, 2)} );
+""")
+
+x.unit(f"{type.difference}(): difference with self empties the set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  TEST_EQUAL( {type.difference(t, t)}, 2 );
+  TEST_TRUE( {type.empty(t)} );
+""")
+
+x.unit(f"{type.intersection}(): intersection keeps the common elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.intersection(t, o)}, 1 );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_TRUE( {type.contains(t, 2)} );
+  TEST_TRUE( {type.contains(t, 3)} );
+  TEST_FALSE( {type.contains(t, 1)} );
+  TEST_TRUE( {type.is_subset(t, o)} );
+""")
+
+x.unit(f"{type.intersection}(): intersection with self changes nothing", f"""
+  {type.put(t, 1)};
+  TEST_EQUAL( {type.intersection(t, t)}, 0 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+""")
+
+x.unit(f"{type.symmetric_difference}(): keeps the uncommon elements", f"""
+  {type.put(t, 1)}; {type.put(t, 2)}; {type.put(t, 3)};
+  {type.put(o, 2)}; {type.put(o, 3)}; {type.put(o, 4)};
+  TEST_EQUAL( {type.symmetric_difference(t, o)}, 3 ); /* one removal plus one addition */
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_TRUE( {type.contains(t, 1)} );
+  TEST_TRUE( {type.contains(t, 4)} );
+  TEST_FALSE( {type.contains(t, 2)} );
+""")
+
+x.unit(f"{type.is_subset}(): subset relations", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  {type.put(o, 1)}; {type.put(o, 2)}; {type.put(o, 3)};
+  TEST_TRUE( {type.is_subset(t, o)} );
+  TEST_FALSE( {type.is_subset(o, t)} );
+  TEST_FALSE( {type.is_superset(t, o)} );
+  TEST_TRUE( {type.is_superset(o, t)} );
+  TEST_TRUE( {type.is_subset(o, o)} );
+""")

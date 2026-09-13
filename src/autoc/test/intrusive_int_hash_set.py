@@ -197,3 +197,34 @@ x.unit(f"{type.hash}(): hashes of two equal !empty sets", f"""
   TEST_TRUE( {type.equal(t1, t2)} );
   TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
 """)
+
+# The algebraic operations are inherited from the set base
+o = type.variable("o")
+
+x.setup(f"""
+  {t.definition};
+  {o.definition};
+  {type.create(t)};
+  {type.create(o)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+  {type.destroy(o)};
+""")
+
+x.unit(f"{type.union}(): union inherited by the intrusive set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  {type.put(o, 2)}; {type.put(o, 3)};
+  TEST_EQUAL( {type.union(t, o)}, 1 );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_TRUE( {type.contains(t, 3)} );
+""")
+
+x.unit(f"{type.intersection}(): intersection inherited by the intrusive set", f"""
+  {type.put(t, 1)}; {type.put(t, 2)};
+  {type.put(o, 2)}; {type.put(o, 3)};
+  TEST_EQUAL( {type.intersection(t, o)}, 1 );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_TRUE( {type.contains(t, 2)} );
+  TEST_TRUE( {type.is_subset(t, o)} );
+""")
