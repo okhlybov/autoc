@@ -357,7 +357,6 @@ class Set(_StructRenderer, Set):
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
-        {self.node}* swap;
         int taken;
         if(!{f.a}) {{
           return {f.b};
@@ -381,7 +380,6 @@ class Set(_StructRenderer, Set):
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
-        {self.node}* swap;
         int taken;
         if(!{f.a}) {{
           {self.destroy_root(f.b)};
@@ -414,7 +412,6 @@ class Set(_StructRenderer, Set):
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
-        {self.node}* swap;
         int taken;
         if(!{f.a}) {{
           {self.destroy_root(f.b)};
@@ -442,7 +439,6 @@ class Set(_StructRenderer, Set):
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
-        {self.node}* swap;
         int taken;
         if(!{f.a}) {{
           return {f.b};
