@@ -245,6 +245,43 @@ class Vector(_StructRenderer, Map, Sequence):
         return 1;
       """
 
+    # The binary search operations require the vector sorted in the ascending order
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+      f.code = lambda f=f: f"""
+        size_t low, high, mid;
+        assert(target);
+        low = 0;
+        high = target->size;
+        while(low < high) {{
+          mid = low + (high - low)/2;
+          if({self.element.compare(self.element.variable("target->elements[mid]"), f.element)} < 0) low = mid + 1;
+          else high = mid;
+        }}
+        return low;
+      """
+
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+      f.code = lambda f=f: f"""
+        size_t low, high, mid;
+        assert(target);
+        low = 0;
+        high = target->size;
+        while(low < high) {{
+          mid = low + (high - low)/2;
+          if({self.element.compare(self.element.variable("target->elements[mid]"), f.element)} <= 0) low = mid + 1;
+          else high = mid;
+        }}
+        return low;
+      """
+
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+      f.code = lambda f=f: f"""
+        size_t low;
+        assert(target);
+        low = {self.lower_bound(f.target, f.element)};
+        return low < target->size && !{self.element.compare(self.element.variable("target->elements[low]"), f.element)};
+      """
+
   def _render_struct(self, stream):
     super()._render_struct(stream)
     if self.public:

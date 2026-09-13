@@ -149,3 +149,33 @@ x.unit(f"{range}(): direct access by offset and range size", f"""
   TEST_EQUAL( *{range.view(r, 49)}, 49 );
   TEST_EQUAL( {range.front(r)}, {range.get(r, 0)} );
 """)
+
+
+x.unit(f"{type.sort}(): sort across chunks", f"""
+  for(i = 0; i < 100; ++i) {type.push(t, "(i*37 + 11)%100")};
+  {type.sort(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  for(i = 0; i < 100; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+""")
+
+x.unit(f"{type.sort}(): sort already sorted and reverse sorted", f"""
+  {type.destroy(t)};
+  {type.create_size(t, 40)};
+  for(i = 0; i < 40; ++i) {type.set(t, "i", "i")};
+  {type.sort(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  {type.reverse(t)};
+  TEST_FALSE( {type.is_sorted(t)} );
+  {type.sort(t)};
+  TEST_TRUE( {type.is_sorted(t)} );
+  for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+""")
+
+x.unit(f"{type.reverse}(): reverse twice restores", f"""
+  {type.destroy(t)};
+  {type.create_size(t, 40)};
+  for(i = 0; i < 40; ++i) {type.set(t, "i", "(i*7)%40")};
+  {type.reverse(t)};
+  {type.reverse(t)};
+  for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, (i*7)%40 );
+""")

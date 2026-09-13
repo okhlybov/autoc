@@ -201,6 +201,95 @@ class TieredVector(_StructRenderer, Map, Sequence):
         }} else return 0;
       """
 
+    # The sort cluster mirrors the vector one - the quicksort with the median-of-three pivot
+    # and the insertion sort for the small ranges - with the element access redirected
+    # through the chunk table. It is defined for the orderable, copyable and swappable
+    # element types: the exchanges require the swappability while the pivot is copied out
+    sort_constraint = lambda: self.element.orderable and self.element.copyable and self.element.swappable
+    slot = lambda index: f"target->chunks[{index} >> {self.chunk_shift}][{index} & {self.chunk_mask}]"
+    element_i = self.element.variable(slot("i"))
+    element_j = self.element.variable(slot("j"))
+    element_lo = self.element.variable(slot("lo"))
+    element_mid = self.element.variable(slot("mid"))
+    element_hi = self.element.variable(slot("hi"))
+    element_prev = self.element.variable(slot("j-1"))
+    pivot = self.element.variable("pivot")
+
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        size_t i, j;
+        assert(target);
+        for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
+          for(j = i; j > {f.lo} && {self.element.compare(element_prev, element_j)} > 0; --j) {{
+            {self.element.swap(element_prev, element_j)};
+          }}
+        }}
+      """
+
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        size_t i, j, mid;
+        {pivot.definition};
+        assert(target);
+        while({f.lo} < {f.hi}) {{
+          if({f.hi} - {f.lo} < 16) {{ /* small ranges are insertion sorted */
+            {self.sort_insertion(f.target, f.lo, f.hi)};
+            return;
+          }}
+          mid = {f.lo} + ({f.hi} - {f.lo})/2;
+          /* median of three orders the lo, mid and hi elements protecting against the sorted inputs */
+          if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
+          if({self.element.compare(element_hi, element_mid)} < 0) {{
+            {self.element.swap(element_hi, element_mid)};
+            if({self.element.compare(element_mid, element_lo)} < 0) {self.element.swap(element_mid, element_lo)};
+          }}
+          {self.element.copy(pivot, element_mid)};
+          i = {f.lo};
+          j = {f.hi};
+          while(i <= j) {{
+            while({self.element.compare(element_i, pivot)} < 0) ++i;
+            while({self.element.compare(element_j, pivot)} > 0) --j;
+            if(i >= j) break;
+            {self.element.swap(element_i, element_j)};
+            ++i;
+            --j;
+          }}
+          {str(self.element.destroy(pivot)) + ";" if self.element.destructible else str()}
+          /* recursing into the smaller part and iterating over the larger one bounds the recursion depth */
+          if(j - {f.lo} < {f.hi} - i) {{
+            {self.sort_range(f.target, f.lo, "j")};
+            {f.lo} = i;
+          }} else {{
+            {self.sort_range(f.target, "i", f.hi)};
+            {f.hi} = j;
+          }}
+        }}
+      """
+
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint) as f:
+      f.code = lambda f=f: f"""
+        assert(target);
+        if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
+      """
+
+    # Reversal is a pure exchange loop so it requires nothing but the element swappability
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
+      f.code = lambda: f"""
+        size_t i;
+        assert(target);
+        for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable(slot("i")), self.element.variable(slot("target->size-1-i")))}; 
+      """
+
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+      f.code = lambda: f"""
+        size_t index;
+        assert(target);
+        for(index = 1; index < target->size; ++index) {{
+          if({self.element.compare(self.element.variable(slot("index")), self.element.variable(slot("index-1")))} < 0) return 0;
+        }}
+        return 1;
+      """
+
   def _render_struct(self, stream):
     super()._render_struct(stream)
     if self.public:
