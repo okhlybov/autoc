@@ -1,6 +1,6 @@
 from autoc.list import List
 from autoc.range import Forward
-from autoc.collection import Collection, Range as _Range
+from autoc.collection import Collection, _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
@@ -101,28 +101,26 @@ class Stack(_StructRenderer, Collection):
 
     self.range = Range(self)
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._list.variable("list").definition}; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._list.variable("list").definition}; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, Forward):
 
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {self.iterable._list.node}* node; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {self.iterable._list.node}* node; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

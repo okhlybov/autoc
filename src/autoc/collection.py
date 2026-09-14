@@ -1,10 +1,12 @@
 import autoc.std as std
 from autoc.hash import Xor
+from autoc.range import Range
 from autoc.memory import Manager
-from autoc.core import Composite, _type
+from autoc.core import Composite, _StructRenderer, _type
 
 
-class Range:
+#
+class _Range(_StructRenderer, Range):
 
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
@@ -14,6 +16,7 @@ class Range:
     
   def __setup__(self):
     super().__setup__()
+    
     with self.copy as f:
       f.inline_code = f"""
         assert(target);

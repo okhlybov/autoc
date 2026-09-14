@@ -1,6 +1,6 @@
 from autoc.deque import Deque
 from autoc.range import Forward
-from autoc.collection import Collection, Range as _Range
+from autoc.collection import Collection, _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
@@ -107,31 +107,27 @@ class Queue(_StructRenderer, Collection):
 
     self.range = Range(self)
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._deque.variable("deque").definition}; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._deque.variable("deque").definition}; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, Forward):
 
-  # The range traverses the queue in FIFO order - from front to back
-
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {self.iterable._deque.node}* front; /**< @private */
-          {self.iterable._deque.node}* back; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {self.iterable._deque.node}* front; /**< @private */
+        {self.iterable._deque.node}* back; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

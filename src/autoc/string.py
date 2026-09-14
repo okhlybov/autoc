@@ -3,7 +3,7 @@ import autoc.std as std
 from autoc.map import Map
 from autoc.module import Code
 from autoc.range import DirectAccess
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import inout, Indirection, Callable
 
 
@@ -142,7 +142,7 @@ class String(Indirection, Map):
     return True
       
 _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
-  /** @internal */
+  /** @private */
   AUTOC_EXTERN const char* _autoc_empty_string;
 """, implementation=f"""
   const char* _autoc_empty_string = "";
@@ -152,15 +152,14 @@ _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
 #
 class Range(_Range, DirectAccess):
   
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable.type, constant=True)} iterable; /**< @private */
-          {self.iterable.index} front, back; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable.type, constant=True)} iterable; /**< @private */
+        {self.iterable.index} front, back; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

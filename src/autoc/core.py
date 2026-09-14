@@ -1,6 +1,6 @@
 import re
 import sys
-import autoc.module
+from autoc.module import Entity, Code
 from collections.abc import Iterable # substitute for missing iterable()
 
 
@@ -144,19 +144,50 @@ class _VisibilityManager:
     return self.visibility == "internal"
 
 
+class _Documented(Entity, _VisibilityManager):
+  
+  def __init__(self, *args, brief=None, description=None, **kws):
+    super().__init__(*args, **kws)
+    self.__manage_attr("brief", brief)
+    self.__manage_attr("description", description)
+
+  def __manage_attr(self, attr, value):
+    if value:
+      setattr(self, attr, value)
+    elif not hasattr(self.__class__, attr):
+      setattr(self, attr, None)
+
+  def _render_documentation(self, stream, header):
+    if self.public:
+      # If no brief is specified, this means no description as well as the most likely case
+      if self.brief:
+        stream.append(f"/** @public\n@brief {self.brief}\n")
+        self._render_description(stream)
+        stream.append("*/\n")
+      else:
+        stream.append("/** @public ")
+        self._render_description(stream)
+        stream.append("*/\n")
+    elif header:
+      stream.append("/** @private */\n")
+
+  def _render_description(self, stream):
+    if self.description:
+      stream.append(self.description)
+
 #
-class Type(autoc.module.Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
+class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
 
   def __setup__(self):
     # Basic methods
-    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible)
-    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible)
-    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable)
-    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable)
-    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable)
-    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable)
-    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable)
-    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable)
+    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters")
+    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value")
+    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value")
+    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location")
+    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values")
+    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality")
+    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values")
+    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value")
     # Methods used by the hash-based containers
     self.hash_lookup_hash = lambda *args: self.hash(*args)
     self.hash_lookup_equal = lambda *args: self.equal(*args)
@@ -235,12 +266,12 @@ class _Named(Type):
   #
   def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
-    return self.macro(attribute, m._result, m._parameters, *args, **kws)
+    return self.macro(attribute, m._result, m._parameters, *args, brief=m.brief, description=m.description, **kws)
     
   #
   def method_from(self, identifier, *args, attribute=None, **kws):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
-    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, **kws)
+    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, brief=m.brief, description=m.description, type=self, **kws)
   
   #
   def decorate(self, *args, **kws):
@@ -286,17 +317,15 @@ class Primitive(_Named, _Traitful):
     self.macro_from("create", lambda target: f"{target} = 0")
     self.macro_from("copy", lambda target, source: f"{target} = {source}")
     self.macro_from("move", lambda target, source: f"{target} = {source}")
-    # The swap is expanded inline at the call sites as a scoped block - the temporary is
-    # confined by the block scope keeping the macro hygienic and the generated source
-    # free of the per-primitive swap function traces
-    self.macro_from("swap", lambda left, right: f"{{ {self} temp = {left}; {left} = {right}; {right} = temp; }}")
+    self.macro_from("swap", lambda left, right: f"{{ {self} _ = {left}; {left} = {right}; {right} = _; }}")
     self.macro_from("equal", lambda left, right: f"({left} == {right})")
     self.macro_from("compare", lambda left, right: f"({left} == {right} ? 0 : ({left} < {right} ? -1 : +1))")
     self.macro_from("hash", lambda target: f"(size_t)({target})")
     
   @property
   def destructible(self):
-    return False # Primitive type almost always bears no destructor
+    # Primitive types almost always bear no destructor
+    return False
 
   @property
   def zero_initializable(self):
@@ -389,11 +418,14 @@ class Composite(_Named, _Traitful):
     return Indirection(self, constant=True)
 
 
-class _StructRenderer:
+class _StructRenderer(_Documented):
 
-  def _render_struct(self, stream):
-    if not self.public:
-      stream.append("/** @internal */\n")
+  def _render_struct(self, stream, header):
+    self._render_documentation(stream, header)
+    
+  def _render_description(self, stream):
+    super()._render_description(stream)
+    stream.append(f"\n@defgroup {self}\n")
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
@@ -401,7 +433,7 @@ class _StructRenderer:
     # even for internal types since they can be a part of more acessible structures
     # treated by the public inline code
     if header:
-      self._render_struct(stream)
+      self._render_struct(stream, header)
 
 
 # Abstract class for renderable contents, basically a str-like type
@@ -573,7 +605,7 @@ def inout(obj):
 
 
 # Basic callable descriptor
-class Callable:
+class Callable(_Documented):
   
   def __init__(self, result, parameters, *args, constraint=lambda: True, **kws):
     super().__init__(*args, **kws)
@@ -629,7 +661,7 @@ class Callable:
 
 
 #
-class _Parametrized(Callable, autoc.module.Entity):
+class _Parametrized(Callable, Entity):
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -684,10 +716,7 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
     if self.active:
       super().render_declarations(stream, header)
       if (header and not self.internal) or (not header and self.internal):
-        if self.public:
-          stream.append("/** @public */\n")
-        elif not self.internal:
-          stream.append("/** @private */\n")
+        self._render_documentation(stream, header)
         stream.append(f"typedef {self._result_c} (*{self.name})({", ".join(str(t) for t in self.parameters.values())});\n")
 
   @property
@@ -747,11 +776,12 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   def of(self, callable, name, constraint=None, **kws):
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
-  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), **kws):
+  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), type=None, **kws):
     super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), **kws)
     self.name = str(name)
     self.linkage = linkage
     self.__abstract = abstract
+    self.type = type # Object this function is attached to
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
     for x in self.arguments:
       setattr(self, x.name, x)
@@ -827,6 +857,7 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
     if self.active:
       super().render_declarations(stream, header)
       if (header and not self.internal) or (not header and self.internal):
+        self._render_documentation(stream,header)
         self._render_declaration(stream)
 
   #
@@ -847,28 +878,24 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
 
   #
   def _render_declaration(self, stream):
-    if not self.internal:
-      self._render_description(stream)
     self._render_decorator(stream)
     stream.append(self.declaration)
     stream.append(";\n")
 
   #
-  def _render_description(self, stream):
-    if self.public:
-      stream.append("/** @public */\n")
-    elif not self.internal:
-      stream.append("/** @private */\n")
-
-  #
   def _render_decorator(self, stream):
     stream.append(_linkage_spec_c[self.linkage])
 
-
+  def _render_description(self, stream):
+    super()._render_description(stream)
+    if self.type:
+      stream.append(f"\n@ingroup {self.type}\n")
+      
+      
 _linkage_spec_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}
 
 
-_linkage_code = autoc.module.Code(interface="""
+_linkage_code = Code(interface="""
   #ifndef AUTOC_EXTERN
     #ifdef __cplusplus
       #define AUTOC_EXTERN extern "C"

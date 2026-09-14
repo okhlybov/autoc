@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 from autoc.set import Set, _ceil_power2
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer
 
 
@@ -294,30 +294,28 @@ class Set(_StructRenderer, Set):
         return result;
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self.element}* elements; /**< @private */
-      {std.size_t} capacity; /**< @private */
-      {std.size_t} size; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self.element}* elements; /**< @private */
+        {std.size_t} capacity; /**< @private */
+        {std.size_t} size; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, Forward):
   
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {std.size_t} front; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {std.size_t} front; /**< @private */
+      }} {self.name};
+    """)
 
   def _copy(self, result, parameters, **kws):
     return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)

@@ -32,7 +32,7 @@ class XorRot(_IncrementalHasher):
     
 
 _rotl_code = Code(dependencies=(std.limits_h, std.size_t, autoc.core._linkage_code), interface=f"""
-    /** @internal */
+    /** @private */
     AUTOC_STATIC_INLINE
     size_t _autoc_rotl(size_t value) {{
       return (value << 1) | (value >> (sizeof(size_t)*CHAR_BIT - 1));

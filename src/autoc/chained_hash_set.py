@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 from autoc.set import Set, _ceil_power2
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 
 
@@ -241,40 +241,38 @@ class Set(_StructRenderer, Set):
         return result;
       """
 
-  def _render_struct(self, stream):
+  def _render_struct(self, stream, header):
     stream.append(f"""
-      /** @internal */
+      /** @private */
       typedef struct {self.node} {self.node};
-      /** @internal */
+      /** @private */
       struct {self.node} {{
         {self.element} element;
         struct {self.node}* next;
       }};
     """)
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._bucket_p} buckets; /**< @private */
-      {std.size_t} capacity; /**< @private */
-      {std.size_t} size; /**< @private */
-    }} {self.name};
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._bucket_p} buckets; /**< @private */
+        {std.size_t} capacity; /**< @private */
+        {std.size_t} size; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, Forward):
 
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {std.size_t} bucket; /**< @private */
-          {self.iterable.node}* node; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {std.size_t} bucket; /**< @private */
+        {self.iterable.node}* node; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

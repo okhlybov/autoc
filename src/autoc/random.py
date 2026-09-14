@@ -15,7 +15,7 @@ class StaticSeeder(Entity):
 
 #
 hash = Code(dependencies=(autoc.core._linkage_code, std.size_t), interface="""
-  /** @internal */
+  /** @private */
   AUTOC_STATIC_INLINE
   size_t _autoc_hash(size_t key) {
     /*
@@ -47,9 +47,9 @@ class RandomSeeder(Code):
 
   def __init__(self):
     super().__init__(interface="""
-      /** @internal */
+      /** @private */
       AUTOC_EXTERN size_t _autoc_seed;
-      /** @internal */
+      /** @private */
       AUTOC_EXTERN
         void
       #if defined(__POCC__)
@@ -135,7 +135,7 @@ class Randomizer(Code):
   def __init__(self, dependencies=(), **kws):
     self._entity_t = autoc.core.Indirection("void", constant=True)
     super().__init__(interface=f"""
-      /** @internal */
+      /** @private */
       AUTOC_STATIC_INLINE
       size_t _autoc_random_priority(const void* entity) {{
         return _autoc_hash(_autoc_seed ^ (size_t)entity);

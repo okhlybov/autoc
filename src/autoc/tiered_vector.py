@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.map import Map
 from autoc.range import DirectAccess
 from autoc.sequence import Sequence
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 
 
@@ -306,31 +306,29 @@ class TieredVector(_StructRenderer, Map, Sequence):
         return 1;
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._chunk_pp} chunks; /**< @private */
-      {std.size_t} chunk_count; /**< @private */
-      {std.size_t} chunk_capacity; /**< @private */
-      {std.size_t} size; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._chunk_pp} chunks; /**< @private */
+        {std.size_t} chunk_count; /**< @private */
+        {std.size_t} chunk_capacity; /**< @private */
+        {std.size_t} size; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, DirectAccess):
 
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {std.size_t} front, back; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {std.size_t} front, back; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

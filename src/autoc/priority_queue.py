@@ -1,6 +1,6 @@
 import autoc.std as std
-from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 from autoc.collection import Collection
+from autoc.core import inout, out, Indirection, _StructRenderer
 
 
 #
@@ -19,6 +19,7 @@ class PriorityQueue(_StructRenderer, Collection):
   def __setup__(self):
     super().__setup__()
 
+    # TODO verify
     # The equality and the hashing are not defined for the heap
     self.equal = None
     self.hash = None
@@ -183,13 +184,12 @@ class PriorityQueue(_StructRenderer, Collection):
         return {slot0.bind(f.result)};
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._element_p} elements; /**< @private */
-      {std.size_t} capacity; /**< @private */
-      {std.size_t} size; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._element_p} elements; /**< @private */
+        {std.size_t} capacity; /**< @private */
+        {std.size_t} size; /**< @private */
+      }} {self.name};
     """)

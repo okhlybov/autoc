@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.map import Map
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 
 
@@ -292,29 +292,27 @@ class Vector(_StructRenderer, Map, Sequence):
         return low < target->size && !{self.element.compare(self.element.variable("target->elements[low]"), f.element)};
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {Indirection(self.element)} elements; /**< @private */
-      {self.index} size; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.element)} elements; /**< @private */
+        {self.index} size; /**< @private */
+      }} {self.name};
     """)
 
 
 #
 class Range(_Range, DirectAccess):
   
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-          {self.iterable.index} front, back; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        {self.iterable.index} front, back; /**< @private */
+      }} {self.name};
+    """)
 
   def _copy(self, result, parameters, **kws):
     return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)

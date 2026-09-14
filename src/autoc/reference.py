@@ -131,11 +131,12 @@ class Arc(_StructRenderer, _Reference):
         }}
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    stream.append("/** @internal */\n")
-    stream.append(f"""typedef struct {{
-      {self.type} value;
-      unsigned count;
-    }} {self._layout};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append("/** @private */\n")
+    stream.append(f"""
+      typedef struct {{
+        {self.type} value;
+        unsigned count;
+      }} {self._layout};
     """)      

@@ -14,7 +14,7 @@ class Type(_StructRenderer, Composite):
     with self.destroy as f:
       f.inline_code = "assert(target);"
 
-  def _render_struct(self, stream):
+  def _render_struct(self, stream, header):
     stream.append(f"typedef struct {{ int value; }} {self.name};")
 
 

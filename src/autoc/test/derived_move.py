@@ -21,7 +21,7 @@ class Type(_StructRenderer, Composite):
     with self.hash as f:
       f.inline_code = "return (size_t)*target->value;"
 
-  def _render_struct(self, stream):
+  def _render_struct(self, stream, header):
     stream.append(f"typedef struct {{ int* value; }} {self.name};")
 
 

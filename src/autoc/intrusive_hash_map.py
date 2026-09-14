@@ -2,7 +2,7 @@ from autoc.map import Map
 from autoc.range import Forward
 from autoc.hash_map import _Entry
 from autoc.intrusive_hash_set import Set
-from autoc.collection import Range as _Range
+from autoc.collection import _Range
 from autoc.core import Indirection, _StructRenderer, Callable
 
 
@@ -164,13 +164,12 @@ class Map(_StructRenderer, Map):
         {entry.destroy_index(_entry)};
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
-    stream.append(f"""typedef struct {{
-      {self._set.variable("set").definition}; /**< @private */
-    }} {self.name};
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._set.variable("set").definition}; /**< @private */
+      }} {self.name};
     """)
 
 
@@ -184,14 +183,13 @@ class Range(_Range, Forward):
     self.index = iterable.index
     self.dependencies.update((self._entry, self._range))
 
-  def render_declarations(self, stream, header):
-    super().render_declarations(stream, header)
-    if header:
-      stream.append(f"""
-        typedef struct {{
-          {self._range.name} range; /**< @private */
-        }} {self.name};
-      """)
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      typedef struct {{
+        {self._range.name} range; /**< @private */
+      }} {self.name};
+    """)
 
   def __setup__(self):
     super().__setup__()

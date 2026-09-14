@@ -38,7 +38,7 @@ class Type(_StructRenderer, Composite):
     with self.hash as f:
       f.code = "return *target->value;"
     
-  def _render_struct(self, stream):
+  def _render_struct(self, stream, header):
     stream.append(f"""
       typedef struct {{
         int* value;

@@ -128,13 +128,10 @@ class Variant(_StructRenderer, Composite):
         {type.copy(type.variable(f"{target}.value.{name}"), "value")};
       """
 
-  def _render_struct(self, stream):
-    super()._render_struct(stream)
-    if self.public:
-      stream.append("/** @public */\n")
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
     stream.append(f"typedef struct {self.name} {self.name};\n")
-    if self.public:
-      stream.append("/** @public */\n")
+    super()._render_struct(stream, header)
     stream.append(f"struct {self.name} {{\n")
     stream.append("int tag; /**< @private */\n")
     stream.append("union {\n")
