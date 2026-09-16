@@ -81,25 +81,25 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.contains(_target, f.element)};
       """
 
-    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back of queue") as f:
       f.code = f"""
         assert(target);
         {self._deque.push_back(_target, f.element)};
       """
 
-    with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front of queue") as f:
       f.code = f"""
         assert(target);
         return {self._deque.pop_front(_target)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element") as f:
       f.code = f"""
         assert(target);
         return {self._deque.front(_target)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element") as f:
       f.code = f"""
         assert(target);
         return {self._deque.back(_target)};

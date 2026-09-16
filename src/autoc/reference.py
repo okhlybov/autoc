@@ -19,14 +19,14 @@ class _Reference(Indirection, Composite):
     self.method(self, "share", {"source": self})
     self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
-    self.method(None, "free", {"target": self})
+    self.method(None, "free", {"target": self}, brief="Decrement reference count")
     self.macro_from("destroy", lambda target: self.free(target))
     
     # A moved-from reference is nulled so that destroying it afterwards is a safe no-op
     # The underlying free guards on the pointer being NULL
     self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = NULL")
     # Swapping exchanges the handles without touching the reference counts on either side
-    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))})
+    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two references")
     with self.swap as f:
       f.inline_code = f"""
         {self} temp;

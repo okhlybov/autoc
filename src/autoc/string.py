@@ -20,7 +20,7 @@ class String(Indirection, Map):
     self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")
     self.move = self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = (char*)_autoc_empty_string")
-    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))})
+    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two strings")
     with self.swap as f:
       f.inline_code = """
         char* temp;
@@ -29,7 +29,7 @@ class String(Indirection, Map):
         *right = temp;
       """
 
-    with self.method(Callable.Parameter(self), "new", {"source": self}) as f:
+    with self.method(Callable.Parameter(self), "new", {"source": self}, brief="Duplicate string") as f:
       f.inline_code = """
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
@@ -54,7 +54,7 @@ class String(Indirection, Map):
         } else return (char*)_autoc_empty_string;
       """
       
-    with self.method(None, "free", {"target": inout(self)}) as f:
+    with self.method(None, "free", {"target": inout(self)}, brief="Free string memory") as f:
       f.inline_code = f"""
         assert(target);
         if(target != _autoc_empty_string) free(target);

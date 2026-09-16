@@ -54,7 +54,7 @@ class Set(_StructRenderer, Set):
         target->size = 0;
       """
 
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Create set with given capacity (internal)") as f:
       f.code = f"""
         assert(target);
         if(capacity) {{
@@ -64,7 +64,7 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count") as f:
       f.code = f"""
         assert(target);
         {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
@@ -89,7 +89,7 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="internal", brief="Resize hash table (internal)") as f:
       f.code = f"""
         size_t index, bucket, new_capacity;
         {self._bucket_p} buckets;
@@ -165,7 +165,7 @@ class Set(_StructRenderer, Set):
         return 0;
       """
 
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view") as f:
       f.code = f"""
         size_t bucket;
         {self.node}* n;

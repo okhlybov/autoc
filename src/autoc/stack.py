@@ -81,19 +81,19 @@ class Stack(_StructRenderer, Collection):
         return {self._list.hash(_target)};
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to top of stack") as f:
       f.code = f"""
         assert(target);
         {self._list.push_front(_target, f.element)};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from top of stack") as f:
       f.code = f"""
         assert(target);
         return {self._list.pop_front(_target)};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to top element") as f:
       f.code = f"""
         assert(target);
         return {self._list.front(_target)};

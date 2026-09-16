@@ -94,7 +94,7 @@ class List(_StructRenderer, Sequence):
         {self.create(f.source)};
       """
 
-    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front") as f:
       f.code = f"""
         {self.node}* node;
         assert(target);
@@ -105,7 +105,7 @@ class List(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front") as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -120,7 +120,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
     
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable) as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
@@ -130,7 +130,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("front", "view"), {"target": self}) as f:
+    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get view of front element") as f:
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});

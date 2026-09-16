@@ -228,7 +228,7 @@ class Range(_Range, Forward):
         return {self._range.empty(_target_range)};
       """
 
-    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}) as f:
+    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get view of front index") as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -252,7 +252,7 @@ class Range(_Range, Forward):
         return {self._entry.element_view(self._range.front_view(_target_range)).bind(self.element.view_type)};
       """
 
-    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable) as f:
+    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get front index") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

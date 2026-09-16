@@ -59,7 +59,7 @@ class Set(_StructRenderer, Set):
     
     _target = self.variable("_target")
     
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Create set with given capacity (internal)") as f:
       f.code = f"""
         size_t index;
         assert(target);
@@ -71,7 +71,7 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count") as f:
       f.code = f"""
         assert(target);
         {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
@@ -84,7 +84,7 @@ class Set(_StructRenderer, Set):
         target->capacity = target->size = 0;
       """
     
-    with self.method(Callable.Parameter(self._element_p), ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable) as f:
+    with self.method(Callable.Parameter(self._element_p), ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate element by value (internal)") as f:
       f.code = f"""
         size_t index, start;
         {self._element_p} _element = NULL;
@@ -119,7 +119,7 @@ class Set(_StructRenderer, Set):
         return NULL;
       """
     
-    with self.method(Callable.Parameter(self._element_p), ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable) as f:
+    with self.method(Callable.Parameter(self._element_p), ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate empty slot for element (internal)") as f:
       f.code = f"""
         size_t index, start;
         assert(target);
@@ -145,7 +145,7 @@ class Set(_StructRenderer, Set):
         abort(); /* not finding a suitable empty slot is a fatal error */
       """
 
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, constraint=lambda: self.element.copyable, brief="Resize hash table (internal)") as f:
       f.code = f"""
         {_target.definition};
         size_t index, _index, new_capacity;

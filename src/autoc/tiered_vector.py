@@ -53,7 +53,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         return {f.index} < target->size;
       """
 
-    with self.method(None, "extend", {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, "extend", {"target": inout(self)}, hidden=True, visibility="internal", brief="Extend chunk table if needed (internal)") as f:
       f.code = f"""
         size_t index;
         {self._chunk_pp} chunks;
@@ -100,7 +100,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
           }}
         """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back") as f:
       f.code = f"""
         assert(target);
         {self.extend(f.target)};
@@ -108,7 +108,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

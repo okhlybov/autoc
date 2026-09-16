@@ -101,7 +101,7 @@ class Variant(_StructRenderer, Composite):
       f.inline_code = f"return {target}.tag == {index};"
 
   def _add_reader(self, type, name, index):
-    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get value of type {name}") as f:
       result = f.result.variable("result")
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
@@ -112,7 +112,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_view(self, type, name, index):
-    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility) as f:
+    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility, brief=f"Get view of type {name}") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
         assert({target}.tag == {index});
@@ -120,7 +120,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_writer(self, type, name, index):
-    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable) as f:
+    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set value to type {name}") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
         {self._destroy_active(target)};

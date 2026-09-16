@@ -19,25 +19,25 @@ class _Entry(Record):
     _index = self.index.variable("target->index")
     _element = self.element.variable("target->element")
 
-    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal") as f:
+    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of element (internal)") as f:
       f.code = f"""
         assert(target);
         return {self.element.variable("target->element").bind(f.result)};
       """
 
-    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal") as f:
+    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of index (internal)") as f:
       f.code = f"""
         assert(target);
         return {self.index.variable("target->index").bind(f.result)};
       """
 
-    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable) as f:
+    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable, brief="Emplace index (internal)") as f:
       f.code = f"""
         assert(target);
         {self.index.copy(_index, f.index)};
       """
 
-    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy index (internal)") as f:
       if self.index.destructible:
         f.code = f"""
           assert(target);
@@ -48,13 +48,13 @@ class _Entry(Record):
           assert(target);
         """
       
-    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable) as f:
+    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Emplace element (internal)") as f:
       f.code = f"""
         assert(target);
         {self.element.copy(_element, f.element)};
       """
 
-    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy element (internal)") as f:
       if self.element.destructible:
         f.code = f"""
           assert(target);
@@ -65,7 +65,7 @@ class _Entry(Record):
           assert(target);
         """
 
-    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Replace element in-place (internal)") as f:
       f.code = f"""
         assert(target);
         {self.destroy_element(f.target)};

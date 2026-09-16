@@ -49,7 +49,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable) as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with given number of default-constructed elements") as f:
       if self.element.zero_initializable:
         f.code = f"""
           assert(target);
@@ -180,7 +180,7 @@ class Vector(_StructRenderer, Map, Sequence):
     element_prev = self.element.variable("target->elements[j-1]")
     pivot = self.element.variable("pivot")
 
-    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
       f.code = lambda f=f: f"""
         size_t i, j;
         assert(target);
@@ -191,7 +191,7 @@ class Vector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using quicksort (internal)") as f:
       f.code = lambda f=f: f"""
         size_t i, j, mid;
         {pivot.definition};

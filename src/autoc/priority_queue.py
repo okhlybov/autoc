@@ -104,7 +104,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return 0;
       """
 
-    with self.method(None, "_grow", {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, "_grow", {"target": inout(self)}, hidden=True, visibility="internal", brief="Grow internal buffer if needed (internal)") as f:
       f.code = f"""
         size_t index, new_capacity;
         {self._element_p} elements;
@@ -117,7 +117,7 @@ class PriorityQueue(_StructRenderer, Collection):
         target->capacity = new_capacity;
       """
 
-    with self.method(None, ("sift", "up"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("sift", "up"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element up in heap (internal)") as f:
       f.code = lambda f=f: f"""
         size_t parent;
         assert(target);
@@ -129,7 +129,7 @@ class PriorityQueue(_StructRenderer, Collection):
         }}
       """
 
-    with self.method(None, ("sift", "down"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("sift", "down"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element down in heap (internal)") as f:
       f.code = lambda f=f: f"""
         size_t child;
         assert(target);
@@ -143,7 +143,7 @@ class PriorityQueue(_StructRenderer, Collection):
         }}
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable) as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Add element to priority queue") as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size == target->capacity) {self._grow(f.target)};
@@ -152,7 +152,7 @@ class PriorityQueue(_StructRenderer, Collection):
         {self.sift_up(f.target, "target->size - 1")};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable) as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element") as f:
       result = f.result.variable("result")
       f.code = lambda f=f: f"""
         {result.definition};
@@ -167,7 +167,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable) as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get reference to highest priority element") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -177,7 +177,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Get view of highest priority element") as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});

@@ -78,7 +78,7 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(Indirection(self._node_p), "link", {"target": inout(self), "node": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+    with self.method(Indirection(self._node_p), "link", {"target": inout(self), "node": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Get link to node (internal)") as f:
       f.code = f"""
         assert(target);
         assert(node);
@@ -86,7 +86,7 @@ class Set(_StructRenderer, Set):
         return &target->root;
       """
 
-    with self.method(None, ("rotate", "left"), {"link": Callable.Parameter(Indirection(self._node_p))}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("rotate", "left"), {"link": Callable.Parameter(Indirection(self._node_p))}, hidden=True, visibility="internal", brief="Rotate left at link (internal)") as f:
       f.code = f"""
         {self.node}* n;
         {self.node}* pivot;
@@ -100,7 +100,7 @@ class Set(_StructRenderer, Set):
         *link = pivot;
       """
 
-    with self.method(None, ("rotate", "right"), {"link": Callable.Parameter(Indirection(self._node_p))}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("rotate", "right"), {"link": Callable.Parameter(Indirection(self._node_p))}, hidden=True, visibility="internal", brief="Rotate right at link (internal)") as f:
       f.code = f"""
         {self.node}* n;
         {self.node}* pivot;
@@ -189,7 +189,7 @@ class Set(_StructRenderer, Set):
         return 1;
       """
 
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view") as f:
       f.code = f"""
         {self.node}* n;
         int order;
@@ -261,7 +261,7 @@ class Set(_StructRenderer, Set):
     # are reused without copying and the other set is left empty. The parent links and the
     # element resources are maintained throughout
 
-    with self.method(self._node_p, ("merge", "nodes"), {"left": Callable.Parameter(self._node_p), "right": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+    with self.method(self._node_p, ("merge", "nodes"), {"left": Callable.Parameter(self._node_p), "right": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Merge two node trees (internal)") as f:
       f.code = f"""
         if(!{f.left}) return {f.right};
         if(!{f.right}) return {f.left};
@@ -275,7 +275,7 @@ class Set(_StructRenderer, Set):
         return {f.right};
       """
 
-    with self.method(None, ("split", "nodes"), {"tree": Callable.Parameter(self._node_p), "key": self.element, "left": out(Indirection(self._node_p)), "right": out(Indirection(self._node_p))}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("split", "nodes"), {"tree": Callable.Parameter(self._node_p), "key": self.element, "left": out(Indirection(self._node_p)), "right": out(Indirection(self._node_p))}, hidden=True, visibility="internal", brief="Split node tree by key (internal)") as f:
       f.code = f"""
         assert({f.left});
         assert({f.right});
@@ -294,7 +294,7 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method("int", ("discard", "equal"), {"root": inout(Indirection(self._node_p)), "key": self.element}, hidden=True, visibility="internal") as f:
+    with self.method("int", ("discard", "equal"), {"root": inout(Indirection(self._node_p)), "key": self.element}, hidden=True, visibility="internal", brief="Discard element matching key (internal)") as f:
       destroy_element = str(self.element.destroy(self.element.variable("n->element"))) + ";" if self.element.destructible else str()
       f.code = f"""
         int order;
@@ -323,7 +323,7 @@ class Set(_StructRenderer, Set):
         return 1;
       """
 
-    with self.method(None, ("destroy", "root"), {"root": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+    with self.method(None, ("destroy", "root"), {"root": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Destroy node tree (internal)") as f:
       destroy_element = str(self.element.destroy(self.element.variable("n->element"))) + ";" if self.element.destructible else str()
       f.code = f"""
         {self.node}* n;
@@ -347,13 +347,13 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(std.size_t, "count", {"node": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal") as f:
+    with self.method(std.size_t, "count", {"node": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Count nodes in tree (internal)") as f:
       f.code = f"""
         if(!{f.node}) return 0;
         return 1 + {self.count(f"{f.node}->left")} + {self.count(f"{f.node}->right")};
       """
 
-    with self.method(self._node_p, ('union', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method(self._node_p, ('union', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Union of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -408,7 +408,7 @@ class Set(_StructRenderer, Set):
         return {self.merge_nodes("left_result", "right_result")};
       """
 
-    with self.method(self._node_p, ('difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method(self._node_p, ('difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Difference of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -435,7 +435,7 @@ class Set(_StructRenderer, Set):
         return {f.a};
       """
 
-    with self.method(self._node_p, ('symmetric_difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method(self._node_p, ('symmetric_difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Symmetric difference of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -467,7 +467,7 @@ class Set(_StructRenderer, Set):
 
     # The consuming implementations of the algebraic operations: both operands are merged
     # at the node level and the other set is left empty
-    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Add all elements from other set") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -486,7 +486,7 @@ class Set(_StructRenderer, Set):
         return target->size - previous;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove all elements found in other set") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -510,7 +510,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keep only elements also present in other set") as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -529,7 +529,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove elements in both sets, add elements in only one") as f:
       f.code = f"""
         size_t previous, other_size;
         assert(target);
