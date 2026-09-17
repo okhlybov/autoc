@@ -87,7 +87,7 @@ class Variant(_StructRenderer, Composite):
         return str().join([str(x) for x in code])
       f.inline_code = _hash
 
-    with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility) as f:
+    with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility, brief="Check if the variant holds no value") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"return {target}.tag == -1;"
 
@@ -98,7 +98,7 @@ class Variant(_StructRenderer, Composite):
       self._add_writer(type, name, index)
 
   def _add_predicate(self, name, index):
-    with self.method("int", ("is", name), {"target": self}, visibility=self.visibility) as f:
+    with self.method("int", ("is", name), {"target": self}, visibility=self.visibility, brief=f"Check if the variant holds the {name} value") as f:
       target = f"({f.target.bind(self)})"
       f.inline_code = f"return {target}.tag == {index};"
 

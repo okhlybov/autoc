@@ -8,7 +8,7 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
-  brief = "Generic set container of distinct element values"
+  brief = "Hash set of distinct elements using bucket chaining - stable element addresses, no sentinel values"
 
   def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
@@ -290,7 +290,7 @@ class Range(_Range, Forward):
         }}
       """
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

@@ -9,7 +9,7 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
-  brief = "Ordered set container of distinct values"
+  brief = "Ordered set of distinct values implemented as a treap - iterates in sorted order"
   
   def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, randomizer), **kws)
@@ -378,7 +378,7 @@ class Set(_StructRenderer, Set):
         return {f.a};
       """
 
-    with self.method(self._node_p, ('intersection', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable) as f:
+    with self.method(self._node_p, ('intersection', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Intersect two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -607,7 +607,7 @@ class Range(_Range, Forward):
 
     node_element = self.element.variable("target->node->element")
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

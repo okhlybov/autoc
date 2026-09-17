@@ -12,7 +12,7 @@ class PriorityQueue(_StructRenderer, Collection):
   # the iteration is not exposed and the equality and the hashing are not defined
   # (two heaps holding the same elements are not required to have the same shape)
   
-  brief = "Ordered sorted FIFO container with head push and tail pop"
+  brief = "Priority queue of elements ordered by priority - pop always yields the greatest element"
 
 
   def __init__(self, name, element, **kws):
@@ -50,7 +50,7 @@ class PriorityQueue(_StructRenderer, Collection):
         target->capacity = target->size = 0;
       """
 
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}) as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, brief="Create the queue with room for the given number of elements") as f:
       f.code = f"""
         assert(target);
         if({f.capacity} > 0) {{

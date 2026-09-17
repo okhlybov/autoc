@@ -9,7 +9,7 @@ from autoc.core import Indirection, _StructRenderer, Callable
 #
 class Map(_StructRenderer, Map):
   
-  brief = "Intrusive index to element mapping container with distinct index values"
+  brief = "Map from index to element over open addressing with sentinel values"
 
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
@@ -198,7 +198,7 @@ class Range(_Range, Forward):
 
     _target_range = self._range.variable("target->range")
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -213,7 +213,7 @@ class Range(_Range, Forward):
         return {self._range.empty(_target_range)};
       """
 
-    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}) as f:
+    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get a constant view of the front index") as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -237,7 +237,7 @@ class Range(_Range, Forward):
         return {self._entry.element_view(self._range.front_view(_target_range))};
       """
 
-    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable) as f:
+    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get a copy of the front index") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

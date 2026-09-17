@@ -7,7 +7,7 @@ from autoc.core import _StructRenderer, Callable, Indirection, inout
 #
 class Queue(_StructRenderer, Collection):
 
-  brief = "Ordered FIFO container with head push and tail pop"
+  brief = "Ordered FIFO container with back push and front pop"
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -134,7 +134,7 @@ class Range(_Range, Forward):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole queue") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

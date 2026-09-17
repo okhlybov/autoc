@@ -233,21 +233,21 @@ class Vector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint) as f:
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order") as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable) as f:
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements") as f:
       f.code = lambda: f"""
         size_t i;
         assert(target);
         for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
       """
 
-    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable) as f:
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order") as f:
       f.code = lambda: f"""
         size_t index;
         assert(target);
@@ -258,7 +258,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     # The binary search operations require the vector sorted in the ascending order
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the first position the element can be inserted at keeping the order") as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -272,7 +272,7 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the last position the element can be inserted at keeping the order") as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -286,7 +286,7 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable) as f:
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Check if the element is present in the sorted vector") as f:
       f.code = lambda f=f: f"""
         size_t low;
         assert(target);
@@ -322,7 +322,7 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole vector") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

@@ -8,7 +8,7 @@ class Type(_StructRenderer, Composite):
   def __setup__(self):
     super().__setup__()
     
-    with self.method(None, "create", {"target": out(self), "value": "int"}) as f:
+    with self.method(None, "create", {"target": out(self), "value": "int"}, brief="Create the composite owning a copy of the given value") as f:
       f.code = """
         target->value = (int*)malloc(sizeof(int));
         *target->value = value;

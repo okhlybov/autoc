@@ -9,7 +9,7 @@ from autoc.core import Indirection, Callable, _StructRenderer
 #
 class Map(_StructRenderer, Map):
 
-  brief = "Generic index to element mapping container with distinct index values"
+  brief = "Hash map from index to element using bucket chaining - stable entry addresses, no sentinel values"
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
@@ -199,7 +199,7 @@ class Range(_Range, Forward):
 
     _target_range = self._range.variable("target->range")
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

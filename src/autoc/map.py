@@ -5,7 +5,11 @@ from autoc.collection import Collection
 #
 class Map(Collection):
   
-  berief = "Abstract base type for the index to element mappings"
+  brief = "Abstract base type for the index to element mappings"
+
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.index}, {self.element}>"
   
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, *args, **kws)

@@ -157,9 +157,12 @@ class _Documented(Entity, _VisibilityManager):
     elif not hasattr(self.__class__, attr):
       setattr(self, attr, None)
 
+  # Display name of the type in the rendered documentation - containers show
+  # their element type while the rest render as the bare type name
   @property
   def _doxygen_type(self):
-    return self.name
+    element = getattr(self, "element", None)
+    return f"{self.name}<{element}>" if element else self.name
   
   def _render_documentation(self, stream, header):
     if self.public:
@@ -638,7 +641,7 @@ class Callable(_Documented):
 
   # Create function type borrowing the signature
   def functional(self, name):
-    return Functional.of(name, self)
+    return Functional.of(name, self, brief=self.brief)
   
   class Parameter:
     def __init__(self, type):
@@ -893,7 +896,9 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   def _render_description(self, stream):
     super()._render_description(stream)
     if self.type:
-      stream.append(f"\n@ingroup {self.type}\n")
+      # The group of the member is addressed by its identifier which is the
+      # owning type name - the display name is reserved for the group title
+      stream.append(f"\n@ingroup {self.type.name}\n")
       
       
 _linkage_spec_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}

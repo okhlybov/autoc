@@ -3,10 +3,10 @@ from autoc.test import *
 from autoc.module import Code
 
 
-unary = autoc.core.Functional("int", "unary_op", {"x": "int"})
-noarg = autoc.core.Functional(None, "void_op", {})
-derived = autoc.core.Functional.of("derived_op", unary)
-internal = autoc.core.Functional("int", "internal_op", {"x": "int"}, visibility="internal")
+unary = autoc.core.Functional("int", "unary_op", {"x": "int"}, brief="Unary function of an integer argument")
+noarg = autoc.core.Functional(None, "void_op", {}, brief="Function taking no arguments and returning no result")
+derived = autoc.core.Functional.of("derived_op", unary, brief="Unary function of an integer argument returning an integer")
+internal = autoc.core.Functional("int", "internal_op", {"x": "int"}, visibility="internal", brief="Unary function of an integer argument (internal)")
 
 
 # Python-side sanity checks of the construction API - evaluated at the generation time

@@ -127,7 +127,7 @@ class Range(_Range, Forward):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole stack") as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

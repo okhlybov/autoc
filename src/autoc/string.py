@@ -167,7 +167,7 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole string") as f:
       f.inline_code = lambda: f"""
         {self} result;
         assert(iterable);

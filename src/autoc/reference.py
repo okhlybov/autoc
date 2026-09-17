@@ -13,10 +13,10 @@ class _Reference(Indirection, Composite):
   def __setup__(self):
     super().__setup__()
 
-    self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)})
+    self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)}, brief="Create the reference owning a new instance of the type")
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
-    self.method(self, "share", {"source": self})
+    self.method(self, "share", {"source": self}, brief="Share the instance by increasing its reference count")
     self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
     self.method(None, "free", {"target": self}, brief="Decrement reference count")
@@ -59,6 +59,8 @@ class _Reference(Indirection, Composite):
 
 #
 class Raw(_Reference):
+
+  brief = "Non-owning reference to a manually managed instance"
   
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)

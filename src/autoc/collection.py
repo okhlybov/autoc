@@ -13,6 +13,11 @@ class _Range(_StructRenderer, Range):
     self.iterable = iterable
     iterable.references.add(self)
     self.dependencies.add(iterable)
+
+  # Ranges iterate their owning container and display its name
+  @property
+  def _doxygen_type(self):
+    return f"{self.iterable._doxygen_type} range"
     
   def __setup__(self):
     super().__setup__()
@@ -47,9 +52,9 @@ class Collection(Composite):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "empty", {"target": self})
-    self.method(std.size_t, "size", {"target": self})
-    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable)
+    self.method("int", "empty", {"target": self}, brief="Check if the container holds no elements")
+    self.method(std.size_t, "size", {"target": self}, brief="Get the number of elements in the container")
+    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Check if the container holds the element")
 
   @property
   def copyable(self):

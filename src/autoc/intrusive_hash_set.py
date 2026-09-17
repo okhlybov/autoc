@@ -15,7 +15,7 @@ class _Macro(Macro):
 #
 class Set(_StructRenderer, Set):
 
-  brief = "Intrusive set container of distinct element values"
+  brief = "Set of distinct elements over open addressing with sentinel values"
   
   def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
@@ -232,7 +232,7 @@ class Set(_StructRenderer, Set):
         }} else return 0;
       """
     
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}) as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find the element and return a constant view of it") as f:
       f.code = f"""
         size_t index;
         assert(target);
@@ -333,7 +333,7 @@ class Range(_Range, Forward):
         while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
       """
     
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}) as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole set") as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
