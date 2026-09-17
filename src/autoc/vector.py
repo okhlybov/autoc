@@ -9,6 +9,8 @@ from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 #
 class Vector(_StructRenderer, Map, Sequence):
 
+  brief = "Direct access sequence container"
+  
   def __init__(self, name, element, **kws):
     super().__init__(name, element, std.size_t, **kws)
     self.range = Range(self)

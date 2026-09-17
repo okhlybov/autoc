@@ -9,6 +9,8 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
+  brief = "Ordered set container of distinct values"
+  
   def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, randomizer), **kws)
     self.node = _type(self._decorate_component("node"))

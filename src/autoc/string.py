@@ -10,6 +10,8 @@ from autoc.core import inout, Indirection, Callable
 #
 class String(Indirection, Map):
   
+  brief = "Value type wrapper of the C char* string"
+  
   def __init__(self, name, *args, **kws):
     super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.string_h, _static_code))
     self.range = Range(self)
@@ -140,7 +142,8 @@ class String(Indirection, Map):
   @property
   def destructible(self):
     return True
-      
+  
+  
 _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
   /** @private */
   AUTOC_EXTERN const char* _autoc_empty_string;

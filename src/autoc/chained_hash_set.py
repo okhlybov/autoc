@@ -8,6 +8,8 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Set):
 
+  brief = "Generic set container of distinct element values"
+
   def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
     self.node = _type(self._decorate_component("node"))

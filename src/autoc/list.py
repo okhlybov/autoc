@@ -8,7 +8,7 @@ from autoc.core import inout, _type, Callable, _StructRenderer
 #
 class List(_StructRenderer, Sequence):
   
-  brief = "Singly linked list container"
+  brief = "Ordered sequential container"
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)

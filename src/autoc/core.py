@@ -157,6 +157,10 @@ class _Documented(Entity, _VisibilityManager):
     elif not hasattr(self.__class__, attr):
       setattr(self, attr, None)
 
+  @property
+  def _doxygen_type(self):
+    return self.name
+  
   def _render_documentation(self, stream, header):
     if self.public:
       # If no brief is specified, this means no description as well as the most likely case
@@ -425,7 +429,7 @@ class _StructRenderer(_Documented):
     
   def _render_description(self, stream):
     super()._render_description(stream)
-    stream.append(f"\n@defgroup {self}\n")
+    stream.append(f"\n@defgroup {self} {self._doxygen_type}\n")
   
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

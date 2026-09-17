@@ -11,6 +11,9 @@ class PriorityQueue(_StructRenderer, Collection):
   # storage while handling the duplicate priorities naturally. The heap shape is internal:
   # the iteration is not exposed and the equality and the hashing are not defined
   # (two heaps holding the same elements are not required to have the same shape)
+  
+  brief = "Ordered sorted FIFO container with head push and tail pop"
+
 
   def __init__(self, name, element, **kws):
     super().__init__(name, element, **kws)

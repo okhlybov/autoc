@@ -7,6 +7,8 @@ from autoc.core import _StructRenderer, Callable, Indirection, inout
 #
 class Stack(_StructRenderer, Collection):
 
+  brief = "Ordered LIFO container with head push/pop"
+  
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self._list = List(self._decorate_component("list"), self.element, visibility="internal")

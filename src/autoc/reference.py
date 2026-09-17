@@ -95,6 +95,8 @@ class Raw(_Reference):
 #
 class Arc(_StructRenderer, _Reference):
   
+  brief = "Reference counted shared instance proxy type"
+  
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
     self.memory = memory

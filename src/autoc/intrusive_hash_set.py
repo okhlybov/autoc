@@ -14,6 +14,8 @@ class _Macro(Macro):
 
 #
 class Set(_StructRenderer, Set):
+
+  brief = "Intrusive set container of distinct element values"
   
   def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)

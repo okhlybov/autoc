@@ -5,6 +5,8 @@ from autoc.core import Composite, _type, inout
 #
 class Range(Composite):
   
+  brief = "Base type for iterators"
+  
   def __init__(self, element, *args, **kws):
     super().__init__(*args, **kws)
     self.element = _type(element)

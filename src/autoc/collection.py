@@ -35,6 +35,8 @@ class _Range(_StructRenderer, Range):
 #
 class Collection(Composite):
   
+  brief = "Base type for sequential containers"
+  
   def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)
     # self.range=

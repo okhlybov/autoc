@@ -17,6 +17,8 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
   # TODO direct access get/set/inset/remove etc
 
+  brief = "Append-optimized direct access sequence container"
+  
   def __init__(self, name, element, chunk_shift=16, **kws):
     super().__init__(name, element, std.size_t, **kws)
     self.chunk_shift = int(chunk_shift)

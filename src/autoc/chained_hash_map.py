@@ -9,6 +9,8 @@ from autoc.core import Indirection, Callable, _StructRenderer
 #
 class Map(_StructRenderer, Map):
 
+  brief = "Generic index to element mapping container with distinct index values"
+
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(

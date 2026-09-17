@@ -7,6 +7,8 @@ from autoc.core import _StructRenderer, Callable, Indirection, inout
 #
 class Queue(_StructRenderer, Collection):
 
+  brief = "Ordered FIFO container with head push and tail pop"
+  
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self._deque = Deque(self._decorate_component("deque"), self.element, visibility="internal")

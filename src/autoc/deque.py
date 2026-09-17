@@ -8,6 +8,8 @@ from autoc.core import inout, _type, Callable, _StructRenderer
 #
 class Deque(_StructRenderer, Sequence):
 
+  brief = "Ordered sequence FIFO container"
+  
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
     self.node = _type(self._decorate_component("node"))
