@@ -28,159 +28,6 @@ class _Builder(list):
     super().append(s)
 
 
-#
-class Module:
-
-  __entities = None
-  __header = None
-  __sources = None
-  __digests = None
-  __total_entities = None
-
-  def __init__(self, name, *args, stateful=True, source_count=None, source_threshold=None, **kws):
-    super().__init__(*args, **kws)
-    self.name = str(name)
-    self.stateful = stateful
-    self.source_count = source_count
-    self.source_threshold = source_threshold
-
-  @property
-  def entities(self):
-    if self.__entities is None:
-      self.__entities = set()
-    return self.__entities
-
-  def add(self, entity):
-    self.entities.add(entity)
-    return self
-
-  @property
-  def header(self):
-    if self.__header is None:
-      self.__header = Header(self)
-    return self.__header
-
-  @property
-  def sources(self):
-    if self.__sources is None:
-      if self.source_count is None:
-        raise ValueError("source_count must be set before accessing sources")
-      self.__sources = [Source(self, i) for i in range(1, self.source_count + 1)]
-    return self.__sources
-
-  @property
-  def digests(self):
-    if self.__digests is None:
-      self.__digests = _State(self).read()
-    return self.__digests
-
-  def render(self):
-    previous = set(self.digests) # File names produced by the previous generation run
-    self.distribute_entities()
-    self.header.render()
-    for source in self.sources:
-      source.render()
-    if self.stateful:
-      _State(self).collect().write()
-      # Remove outputs of the previous run which are no longer produced
-      produced = {self.header.file_name, *(source.file_name for source in self.sources)}
-      for file_name in previous - produced:
-        try:
-          os.unlink(file_name)
-        except OSError:
-          pass
-    return self
-
-  @property
-  def total_entities(self):
-    if self.__total_entities is None:
-      entities = set()
-      for e in self.entities:
-        entities.update(e.total_references)
-      self.__total_entities = entities
-    return self.__total_entities
-
-  def distribute_entities(self):
-    self.header.entities.update(self.total_entities)
-    if self.source_count is None:
-      if self.source_threshold is None:
-        self.source_count = 1
-      else:
-        total_complexity = sum(e.complexity for e in self.total_entities)
-        self.source_count = int((total_complexity / self.source_threshold) + 0.999)  # ceil
-    for e in sorted(self.total_entities):
-      self.sources.sort(key=lambda s: s.complexity)
-      self.sources[0].add(e)
-
-  def __enter__(self):
-    return self
-
-  def __exit__(self, exc_type, exc_value, traceback):
-    self.render()
-    return False
-
-
-class _State(dict):
-  def __init__(self, module, *args, **kws):
-    super().__init__(*args, **kws)
-    self.module = module
-
-  @property
-  def file_name(self): return f"{self.module.name}.state"
-
-  def collect(self):
-    self[self.module.header.file_name] = self.module.header.digest
-    for source in self.module.sources:
-      self[source.file_name] = source.digest
-    return self
-
-  def read(self):
-    if os.path.exists(self.file_name):
-      if self.module.stateful:
-        with open(self.file_name, "rt") as io:
-          for line in io:
-            line = line.strip()
-            if not line:
-              continue
-            match = re.match(r"\s*([^\s]+)\s+\*(.*)", line)
-            if match is None:
-              raise ValueError("bad state file format")
-            digest, fname = match.groups()
-            self[fname] = digest
-      else:
-        # Delete stray state file on (porbable) switch from stateful operation to stateless
-        os.unlink(self.file_name)
-    return self
-
-  def write(self):
-    with open(self.file_name, "wt") as io:
-      for file_name, digest in sorted(self.items()):
-        io.write(f"{digest} *{file_name}\n")
-    return self
-
-
-class _StreamFile:
-  def __init__(self, path, mode="wt", *args, **kws):
-    super().__init__(*args, **kws)
-    self.__file = open(path, mode)
-    self.__digest = hashlib.md5()
-    self.path = path
-
-  @property
-  def digest(self):
-    return self.__digest.hexdigest()
-
-  def write(self, data):
-    self.__file.write(data)
-    self.__digest.update(data.encode("utf-8"))
-
-  def close(self): self.__file.close()
-
-  def __enter__(self): return self
-
-  def __exit__(self, exc_type, exc_val, exc_tb): self.close()
-
-
 class _SmartRenderer:
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -305,6 +152,163 @@ class Source(_EntityContainer, _SmartRenderer):
       {_caption}
       #include "{self.module.header.file_name}"
     """.lstrip())
+
+
+#
+class Module:
+
+  __entities = None
+  __header = None
+  __sources = None
+  __digests = None
+  __total_entities = None
+
+  def __init__(self, name, *args, stateful=True, source_count=None, source_threshold=None, source=Source, header=Header, **kws):
+    super().__init__(*args, **kws)
+    self.name = str(name)
+    self.stateful = stateful
+    self.source_count = source_count
+    self.source_threshold = source_threshold
+    self.__header_ctor = header
+    self.__source_ctor = source
+
+  @property
+  def entities(self):
+    if self.__entities is None:
+      self.__entities = set()
+    return self.__entities
+
+  def add(self, entity):
+    self.entities.add(entity)
+    return self
+
+  @property
+  def header(self):
+    if self.__header is None:
+      self.__header = self.__header_ctor(self)
+    return self.__header
+
+  @property
+  def sources(self):
+    if self.__sources is None:
+      if self.source_count is None:
+        raise ValueError("source_count must be set before accessing sources")
+      self.__sources = [self.__source_ctor(self, i) for i in range(1, self.source_count + 1)]
+    return self.__sources
+
+  @property
+  def digests(self):
+    if self.__digests is None:
+      self.__digests = _State(self).read()
+    return self.__digests
+
+  def render(self):
+    previous = set(self.digests) # File names produced by the previous generation run
+    self.distribute_entities()
+    self.header.render()
+    for source in self.sources:
+      source.render()
+    if self.stateful:
+      _State(self).collect().write()
+      # Remove outputs of the previous run which are no longer produced
+      produced = {self.header.file_name, *(source.file_name for source in self.sources)}
+      for file_name in previous - produced:
+        try:
+          os.unlink(file_name)
+        except OSError:
+          pass
+    return self
+
+  @property
+  def total_entities(self):
+    if self.__total_entities is None:
+      entities = set()
+      for e in self.entities:
+        entities.update(e.total_references)
+      self.__total_entities = entities
+    return self.__total_entities
+
+  def distribute_entities(self):
+    self.header.entities.update(self.total_entities)
+    if self.source_count is None:
+      if self.source_threshold is None:
+        self.source_count = 1
+      else:
+        total_complexity = sum(e.complexity for e in self.total_entities)
+        self.source_count = int((total_complexity / self.source_threshold) + 0.999)  # ceil
+    # Allow to disable sources rendering by setting source_count to 0
+    if self.source_count > 0:
+      for e in sorted(self.total_entities):
+        self.sources.sort(key=lambda s: s.complexity)
+        self.sources[0].add(e)
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exc_type, exc_value, traceback):
+    self.render()
+    return False
+
+
+class _State(dict):
+  def __init__(self, module, *args, **kws):
+    super().__init__(*args, **kws)
+    self.module = module
+
+  @property
+  def file_name(self): return f"{self.module.name}.state"
+
+  def collect(self):
+    self[self.module.header.file_name] = self.module.header.digest
+    for source in self.module.sources:
+      self[source.file_name] = source.digest
+    return self
+
+  def read(self):
+    if os.path.exists(self.file_name):
+      if self.module.stateful:
+        with open(self.file_name, "rt") as io:
+          for line in io:
+            line = line.strip()
+            if not line:
+              continue
+            match = re.match(r"\s*([^\s]+)\s+\*(.*)", line)
+            if match is None:
+              raise ValueError("bad state file format")
+            digest, fname = match.groups()
+            self[fname] = digest
+      else:
+        # Delete stray state file on (porbable) switch from stateful operation to stateless
+        os.unlink(self.file_name)
+    return self
+
+  def write(self):
+    with open(self.file_name, "wt") as io:
+      for file_name, digest in sorted(self.items()):
+        io.write(f"{digest} *{file_name}\n")
+    return self
+
+
+class _StreamFile:
+  def __init__(self, path, mode="wt", *args, **kws):
+    super().__init__(*args, **kws)
+    self.__file = open(path, mode)
+    self.__digest = hashlib.md5()
+    self.path = path
+
+  @property
+  def digest(self):
+    return self.__digest.hexdigest()
+
+  def write(self, data):
+    self.__file.write(data)
+    self.__digest.update(data.encode("utf-8"))
+
+  def close(self): self.__file.close()
+
+  def __enter__(self): return self
+
+  def __exit__(self, exc_type, exc_val, exc_tb): self.close()
 
 
 #
