@@ -1,7 +1,7 @@
 import autoc.std as std
 from itertools import islice
 from autoc.memory import Manager
-from autoc.core import Composite, _StructRenderer, Indirection, Callable, out, inout
+from autoc.core import Composite, _StructRenderer, _AliasRenderer, Indirection, Callable, out, inout
 
 
 #  
@@ -58,7 +58,7 @@ class _Reference(Indirection, Composite):
 
 
 #
-class Raw(_Reference):
+class Raw(_AliasRenderer, _Reference):
 
   brief = "Non-owning reference to a manually managed instance"
   
@@ -86,10 +86,12 @@ class Raw(_Reference):
       """
       
     with self.free as f:
+      # Raw bears no layout of its own: new() allocates the referenced type
+      # directly, so free() releases exactly that allocation
       f.code = f"""
         if({f.target}) {{
           {self.type.destroy(f.target) if self.type.destructible else str()};
-          {self.memory.free(f"({self._layout}*){f.target}")};
+          {self.memory.free(f.target)};
         }}
       """
 

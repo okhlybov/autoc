@@ -14,10 +14,11 @@ class _Range(_StructRenderer, Range):
     iterable.references.add(self)
     self.dependencies.add(iterable)
 
-  # Ranges iterate their owning container and display its name
-  @property
-  def _doxygen_type(self):
-    return f"{self.iterable._doxygen_type} range"
+  # A range is a non-owning cursor whose display name is its own identifier and
+  # which belongs to the group of the container it spans
+  def _render_description(self, stream):
+    super()._render_description(stream)
+    stream.append(f"\n@ingroup {self.iterable.name}\n")
     
   def __setup__(self):
     super().__setup__()

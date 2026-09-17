@@ -4,11 +4,11 @@ from autoc.map import Map
 from autoc.module import Code
 from autoc.range import DirectAccess
 from autoc.collection import _Range
-from autoc.core import inout, Indirection, Callable
+from autoc.core import inout, Indirection, Callable, _AliasRenderer
 
 
 #
-class String(Indirection, Map):
+class String(_AliasRenderer, Indirection, Map):
   
   brief = "Value type wrapper of the C char* string"
   

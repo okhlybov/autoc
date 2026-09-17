@@ -1,5 +1,6 @@
 tmp
 build
+html
 test.cmake
 test.state
 test_auto*

@@ -157,12 +157,13 @@ class _Documented(Entity, _VisibilityManager):
     elif not hasattr(self.__class__, attr):
       setattr(self, attr, None)
 
-  # Display name of the type in the rendered documentation - containers show
-  # their element type while the rest render as the bare type name
+  # Display name of the type in the rendered documentation. The default is the
+  # exact C identifier so the generated markup references the concrete expanded
+  # symbols; the generic (template-like) presentation is supplied by the
+  # documentation sub-project which overrides this property per type
   @property
   def _doxygen_type(self):
-    element = getattr(self, "element", None)
-    return f"{self.name}<{element}>" if element else self.name
+    return getattr(self, "name", str(self))
   
   def _render_documentation(self, stream, header):
     if self.public:
@@ -181,6 +182,29 @@ class _Documented(Entity, _VisibilityManager):
   def _render_description(self, stream):
     if self.description:
       stream.append(self.description)
+
+
+#
+class _GroupRenderer(_Documented):
+
+  # A documented type owning a doxygen group. The group identifier is the type
+  # name so the member @ingroup references and the @defgroup declaration always
+  # agree while the group title carries the display name of the type
+  def _render_description(self, stream):
+    super()._render_description(stream)
+    stream.append(f"\n@defgroup {self.name} {self._doxygen_type}\n")
+
+
+#
+class _AliasRenderer(_GroupRenderer):
+  
+  # Value types which bear no structure of their own (e.g. String wrapping a
+  # plain char*) still render their type-level documentation and group once
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      self._render_documentation(stream, header)
+
 
 #
 class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
@@ -250,6 +274,9 @@ class _Named(Type):
 
   #
   def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, **kws):
+    # The owning type is recorded so the rendered documentation groups the member
+    # under its type - the explicitly attributed method_from() calls take precedence
+    kws.setdefault("type", self)
     x = Function(
       result,
       self.decorate(identifier, hidden=hidden),
@@ -425,15 +452,11 @@ class Composite(_Named, _Traitful):
     return Indirection(self, constant=True)
 
 
-class _StructRenderer(_Documented):
+class _StructRenderer(_GroupRenderer):
 
   def _render_struct(self, stream, header):
     self._render_documentation(stream, header)
-    
-  def _render_description(self, stream):
-    super()._render_description(stream)
-    stream.append(f"\n@defgroup {self} {self._doxygen_type}\n")
-  
+
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     # Structures are expected to be rendered in the interface header
@@ -895,9 +918,11 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
 
   def _render_description(self, stream):
     super()._render_description(stream)
-    if self.type:
-      # The group of the member is addressed by its identifier which is the
-      # owning type name - the display name is reserved for the group title
+    # The group of the member is addressed by its identifier which is the
+    # owning type name - the display name is reserved for the group title.
+    # Only the public owners declare a group so the internal ones (the hidden
+    # container components) must not reference a group which does not exist
+    if self.type and self.type.public:
       stream.append(f"\n@ingroup {self.type.name}\n")
       
       
