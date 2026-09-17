@@ -233,7 +233,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
     element_prev = self.element.variable(slot("j-1"))
     pivot = self.element.variable("pivot")
 
-    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Insertion sort the inclusive [lo, hi] range (internal)") as f:
       f.code = lambda f=f: f"""
         size_t i, j;
         assert(target);
@@ -244,7 +244,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint) as f:
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Quicksort the inclusive [lo, hi] range (internal)") as f:
       f.code = lambda f=f: f"""
         size_t i, j, mid;
         {pivot.definition};
@@ -322,6 +322,8 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
 #
 class Range(_Range, DirectAccess):
+
+  brief = "Direct access range over the tiered vector elements"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

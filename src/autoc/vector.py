@@ -41,7 +41,7 @@ class Vector(_StructRenderer, Map, Sequence):
         return target->size;
       """
     
-    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private") as f:
+    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private", brief="Allocate the element storage with given capacity (private)") as f:
       f.code = f"""
         assert(target);
         if(capacity > 0) {{
@@ -51,7 +51,7 @@ class Vector(_StructRenderer, Map, Sequence):
       """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with given number of default-constructed elements") as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with the given number of default-initialized elements") as f:
       if self.element.zero_initializable:
         f.code = f"""
           assert(target);
@@ -306,6 +306,8 @@ class Vector(_StructRenderer, Map, Sequence):
 
 #
 class Range(_Range, DirectAccess):
+  brief = "Direct access range over the vector elements"
+
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

@@ -7,6 +7,8 @@ from autoc.core import Composite, _StructRenderer
 # derived out of the default construction and the swap
 class Type(_StructRenderer, Composite):
 
+  brief = "Test composite defining only the lifecycle - the rest of the operations is derived absent"
+
   def __setup__(self):
     super().__setup__()
     with self.create as f:

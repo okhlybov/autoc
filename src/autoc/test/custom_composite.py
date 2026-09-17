@@ -4,6 +4,8 @@ from autoc.core import Composite, _StructRenderer, out
 
 # Custom composite value type
 class Type(_StructRenderer, Composite):
+
+  brief = "Test composite owning a heap allocated integer value"
   
   def __setup__(self):
     super().__setup__()

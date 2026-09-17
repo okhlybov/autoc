@@ -6,6 +6,8 @@ from autoc.core import Composite, _StructRenderer, out
 # the default construction and the swap
 class Type(_StructRenderer, Composite):
 
+  brief = "Test composite supplying everything except the move - the move is derived"
+
   def __setup__(self):
     super().__setup__()
     with self.create as f:

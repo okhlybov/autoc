@@ -180,6 +180,8 @@ class List(_StructRenderer, Sequence):
 
 #
 class Range(_Range, Forward):
+  brief = "Forward range over the list elements"
+
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

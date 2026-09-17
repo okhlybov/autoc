@@ -44,12 +44,12 @@ class Set(_StructRenderer, Set):
       return target->size;
     """
     
-    with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True) as f:
+    with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True, brief="Check if the element slot holds a live element (internal)") as f:
       f.code = f"""
         return !({self.is_empty(f.element)} || {self.is_deleted(f.element)});
       """
     
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the element table with the capacity rounded up to a power of two (internal)") as f:
       f.code = f"""
         assert(target);
         assert(capacity > 0);
@@ -309,6 +309,8 @@ class Set(_StructRenderer, Set):
 
 #
 class Range(_Range, Forward):
+  brief = "Forward range over the set elements"
+
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
@@ -327,7 +329,7 @@ class Range(_Range, Forward):
     
     front_element = self.element.variable("target->iterable->elements[target->front]")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next live element (internal)") as f:
       f.code = lambda: f"""
         assert(target);
         while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;

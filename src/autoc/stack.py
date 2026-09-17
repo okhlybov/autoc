@@ -115,6 +115,8 @@ class Stack(_StructRenderer, Collection):
 #
 class Range(_Range, Forward):
 
+  brief = "Forward range over the stack elements"
+
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""

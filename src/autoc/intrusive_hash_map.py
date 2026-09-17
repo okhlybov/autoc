@@ -178,6 +178,8 @@ class Map(_StructRenderer, Map):
 #
 class Range(_Range, Forward):
 
+  brief = "Forward range over the map indices and elements"
+
   def __init__(self, iterable, *args, **kws):
     super().__init__(iterable, *args, **kws)
     self._range = iterable._set.range

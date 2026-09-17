@@ -154,6 +154,8 @@ _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
 
 #
 class Range(_Range, DirectAccess):
+  brief = "Direct access range over the string characters"
+
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

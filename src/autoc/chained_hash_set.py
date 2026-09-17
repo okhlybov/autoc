@@ -47,7 +47,7 @@ class Set(_StructRenderer, Set):
         target->capacity = target->size = 0;
       """
 
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal") as f:
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the hash table with the capacity rounded up to a power of two (internal)") as f:
       f.code = f"""
         assert(target);
         assert(capacity > 0);
@@ -266,6 +266,8 @@ class Set(_StructRenderer, Set):
 #
 class Range(_Range, Forward):
 
+  brief = "Forward range over the set elements"
+
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
@@ -281,7 +283,7 @@ class Range(_Range, Forward):
 
     node_element = self.element.variable("target->node->element")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal") as f:
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next occupied bucket (internal)") as f:
       f.code = f"""
         assert(target);
         while(!target->node && target->bucket < target->iterable->capacity) {{

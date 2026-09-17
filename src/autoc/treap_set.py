@@ -593,6 +593,8 @@ class Set(_StructRenderer, Set):
 #
 class Range(_Range, Forward):
 
+  brief = "Forward range over the set elements"
+
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""

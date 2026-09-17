@@ -236,6 +236,8 @@ class Deque(_StructRenderer, Sequence):
 #
 class Range(_Range, Bidirectional):
 
+  brief = "Bidirectional range over the deque elements"
+
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
