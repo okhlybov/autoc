@@ -36,12 +36,11 @@ is documented once, instantiated with the placeholder value types:
 
 | Placeholder | Stands for |
 |---|---|
-| `T` | the element type of a sequence, set, stack, queue or priority queue |
+| `T` | the element type of a sequence, set, stack, queue or priority queue — and the mapped value type of a map |
 | `K` | the index (key) type of a map |
-| `V` | the mapped value type of a map |
 
 so a container is presented the way a C++ reader expects it: `List<T>`, `Vector<T>`,
-`Map<K, V>`, `Set<T>`, and the range of a container as the nested type `List<T>::Range`.
+`Map<K, T>`, `Set<T>`, and the range of a container as the nested type `List<T>::Range`.
 
 Two deliberate conventions keep the manual directly usable when reading generated code:
 

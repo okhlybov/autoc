@@ -43,7 +43,7 @@ explicit `move` at all.
 
 Iteration is expressed with *ranges*: small, non-owning, copyable cursors over a container.
 Every sequence and every set and map has a nested range type, named after the container —
-`List<T>::Range` for @ref List, `ChainedHashMap<K, V>::Range` for @ref ChainedHashMap — with
+`List<T>::Range` for @ref List, `ChainedHashMap<K, T>::Range` for @ref ChainedHashMap — with
 the C spelling `ListRange`, `ChainedHashMapRange`.
 
 A range exposes exactly the operations its access pattern supports:

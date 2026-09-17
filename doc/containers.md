@@ -1,7 +1,7 @@
 # Container catalog {#containers}
 
 Every container below is documented in this manual as a single generic type, instantiated
-with the placeholders `T`, `K` and `V` (see @ref index). The *Python module* is what you
+with the placeholders `T` and `K` (see @ref index). The *Python module* is what you
 import in your module script; the *type* is the class you instantiate with a concrete C type.
 
 ## Sequences
@@ -30,9 +30,9 @@ import in your module script; the *type* is the class you instantiate with a con
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
-| `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, V>` | forward | bucket chaining over an internal entry set |
-| `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, V>` | forward | flat open addressing; entries carry the sentinels |
-| `autoc.treap_map` | `Map` | `TreapMap<K, V>` | forward | ordered by key; supports lexicographic comparison |
+| `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | forward | bucket chaining over an internal entry set |
+| `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | forward | flat open addressing; entries carry the sentinels |
+| `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key; supports lexicographic comparison |
 | `autoc.map` | `Map` | — | — | abstract interface shared by the map implementations |
 | `autoc.hash_map` | `_Entry` | — | — | shared key→value entry record used by the map implementations |
 

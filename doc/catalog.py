@@ -4,7 +4,7 @@
 # documentation of a concrete module references the concrete expanded code. This
 # catalog instantiates each container once with the generic value types and overrides
 # the display name only, which turns the same declarations into a C++-flavoured
-# reference: List<T>, Map<K, V>, List<T>::Range and so on while every operation keeps
+# reference: List<T>, Map<K, T>, List<T>::Range and so on while every operation keeps
 # its generated C identifier so an entry in the manual matches the generated code.
 
 import os
@@ -39,7 +39,6 @@ autoc.core.decorator = autoc.core.camel_decorator
 # Generic value types standing for the concrete element, key and mapped types
 T = autoc.core.Primitive("T")
 K = autoc.core.Primitive("K")
-V = autoc.core.Primitive("V")
 
 
 # The sentinel operations the intrusive containers need are left symbolic - the manual
@@ -202,12 +201,12 @@ def configure_module(module):
   module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
   module.add(TreapSet("TreapSet", T))
 
-  module.add(ChainedHashMap("ChainedHashMap", V, K))
-  module.add(IntrusiveHashMap("IntrusiveHashMap", V, K, **_sentinels))
-  module.add(TreapMap("TreapMap", V, K))
+  module.add(ChainedHashMap("ChainedHashMap", T, K))
+  module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
+  module.add(TreapMap("TreapMap", T, K))
 
-  module.add(autoc.record.Record("Record", {"first": T, "second": V}))
-  module.add(autoc.variant.Variant("Variant", {"first": T, "second": V}))
+  module.add(autoc.record.Record("Record", {"first": T, "second": K}))
+  module.add(autoc.variant.Variant("Variant", {"first": T, "second": K}))
 
   module.add(Arc(T, name="Arc"))
   module.add(Raw(T, name="Raw"))
