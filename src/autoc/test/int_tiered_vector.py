@@ -179,3 +179,77 @@ x.unit(f"{type.reverse}(): reverse twice restores", f"""
   {type.reverse(t)};
   for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, (i*7)%40 );
 """)
+
+
+x.setup(f"""
+  int i;
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.resize}(): resize up from empty", f"""
+  {type.resize(t, 5)};
+  TEST_FALSE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 5 );
+  for(i = 0; i < 5; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): resize up across the chunk boundaries", f"""
+  {type.resize(t, 40)};
+  TEST_EQUAL( {type.size(t)}, 40 );
+  for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): resize into size zero is a no-op", f"""
+  {type.resize(t, 0)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+""")
+
+x.unit(f"{type.resize}(): same size is a no-op", f"""
+  {type.create_size(t, 40)};
+  for(i = 0; i < 40; ++i) {type.set(t, "i", "i")};
+  {type.resize(t, 40)};
+  TEST_EQUAL( {type.size(t)}, 40 );
+  for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+""")
+
+x.unit(f"{type.resize}(): resize down releases the unused chunks", f"""
+  {type.create_size(t, 40)};
+  for(i = 0; i < 40; ++i) {type.set(t, "i", "i")};
+  {type.resize(t, 20)};
+  TEST_EQUAL( {type.size(t)}, 20 );
+  for(i = 0; i < 20; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+  /* the freed chunk is reused by the subsequent pushes */
+  for(i = 20; i < 50; ++i) {type.push(t, "i")};
+  TEST_EQUAL( {type.size(t)}, 50 );
+  for(i = 0; i < 50; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+""")
+
+x.unit(f"{type.resize}(): resize to empty and back", f"""
+  {type.create_size(t, 40)};
+  {type.resize(t, 0)};
+  TEST_TRUE( {type.empty(t)} );
+  {type.resize(t, 10)};
+  TEST_EQUAL( {type.size(t)}, 10 );
+  for(i = 0; i < 10; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): repeated up and down cycles", f"""
+  {type.create_size(t, 40)};
+  for(i = 0; i < 40; ++i) {type.set(t, "i", "i")};
+  {type.resize(t, 70)};
+  TEST_EQUAL( {type.size(t)}, 70 );
+  for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+  for(i = 40; i < 70; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+  {type.resize(t, 30)};
+  TEST_EQUAL( {type.size(t)}, 30 );
+  for(i = 0; i < 30; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+  {type.resize(t, 45)};
+  TEST_EQUAL( {type.size(t)}, 45 );
+  for(i = 0; i < 30; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+  for(i = 30; i < 45; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")

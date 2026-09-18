@@ -115,6 +115,47 @@ class Vector(_StructRenderer, Map, Sequence):
         {self.element.copy(target_i, f.element)};
       """
 
+    # Resize follows the std::vector::resize semantics: growing default-initializes the
+    # new tail elements while shrinking destroys the removed tail. Growing reallocates
+    # the exact size buffer and migrates the old elements by copy; shrinking only
+    # destroys the tail since the buffer is a single allocation freed as a whole
+    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.copyable and (self.element.default_constructible or self.element.zero_initializable), brief="Resize the vector to the given number of elements") as f:
+      if self.element.zero_initializable:
+        f.code = f"""
+          {self.index} index;
+          {Indirection(self.element)} elements;
+          assert(target);
+          if({f.size} > target->size) {{
+            elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(elements);
+            for(index = 0; index < target->size; ++index) {self.element.copy(self.element.variable("elements[index]"), target_i)};
+            {self.memory.free("target->elements")};
+            target->elements = elements;
+          }} else {{
+            for(index = {f.size}; index < target->size; ++index) {{
+              {destroy_i};
+            }}
+          }}
+          target->size = {f.size};
+        """
+      else:
+        f.code = f"""
+          {self.index} index;
+          {Indirection(self.element)} elements;
+          assert(target);
+          if({f.size} > target->size) {{
+            elements = {self.memory.allocate(self.element, f.size)}; assert(elements);
+            for(index = 0; index < target->size; ++index) {self.element.copy(self.element.variable("elements[index]"), target_i)};
+            for(index = target->size; index < {f.size}; ++index) {self.element.create(self.element.variable("elements[index]"))};
+            {self.memory.free("target->elements")};
+            target->elements = elements;
+          }} else {{
+            for(index = {f.size}; index < target->size; ++index) {{
+              {destroy_i};
+            }}
+          }}
+          target->size = {f.size};
+        """
+
     with self.create as f:
       f.inline_code = """
         assert(target);

@@ -138,3 +138,76 @@ x.unit(f"{type.reverse}(): reverse empty and single element vectors", f"""
   {type.reverse(t)};
   TEST_EQUAL( {type.get(t, 0)}, 5 );
 """)
+
+
+x.setup(f"""
+  int i;
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.resize}(): resize up from empty", f"""
+  {type.resize(t, 8)};
+  TEST_FALSE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 8 );
+  for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): resize up into size zero is a no-op", f"""
+  {type.resize(t, 0)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.size(t)}, 0 );
+""")
+
+x.unit(f"{type.resize}(): resize down preserves the head", f"""
+  {type.create_size(t, 8)};
+  for(i = 0; i < 8; ++i) {type.set(t, "i", "i")};
+  {type.resize(t, 3)};
+  TEST_EQUAL( {type.size(t)}, 3 );
+  for(i = 0; i < 3; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+""")
+
+x.unit(f"{type.resize}(): same size is a no-op", f"""
+  {type.create_size(t, 4)};
+  {type.set(t, 0, 1)}; {type.set(t, 1, 2)}; {type.set(t, 2, 3)}; {type.set(t, 3, 4)};
+  {type.resize(t, 4)};
+  TEST_EQUAL( {type.size(t)}, 4 );
+  TEST_EQUAL( {type.get(t, 0)}, 1 );
+  TEST_EQUAL( {type.get(t, 3)}, 4 );
+""")
+
+x.unit(f"{type.resize}(): resize up re-default-initializes the tail", f"""
+  {type.create_size(t, 4)};
+  for(i = 0; i < 4; ++i) {type.set(t, "i", "i + 1")};
+  {type.resize(t, 6)};
+  TEST_EQUAL( {type.size(t)}, 6 );
+  TEST_EQUAL( {type.get(t, 3)}, 4 );
+  for(i = 4; i < 6; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): resize to empty and back", f"""
+  {type.create_size(t, 4)};
+  {type.resize(t, 0)};
+  TEST_TRUE( {type.empty(t)} );
+  {type.resize(t, 2)};
+  TEST_EQUAL( {type.size(t)}, 2 );
+  for(i = 0; i < 2; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")
+
+x.unit(f"{type.resize}(): repeated up and down cycles", f"""
+  {type.create_size(t, 4)};
+  for(i = 0; i < 4; ++i) {type.set(t, "i", "i")};
+  {type.resize(t, 10)};
+  TEST_EQUAL( {type.size(t)}, 10 );
+  for(i = 0; i < 4; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
+  {type.resize(t, 2)};
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.get(t, 1)}, 1 );
+  {type.resize(t, 5)};
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_EQUAL( {type.get(t, 1)}, 1 );
+  for(i = 2; i < 5; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
+""")

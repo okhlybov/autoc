@@ -20,7 +20,9 @@ class TieredVector(_StructRenderer, Map, Sequence):
   brief = "Append-optimized direct access sequence container"
   
   def __init__(self, name, element, chunk_shift=16, **kws):
-    super().__init__(name, element, std.size_t, **kws)
+    # memset is needed to zero-initialize the elements of the types which are
+    # zero initializable but not default constructible
+    super().__init__(name, element, std.size_t, dependencies=(std.string_h,), **kws)
     self.chunk_shift = int(chunk_shift)
     self.chunk_mask = (1 << self.chunk_shift) - 1
     self._chunk_p = Indirection(self.element)
@@ -72,7 +74,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
         assert(target);
         if(target->size == (target->chunk_count << {self.chunk_shift})) {{
           if(target->chunk_count == target->chunk_capacity) {{
-            chunks = {self.memory.allocate(self._chunk_p, "target->chunk_capacity ? target->chunk_capacity*2 : 8")};
+            chunks = {self.memory.allocate(self._chunk_p, "(target->chunk_capacity ? target->chunk_capacity*2 : 8)")};
             assert(chunks);
             for(index = 0; index < target->chunk_count; ++index) chunks[index] = target->chunks[index];
             {self.memory.free("target->chunks")};
@@ -129,6 +131,40 @@ class TieredVector(_StructRenderer, Map, Sequence):
         --target->size;
         {self.element.move(result, self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"))};
         return {result};
+      """
+
+    # Resize grows the vector by extending the chunk table and default-initializing the
+    # new elements in place - no element migration is ever needed since the chunks are
+    # stable. Shrinking destroys the removed tail and releases the chunks which became
+    # fully unused; the chunk table itself is not reallocated down
+    resize_slot = lambda index: f"target->chunks[{index} >> {self.chunk_shift}][{index} & {self.chunk_mask}]"
+    resize_destroy_i = str(self.element.destroy(self.element.variable(resize_slot("index")))) + ";" if self.element.destructible else str()
+    if self.element.default_constructible:
+      resize_create_i = str(self.element.create(self.element.variable(resize_slot("target->size")))) + ";"
+    else:
+      resize_create_i = f"memset(&({resize_slot('target->size')}), 0, sizeof({self.element}));"
+
+    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Resize the vector to the given number of elements") as f:
+      f.code = f"""
+        size_t index;
+        size_t needed;
+        assert(target);
+        for(index = target->size; index < {f.size}; ++index) {{
+          {self.extend(f.target)};
+          {resize_create_i}
+          ++target->size;
+        }}
+        if({f.size} < target->size) {{
+          for(index = {f.size}; index < target->size; ++index) {{
+            {resize_destroy_i}
+          }}
+          needed = ({f.size} + {self.chunk_mask}) >> {self.chunk_shift};
+          for(index = needed; index < target->chunk_count; ++index) {{
+            {self.memory.free("target->chunks[index]")};
+          }}
+          target->chunk_count = needed;
+        }}
+        target->size = {f.size};
       """
 
     with self.get as f:
