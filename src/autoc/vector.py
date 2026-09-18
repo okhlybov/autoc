@@ -18,6 +18,14 @@ class Vector(_StructRenderer, Map, Sequence):
   def __setup__(self):
     super().__setup__()
     
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *DefaultConstructible* and *Copyable*.
+      Supports bidirectional element traversal via the corresponding @ref {self.range} iterator as well as subranging with direct indexed access to the subrange's elements.
+
+      Implemented as the contigious array of elements.
+      The closest C++ equivalent is [std::vector<>](https://cppreference.com/cpp/container/vector).
+    """
+
     left_i = self.element.variable("left->elements[index]")
     right_i = self.element.variable("right->elements[index]")
     source_i = self.element.variable("source->elements[index]")
@@ -306,15 +314,13 @@ class Vector(_StructRenderer, Map, Sequence):
 
 #
 class Range(_Range, DirectAccess):
-  brief = "Direct access range over the vector elements"
-
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
       typedef struct {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-        {self.iterable.index} front, back; /**< @private */
+        {self.iterable.index} front, /**< @private */ back; /**< @private */
       }} {self.name};
     """)
 

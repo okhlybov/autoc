@@ -8,8 +8,6 @@ from autoc.collection import Collection
 #
 class Set(Collection):
   
-  brief = "Abstract base type for the sets of distinct values"
-  
   def __setup__(self):
     super().__setup__()
     

@@ -169,11 +169,11 @@ class _Documented(Entity, _VisibilityManager):
     if self.public:
       # If no brief is specified, this means no description as well as the most likely case
       if self.brief:
-        stream.append(f"/** @public\n@brief {self.brief}\n")
+        stream.append(f"/** @public\n\t@brief {self.brief}\n")
         self._render_description(stream)
         stream.append("*/\n")
       else:
-        stream.append("/** @public ")
+        stream.append("/** @public\n")
         self._render_description(stream)
         stream.append("*/\n")
     elif header:
@@ -192,7 +192,7 @@ class _GroupRenderer(_Documented):
   # agree while the group title carries the display name of the type
   def _render_description(self, stream):
     super()._render_description(stream)
-    stream.append(f"\n@defgroup {self.name} {self._doxygen_type}\n")
+    stream.append(f"\n\t@defgroup {self.name} {self._doxygen_type}\n")
 
 
 #

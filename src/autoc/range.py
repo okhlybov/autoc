@@ -5,8 +5,6 @@ from autoc.core import Composite, _type, inout
 #
 class Range(Composite):
   
-  brief = "Base type for iterators"
-  
   def __init__(self, element, *args, **kws):
     super().__init__(*args, **kws)
     self.element = _type(element)
@@ -28,6 +26,8 @@ class Range(Composite):
 #
 class Input(Range):
 
+  brief = "Forward iterator"
+
   def __setup__(self):
     super().__setup__()
     self.method("int", "empty", {"target": self}, brief="Check if the range is exhausted")
@@ -39,6 +39,19 @@ class Input(Range):
 #
 class Forward(Input):
 
+  brief = "Forward copyable iterator"
+
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    
+  def __setup__(self):
+    super().__setup__()
+
+    self.description = f"""
+      This iterator allows to traverse the iterable container (@ref {self.iterable}) in forward direction.
+    """
+    
+
   @property
   def copyable(self):
     return True
@@ -47,12 +60,19 @@ class Forward(Input):
 #
 class Backward(Input):
 
+  brief = "Backward copyable iterator"
+
   @property
   def copyable(self):
     return True
 
   def __setup__(self):
     super().__setup__()
+
+    self.description = f"""
+      This iterator allows to traverse the iterable container (@ref {self.iterable}) in backward direction.
+    """
+
     self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the back element")
     self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get a constant view of the back element")
     self.method(None, ("move", "back"), {"target": inout(self)}, brief="Retreat the range to the previous element")
@@ -60,14 +80,30 @@ class Backward(Input):
 
 #
 class Bidirectional(Forward, Backward):
-  pass
+  
+  brief = "Bidirectional (forward/backward) copyable iterator"
+  
+  def __setup__(self):
+    super().__setup__()
+    
+    self.description = f"""
+      This iterator allows to traverse the iterable container (@ref {self.iterable}) in both (forward and backward) directions.
+    """
 
 
 #
 class DirectAccess(Forward, Backward):
 
+  brief = "Bidirectional (forward/backward) copyable iterator with direct access"
+
   def __setup__(self):
     super().__setup__()
+
+    self.description = f"""
+      This iterator allows to traverse the iterable container (@ref {self.iterable}) in both (forward and backward) directions.
+      In addition, it provides a direct (indexed) access to the range of currently accessible range's elements.
+    """
+
     self.method(self.element, "get", {"target": self, "index": std.size_t}, constraint=lambda: self.element.copyable, brief="Get a copy of the element at offset")
     self.method(self.element.view_type, "view", {"target": self,  "index": std.size_t}, brief="Get a constant view of the element at offset")
     self.method(std.size_t, "size", {"target": self}, brief="Get the number of remaining elements")

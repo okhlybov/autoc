@@ -5,8 +5,6 @@ from autoc.collection import Collection
 #
 class Sequence(Collection):
   
-  brief = "Base type for the abstract sequential collection"
-  
   def __init__(self, *args, hasher=XorRot(), **kws):
     super().__init__(*args, hasher=hasher, **kws)
     

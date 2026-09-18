@@ -8,7 +8,7 @@ from autoc.core import inout, _type, Callable, _StructRenderer
 #
 class List(_StructRenderer, Sequence):
   
-  brief = "Ordered sequential container"
+  brief = "Ordered sequential container with element insertion and removal at the front end"
   
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
@@ -22,6 +22,14 @@ class List(_StructRenderer, Sequence):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the singly linked list.
+      The closest C++ equivalent is [std::forward_list<>](https://cppreference.com/cpp/container/forward_list).
+    """
+  
     node_element = self.element.variable("node->element")
     front_element = self.element.variable("target->front->element")
     target_element = self.element.variable("target_node->element")
@@ -180,8 +188,6 @@ class List(_StructRenderer, Sequence):
 
 #
 class Range(_Range, Forward):
-  brief = "Forward range over the list elements"
-
   
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

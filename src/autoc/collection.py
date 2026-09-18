@@ -18,10 +18,14 @@ class _Range(_StructRenderer, Range):
   # which belongs to the group of the container it spans
   def _render_description(self, stream):
     super()._render_description(stream)
-    stream.append(f"\n@ingroup {self.iterable.name}\n")
+    stream.append(f"\n\t@ingroup {self.iterable.name}\n")
     
   def __setup__(self):
     super().__setup__()
+    
+    self.description1 = f"""
+      The opaque value representing @ref {self} value.
+    """
     
     with self.copy as f:
       f.inline_code = f"""
@@ -40,8 +44,6 @@ class _Range(_StructRenderer, Range):
 
 #
 class Collection(Composite):
-  
-  brief = "Base type for sequential containers"
   
   def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)

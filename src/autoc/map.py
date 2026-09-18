@@ -5,8 +5,6 @@ from autoc.collection import Collection
 #
 class Map(Collection):
   
-  brief = "Abstract base type for the index to element mappings"
-
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, *args, **kws)
     self.index = _type(index)
