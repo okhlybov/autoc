@@ -29,6 +29,14 @@ class Set(_StructRenderer, Set):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Orderable*.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator - the elements are yielded in sorted order.
+
+      Implemented as the treap - the randomized binary search tree with the algebraic set operations.
+      The closest C++ equivalent is [std::set<>](https://cppreference.com/cpp/container/set).
+    """
+
     node_element = self.element.variable("n->element")
     link_element = self.element.variable("(*link)->element")
     # Node pointer expressions bound to their C side counterparts

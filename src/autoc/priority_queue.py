@@ -12,7 +12,7 @@ class PriorityQueue(_StructRenderer, Collection):
   # the iteration is not exposed and the equality and the hashing are not defined
   # (two heaps holding the same elements are not required to have the same shape)
   
-  brief = "Priority queue of elements ordered by priority - pop always yields the greatest element"
+  brief = "Priority queue of elements ordered by priority"
 
 
   def __init__(self, name, element, **kws):
@@ -21,6 +21,15 @@ class PriorityQueue(_StructRenderer, Collection):
 
   def __setup__(self):
     super().__setup__()
+
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Orderable*.
+      The iteration is not exposed - the elements are consumed one by one via `pop` which
+      always yields the greatest element per the element comparison. Duplicate priorities allowed.
+
+      Implemented as the binary heap over the flat array.
+      The closest C++ equivalent is [std::priority_queue<>](https://cppreference.com/cpp/container/priority_queue).
+    """
 
     # TODO verify
     # The equality and the hashing are not defined for the heap

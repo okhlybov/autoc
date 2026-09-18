@@ -25,6 +25,14 @@ class Set(_StructRenderer, Set):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Hashable* and *Comparable*.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the hash table with bucket chaining.
+      The closest C++ equivalent is [std::unordered_set<>](https://cppreference.com/cpp/container/unordered_set).
+    """
+
     node_element = self.element.variable("n->element")
     source_element = self.element.variable("source_n->element")
     target_element = self.element.variable("n->element")

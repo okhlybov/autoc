@@ -22,6 +22,14 @@ class Deque(_StructRenderer, Sequence):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Copyable*.
+      Supports two way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the doubly linked list.
+      The closest C++ equivalent is [std::deque<>](https://cppreference.com/cpp/container/deque).
+    """
+
     node_element = self.element.variable("node->element")
     front_element = self.element.variable("target->front->element")
     back_element = self.element.variable("target->back->element")

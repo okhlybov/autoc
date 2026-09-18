@@ -103,6 +103,14 @@ class Stack(_StructRenderer, Collection):
 
     self.range = Range(self)
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the LIFO adapter over the internal @ref List.
+      The closest C++ equivalent is [std::stack<>](https://cppreference.com/cpp/container/stack).
+    """
+
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""

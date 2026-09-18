@@ -30,6 +30,16 @@ class TieredVector(_StructRenderer, Map, Sequence):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Copyable*.
+      Supports two way element traversal via the corresponding @ref {self.range} iterator
+      as well as subranging with direct indexed access to the subrange's elements.
+
+      Implemented as the fixed size chunks of elements addressed through the chunk table -
+      the append is allocation-only with the stable element addresses.
+      No direct C++ equivalent, but close to [std::deque<>](https://cppreference.com/cpp/container/deque).
+    """
+
     with self.size as f:
       f.inline_code = f"""
         assert(target);

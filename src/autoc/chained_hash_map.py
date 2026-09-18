@@ -28,6 +28,14 @@ class Map(_StructRenderer, Map):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the index type (@ref {self.index}) to be *Hashable* and *Comparable* and the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way traversal over the indices and elements via the corresponding @ref {self.range} iterator.
+
+      Implemented as the hash table with bucket chaining over the internal chained entry set.
+      The closest C++ equivalent is [std::unordered_map<>](https://cppreference.com/cpp/container/unordered_map).
+    """
+
     _target = self._set.variable("target->set")
     _source = self._set.variable("source->set")
     _left = self._set.variable("left->set")

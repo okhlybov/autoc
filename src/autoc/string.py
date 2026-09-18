@@ -18,6 +18,16 @@ class String(_AliasRenderer, Indirection, Map):
 
   def __setup__(self):
     super().__setup__()
+
+    self.description = f"""
+      Requires no constraints on the element type - the element type is fixed to `char`.
+      Supports two way character traversal via the corresponding @ref {self.range} iterator
+      as well as subranging with direct indexed access to the subrange's characters.
+
+      Implemented as the dynamically sized null terminated char buffer carrying the embedded length.
+      The closest C++ equivalent is [std::string<>](https://cppreference.com/cpp/string/basic_string).
+    """
+
     self.create = self.macro_from("create", lambda target: f"{target} = (char*)_autoc_empty_string")
     self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")

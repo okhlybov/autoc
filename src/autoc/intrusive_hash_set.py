@@ -33,7 +33,16 @@ class Set(_StructRenderer, Set):
 
   def __setup__(self):
     super().__setup__()
-    
+
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Hashable*, *Comparable* and to reserve
+      the two sentinel states - the empty and the deleted slots of the table.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the hash table with the flat open addressing over the sentinel carrying elements.
+      The closest C++ equivalent is [std::unordered_set<>](https://cppreference.com/cpp/container/unordered_set).
+    """
+
     target_i = self.element.variable("target->elements[index]")
     source_i = self.element.variable("source->elements[index]")
     target_elements = self._element_p.variable("target->elements")

@@ -13,6 +13,8 @@ class Queue(_StructRenderer, Collection):
     super().__init__(*args, **kws)
     self._deque = Deque(self._decorate_component("deque"), self.element, visibility="internal")
     self.dependencies.add(self._deque)
+    self.range = Range(self)
+
 
   @property
   def orderable(self):
@@ -107,7 +109,13 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.back(_target)};
       """
 
-    self.range = Range(self)
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way element traversal via the corresponding @ref {self.range} iterator.
+
+      Implemented as the FIFO adapter over the internal @ref Deque.
+      The closest C++ equivalent is [std::queue<>](https://cppreference.com/cpp/container/queue).
+    """
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

@@ -32,6 +32,16 @@ class Map(_StructRenderer, Map):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the index type (@ref {self.index}) to be *Hashable*, *Comparable* and to reserve
+      the two sentinel states - the empty and the deleted slots of the table -
+      and the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way traversal over the indices and elements via the corresponding @ref {self.range} iterator.
+
+      Implemented as the hash table with the flat open addressing over the sentinel carrying entries.
+      The closest C++ equivalent is [std::unordered_map<>](https://cppreference.com/cpp/container/unordered_map).
+    """
+
     _target = self.variable("target->set")
     _source = self.variable("source->set")
     _left = self.variable("left->set")

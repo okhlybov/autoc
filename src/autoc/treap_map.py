@@ -30,6 +30,14 @@ class Map(_StructRenderer, Map):
   def __setup__(self):
     super().__setup__()
 
+    self.description = f"""
+      Requires the index type (@ref {self.index}) to be *Orderable* and the element type (@ref {self.element}) to be *Copyable*.
+      Supports one way traversal over the indices and elements via the corresponding @ref {self.range} iterator - the entries are yielded in index order.
+
+      Implemented as the treap - the randomized binary search tree over the internal entry set.
+      The closest C++ equivalent is [std::map<>](https://cppreference.com/cpp/container/map).
+    """
+
     _target = self._set.variable("target->set")
     _source = self._set.variable("source->set")
     _left = self._set.variable("left->set")
