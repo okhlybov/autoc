@@ -2,7 +2,7 @@ def CMake(module):
   cmake = f"{module.name}.cmake"
   sources = " ".join([f"${{CMAKE_CURRENT_SOURCE_DIR}}/{s.file_name}" for s in module.sources])
   # A documentation-only module (source_count = 0) emits no translation units and
-  # therefore declares no library - only the header the documentation is built from
+  # therefore declares no library - only the header the documentat  ion is built from
   library = f"""
     add_library({module.name}-auto OBJECT ${{{module.name}_SOURCES}})
     target_include_directories({module.name}-auto INTERFACE $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}>)
