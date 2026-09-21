@@ -13,12 +13,19 @@ class Set(Collection):
     
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present",
       description="""
+        Inserts the element when the set holds no equal element yet. Every set implementation
+        inherits this protocol operation; the insertion cost is the one of the underlying
+        implementation.
+
         @param[in,out] target the set to insert into
         @param[in] element the element to insert - ignored when the set already holds an equal element
         @return non-zero if the element was inserted and zero if an equal element was already present
       """)
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present",
       description="""
+        Removes the element when the set holds an equal one, leaving the set unchanged
+        otherwise. Every set implementation inherits this protocol operation.
+
         @param[in,out] target the set to remove from
         @param[in] element the element to remove
         @return non-zero if the element was removed and zero if the set held no equal element
@@ -36,6 +43,9 @@ class Set(Collection):
 
     with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Add all elements from other set",
       description="""
+        Adds every element of the other set which the target does not hold yet by walking
+        the other set's range and putting its elements. The other set is not modified.
+
         @param[in,out] target the set to add the elements to
         @param[in] other the set whose elements are added - the target itself is allowed and keeps it unchanged
         @return the number of elements added
@@ -55,6 +65,9 @@ class Set(Collection):
 
     with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove all elements found in other set",
       description="""
+        Removes every element of the target which the other set holds by walking the other
+        set's range and removing its elements. The other set is not modified.
+
         @param[in,out] target the set to remove the elements from
         @param[in] other the set whose elements are removed - the target itself is allowed and empties it in place
         @return the number of elements removed
@@ -79,6 +92,9 @@ class Set(Collection):
 
     with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Keep only elements also present in other set",
       description="""
+        Removes every element of the target which the other set does not hold. The other set
+        is traversed via a temporary copy of the target so the removals do not disturb the walk.
+
         @param[in,out] target the set to keep the elements in
         @param[in] other the set to intersect with - the target itself is allowed and keeps it unchanged
         @return the number of elements removed
@@ -102,6 +118,9 @@ class Set(Collection):
 
     with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove elements in both sets, add elements in only one",
       description="""
+        Removes the elements the two sets share and adds the elements only the other set
+        holds, making the target hold the elements present in exactly one of the sets.
+
         @param[in,out] target the set to change
         @param[in] other the set to change the target by - the target itself is allowed and empties it in place
         @return the number of elements added or removed
@@ -127,6 +146,9 @@ class Set(Collection):
 
     with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements are in other set",
       description="""
+        Walks the target's range and looks every element up in the other set, aborting on
+        the first missing one.
+
         @param[in] target the set to test
         @param[in] other the set to test against
         @return non-zero if every element of the target is also present in the other set
@@ -143,6 +165,9 @@ class Set(Collection):
 
     with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements of other are in this set",
       description="""
+        Walks the other set's range and looks every element up in the target, aborting on
+        the first missing one.
+
         @param[in] target the set to test against
         @param[in] other the set to test
         @return non-zero if every element of the other set is also present in the target

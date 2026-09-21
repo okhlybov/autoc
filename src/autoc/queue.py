@@ -87,6 +87,9 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back of queue",
       description="""
+        Adds the element at the back of the queue in O(1) so it is yielded last by the
+        subsequent `dequeue` operations.
+
         @param[in,out] target the queue to add to
         @param[in] element the element to add to the back
       """) as f:
@@ -97,6 +100,9 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front of queue",
       description="""
+        Removes and moves out the element which has been in the queue the longest in O(1).
+        The returned element is a moved copy so the caller owns it.
+
         @param[in,out] target the queue to remove from - must not be empty
         @return the removed front element
       """) as f:
@@ -107,6 +113,9 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
       description="""
+        Returns a copy of the element to be returned by the next `dequeue` without
+        modifying the queue.
+
         @param[in] target the queue to read - must not be empty
         @return the element at the front without removing it
       """) as f:
@@ -117,6 +126,8 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
       description="""
+        Returns a copy of the most recently enqueued element without modifying the queue.
+
         @param[in] target the queue to read - must not be empty
         @return the element at the back without removing it
       """) as f:
@@ -162,6 +173,10 @@ class Range(_Range, Forward):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole queue",
       description="""
+        Creates the range over the queue elements traversable from the front towards the
+        back. The range must not outlive the queue and the queue must not be modified
+        while the range is traversed.
+
         @param[in] iterable the queue to span
         @return the range covering the whole queue
       """) as f:

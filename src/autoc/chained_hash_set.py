@@ -76,6 +76,10 @@ class Set(_StructRenderer, Set):
 
     with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count",
       description="""
+        Creates the set preallocating the hash table for the estimated element count - the
+        table capacity is the given estimate divided by the load factor threshold and rounded
+        up to a power of two. No rehashing takes place until the set grows past the estimate.
+
         @param[out] target the set to construct
         @param[in] size the estimated element count used to preallocate the hash table
       """) as f:
@@ -181,6 +185,10 @@ class Set(_StructRenderer, Set):
 
     with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view",
       description="""
+        Hashes the element to its bucket and walks the chain comparing the elements -
+        expected O(1) with the load factor bounded by the threshold. The returned view points
+        into the found node and stays valid while the element is held by the set.
+
         @param[in] target the set to search
         @param[in] element the element to look for
         @return a constant view of the found element or NULL when absent
@@ -311,6 +319,11 @@ class Range(_Range, Forward):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set",
       description="""
+        Creates the range over the bucket chain array scanning the buckets until the first
+        occupied one. The traversal order is unspecified - it follows the hash table layout.
+        The range must not outlive the set and the set must not be modified while the range
+        is traversed.
+
         @param[in] iterable the set to span
         @return the range covering the whole set in unspecified order
       """) as f:

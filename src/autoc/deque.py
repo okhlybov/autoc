@@ -108,6 +108,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front",
       description="""
+        Inserts the element at the front in O(1) by allocating a new node and linking it
+        before the current front. Other elements are untouched so their addresses stay valid.
+
         @param[in,out] target the deque to add to
         @param[in] element the element to add to the front
       """) as f:
@@ -125,6 +128,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front",
       description="""
+        Moves the front element out and releases its node in O(1). The returned element
+        is a moved copy so the caller owns it.
+
         @param[in,out] target the deque to remove from - must not be empty
         @return the removed front element
       """) as f:
@@ -145,6 +151,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(None, ("push", "back"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
       description="""
+        Appends the element at the back in O(1) by allocating a new node and linking it
+        after the current back. Other elements are untouched so their addresses stay valid.
+
         @param[in,out] target the deque to add to
         @param[in] element the element to add to the back
       """) as f:
@@ -162,6 +171,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element, ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
       description="""
+        Moves the back element out and releases its node in O(1). The returned element
+        is a moved copy so the caller owns it.
+
         @param[in,out] target the deque to remove from - must not be empty
         @return the removed back element
       """) as f:
@@ -182,6 +194,8 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
       description="""
+        Returns a copy of the first element in O(1) without modifying the deque.
+
         @param[in] target the deque to read - must not be empty
         @return the element at the front
       """) as f:
@@ -196,6 +210,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get view of front element",
       description="""
+        Returns a pointer to the first element without copying it in O(1). The view is valid
+        while that element is held by the deque - removing it invalidates the view.
+
         @param[in] target the deque to read - must not be empty
         @return a constant view of the element at the front, valid while the element is held by the deque
       """) as f:
@@ -207,6 +224,8 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
       description="""
+        Returns a copy of the last element in O(1) without modifying the deque.
+
         @param[in] target the deque to read - must not be empty
         @return the element at the back
       """) as f:
@@ -221,6 +240,9 @@ class Deque(_StructRenderer, Sequence):
 
     with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get view of back element",
       description="""
+        Returns a pointer to the last element without copying it in O(1). The view is valid
+        while that element is held by the deque - removing it invalidates the view.
+
         @param[in] target the deque to read - must not be empty
         @return a constant view of the element at the back, valid while the element is held by the deque
       """) as f:
@@ -292,6 +314,10 @@ class Range(_Range, Bidirectional):
 
     with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole deque",
       description="""
+        Creates the range over the node chain traversable in both directions from front
+        to back and back. The range must not outlive the deque and the deque must not be
+        modified while the range is traversed.
+
         @param[in] iterable the deque to span
         @return the range covering the whole deque
       """) as f:

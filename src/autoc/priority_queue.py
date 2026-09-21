@@ -61,6 +61,9 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, brief="Create the queue with room for the given number of elements",
       description="""
+        Creates the queue with the buffer preallocated for the given number of elements -
+        no reallocation takes place until the queue grows past it.
+
         @param[out] target the queue to construct
         @param[in] capacity the number of elements to reserve room for
       """) as f:
@@ -161,6 +164,9 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Add element to priority queue",
       description="""
+        Adds the element to the heap restoring the heap invariant with the O(log n) sift-up.
+        The buffer is grown by doubling with element migration when the capacity is exhausted.
+
         @param[in,out] target the queue to add to
         @param[in] element the element to add
       """) as f:
@@ -174,6 +180,10 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element",
       description="""
+        Removes and moves out the greatest element per the element comparison in O(log n) -
+        the last element replaces the root which is sifted down to restore the heap invariant.
+        The returned element is a moved copy so the caller owns it.
+
         @param[in,out] target the queue to remove from - must not be empty
         @return the highest priority element
       """) as f:
@@ -193,6 +203,9 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get reference to highest priority element",
       description="""
+        Returns a copy of the greatest element per the element comparison without
+        modifying the heap.
+
         @param[in] target the queue to read - must not be empty
         @return the highest priority element without removing it
       """) as f:
@@ -207,6 +220,10 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Get view of highest priority element",
       description="""
+        Returns a pointer to the greatest element per the element comparison without copying
+        it. The view is valid until the next `push` or `pop` since the sift operations may
+        move the element within the buffer.
+
         @param[in] target the queue to read - must not be empty
         @return a constant view of the highest priority element
       """) as f:

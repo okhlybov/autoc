@@ -211,6 +211,11 @@ class Range(_Range, Forward):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map",
       description="""
+        Creates the range over the bucket chain array scanning the buckets until the first
+        occupied one. The traversal order is unspecified - it follows the hash table layout.
+        The range must not outlive the map and the map must not be modified while the range
+        is traversed.
+
         @param[in] iterable the map to span
         @return the range covering the whole map in unspecified order
       """) as f:
@@ -230,6 +235,9 @@ class Range(_Range, Forward):
 
     with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get view of front index",
       description="""
+        Returns a pointer to the index of the entry found first in the table layout.
+        The view is valid while that entry is held by the map.
+
         @param[in] target the non-empty map to inspect
         @return a constant view of the front index
       """) as f:
@@ -258,6 +266,8 @@ class Range(_Range, Forward):
 
     with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get front index",
       description="""
+        Returns a copy of the index of the entry found first in the table layout.
+
         @param[in] target the non-empty map to inspect
         @return a copy of the front index
       """) as f:

@@ -201,6 +201,10 @@ class Set(_StructRenderer, Set):
 
     with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view",
       description="""
+        Descends the treap from the root comparing the elements - expected O(log n) since
+        the tree shape is randomized by the treap priorities. The returned view points into
+        the found node and stays valid while the element is held by the set.
+
         @param[in] target the set to search
         @param[in] element the element to look for
         @return a constant view of the found element or NULL when absent
@@ -484,6 +488,10 @@ class Set(_StructRenderer, Set):
     # at the node level and the other set is left empty
     with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Add all elements from other set",
       description="""
+        Merges the two node trees at the node level in expected O(m log(n/m)). The other
+        set's nodes are taken over so it is left empty - both operands must be distinct
+        objects holding comparable elements.
+
         @param[in,out] target the set to update
         @param[in,out] other the set of elements to add - it is left empty on return
         @return the number of elements added
@@ -508,6 +516,10 @@ class Set(_StructRenderer, Set):
 
     with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove all elements found in other set",
       description="""
+        Removes the nodes whose elements the other tree holds at the node level in expected
+        O(m log(n/m)). The other set's nodes are taken over so it is left empty - both
+        operands must be distinct objects holding comparable elements.
+
         @param[in,out] target the set to update
         @param[in,out] other the set of elements to remove - it is left empty on return
         @return the number of elements removed
@@ -537,6 +549,10 @@ class Set(_StructRenderer, Set):
 
     with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keep only elements also present in other set",
       description="""
+        Keeps the nodes whose elements the other tree holds at the node level in expected
+        O(m log(n/m)). The other set's nodes are taken over so it is left empty - both
+        operands must be distinct objects holding comparable elements.
+
         @param[in,out] target the set to update
         @param[in,out] other the set of elements to keep - it is left empty on return
         @return the number of elements removed
@@ -561,6 +577,10 @@ class Set(_StructRenderer, Set):
 
     with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove elements in both sets, add elements in only one",
       description="""
+        Produces the tree holding the elements present in exactly one of the sets at the
+        node level in expected O(m log(n/m)). The other set's nodes are taken over so it
+        is left empty - both operands must be distinct objects holding comparable elements.
+
         @param[in,out] target the set to update
         @param[in,out] other the set to symmetric difference with - it is left empty on return
         @return the number of elements removed
@@ -644,6 +664,10 @@ class Range(_Range, Forward):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set",
       description="""
+        Creates the range over the treap descending to the leftmost node so the traversal
+        starts at the smallest element and proceeds in ascending order. The range must not
+        outlive the set and the set must not be modified while the range is traversed.
+
         @param[in] iterable the set to span
         @return the range covering the whole set in ascending order
       """) as f:

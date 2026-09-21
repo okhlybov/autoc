@@ -34,6 +34,9 @@ class String(_AliasRenderer, Indirection, Map):
     self.move = self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = (char*)_autoc_empty_string")
     self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two strings",
       description="""
+        Swaps the string buffers in O(1) by exchanging the pointers - no character copying.
+        Neither string is modified content-wise beyond taking over the other's buffer.
+
         @param[in,out] left the first string
         @param[in,out] right the second string
       """)
@@ -47,6 +50,10 @@ class String(_AliasRenderer, Indirection, Map):
 
     with self.method(Callable.Parameter(self), "new", {"source": self}, brief="Duplicate string",
       description="""
+        Duplicates the string into a freshly allocated NUL-terminated buffer using `strdup`
+        where available and an explicit `malloc`+`memcpy` fallback otherwise. A null string
+        duplicates into the shared empty string which needs no release.
+
         @param[in] source the string to duplicate - a null string duplicates into the empty one
         @return the newly allocated copy of the string
       """) as f:
@@ -76,6 +83,10 @@ class String(_AliasRenderer, Indirection, Map):
       
     with self.method(None, "free", {"target": inout(self)}, brief="Free string memory",
       description="""
+        Releases the buffer of a string created by `new` or assigned an owned copy.
+        The empty string sentinel is never freed; the target is left pointing at it
+        so the string stays usable.
+
         @param[in,out] target the string to release - reset to the empty string
       """) as f:
       f.inline_code = f"""
@@ -192,6 +203,9 @@ class Range(_Range, DirectAccess):
 
     with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole string",
       description="""
+        Creates the range over the characters up to but not including the terminator.
+        The range must not outlive the string buffer.
+
         @param[in] iterable the string to span
         @return the range covering the whole string
       """) as f:

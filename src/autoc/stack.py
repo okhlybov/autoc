@@ -85,6 +85,9 @@ class Stack(_StructRenderer, Collection):
 
     with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to top of stack",
       description="""
+        Pushes the element onto the top of the stack by delegating to the internal list.
+        The pushed element becomes the next one returned by `pop`.
+
         @param[in,out] target the stack to add to
         @param[in] element the element to push onto the top
       """) as f:
@@ -95,6 +98,9 @@ class Stack(_StructRenderer, Collection):
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from top of stack",
       description="""
+        Removes and moves out the top element in O(1) - the element last pushed onto
+        the stack. The returned element is a moved copy so the caller owns it.
+
         @param[in,out] target the stack to remove from - must not be empty
         @return the removed top element
       """) as f:
@@ -105,6 +111,8 @@ class Stack(_StructRenderer, Collection):
 
     with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to top element",
       description="""
+        Returns a copy of the element last pushed onto the stack without removing it.
+
         @param[in] target the stack to read - must not be empty
         @return the element at the top without removing it
       """) as f:
@@ -151,6 +159,10 @@ class Range(_Range, Forward):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole stack",
       description="""
+        Creates the range over the stack elements traversable from the top towards the
+        bottom. The range must not outlive the stack and the stack must not be modified
+        while the range is traversed.
+
         @param[in] iterable the stack to span
         @return the range covering the whole stack
       """) as f:

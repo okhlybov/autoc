@@ -116,6 +116,10 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
       description="""
+        Appends the element in amortized O(1): the element lands in the last chunk and a fresh
+        chunk of the fixed tier capacity is allocated when the current one fills up. Existing
+        element addresses stay valid since the chunks never move.
+
         @param[in,out] target the vector to add to
         @param[in] element the element to add to the back
       """) as f:
@@ -128,6 +132,9 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
       description="""
+        Moves the last element out in O(1). The chunk that became empty is not released -
+        it is reused by the subsequent push operations.
+
         @param[in,out] target the vector to remove from - must not be empty
         @return the removed back element
       """) as f:
@@ -154,6 +161,12 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Resize the vector to the given number of elements",
       description="""
+        Changes the number of elements: growing default-initializes the new elements in place
+        extending the chunk table - no element migration is ever needed since the chunks are
+        stable, so existing element addresses remain valid. Shrinking destroys the removed tail
+        and releases the chunks which became fully unused; the chunk table itself is not
+        reallocated down.
+
         @param[in,out] target the vector to resize
         @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
       """) as f:
@@ -210,6 +223,10 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create the vector with room for the given number of default-constructed elements",
       description="""
+        Creates the vector holding the given number of default-initialized elements laid out
+        over the fixed capacity chunks. Zero-initializable elements are initialized by the
+        zeroed chunk allocations alone; otherwise the elements are default constructed one by one.
+
         @param[out] target the vector to construct
         @param[in] size the number of default-initialized elements to provide room for
       """) as f:
@@ -348,6 +365,13 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order",
       description="""
+        Sorts the elements in ascending order with a quicksort variant: small ranges are
+        insertion sorted, the pivot is the median of three which protects against the sorted
+        inputs, and the recursion always descends into the smaller part to bound the depth.
+        The sort is not stable and needs the element to be Orderable, Copyable and Swappable.
+        The elements are addressed through their chunks so the sort stays independent of the
+        chunk boundaries.
+
         @param[in,out] target the vector to sort
       """) as f:
       f.code = lambda f=f: f"""
@@ -358,6 +382,9 @@ class TieredVector(_StructRenderer, Map, Sequence):
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
     with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements",
       description="""
+        Reverses the element order in place by exchanging the mirrored element pairs.
+        It needs nothing but the element swappability - no copies or destructions take place.
+
         @param[in,out] target the vector to reverse
       """) as f:
       f.code = lambda: f"""
@@ -368,6 +395,9 @@ class TieredVector(_StructRenderer, Map, Sequence):
 
     with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
       description="""
+        Walks the vector once returning non-zero when every element is not less than its
+        predecessor. An empty or single element vector is considered sorted.
+
         @param[in] target the vector to check
         @return non-zero if the elements are sorted in ascending order
       """) as f:
@@ -411,6 +441,9 @@ class Range(_Range, DirectAccess):
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole tiered vector",
       description="""
+        Creates the range over the chunked element storage. The range must not outlive
+        the vector and the vector must not be resized while the range is traversed.
+
         @param[in] iterable the tiered vector to span
         @return the range covering the whole vector
       """) as f:
