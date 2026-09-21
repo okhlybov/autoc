@@ -12,10 +12,30 @@ class Map(Collection):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "indexed", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable, brief="Check if the map holds the index")
-    self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: self.index.comparable and self.element.copyable, brief="Set the element at index")
-    self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable and self.element.copyable, brief="Get a copy of the element at index")
-    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable, brief="Get a constant view of the element at index")
+    self.method("int", "indexed", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable, brief="Check if the map holds the index",
+      description="""
+        @param[in] target the map to check
+        @param[in] index the index to look for
+        @return non-zero if the map holds an element at the index
+      """)
+    self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: self.index.comparable and self.element.copyable, brief="Set the element at index",
+      description="""
+        @param[in,out] target the map to update
+        @param[in] index the index to assign the element at
+        @param[in] element the element to store - the element previously held at the index is destroyed
+      """)
+    self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable and self.element.copyable, brief="Get a copy of the element at index",
+      description="""
+        @param[in] target the map to read from
+        @param[in] index the index to read the element at - must be present in the map
+        @return a copy of the element held at the index
+      """)
+    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable, brief="Get a constant view of the element at index",
+      description="""
+        @param[in] target the map to read from
+        @param[in] index the index to read the element at
+        @return a constant view of the element held at the index or a null view if the index is absent
+      """)
     
   @property
   def copyable(self):

@@ -59,7 +59,11 @@ class PriorityQueue(_StructRenderer, Collection):
         target->capacity = target->size = 0;
       """
 
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, brief="Create the queue with room for the given number of elements") as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, brief="Create the queue with room for the given number of elements",
+      description="""
+        @param[out] target the queue to construct
+        @param[in] capacity the number of elements to reserve room for
+      """) as f:
       f.code = f"""
         assert(target);
         if({f.capacity} > 0) {{
@@ -155,7 +159,11 @@ class PriorityQueue(_StructRenderer, Collection):
         }}
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Add element to priority queue") as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Add element to priority queue",
+      description="""
+        @param[in,out] target the queue to add to
+        @param[in] element the element to add
+      """) as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size == target->capacity) {self._grow(f.target)};
@@ -164,7 +172,11 @@ class PriorityQueue(_StructRenderer, Collection):
         {self.sift_up(f.target, "target->size - 1")};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element") as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element",
+      description="""
+        @param[in,out] target the queue to remove from - must not be empty
+        @return the highest priority element
+      """) as f:
       result = f.result.variable("result")
       f.code = lambda f=f: f"""
         {result.definition};
@@ -179,7 +191,11 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get reference to highest priority element") as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get reference to highest priority element",
+      description="""
+        @param[in] target the queue to read - must not be empty
+        @return the highest priority element without removing it
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -189,7 +205,11 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Get view of highest priority element") as f:
+    with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Get view of highest priority element",
+      description="""
+        @param[in] target the queue to read - must not be empty
+        @return a constant view of the highest priority element
+      """) as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});

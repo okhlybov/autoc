@@ -82,7 +82,11 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count") as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count",
+      description="""
+        @param[out] target the set to construct
+        @param[in] size the estimated element count used to preallocate the element table
+      """) as f:
       f.code = f"""
         assert(target);
         {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
@@ -241,7 +245,12 @@ class Set(_StructRenderer, Set):
         }} else return 0;
       """
     
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find the element and return a constant view of it") as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find the element and return a constant view of it",
+      description="""
+        @param[in] target the set to search
+        @param[in] element the element to look for
+        @return a constant view of the found element or NULL when absent
+      """) as f:
       f.code = f"""
         size_t index;
         assert(target);
@@ -344,7 +353,11 @@ class Range(_Range, Forward):
         while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
       """
     
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole set") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole set",
+      description="""
+        @param[in] iterable the set to span
+        @return the range covering the whole set in unspecified order
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

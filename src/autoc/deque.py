@@ -106,7 +106,11 @@ class Deque(_StructRenderer, Sequence):
         {self.create(f.source)};
       """
 
-    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front") as f:
+    with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front",
+      description="""
+        @param[in,out] target the deque to add to
+        @param[in] element the element to add to the front
+      """) as f:
       f.code = f"""
         {self.node}* node;
         assert(target);
@@ -119,7 +123,11 @@ class Deque(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front") as f:
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front",
+      description="""
+        @param[in,out] target the deque to remove from - must not be empty
+        @return the removed front element
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -135,7 +143,11 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(None, ("push", "back"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back") as f:
+    with self.method(None, ("push", "back"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
+      description="""
+        @param[in,out] target the deque to add to
+        @param[in] element the element to add to the back
+      """) as f:
       f.code = f"""
         {self.node}* node;
         assert(target);
@@ -148,7 +160,11 @@ class Deque(_StructRenderer, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back") as f:
+    with self.method(self.element, ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
+      description="""
+        @param[in,out] target the deque to remove from - must not be empty
+        @return the removed back element
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {self.node}* node;
@@ -164,7 +180,11 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element") as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
+      description="""
+        @param[in] target the deque to read - must not be empty
+        @return the element at the front
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
@@ -174,14 +194,22 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get view of front element") as f:
+    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get view of front element",
+      description="""
+        @param[in] target the deque to read - must not be empty
+        @return a constant view of the element at the front, valid while the element is held by the deque
+      """) as f:
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {front_element.bind(f.result)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element") as f:
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
+      description="""
+        @param[in] target the deque to read - must not be empty
+        @return the element at the back
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
@@ -191,7 +219,11 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get view of back element") as f:
+    with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get view of back element",
+      description="""
+        @param[in] target the deque to read - must not be empty
+        @return a constant view of the element at the back, valid while the element is held by the deque
+      """) as f:
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -258,7 +290,11 @@ class Range(_Range, Bidirectional):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole deque") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole deque",
+      description="""
+        @param[in] iterable the deque to span
+        @return the range covering the whole deque
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

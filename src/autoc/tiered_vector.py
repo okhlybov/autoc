@@ -114,7 +114,11 @@ class TieredVector(_StructRenderer, Map, Sequence):
           }}
         """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back") as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
+      description="""
+        @param[in,out] target the vector to add to
+        @param[in] element the element to add to the back
+      """) as f:
       f.code = f"""
         assert(target);
         {self.extend(f.target)};
@@ -122,7 +126,11 @@ class TieredVector(_StructRenderer, Map, Sequence):
         ++target->size;
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back") as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
+      description="""
+        @param[in,out] target the vector to remove from - must not be empty
+        @return the removed back element
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -144,7 +152,11 @@ class TieredVector(_StructRenderer, Map, Sequence):
     else:
       resize_create_i = f"memset(&({resize_slot('target->size')}), 0, sizeof({self.element}));"
 
-    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Resize the vector to the given number of elements") as f:
+    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Resize the vector to the given number of elements",
+      description="""
+        @param[in,out] target the vector to resize
+        @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
+      """) as f:
       f.code = f"""
         size_t index;
         size_t needed;
@@ -196,7 +208,11 @@ class TieredVector(_StructRenderer, Map, Sequence):
         {self.element.copy(self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]"), f.element)};
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create the vector with room for the given number of default-constructed elements") as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create the vector with room for the given number of default-constructed elements",
+      description="""
+        @param[out] target the vector to construct
+        @param[in] size the number of default-initialized elements to provide room for
+      """) as f:
       if self.element.zero_initializable:
         # The chunked zeroed allocation is the default initialization - no per element operations
         f.code = f"""
@@ -330,21 +346,31 @@ class TieredVector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order") as f:
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order",
+      description="""
+        @param[in,out] target the vector to sort
+      """) as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements") as f:
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements",
+      description="""
+        @param[in,out] target the vector to reverse
+      """) as f:
       f.code = lambda: f"""
         size_t i;
         assert(target);
         for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable(slot("i")), self.element.variable(slot("target->size-1-i")))}; 
       """
 
-    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order") as f:
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
+      description="""
+        @param[in] target the vector to check
+        @return non-zero if the elements are sorted in ascending order
+      """) as f:
       f.code = lambda: f"""
         size_t index;
         assert(target);
@@ -383,7 +409,11 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole tiered vector") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole tiered vector",
+      description="""
+        @param[in] iterable the tiered vector to span
+        @return the range covering the whole vector
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

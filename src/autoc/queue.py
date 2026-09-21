@@ -85,25 +85,41 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.contains(_target, f.element)};
       """
 
-    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back of queue") as f:
+    with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back of queue",
+      description="""
+        @param[in,out] target the queue to add to
+        @param[in] element the element to add to the back
+      """) as f:
       f.code = f"""
         assert(target);
         {self._deque.push_back(_target, f.element)};
       """
 
-    with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front of queue") as f:
+    with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front of queue",
+      description="""
+        @param[in,out] target the queue to remove from - must not be empty
+        @return the removed front element
+      """) as f:
       f.code = f"""
         assert(target);
         return {self._deque.pop_front(_target)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element") as f:
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
+      description="""
+        @param[in] target the queue to read - must not be empty
+        @return the element at the front without removing it
+      """) as f:
       f.code = f"""
         assert(target);
         return {self._deque.front(_target)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element") as f:
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
+      description="""
+        @param[in] target the queue to read - must not be empty
+        @return the element at the back without removing it
+      """) as f:
       f.code = f"""
         assert(target);
         return {self._deque.back(_target)};
@@ -144,7 +160,11 @@ class Range(_Range, Forward):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole queue") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole queue",
+      description="""
+        @param[in] iterable the queue to span
+        @return the range covering the whole queue
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

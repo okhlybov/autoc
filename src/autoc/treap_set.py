@@ -199,7 +199,12 @@ class Set(_StructRenderer, Set):
         return 1;
       """
 
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view") as f:
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view",
+      description="""
+        @param[in] target the set to search
+        @param[in] element the element to look for
+        @return a constant view of the found element or NULL when absent
+      """) as f:
       f.code = f"""
         {self.node}* n;
         int order;
@@ -477,7 +482,12 @@ class Set(_StructRenderer, Set):
 
     # The consuming implementations of the algebraic operations: both operands are merged
     # at the node level and the other set is left empty
-    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Add all elements from other set") as f:
+    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Add all elements from other set",
+      description="""
+        @param[in,out] target the set to update
+        @param[in,out] other the set of elements to add - it is left empty on return
+        @return the number of elements added
+      """) as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -496,7 +506,12 @@ class Set(_StructRenderer, Set):
         return target->size - previous;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove all elements found in other set") as f:
+    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove all elements found in other set",
+      description="""
+        @param[in,out] target the set to update
+        @param[in,out] other the set of elements to remove - it is left empty on return
+        @return the number of elements removed
+      """) as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -520,7 +535,12 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keep only elements also present in other set") as f:
+    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keep only elements also present in other set",
+      description="""
+        @param[in,out] target the set to update
+        @param[in,out] other the set of elements to keep - it is left empty on return
+        @return the number of elements removed
+      """) as f:
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
@@ -539,7 +559,12 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove elements in both sets, add elements in only one") as f:
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove elements in both sets, add elements in only one",
+      description="""
+        @param[in,out] target the set to update
+        @param[in,out] other the set to symmetric difference with - it is left empty on return
+        @return the number of elements removed
+      """) as f:
       f.code = f"""
         size_t previous, other_size;
         assert(target);
@@ -617,7 +642,11 @@ class Range(_Range, Forward):
 
     node_element = self.element.variable("target->node->element")
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set",
+      description="""
+        @param[in] iterable the set to span
+        @return the range covering the whole set in ascending order
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

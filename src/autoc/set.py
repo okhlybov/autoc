@@ -11,8 +11,18 @@ class Set(Collection):
   def __setup__(self):
     super().__setup__()
     
-    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present")
-    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present")
+    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present",
+      description="""
+        @param[in,out] target the set to insert into
+        @param[in] element the element to insert - ignored when the set already holds an equal element
+        @return non-zero if the element was inserted and zero if an equal element was already present
+      """)
+    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present",
+      description="""
+        @param[in,out] target the set to remove from
+        @param[in] element the element to remove
+        @return non-zero if the element was removed and zero if the set held no equal element
+      """)
 
     # The algebraic operations are composed entirely out of the protocol primitives so every
     # set implementation inherits them. They mutate the target in place and return the number
@@ -24,7 +34,12 @@ class Set(Collection):
     temp = self.variable("temp")
     algebra_constraint = lambda: self.element.copyable and self.element.comparable
 
-    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Add all elements from other set") as f:
+    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Add all elements from other set",
+      description="""
+        @param[in,out] target the set to add the elements to
+        @param[in] other the set whose elements are added - the target itself is allowed and keeps it unchanged
+        @return the number of elements added
+      """) as f:
       f.code = lambda f=f: f"""
         size_t added;
         {r.definition};
@@ -38,7 +53,12 @@ class Set(Collection):
         return added;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove all elements found in other set") as f:
+    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove all elements found in other set",
+      description="""
+        @param[in,out] target the set to remove the elements from
+        @param[in] other the set whose elements are removed - the target itself is allowed and empties it in place
+        @return the number of elements removed
+      """) as f:
       f.code = lambda f=f: f"""
         size_t removed;
         {r.definition};
@@ -57,7 +77,12 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Keep only elements also present in other set") as f:
+    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Keep only elements also present in other set",
+      description="""
+        @param[in,out] target the set to keep the elements in
+        @param[in] other the set to intersect with - the target itself is allowed and keeps it unchanged
+        @return the number of elements removed
+      """) as f:
       f.code = lambda f=f: f"""
         size_t removed;
         {r.definition};
@@ -75,7 +100,12 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove elements in both sets, add elements in only one") as f:
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove elements in both sets, add elements in only one",
+      description="""
+        @param[in,out] target the set to change
+        @param[in] other the set to change the target by - the target itself is allowed and empties it in place
+        @return the number of elements added or removed
+      """) as f:
       f.code = lambda f=f: f"""
         size_t changed;
         {r.definition};
@@ -95,7 +125,12 @@ class Set(Collection):
         return changed;
       """
 
-    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements are in other set") as f:
+    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements are in other set",
+      description="""
+        @param[in] target the set to test
+        @param[in] other the set to test against
+        @return non-zero if every element of the target is also present in the other set
+      """) as f:
       f.code = lambda f=f: f"""
         {r.definition};
         assert(target);
@@ -106,7 +141,12 @@ class Set(Collection):
         return 1;
       """
 
-    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements of other are in this set") as f:
+    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements of other are in this set",
+      description="""
+        @param[in] target the set to test against
+        @param[in] other the set to test
+        @return non-zero if every element of the other set is also present in the target
+      """) as f:
       f.code = lambda f=f: f"""
         {r.definition};
         assert(target);

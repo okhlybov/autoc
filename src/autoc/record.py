@@ -100,7 +100,11 @@ class Record(_StructRenderer, Composite):
         self._add_writer(type, field)
 
   def _add_reader(self, type, field):
-    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {field} field") as f:
+    with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {field} field",
+      description=f"""
+        @param[in] target the record to read
+        @return a copy of the {field} field
+      """) as f:
       result = f.result.variable("result")
       target = f"({f.target.bind(self)})"
       f.inline_code = f"""
@@ -110,7 +114,11 @@ class Record(_StructRenderer, Composite):
       """
 
   def _add_writer(self, type, field):
-    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {field} field") as f:
+    with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {field} field",
+      description=f"""
+        @param[out] target the record to update
+        @param[in] value the value to store into the {field} field - the previous field value is destroyed
+      """) as f:
       target = f"({f.target.bind(self)})"
       destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
       f.inline_code = f"""

@@ -59,7 +59,11 @@ class Vector(_StructRenderer, Map, Sequence):
       """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
-    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with the given number of default-initialized elements") as f:
+    with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with the given number of default-initialized elements",
+      description="""
+        @param[out] target the vector to construct
+        @param[in] size the number of default-initialized elements to create
+      """) as f:
       if self.element.zero_initializable:
         f.code = f"""
           assert(target);
@@ -119,7 +123,11 @@ class Vector(_StructRenderer, Map, Sequence):
     # new tail elements while shrinking destroys the removed tail. Growing reallocates
     # the exact size buffer and migrates the old elements by copy; shrinking only
     # destroys the tail since the buffer is a single allocation freed as a whole
-    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.copyable and (self.element.default_constructible or self.element.zero_initializable), brief="Resize the vector to the given number of elements") as f:
+    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.copyable and (self.element.default_constructible or self.element.zero_initializable), brief="Resize the vector to the given number of elements",
+      description="""
+        @param[in,out] target the vector to resize
+        @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
+      """) as f:
       if self.element.zero_initializable:
         f.code = f"""
           {self.index} index;
@@ -282,21 +290,31 @@ class Vector(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order") as f:
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order",
+      description="""
+        @param[in,out] target the vector to sort
+      """) as f:
       f.code = lambda f=f: f"""
         assert(target);
         if(target->size > 1) {self.sort_range(f.target, 0, "target->size-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements") as f:
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements",
+      description="""
+        @param[in,out] target the vector to reverse
+      """) as f:
       f.code = lambda: f"""
         size_t i;
         assert(target);
         for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
       """
 
-    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order") as f:
+    with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
+      description="""
+        @param[in] target the vector to check
+        @return non-zero if the elements are sorted in ascending order
+      """) as f:
       f.code = lambda: f"""
         size_t index;
         assert(target);
@@ -307,7 +325,12 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     # The binary search operations require the vector sorted in the ascending order
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the first position the element can be inserted at keeping the order") as f:
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the first position the element can be inserted at keeping the order",
+      description="""
+        @param[in] target the sorted vector to search
+        @param[in] element the element to insert
+        @return the position of the first element not less than the given one
+      """) as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -321,7 +344,12 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the last position the element can be inserted at keeping the order") as f:
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the last position the element can be inserted at keeping the order",
+      description="""
+        @param[in] target the sorted vector to search
+        @param[in] element the element to compare with
+        @return the position of the first element greater than the given one
+      """) as f:
       f.code = lambda f=f: f"""
         size_t low, high, mid;
         assert(target);
@@ -335,7 +363,12 @@ class Vector(_StructRenderer, Map, Sequence):
         return low;
       """
 
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Check if the element is present in the sorted vector") as f:
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Check if the element is present in the sorted vector",
+      description="""
+        @param[in] target the sorted vector to search
+        @param[in] element the element to look for
+        @return non-zero if the element is present in the vector
+      """) as f:
       f.code = lambda f=f: f"""
         size_t low;
         assert(target);
@@ -371,7 +404,11 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole vector") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole vector",
+      description="""
+        @param[in] iterable the vector to span
+        @return the range covering the whole vector
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

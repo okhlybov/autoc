@@ -32,7 +32,11 @@ class String(_AliasRenderer, Indirection, Map):
     self.destroy = self.macro_from("destroy", lambda target: str(self.free(target)))
     self.copy = self.macro_from("copy", lambda target, source: f"{target} = {self.new(source)}")
     self.move = self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = (char*)_autoc_empty_string")
-    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two strings")
+    self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two strings",
+      description="""
+        @param[in,out] left the first string
+        @param[in,out] right the second string
+      """)
     with self.swap as f:
       f.inline_code = """
         char* temp;
@@ -41,7 +45,11 @@ class String(_AliasRenderer, Indirection, Map):
         *right = temp;
       """
 
-    with self.method(Callable.Parameter(self), "new", {"source": self}, brief="Duplicate string") as f:
+    with self.method(Callable.Parameter(self), "new", {"source": self}, brief="Duplicate string",
+      description="""
+        @param[in] source the string to duplicate - a null string duplicates into the empty one
+        @return the newly allocated copy of the string
+      """) as f:
       f.inline_code = """
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
@@ -66,7 +74,10 @@ class String(_AliasRenderer, Indirection, Map):
         } else return (char*)_autoc_empty_string;
       """
       
-    with self.method(None, "free", {"target": inout(self)}, brief="Free string memory") as f:
+    with self.method(None, "free", {"target": inout(self)}, brief="Free string memory",
+      description="""
+        @param[in,out] target the string to release - reset to the empty string
+      """) as f:
       f.inline_code = f"""
         assert(target);
         if(target != _autoc_empty_string) free(target);
@@ -179,7 +190,11 @@ class Range(_Range, DirectAccess):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole string") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole string",
+      description="""
+        @param[in] iterable the string to span
+        @return the range covering the whole string
+      """) as f:
       f.inline_code = lambda: f"""
         {self} result;
         assert(iterable);

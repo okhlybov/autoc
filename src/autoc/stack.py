@@ -83,19 +83,31 @@ class Stack(_StructRenderer, Collection):
         return {self._list.hash(_target)};
       """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to top of stack") as f:
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to top of stack",
+      description="""
+        @param[in,out] target the stack to add to
+        @param[in] element the element to push onto the top
+      """) as f:
       f.code = f"""
         assert(target);
         {self._list.push_front(_target, f.element)};
       """
 
-    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from top of stack") as f:
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from top of stack",
+      description="""
+        @param[in,out] target the stack to remove from - must not be empty
+        @return the removed top element
+      """) as f:
       f.code = f"""
         assert(target);
         return {self._list.pop_front(_target)};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to top element") as f:
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to top element",
+      description="""
+        @param[in] target the stack to read - must not be empty
+        @return the element at the top without removing it
+      """) as f:
       f.code = f"""
         assert(target);
         return {self._list.front(_target)};
@@ -137,7 +149,11 @@ class Range(_Range, Forward):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole stack") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole stack",
+      description="""
+        @param[in] iterable the stack to span
+        @return the range covering the whole stack
+      """) as f:
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};

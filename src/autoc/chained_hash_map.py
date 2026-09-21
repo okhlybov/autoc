@@ -209,7 +209,11 @@ class Range(_Range, Forward):
 
     _target_range = self._range.variable("target->range")
 
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map") as f:
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map",
+      description="""
+        @param[in] iterable the map to span
+        @return the range covering the whole map in unspecified order
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};
@@ -224,7 +228,11 @@ class Range(_Range, Forward):
         return {self._range.empty(_target_range)};
       """
 
-    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get view of front index") as f:
+    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get view of front index",
+      description="""
+        @param[in] target the non-empty map to inspect
+        @return a constant view of the front index
+      """) as f:
       f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
@@ -248,7 +256,11 @@ class Range(_Range, Forward):
         return {self._entry.element_view(self._range.front_view(_target_range)).bind(self.element.view_type)};
       """
 
-    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get front index") as f:
+    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get front index",
+      description="""
+        @param[in] target the non-empty map to inspect
+        @return a copy of the front index
+      """) as f:
       result = f.result.variable("result")
       f.code = f"""
         {result.definition};

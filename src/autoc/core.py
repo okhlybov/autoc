@@ -211,14 +211,49 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
 
   def __setup__(self):
     # Basic methods
-    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters")
-    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value")
-    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value")
-    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location")
-    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values")
-    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality")
-    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values")
-    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value")
+    # The descriptions are type-agnostic because every type inherits them through
+    # method_from()/macro_from() - the concrete declarations keep the parameter names
+    # of these prototypes so the rendered @param entries always match the signatures
+    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters",
+      description="""
+        @param[out] target the value to construct - the constructed value replaces whatever the target held before
+      """)
+    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value",
+      description="""
+        @param[in] target the value to destroy - the released resources leave the value invalid
+      """)
+    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value",
+      description="""
+        @param[out] target the value to construct as the copy
+        @param[in] source the value to copy
+      """)
+    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location",
+      description="""
+        @param[out] target the value to construct as the destination
+        @param[in,out] source the value to move from - left in a valid empty state
+      """)
+    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values",
+      description="""
+        @param[in,out] left the first value
+        @param[in,out] right the second value
+      """)
+    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality",
+      description="""
+        @param[in] left the first value
+        @param[in] right the second value
+        @return non-zero if the values are equal and zero otherwise
+      """)
+    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values",
+      description="""
+        @param[in] left the first value
+        @param[in] right the second value
+        @return a negative value, zero or a positive value as the first value is less than, equal to or greater than the second one
+      """)
+    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value",
+      description="""
+        @param[in] target the value to hash
+        @return the hash of the value - equal values always hash alike
+      """)
     # Methods used by the hash-based containers
     self.hash_lookup_hash = lambda *args: self.hash(*args)
     self.hash_lookup_equal = lambda *args: self.equal(*args)
@@ -664,7 +699,7 @@ class Callable(_Documented):
 
   # Create function type borrowing the signature
   def functional(self, name):
-    return Functional.of(name, self, brief=self.brief)
+    return Functional.of(name, self, brief=self.brief, description=self.description)
   
   class Parameter:
     def __init__(self, type):
@@ -767,7 +802,7 @@ class Macro(_Parametrized):
   
   @classmethod
   def of(self, callable, emitter, constraint=None, **kws):
-    return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, **kws)
+    return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, brief=callable.brief, description=callable.description, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
     super().__init__(result, parameters, **kws)
