@@ -14,6 +14,7 @@ string_h = SystemHeader("string.h")
 stdbool_h = SystemHeader("stdbool.h")
 complex_h = SystemHeader("complex.h")
 inttypes_h = SystemHeader("inttypes.h")
+stdarg_h = SystemHeader("stdarg.h")
 
 
 stdlib_h = Code(interface="""
@@ -55,6 +56,7 @@ unsigned_long_long = unsigned_long_long_int = _primitive("unsigned long long", m
 size_t = _primitive("size_t", dependencies=(stddef_h,))
 ptrdiff_t = _primitive("ptrdiff_t", dependencies=(stddef_h,))
 uintptr_t = _primitive("uintptr_t", dependencies=(stddef_h,))
+va_list = _primitive("va_list", dependencies=(stdarg_h,))
 
 float = _primitive("float")
 double = _primitive("double")

@@ -368,11 +368,13 @@ class _Named(Type):
   #
   def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
+    kws.setdefault("variadic", getattr(m, "variadic", False))
     return self.macro(attribute, m._result, m._parameters, *args, brief=m.brief, description=m.description, **kws)
     
   #
   def method_from(self, identifier, *args, attribute=None, **kws):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
+    kws.setdefault("variadic", getattr(m, "variadic", False))
     return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, brief=m.brief, description=m.description, type=self, **kws)
   
   #
@@ -705,12 +707,13 @@ def inout(obj):
 # Basic callable descriptor
 class Callable(_Documented):
   
-  def __init__(self, result, parameters, *args, constraint=lambda: True, **kws):
+  def __init__(self, result, parameters, *args, constraint=lambda: True, variadic=False, **kws):
     super().__init__(*args, **kws)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
     self._parameters = parameters
     self.constraint = constraint
+    self.variadic = bool(variadic)
     
   @property
   def active(self):
@@ -722,7 +725,10 @@ class Callable(_Documented):
 
   @property
   def signature(self):
-    return "%s(%s)" % (self._result_c, ", ".join(str(t) for t in self.parameters.values()))
+    params = [str(t) for t in self.parameters.values()]
+    if self.variadic:
+      params.append("...")
+    return "%s(%s)" % (self._result_c, ", ".join(params))
 
   def contents(self, contents):
     if self.result is None:
@@ -732,7 +738,7 @@ class Callable(_Documented):
 
   # Create function type borrowing the signature
   def functional(self, name):
-    return Functional.of(name, self, brief=self.brief, description=self.description)
+    return Functional.of(name, self, brief=self.brief, description=self.description, variadic=self.variadic)
   
   class Parameter:
     def __init__(self, type):
@@ -772,9 +778,17 @@ class _Parametrized(Callable, Entity):
   def __call__(self, *arguments):
     if not self.active:
       raise ValueError(f"attempt to call disabled function {self}")
-    if (na := len(arguments)) != (np := len(self.parameters)):
-      raise TypeError(f"{self} takes {np} parameter(s) but {na} given")
-    return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
+    if self.variadic:
+      np = len(self.parameters)
+      if (na := len(arguments)) < np:
+        raise TypeError(f"{self} takes at least {np} parameter(s) but {na} given")
+      fixed = [_value(argument).bind(type) for argument, type in zip(arguments[:np], self.parameters.values())]
+      var = [str(argument) for argument in arguments[np:]]
+      return [*fixed, *var]
+    else:
+      if (na := len(arguments)) != (np := len(self.parameters)):
+        raise TypeError(f"{self} takes {np} parameter(s) but {na} given")
+      return [_value(argument).bind(type) for argument, type in zip(arguments, self.parameters.values())]
 
 
 class _Functional:
@@ -800,6 +814,7 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
 
   @classmethod
   def of(self, name, callable, *args, **kws):
+    kws.setdefault("variadic", getattr(callable, "variadic", False))
     return self(callable._result, name, callable._parameters, *args, **kws)
 
   def __init__(self, result, name, parameters, *args, **kws):
@@ -815,7 +830,11 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
       super().render_declarations(stream, header)
       if (header and not self.internal) or (not header and self.internal):
         self._render_documentation(stream, header)
-        stream.append(f"typedef {self._result_c} (*{self.name})({", ".join(str(t) for t in self.parameters.values())});\n")
+        params = [str(t) for t in self.parameters.values()]
+        if self.variadic:
+          params.append("...")
+        params_str = ", ".join(params)
+        stream.append(f"typedef {self._result_c} (*{self.name})({params_str});\n")
 
   @property
   def orderable(self):
@@ -835,6 +854,7 @@ class Macro(_Parametrized):
   
   @classmethod
   def of(self, callable, emitter, constraint=None, **kws):
+    kws.setdefault("variadic", getattr(callable, "variadic", False))
     return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, brief=callable.brief, description=callable.description, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
@@ -872,6 +892,7 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   
   @classmethod
   def of(self, callable, name, constraint=None, **kws):
+    kws.setdefault("variadic", getattr(callable, "variadic", False))
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
   def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), type=None, **kws):
@@ -896,9 +917,12 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
 
   def _declaration_c(self, render_names):
     if render_names:
-      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(f"{t} {n}" for n, t in self.parameters.items()))
+      params = [f"{t} {n}" for n, t in self.parameters.items()]
     else:
-      return "%s %s(%s)" % (self._result_c, self.name, ", ".join(str(t) for t in self.parameters.values()))
+      params = [str(t) for t in self.parameters.values()]
+    if self.variadic:
+      params.append("...")
+    return "%s %s(%s)" % (self._result_c, self.name, ", ".join(params))
 
   @property
   def _body_c(self):
