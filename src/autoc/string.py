@@ -58,7 +58,7 @@ class String(_AliasRenderer, Indirection, Map):
         @param[in] source the string to duplicate - a null string duplicates into the empty one
         @return the newly allocated copy of the string
       """) as f:
-      f.inline_code = """
+      f.code = """
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
             return strdup(source);

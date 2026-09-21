@@ -89,7 +89,7 @@ class Record(_StructRenderer, Composite):
           code.append(";")
         code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
         return str().join([str(x) for x in code])
-      f.inline_code = _hash
+      f.code = _hash
 
     if self.getters:
       for field, type in self.fields.items():

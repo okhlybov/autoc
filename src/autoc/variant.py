@@ -33,7 +33,7 @@ class Variant(_StructRenderer, Composite):
 
     with self.destroy as f:
       target = f"({f.target.bind(self)})"
-      f.inline_code = self._destroy_active(target)
+      f.code = self._destroy_active(target)
 
     with self.equal as f:
       def _equal(f=f):
@@ -46,7 +46,7 @@ class Variant(_StructRenderer, Composite):
         code.append("default: return 1; /* both empty */")
         code.append("}")
         return str().join([str(x) for x in code])
-      f.inline_code = _equal
+      f.code = _equal
 
     with self.copy as f:
       def _copy(f=f):
@@ -57,7 +57,7 @@ class Variant(_StructRenderer, Composite):
           code.append(f"case {index}: {{{type.copy(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
         code.append("}")
         return str().join([str(x) for x in code])
-      f.inline_code = _copy
+      f.code = _copy
 
     with self.move as f:
       def _move(f=f):
@@ -70,7 +70,7 @@ class Variant(_StructRenderer, Composite):
         code.append("}")
         code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
         return str().join([str(x) for x in code])
-      f.inline_code = _move
+      f.code = _move
 
     with self.hash as f:
       def _hash(f=f):
@@ -85,7 +85,7 @@ class Variant(_StructRenderer, Composite):
         code.append("}")
         code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
         return str().join([str(x) for x in code])
-      f.inline_code = _hash
+      f.code = _hash
 
     with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility, brief="Check if the variant holds no value",
       description="""

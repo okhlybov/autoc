@@ -130,38 +130,36 @@ class StaticVector(_StructRenderer, Map, Sequence):
         {self._variant.create(_target)};
       """
 
-    with self.destroy as f:
-      if self.destructible:
-        f.inline_code = f"""
+    if self.destructible:
+      with self.destroy as f:
+        f.code = f"""
           assert(target);
           {self._variant.destroy(_target)};
         """
-      else:
-        f.inline_code = str()
 
     with self.copy as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         assert(source);
         {self._variant.copy(_target, _source)};
       """
 
     with self.move as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         assert(source);
         {self._variant.move(_target, _source)};
       """
 
     with self.equal as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(left);
         assert(right);
         return {self._variant.equal(_left, _right)};
       """
 
     with self.hash as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         return {self._variant.hash(_target)};
       """
@@ -267,7 +265,7 @@ class StaticVector(_StructRenderer, Map, Sequence):
         @param[in,out] target the static vector to clear
       """) as f:
       destroy_stmt = f"{self._variant.destroy(_target)};" if self.destructible else ""
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         {destroy_stmt}
         target->variant.tag = -1;
@@ -286,7 +284,7 @@ class StaticVector(_StructRenderer, Map, Sequence):
         tuple_k = self.tuples[k - 1]
         tuple_var = tuple_k.variable(f"target->variant.value.s{k}")
         cases.append(f"case {k-1}: {{{tuple_k.create(tuple_var)};}} break;")
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         assert({f.size} <= {self._capacity});
         if({f.size} == 0) {{
