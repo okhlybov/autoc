@@ -497,9 +497,6 @@ class Set(_StructRenderer, Set):
         @return the number of elements added
       """) as f:
       other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
       f.code = f"""
         size_t previous;
         assert(target);
@@ -524,9 +521,6 @@ class Set(_StructRenderer, Set):
         @param[in,out] other the set of elements to remove - it is left empty on return
         @return the number of elements removed
       """) as f:
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
       other_root = f"{f.other}->root"
       f.code = f"""
         size_t previous;
@@ -558,9 +552,6 @@ class Set(_StructRenderer, Set):
         @return the number of elements removed
       """) as f:
       other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
-      other_root = f"{f.other}->root"
       f.code = f"""
         size_t previous;
         assert(target);
@@ -583,8 +574,9 @@ class Set(_StructRenderer, Set):
 
         @param[in,out] target the set to update
         @param[in,out] other the set to symmetric difference with - it is left empty on return
-        @return the number of elements removed
+        @return the number of elements added or removed
       """) as f:
+      other_root = f"{f.other}->root"
       f.code = f"""
         size_t previous, other_size;
         assert(target);
