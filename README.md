@@ -232,7 +232,7 @@ consumed 23
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
 | `autoc.queue` | `Queue` | FIFO adapter over `Deque` |
 | `autoc.stack` | `Stack` | LIFO adapter over `List`, forward range |
-| `autoc.string` | `String` | string as an index→character map, direct-access range |
+| `autoc.string` | `String` | string as an index→character map, direct-access range, variadic formatted output |
 | `autoc.set` | `Set` | abstract hash-set interface (shared base) |
 | `autoc.map` | `Map` | abstract hash-map interface (shared base) |
 | `autoc.hash_map` | `_Entry` | shared key→value entry record for map implementations |

@@ -13,7 +13,7 @@ class String(_AliasRenderer, Indirection, Map):
   brief = "Value type wrapper of the C char* string"
   
   def __init__(self, name, *args, **kws):
-    super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.string_h, _static_code))
+    super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.string_h, std.stdarg_h, std.stdlib_h, _static_code, _va_copy_code))
     self.range = Range(self)
 
   def __setup__(self):
@@ -164,6 +164,64 @@ class String(_AliasRenderer, Indirection, Map):
         return hash;
       """
 
+    with self.method("int", "vformat", {"target": inout(Indirection(self)), "format": Indirection("char", constant=True), "args": std.va_list}, brief="Format output into string from va_list",
+      description="""
+        Formats the output according to the format string and variable arguments list,
+        replacing the previous contents of target. The target string buffer is allocated
+        dynamically to fit the formatted output. Any previous buffer held by target is freed.
+
+        @param[in,out] target the string to format into
+        @param[in] format the format string
+        @param[in] args the variable arguments list
+        @return number of characters written, or negative on encoding error
+      """) as f:
+      f.code = """
+        int len;
+        char* buf;
+        va_list args_copy;
+        assert(target);
+        assert(format);
+        #if defined(_MSC_VER) && !defined(__clang__)
+          va_copy(args_copy, args);
+          len = _vscprintf(format, args_copy);
+          va_end(args_copy);
+        #else
+          va_copy(args_copy, args);
+          len = vsnprintf(NULL, 0, format, args_copy);
+          va_end(args_copy);
+        #endif
+        if(len < 0) return len;
+        buf = (char*)malloc((size_t)len + 1);
+        assert(buf);
+        vsnprintf(buf, (size_t)len + 1, format, args);
+        if(*target && *target != _autoc_empty_string) {
+          free(*target);
+        }
+        *target = buf;
+        return len;
+      """
+
+    with self.method("int", "format", {"target": inout(Indirection(self)), "format": Indirection("char", constant=True)}, variadic=True, brief="Format output into string",
+      description="""
+        Formats the output according to the format string and variable arguments,
+        replacing the previous contents of target. The target string buffer is allocated
+        dynamically to fit the formatted output. Any previous buffer held by target is freed.
+
+        @param[in,out] target the string to format into
+        @param[in] format the format string
+        @return number of characters written, or negative on encoding error
+      """) as f:
+      f.code = lambda: f"""
+        int len;
+        va_list args;
+        assert(target);
+        assert(format);
+        va_start(args, format);
+        len = {self.vformat("target", "format", "args")};
+        va_end(args);
+        return len;
+      """
+
   @property
   def rvalue_type(self):
     return self
@@ -182,6 +240,19 @@ _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
   AUTOC_EXTERN const char* _autoc_empty_string;
 """, implementation=f"""
   const char* _autoc_empty_string = "";
+""")
+
+
+_va_copy_code = Code(dependencies=(std.stdarg_h, std.stdio_h, std.string_h), definitions="""
+  #ifndef va_copy
+    #if defined(__GNUC__) || defined(__clang__)
+      #define va_copy(d, s) __builtin_va_copy(d, s)
+    #elif defined(_MSC_VER)
+      #define va_copy(d, s) ((d) = (s))
+    #else
+      #define va_copy(d, s) memcpy(&(d), &(s), sizeof(va_list))
+    #endif
+  #endif
 """)
 
 
