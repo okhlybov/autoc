@@ -203,8 +203,8 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get highest priority element",
       description="""
-        Returns a copy of the greatest element per the element comparison without
-        modifying the heap.
+        Returns a copy of the greatest element per the element comparison in O(1) - the
+        heap root is always at position 0 without modifying the heap.
 
         @param[in] target the queue to read - must not be empty
         @return the highest priority element without removing it
@@ -220,9 +220,9 @@ class PriorityQueue(_StructRenderer, Collection):
 
     with self.method(self.element.view_type, ("top", "view"), {"target": self}, constraint=lambda: self.element.orderable, brief="Get view of highest priority element",
       description="""
-        Returns a pointer to the greatest element per the element comparison without copying
-        it. The view is valid until the next `push` or `pop` since the sift operations may
-        move the element within the buffer.
+        Returns a pointer to the greatest element per the element comparison in O(1)
+        without copying it. The view is valid until the next `push` or `pop` since
+        the sift operations may move the element within the buffer.
 
         @param[in] target the queue to read - must not be empty
         @return a constant view of the highest priority element

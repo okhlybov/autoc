@@ -14,8 +14,8 @@ class Set(Collection):
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present",
       description="""
         Inserts the element when the set holds no equal element yet. Every set implementation
-        inherits this protocol operation; the insertion cost is the one of the underlying
-        implementation.
+        inherits this protocol operation. The insertion cost matches the underlying
+        implementation: expected O(1) for hash-based sets, expected O(log n) for tree-based sets.
 
         @param[in,out] target the set to insert into
         @param[in] element the element to insert - ignored when the set already holds an equal element
@@ -24,7 +24,9 @@ class Set(Collection):
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present",
       description="""
         Removes the element when the set holds an equal one, leaving the set unchanged
-        otherwise. Every set implementation inherits this protocol operation.
+        otherwise. Every set implementation inherits this protocol operation. The removal
+        cost matches the underlying implementation: expected O(1) for hash-based sets,
+        expected O(log n) for tree-based sets.
 
         @param[in,out] target the set to remove from
         @param[in] element the element to remove
@@ -45,6 +47,7 @@ class Set(Collection):
       description="""
         Adds every element of the other set which the target does not hold yet by walking
         the other set's range and putting its elements. The other set is not modified.
+        Cost is O(m) calls to `put` where m is the other set's size.
 
         @param[in,out] target the set to add the elements to
         @param[in] other the set whose elements are added - the target itself is allowed and keeps it unchanged
@@ -67,6 +70,7 @@ class Set(Collection):
       description="""
         Removes every element of the target which the other set holds by walking the other
         set's range and removing its elements. The other set is not modified.
+        Cost is O(m) calls to `remove` where m is the other set's size.
 
         @param[in,out] target the set to remove the elements from
         @param[in] other the set whose elements are removed - the target itself is allowed and empties it in place
@@ -94,6 +98,8 @@ class Set(Collection):
       description="""
         Removes every element of the target which the other set does not hold. The other set
         is traversed via a temporary copy of the target so the removals do not disturb the walk.
+        Cost is O(n) calls to `contains` and `remove` where n is the target size plus the cost
+        of copying the target.
 
         @param[in,out] target the set to keep the elements in
         @param[in] other the set to intersect with - the target itself is allowed and keeps it unchanged
@@ -120,6 +126,7 @@ class Set(Collection):
       description="""
         Removes the elements the two sets share and adds the elements only the other set
         holds, making the target hold the elements present in exactly one of the sets.
+        Cost is O(m) calls to `contains`, `remove`, and `put` where m is the other set's size.
 
         @param[in,out] target the set to change
         @param[in] other the set to change the target by - the target itself is allowed and empties it in place

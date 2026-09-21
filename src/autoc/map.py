@@ -15,6 +15,8 @@ class Map(Collection):
     self.method("int", "indexed", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable, brief="Check if the map holds the index",
       description="""
         Looks the index up per the map lookup mechanics without modifying the map.
+        The cost matches the underlying implementation: expected O(1) for hash-based
+        maps, expected O(log n) for tree-based maps.
 
         @param[in] target the map to check
         @param[in] index the index to look for
@@ -24,6 +26,8 @@ class Map(Collection):
       description="""
         Associates the element with the index - either storing it at the brand new entry
         or replacing the contents of the element already held at the index in place.
+        The cost matches the underlying implementation: expected O(1) for hash-based
+        maps, expected O(log n) for tree-based maps.
 
         @param[in,out] target the map to update
         @param[in] index the index to assign the element at
@@ -32,7 +36,8 @@ class Map(Collection):
     self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: self.index.comparable and self.element.copyable, brief="Get a copy of the element at index",
       description="""
         Returns an owned copy of the element associated with the index - use `view` when
-        the copy is not needed.
+        the copy is not needed. The cost matches the underlying implementation: expected
+        O(1) for hash-based maps, expected O(log n) for tree-based maps.
 
         @param[in] target the map to read from
         @param[in] index the index to read the element at - must be present in the map
@@ -42,7 +47,8 @@ class Map(Collection):
       description="""
         Returns a pointer to the element associated with the index without copying it.
         The view is valid while the entry is held by the map - removing it or overwriting
-        the element at the index invalidates the view.
+        the element at the index invalidates the view. The cost matches the underlying
+        implementation: expected O(1) for hash-based maps, expected O(log n) for tree-based maps.
 
         @param[in] target the map to read from
         @param[in] index the index to read the element at

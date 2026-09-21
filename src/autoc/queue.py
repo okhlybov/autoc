@@ -113,8 +113,8 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
       description="""
-        Returns a copy of the element to be returned by the next `dequeue` without
-        modifying the queue.
+        Returns a copy of the element to be returned by the next `dequeue` in O(1)
+        without modifying the queue.
 
         @param[in] target the queue to read - must not be empty
         @return the element at the front without removing it
@@ -126,7 +126,8 @@ class Queue(_StructRenderer, Collection):
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get back element",
       description="""
-        Returns a copy of the most recently enqueued element without modifying the queue.
+        Returns a copy of the most recently enqueued element in O(1) without modifying
+        the queue.
 
         @param[in] target the queue to read - must not be empty
         @return the element at the back without removing it

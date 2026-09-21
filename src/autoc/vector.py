@@ -302,11 +302,11 @@ class Vector(_StructRenderer, Map, Sequence):
 
     with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order",
       description="""
-        Sorts the elements in ascending order with a quicksort variant: ranges of less than
-        16 elements are insertion sorted, the pivot is the median of three which protects
-        against the sorted inputs, and the recursion always descends into the smaller part
-        to bound the depth. The sort is not stable and needs the element to be Orderable,
-        Copyable and Swappable.
+        Sorts the elements in ascending order in expected O(n log n) with a quicksort
+        variant: ranges of less than 16 elements are insertion sorted, the pivot is the
+        median of three which protects against the sorted inputs, and the recursion always
+        descends into the smaller part to bound the depth. The sort is not stable and needs
+        the element to be Orderable, Copyable and Swappable.
 
         @param[in,out] target the vector to sort
       """) as f:
@@ -318,8 +318,9 @@ class Vector(_StructRenderer, Map, Sequence):
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
     with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements",
       description="""
-        Reverses the element order in place by exchanging the mirrored element pairs.
-        It needs nothing but the element swappability - no copies or destructions take place.
+        Reverses the element order in place in O(n) by exchanging the mirrored element
+        pairs. It needs nothing but the element swappability - no copies or destructions
+        take place.
 
         @param[in,out] target the vector to reverse
       """) as f:
@@ -331,8 +332,8 @@ class Vector(_StructRenderer, Map, Sequence):
 
     with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
       description="""
-        Walks the vector once returning non-zero when every element is not less than its
-        predecessor. An empty or single element vector is considered sorted.
+        Walks the vector once in O(n) returning non-zero when every element is not less
+        than its predecessor. An empty or single element vector is considered sorted.
 
         @param[in] target the vector to check
         @return non-zero if the elements are sorted in ascending order

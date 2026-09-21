@@ -85,8 +85,8 @@ class Stack(_StructRenderer, Collection):
 
     with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to top of stack",
       description="""
-        Pushes the element onto the top of the stack by delegating to the internal list.
-        The pushed element becomes the next one returned by `pop`.
+        Pushes the element onto the top of the stack in O(1) by delegating to the
+        internal list. The pushed element becomes the next one returned by `pop`.
 
         @param[in,out] target the stack to add to
         @param[in] element the element to push onto the top
@@ -111,7 +111,8 @@ class Stack(_StructRenderer, Collection):
 
     with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get top element",
       description="""
-        Returns a copy of the element last pushed onto the stack without removing it.
+        Returns a copy of the element last pushed onto the stack in O(1) without
+        removing it.
 
         @param[in] target the stack to read - must not be empty
         @return the element at the top without removing it

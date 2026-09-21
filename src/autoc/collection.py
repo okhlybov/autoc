@@ -58,7 +58,8 @@ class Collection(Composite):
     self.method("int", "empty", {"target": self}, brief="Check if the container holds no elements",
       description="""
         Reports whether the container holds no elements at all - the protocol operation
-        inherited by every container. Equivalent to `size() == 0` but usually cheaper.
+        inherited by every container. Equivalent to `size() == 0` and O(1) for every
+        container that tracks the element count incrementally.
 
         @param[in] target the container to check
         @return non-zero if the container holds no elements
@@ -66,8 +67,8 @@ class Collection(Composite):
     self.method(std.size_t, "size", {"target": self}, brief="Get the number of elements in the container",
       description="""
         Returns the number of elements currently held by the container - the protocol
-        operation inherited by every container. Most containers maintain it incrementally
-        making it a constant time operation.
+        operation inherited by every container. O(1) for every container that tracks
+        the count incrementally; O(n) for containers that count on demand.
 
         @param[in] target the container to measure
         @return the number of elements held by the container
@@ -75,7 +76,9 @@ class Collection(Composite):
     self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Check if the container holds the element",
       description="""
         Looks the element up per the container lookup mechanics without modifying the
-        container - the cost is the one of the underlying implementation's lookup.
+        container. The cost matches the underlying implementation: expected O(1) for
+        hash-based containers, expected O(log n) for tree-based containers, and O(n)
+        for linear containers.
 
         @param[in] target the container to search
         @param[in] element the element to look for

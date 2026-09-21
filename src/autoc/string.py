@@ -50,9 +50,10 @@ class String(_AliasRenderer, Indirection, Map):
 
     with self.method(Callable.Parameter(self), "new", {"source": self}, brief="Duplicate string",
       description="""
-        Duplicates the string into a freshly allocated NUL-terminated buffer using `strdup`
-        where available and an explicit `malloc`+`memcpy` fallback otherwise. A null string
-        duplicates into the shared empty string which needs no release.
+        Duplicates the string into a freshly allocated NUL-terminated buffer in O(n)
+        where n is the string length, using `strdup` where available and an explicit
+        `malloc`+`memcpy` fallback otherwise. A null string duplicates into the shared
+        empty string which needs no release.
 
         @param[in] source the string to duplicate - a null string duplicates into the empty one
         @return the newly allocated copy of the string
