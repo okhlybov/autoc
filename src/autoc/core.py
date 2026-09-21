@@ -1,5 +1,6 @@
 import re
 import sys
+import textwrap
 from autoc.module import Entity, Code
 from collections.abc import Iterable # substitute for missing iterable()
 
@@ -169,7 +170,7 @@ class _Documented(Entity, _VisibilityManager):
     if self.public:
       # If no brief is specified, this means no description as well as the most likely case
       if self.brief:
-        stream.append(f"/** @public\n\t@brief {self.brief}\n")
+        stream.append(f"/** @public\n@brief {self.brief}\n")
         self._render_description(stream)
         stream.append("*/\n")
       else:
@@ -181,7 +182,11 @@ class _Documented(Entity, _VisibilityManager):
 
   def _render_description(self, stream):
     if self.description:
-      stream.append(self.description)
+      # The descriptions are authored nested into the Python source indentation which
+      # Doxygen's Markdown would otherwise treat as the indented code blocks relative
+      # to the least indented lines of the comment - leaving the embedded commands
+      # unrecognized and rendered verbatim - so normalize the common prefix away
+      stream.append(textwrap.dedent(self.description))
 
 
 #
@@ -192,7 +197,7 @@ class _GroupRenderer(_Documented):
   # agree while the group title carries the display name of the type
   def _render_description(self, stream):
     super()._render_description(stream)
-    stream.append(f"\n\t@defgroup {self.name} {self._doxygen_type}\n")
+    stream.append(f"\n@defgroup {self.name} {self._doxygen_type}\n")
 
 
 #

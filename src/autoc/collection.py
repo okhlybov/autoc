@@ -18,7 +18,7 @@ class _Range(_StructRenderer, Range):
   # which belongs to the group of the container it spans
   def _render_description(self, stream):
     super()._render_description(stream)
-    stream.append(f"\n\t@ingroup {self.iterable.name}\n")
+    stream.append(f"\n@ingroup {self.iterable.name}\n")
     
   def __setup__(self):
     super().__setup__()
