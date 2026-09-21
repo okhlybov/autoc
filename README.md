@@ -227,6 +227,7 @@ consumed 23
 | Module | Type | Notes |
 |---|---|---|
 | `autoc.vector` | `Vector` | direct-access sequence, bidirectional range |
+| `autoc.static_vector` | `StaticVector` | fixed-capacity stack-allocated sequence, direct-access range, zero heap allocations |
 | `autoc.list` | `List` | singly-linked sequence, forward range |
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
 | `autoc.queue` | `Queue` | FIFO adapter over `Deque` |

@@ -11,6 +11,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.list` | `List` | `List<T>` | `List<T>::Range` (forward) | singly linked; `O(1)` push/pop at the front |
 | `autoc.deque` | `Deque` | `Deque<T>` | `Deque<T>::Range` (bidirectional) | doubly linked; both ends are `O(1)` |
 | `autoc.vector` | `Vector` | `Vector<T>` | `Vector<T>::Range` (direct access) | contiguous storage, indexed access, sorting and binary search |
+| `autoc.static_vector` | `StaticVector` | `StaticVector<T, N>` | `StaticVector<T, N>::Range` (direct access) | fixed capacity, stack-allocated, zero heap allocation; backed by variant |
 | `autoc.tiered_vector` | `TieredVector` | `TieredVector<T>` | `TieredVector<T>::Range` (direct access) | chunked; amortized `O(1)` append with stable addresses |
 | `autoc.stack` | `Stack` | `Stack<T>` | `Stack<T>::Range` (forward) | LIFO adapter over the list |
 | `autoc.queue` | `Queue` | `Queue<T>` | `Queue<T>::Range` (forward) | FIFO adapter over the deque |
@@ -48,7 +49,8 @@ import in your module script; the *type* is the class you instantiate with a con
 
 ## Choosing a container
 
-1. **Do you need indexed access?** Use @ref Vector, or @ref TieredVector when the buffer
+1. **Do you need indexed access?** Use @ref Vector, or @ref StaticVector when capacity is
+   bounded and zero heap allocation is required, or @ref TieredVector when the buffer
    grows large or grows often and you need stable element addresses.
 2. **Do you need to insert or remove at both ends?** Use @ref Deque; the adapters
    @ref Stack and @ref Queue are the LIFO/FIFO specializations of that pattern.
