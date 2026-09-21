@@ -221,41 +221,68 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     # of these prototypes so the rendered @param entries always match the signatures
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters",
       description="""
+        Constructs the value in place over the target storage which need not hold a pristine
+        value - whatever the target held before is replaced. Every type inherits this
+        operation; the concrete construction semantics are the ones of the type.
+
         @param[out] target the value to construct - the constructed value replaces whatever the target held before
       """)
     self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value",
       description="""
+        Releases the resources held by the value leaving it invalid - it must be reconstructed
+        before any further use. Destroying a trivial value-less type is a no-op.
+
         @param[in] target the value to destroy - the released resources leave the value invalid
       """)
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value",
       description="""
+        Constructs the target as an independent copy of the source - the two values do not
+        share any resources afterwards. Every type inherits this operation through the
+        method_from()/macro_from() forwarding.
+
         @param[out] target the value to construct as the copy
         @param[in] source the value to copy
       """)
     self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location",
       description="""
+        Transfers the source contents to the target leaving the source in a valid empty
+        state - typically a cheaper pointer transfer than the copy.
+
         @param[out] target the value to construct as the destination
         @param[in,out] source the value to move from - left in a valid empty state
       """)
     self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values",
       description="""
+        Exchanges the contents of the two values - for the handle-like types it is a constant
+        time exchange of the internal pointers requiring no pristine state on either side.
+
         @param[in,out] left the first value
         @param[in,out] right the second value
       """)
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality",
       description="""
+        Checks the two values for equality per the type equality semantics - required to be
+        consistent with the hash so the equal values always compare and hash alike.
+
         @param[in] left the first value
         @param[in] right the second value
         @return non-zero if the values are equal and zero otherwise
       """)
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values",
       description="""
+        Establishes the strict weak ordering of the two values per the type ordering
+        semantics - the ordering the ordered containers and the sorting rely on.
+
         @param[in] left the first value
         @param[in] right the second value
         @return a negative value, zero or a positive value as the first value is less than, equal to or greater than the second one
       """)
     self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value",
       description="""
+        Computes a hash of the value over the hasher of the enclosing module - the equal
+        values are guaranteed to produce the same hash making it usable by the hash-based
+        containers.
+
         @param[in] target the value to hash
         @return the hash of the value - equal values always hash alike
       """)

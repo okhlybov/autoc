@@ -15,12 +15,19 @@ class _Reference(Indirection, Composite):
 
     self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)}, brief="Create the reference owning a new instance of the type",
       description="""
+        Allocates a new instance of the referenced type, constructs it with the given
+        parameters and returns the reference owning it. The instance lives until every
+        reference to it is released.
+
         @return the reference to the newly allocated instance - releasing this reference frees the instance
       """)
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
     self.method(self, "share", {"source": self}, brief="Share the instance by increasing its reference count",
       description="""
+        Returns another reference to the instance the source references without duplicating
+        it - the referenced instance stays alive as long as at least one reference to it exists.
+
         @param[in] source the reference to share - must reference a valid instance
         @return another reference to the same instance - the shared instance stays owned by the caller as well
       """)
@@ -28,6 +35,10 @@ class _Reference(Indirection, Composite):
     
     self.method(None, "free", {"target": self}, brief="Decrement reference count",
       description="""
+        Releases one ownership of the referenced instance - the instance is destroyed and
+        its memory freed only when the last reference to it is released, making this safe
+        to pair with the sharing.
+
         @param[in] target the reference to release - the instance is destroyed when its last reference is released, a null reference is ignored
       """)
     self.macro_from("destroy", lambda target: self.free(target))
@@ -38,6 +49,9 @@ class _Reference(Indirection, Composite):
     # Swapping exchanges the handles without touching the reference counts on either side
     self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two references",
       description="""
+        Exchanges the two reference handles in constant time without touching the reference
+        counts - the instances referenced stay exactly as owned as they were.
+
         @param[in,out] left the first reference
         @param[in,out] right the second reference
       """)

@@ -89,6 +89,9 @@ class Variant(_StructRenderer, Composite):
 
     with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility, brief="Check if the variant holds no value",
       description="""
+        Reports whether the variant was never assigned a value - the freshly created
+        variant holds no alternative until the first `set` call.
+
         @param[in] target the variant to test
         @return non-zero if the variant holds no value
       """) as f:
@@ -104,6 +107,9 @@ class Variant(_StructRenderer, Composite):
   def _add_predicate(self, name, index):
     with self.method("int", ("is", name), {"target": self}, visibility=self.visibility, brief=f"Check if the variant holds the {name} value",
       description=f"""
+        Reports whether the variant currently holds the {name} alternative - the cheap
+        tag check to guard the `{name}` reads.
+
         @param[in] target the variant to test
         @return non-zero if the variant currently holds the {name} alternative
       """) as f:
@@ -113,6 +119,10 @@ class Variant(_StructRenderer, Composite):
   def _add_reader(self, type, name, index):
     with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get value of type {name}",
       description=f"""
+        Returns an owned copy of the value held as the {name} alternative. The variant must
+        actually hold that alternative - check with `is_{name}` first since a mismatch is
+        a contract violation.
+
         @param[in] target the variant to read - must hold the {name} alternative
         @return a copy of the value held as the {name} alternative
       """) as f:
@@ -128,6 +138,10 @@ class Variant(_StructRenderer, Composite):
   def _add_view(self, type, name, index):
     with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility, brief=f"Get view of type {name}",
       description=f"""
+        Returns a pointer to the value held as the {name} alternative without copying it.
+        The view is valid while the variant keeps holding the {name} alternative - any
+        `set` call destroying it invalidates the view.
+
         @param[in] target the variant to read - must hold the {name} alternative
         @return a constant view of the value held as the {name} alternative, valid while the variant keeps that alternative
       """) as f:
@@ -140,6 +154,9 @@ class Variant(_StructRenderer, Composite):
   def _add_writer(self, type, name, index):
     with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set value to type {name}",
       description=f"""
+        Stores the value as the {name} alternative - the alternative the variant held
+        before is destroyed first since a variant holds exactly one value at a time.
+
         @param[out] target the variant to update
         @param[in] value the value to store as the {name} alternative - the alternative previously held is destroyed
       """) as f:

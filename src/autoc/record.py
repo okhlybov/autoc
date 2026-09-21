@@ -102,6 +102,8 @@ class Record(_StructRenderer, Composite):
   def _add_reader(self, type, field):
     with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {field} field",
       description=f"""
+        Returns an owned copy of the {field} field of the record.
+
         @param[in] target the record to read
         @return a copy of the {field} field
       """) as f:
@@ -116,6 +118,9 @@ class Record(_StructRenderer, Composite):
   def _add_writer(self, type, field):
     with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {field} field",
       description=f"""
+        Replaces the contents of the {field} field with the given value - the previously
+        held field value is destroyed first.
+
         @param[out] target the record to update
         @param[in] value the value to store into the {field} field - the previous field value is destroyed
       """) as f:

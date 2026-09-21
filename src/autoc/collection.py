@@ -57,16 +57,26 @@ class Collection(Composite):
     super().__setup__()
     self.method("int", "empty", {"target": self}, brief="Check if the container holds no elements",
       description="""
+        Reports whether the container holds no elements at all - the protocol operation
+        inherited by every container. Equivalent to `size() == 0` but usually cheaper.
+
         @param[in] target the container to check
         @return non-zero if the container holds no elements
       """)
     self.method(std.size_t, "size", {"target": self}, brief="Get the number of elements in the container",
       description="""
+        Returns the number of elements currently held by the container - the protocol
+        operation inherited by every container. Most containers maintain it incrementally
+        making it a constant time operation.
+
         @param[in] target the container to measure
         @return the number of elements held by the container
       """)
     self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Check if the container holds the element",
       description="""
+        Looks the element up per the container lookup mechanics without modifying the
+        container - the cost is the one of the underlying implementation's lookup.
+
         @param[in] target the container to search
         @param[in] element the element to look for
         @return non-zero if the container holds an element equal to the given one

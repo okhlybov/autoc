@@ -32,21 +32,34 @@ class Input(Range):
     super().__setup__()
     self.method("int", "empty", {"target": self}, brief="Check if the range is exhausted",
       description="""
+        Reports whether the range has no more elements to yield - the mandatory first check
+        before reading from or advancing the range.
+
         @param[in] target the range to test
         @return non-zero if the range is exhausted
       """)
     self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the front element",
       description="""
+        Returns an owned copy of the element at the current position without moving the
+        range - use `front_view` when the copy is not needed.
+
         @param[in] target the range to read - must not be exhausted
         @return a copy of the element at the front position
       """)
     self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get a constant view of the front element",
       description="""
+        Returns a pointer to the element at the current position without copying it.
+        The view is only guaranteed until the range is advanced since the traversal
+        may invalidate the underlying position.
+
         @param[in] target the range to read - must not be exhausted
         @return a constant view of the element at the front position, valid until the range is advanced
       """)
     self.method(None, ("move", "front"), {"target": inout(self)}, brief="Advance the range to the next element",
       description="""
+        Steps the range over to the next element in the traversal direction - the element
+        read at the current position is no longer accessible afterwards.
+
         @param[in,out] target the range to advance - must not be exhausted
       """)
 
@@ -90,16 +103,25 @@ class Backward(Input):
 
     self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the back element",
       description="""
+        Returns an owned copy of the element at the back position of the traversal - the
+        opposite end of the one `front` reads - without moving the range.
+
         @param[in] target the range to read - must not be exhausted
         @return a copy of the element at the back position
       """)
     self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get a constant view of the back element",
       description="""
+        Returns a pointer to the element at the back position of the traversal without
+        copying it. The view is only guaranteed until the range is retreated.
+
         @param[in] target the range to read - must not be exhausted
         @return a constant view of the element at the back position, valid until the range is retreated
       """)
     self.method(None, ("move", "back"), {"target": inout(self)}, brief="Retreat the range to the previous element",
       description="""
+        Steps the range over to the previous element against the traversal direction -
+        the backward counterpart of `move_front`.
+
         @param[in,out] target the range to retreat - must not be exhausted
       """)
 
@@ -132,18 +154,27 @@ class DirectAccess(Forward, Backward):
 
     self.method(self.element, "get", {"target": self, "index": std.size_t}, constraint=lambda: self.element.copyable, brief="Get a copy of the element at offset",
       description="""
+        Returns an owned copy of the element at the given offset from the current position
+        without moving the range - the direct access counterpart of `front`.
+
         @param[in] target the range to read
         @param[in] index the offset from the current position
         @return a copy of the element at the offset
       """)
     self.method(self.element.view_type, "view", {"target": self,  "index": std.size_t}, brief="Get a constant view of the element at offset",
       description="""
+        Returns a pointer to the element at the given offset from the current position
+        without copying it. The view is only guaranteed until the range is advanced.
+
         @param[in] target the range to read
         @param[in] index the offset from the current position
         @return a constant view of the element at the offset, valid until the range is advanced
       """)
     self.method(std.size_t, "size", {"target": self}, brief="Get the number of remaining elements",
       description="""
+        Returns how many elements are left between the current position and the back one -
+        the distance the repeated `move_front` calls would cover.
+
         @param[in] target the range to measure
         @return the number of elements left between the current position and the back one
       """)
