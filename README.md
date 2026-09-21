@@ -220,7 +220,7 @@ consumed 23
 
 **Deterministic builds.** Generation is integrated with CMake via `add_autoc_module()`: output digests are tracked, code is regenerated only when definitions actually change, and every generated artifact is declared as a proper build dependency.
 
-**Reference-counted memory as an option, not a mandate.** `Arc` references provide automatic reference counting for shared objects — including when used as container elements — while `Raw` references give you plain unmanaged pointers. Both speak the same protocol as every other type.
+**Reference-counted memory as an option, not a mandate.** `Counted` references provide automatic reference counting for shared objects — including when used as container elements — while `Raw` references give you plain unmanaged pointers. Both speak the same protocol as every other type.
 
 ## Container catalog
 
@@ -245,7 +245,7 @@ consumed 23
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
 | `autoc.record` | `Record` | user-defined field aggregates |
 | `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
-| `autoc.reference` | `Raw`, `Arc` | unmanaged / reference-counted handles |
+| `autoc.reference` | `Raw`, `Counted` | unmanaged / reference-counted handles |
 | `autoc.range` | `Input`/`Forward`/`Backward`/`Bidirectional`/`DirectAccess` | iteration abstractions |
 
 ## CMake integration

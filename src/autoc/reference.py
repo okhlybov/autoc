@@ -16,41 +16,41 @@ class _Reference(Indirection, Composite):
     self.method(Callable.Parameter(self), "new", {name: type for name, type in islice(self.type.create.parameters.items(), 1, None)}, brief="Create the reference owning a new instance of the type",
       description="""
         Allocates a new instance of the referenced type, constructs it with the given
-        parameters and returns the reference owning it. The instance lives until every
-        reference to it is released.
+        parameters and returns the unmanaged reference owning it. The caller is responsible
+        for releasing the instance with free.
 
         @return the reference to the newly allocated instance - releasing this reference frees the instance
       """)
     self.macro("create", None, {"target": out(self)} | self.new.parameters, lambda target, *args: f"{target} = {self.new(*args)}")
 
-    self.method(self, "share", {"source": self}, brief="Share the instance by increasing its reference count",
+    self.method(self, "share", {"source": self}, brief="Duplicate reference handle",
       description="""
         Returns another reference to the instance the source references without duplicating
-        it - the referenced instance stays alive as long as at least one reference to it exists.
+        it or modifying ownership.
 
         @param[in] source the reference to share - must reference a valid instance
-        @return another reference to the same instance - the shared instance stays owned by the caller as well
+        @return another reference to the same instance
       """)
     self.macro_from("copy", lambda target, source: f"{target} = {self.share(source)}")
     
-    self.method(None, "free", {"target": self}, brief="Decrement reference count",
+    self.method(None, "free", {"target": self}, brief="Free referenced instance",
       description="""
-        Releases one ownership of the referenced instance - the instance is destroyed and
-        its memory freed only when the last reference to it is released, making this safe
-        to pair with the sharing.
+        Destroys and releases the referenced instance immediately. Any other handles
+        referencing this instance become invalid unless the reference type manages shared
+        ownership. A null reference is ignored.
 
-        @param[in] target the reference to release - the instance is destroyed when its last reference is released, a null reference is ignored
+        @param[in] target the reference to release - the instance is destroyed and its memory freed, a null reference is ignored
       """)
     self.macro_from("destroy", lambda target: self.free(target))
     
     # A moved-from reference is nulled so that destroying it afterwards is a safe no-op
     # The underlying free guards on the pointer being NULL
     self.macro_from("move", lambda target, source: f"{target} = {source}, {source} = NULL")
-    # Swapping exchanges the handles without touching the reference counts on either side
+    # Swapping exchanges the handles in constant time
     self.swap = self.method(None, "swap", {"left": inout(Indirection(self)), "right": inout(Indirection(self))}, brief="Swap two references",
       description="""
-        Exchanges the two reference handles in constant time without touching the reference
-        counts - the instances referenced stay exactly as owned as they were.
+        Exchanges the two reference handles in constant time without copying or destroying
+        the referenced instances.
 
         @param[in,out] left the first reference
         @param[in,out] right the second reference
@@ -88,7 +88,7 @@ class _Reference(Indirection, Composite):
 #
 class Raw(_AliasRenderer, _Reference):
 
-  brief = "Non-owning reference to a manually managed instance"
+  brief = "Unmanaged reference to an instance"
   
   def __init__(self, *args, memory=Manager(), **kws):
     super().__init__(*args, **kws)
@@ -97,41 +97,6 @@ class Raw(_AliasRenderer, _Reference):
     
   def __setup__(self):
     super().__setup__()
-
-    self.new.brief = "Create the reference owning a new instance of the type"
-    self.new.description = """
-      Allocates a new instance of the referenced type, constructs it with the given
-      parameters and returns the unmanaged reference owning it. The caller is responsible
-      for releasing the instance with free.
-
-      @return the reference to the newly allocated instance - releasing this reference frees the instance
-    """
-
-    self.share.brief = "Duplicate reference handle"
-    self.share.description = """
-      Returns another unmanaged reference to the same instance without duplicating it
-      or modifying ownership.
-
-      @param[in] source the reference to share - must reference a valid instance
-      @return another reference to the same instance
-    """
-
-    self.free.brief = "Free referenced instance"
-    self.free.description = """
-      Destroys and releases the referenced instance immediately. Any other handles
-      referencing this instance become invalid. A null reference is ignored.
-
-      @param[in] target the reference to release - the instance is destroyed and its memory freed, a null reference is ignored
-    """
-
-    self.swap.brief = "Swap two references"
-    self.swap.description = """
-      Exchanges the two reference handles in constant time without copying or destroying
-      the referenced instances.
-
-      @param[in,out] left the first reference
-      @param[in,out] right the second reference
-    """
     
     with self.new as f:
       result = f.result.variable("result")
@@ -160,7 +125,7 @@ class Raw(_AliasRenderer, _Reference):
 
 
 #
-class Arc(_StructRenderer, _Reference):
+class Counted(_StructRenderer, _Reference):
   
   brief = "Reference counted shared instance proxy type"
   
@@ -172,6 +137,42 @@ class Arc(_StructRenderer, _Reference):
     
   def __setup__(self):
     super().__setup__()
+
+    self.new.brief = "Create reference owning a new reference-counted instance"
+    self.new.description = """
+      Allocates a new instance of the referenced type with an associated reference counter,
+      constructs it with the given parameters and returns the reference owning it. The instance
+      lives until every reference to it is released.
+
+      @return the reference to the newly allocated instance - releasing this reference decrements the count and frees the instance when it reaches zero
+    """
+
+    self.share.brief = "Share the instance by increasing its reference count"
+    self.share.description = """
+      Returns another reference to the instance the source references without duplicating
+      it - increments the reference count so the referenced instance stays alive as long
+      as at least one reference to it exists.
+
+      @param[in] source the reference to share - must reference a valid instance
+      @return another reference to the same instance - the shared instance stays owned by the caller as well
+    """
+
+    self.free.brief = "Decrement reference count"
+    self.free.description = """
+      Releases one ownership of the referenced instance by decrementing its reference count.
+      The instance is destroyed and its memory freed only when the last reference to it is
+      released, making this safe to pair with the sharing.
+
+      @param[in] target the reference to release - the instance is destroyed when its last reference is released, a null reference is ignored
+    """
+
+    self.swap.description = """
+      Exchanges the two reference handles in constant time without touching the reference
+      counts - the instances referenced stay exactly as owned as they were.
+
+      @param[in,out] left the first reference
+      @param[in,out] right the second reference
+    """
     
     with self.new as f:
       value = self.type.variable("storage->value")
@@ -208,4 +209,8 @@ class Arc(_StructRenderer, _Reference):
         {self.type} value;
         unsigned count;
       }} {self._layout};
-    """)      
+    """)
+
+
+# Backward compatibility alias
+Arc = Counted      

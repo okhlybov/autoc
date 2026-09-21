@@ -92,6 +92,6 @@ The container strategies differ in what they guarantee, not just in performance:
 - **Generation is deterministic.** Entities are emitted in a stable topological order, so
   re-running the generator over unchanged definitions produces identical output. This is what
   makes the digest-based regeneration in `add_autoc_module()` reliable.
-- **References are optional.** @ref Arc provides reference counting for shared instances;
+- **References are optional.** @ref Counted provides reference counting for shared instances;
   @ref Raw is a plain unmanaged pointer. Both speak the same value protocol as everything
   else, so they can be container elements.

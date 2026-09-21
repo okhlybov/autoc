@@ -1,8 +1,8 @@
-from autoc.reference import Arc
+from autoc.reference import Counted
 from autoc.test import Type as _Type
 from autoc.test.custom_composite import type
 
-x = _Type(type := Arc(type), name="custom_composite_arc")
+x = _Type(type := Counted(type), name="custom_composite_arc")
 
 t = type.variable("t")
 t2 = type.variable("t2")

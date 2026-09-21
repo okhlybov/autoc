@@ -42,7 +42,7 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|
 | `autoc.record` | `Record` | `Record` | user-defined aggregate of named fields, with generated getters/setters |
 | `autoc.variant` | `Variant` | `Variant` | union holding one value out of a predefined set of types |
-| `autoc.reference` | `Arc` | `Arc<T>` | reference-counted shared instance |
+| `autoc.reference` | `Counted` | `Counted<T>` | reference-counted shared instance |
 | `autoc.reference` | `Raw` | `Raw<T>` | unmanaged handle to a manually managed instance |
 | `autoc.range` | `Input`/`Forward`/`Backward`/`Bidirectional`/`DirectAccess` | — | the iteration abstractions the container ranges are built from |
 
@@ -60,7 +60,7 @@ import in your module script; the *type* is the class you instantiate with a con
 6. **Do you need the elements in sorted order, or ordering-based queries?** Use @ref TreapSet.
 7. **Do you map keys to values?** Pick the map in the same family as the set you would have
    picked — @ref ChainedHashMap, @ref IntrusiveHashMap or @ref TreapMap.
-8. **Do you need shared ownership of an element?** Use @ref Arc (or @ref Raw for manual
+8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
 
 All concrete containers in one module share a single generated header, and each brings its

@@ -1,8 +1,8 @@
-from autoc.reference import Arc
+from autoc.reference import Counted
 from autoc.test import Type as _Type
 
 
-x = _Type(type := Arc("int", name="int_arc"))
+x = _Type(type := Counted("int", name="int_arc"))
 
 t = type.variable("t")
 t2 = type.variable("t2")

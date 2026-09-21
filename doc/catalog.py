@@ -158,10 +158,14 @@ class TreapMap(autoc.treap_map.Map):
 
 
 # References
-class Arc(autoc.reference.Arc):
+class Counted(autoc.reference.Counted):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.type}>"
+
+
+class Arc(Counted):
+  pass
 
 
 class Raw(autoc.reference.Raw):
@@ -208,7 +212,7 @@ def configure_module(module):
   module.add(autoc.record.Record("Record", {"first": T, "second": K}))
   module.add(autoc.variant.Variant("Variant", {"first": T, "second": K}))
 
-  module.add(Arc(T, name="Arc"))
+  module.add(Counted(T, name="Counted"))
   module.add(Raw(T, name="Raw"))
 
   return module
