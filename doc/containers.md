@@ -41,6 +41,7 @@ import in your module script; the *type* is the class you instantiate with a con
 
 | Module | Type | Documented as | Notes |
 |---|---|---|---|
+| `autoc.bitset` | `BitSet` | `BitSet<N>` | fixed-size inline bit array; set algebra, popcount, zero heap allocation |
 | `autoc.record` | `Record` | `Record` | user-defined aggregate of named fields, with generated getters/setters |
 | `autoc.variant` | `Variant` | `Variant` | union holding one value out of a predefined set of types |
 | `autoc.reference` | `Counted` | `Counted<T>` | reference-counted shared instance |
@@ -64,6 +65,8 @@ import in your module script; the *type* is the class you instantiate with a con
    picked — @ref ChainedHashMap, @ref IntrusiveHashMap or @ref TreapMap.
 8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
+9. **Do you need a compact set of flags, booleans, or small integer universe?** Use
+   @ref BitSet for zero-heap, fixed-capacity bitwise set algebra.
 
 All concrete containers in one module share a single generated header, and each brings its
 own group in this manual, so the operations of `ChainedHashSet` and `IntrusiveHashSet` never

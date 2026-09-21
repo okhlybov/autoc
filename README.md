@@ -244,6 +244,7 @@ consumed 23
 | `autoc.priority_queue` | `PriorityQueue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
+| `autoc.bitset` | `BitSet` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
 | `autoc.record` | `Record` | user-defined field aggregates |
 | `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
 | `autoc.reference` | `Raw`, `Counted` | unmanaged / reference-counted handles |
