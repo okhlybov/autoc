@@ -22,7 +22,7 @@ class Vector(_StructRenderer, Map, Sequence):
       Requires the element type (@ref {self.element}) to be *DefaultConstructible* and *Copyable*.
       Supports bidirectional element traversal via the corresponding @ref {self.range} iterator as well as subranging with direct indexed access to the subrange's elements.
 
-      Implemented as the contigious array of elements.
+      Implemented as the contiguous array of elements.
       The closest C++ equivalent is [std::vector<>](https://cppreference.com/cpp/container/vector).
     """
 

@@ -230,7 +230,7 @@ consumed 23
 | `autoc.list` | `List` | singly-linked sequence, forward range |
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
 | `autoc.queue` | `Queue` | FIFO adapter over `Deque` |
-| `autoc.array` | `Array` | fixed-size array wrapper |
+| `autoc.stack` | `Stack` | LIFO adapter over `List`, forward range |
 | `autoc.string` | `String` | string as an index→character map, direct-access range |
 | `autoc.set` | `Set` | abstract hash-set interface (shared base) |
 | `autoc.map` | `Map` | abstract hash-map interface (shared base) |
@@ -244,6 +244,7 @@ consumed 23
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
 | `autoc.record` | `Record` | user-defined field aggregates |
+| `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
 | `autoc.reference` | `Raw`, `Arc` | unmanaged / reference-counted handles |
 | `autoc.range` | `Input`/`Forward`/`Backward`/`Bidirectional`/`DirectAccess` | iteration abstractions |
 

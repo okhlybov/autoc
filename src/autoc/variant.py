@@ -117,7 +117,7 @@ class Variant(_StructRenderer, Composite):
       f.inline_code = f"return {target}.tag == {index};"
 
   def _add_reader(self, type, name, index):
-    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get value of type {name}",
+    with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {name} value",
       description=f"""
         Returns an owned copy of the value held as the {name} alternative. The variant must
         actually hold that alternative - check with `is_{name}` first since a mismatch is
@@ -136,7 +136,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_view(self, type, name, index):
-    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility, brief=f"Get view of type {name}",
+    with self.method(type.view_type, (name, "view"), {"target": self}, attribute=("get", name, "view"), visibility=self.visibility, brief=f"Get view of the {name} value",
       description=f"""
         Returns a pointer to the value held as the {name} alternative without copying it.
         The view is valid while the variant keeps holding the {name} alternative - any
@@ -152,7 +152,7 @@ class Variant(_StructRenderer, Composite):
       """
 
   def _add_writer(self, type, name, index):
-    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set value to type {name}",
+    with self.method(None, ("set", name), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {name} value",
       description=f"""
         Stores the value as the {name} alternative - the alternative the variant held
         before is destroyed first since a variant holds exactly one value at a time.

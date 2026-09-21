@@ -253,7 +253,7 @@ class Range(_Range, Forward):
         Returns a pointer to the index of the leftmost entry - the one with the lowest
         index. The view is valid while that entry is held by the map.
 
-        @param[in] target the non-empty map to inspect
+        @param[in] target the non-empty range to inspect
         @return a constant view of the front (lowest) index
       """) as f:
       f.code = f"""
@@ -283,7 +283,7 @@ class Range(_Range, Forward):
       description="""
         Returns a copy of the index of the leftmost entry - the one with the lowest index.
 
-        @param[in] target the non-empty map to inspect
+        @param[in] target the non-empty range to inspect
         @return a copy of the front (lowest) index
       """) as f:
       result = f.result.variable("result")

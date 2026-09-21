@@ -142,7 +142,7 @@ class List(_StructRenderer, Sequence):
         return {result};
       """
     
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
       description="""
         Returns a copy of the first element in O(1) without modifying the list.
 

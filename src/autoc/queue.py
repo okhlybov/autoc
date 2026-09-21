@@ -111,7 +111,7 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.pop_front(_target)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
       description="""
         Returns a copy of the element to be returned by the next `dequeue` without
         modifying the queue.
@@ -124,7 +124,7 @@ class Queue(_StructRenderer, Collection):
         return {self._deque.front(_target)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get back element",
       description="""
         Returns a copy of the most recently enqueued element without modifying the queue.
 

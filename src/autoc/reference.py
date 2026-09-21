@@ -97,6 +97,41 @@ class Raw(_AliasRenderer, _Reference):
     
   def __setup__(self):
     super().__setup__()
+
+    self.new.brief = "Create the reference owning a new instance of the type"
+    self.new.description = """
+      Allocates a new instance of the referenced type, constructs it with the given
+      parameters and returns the unmanaged reference owning it. The caller is responsible
+      for releasing the instance with free.
+
+      @return the reference to the newly allocated instance - releasing this reference frees the instance
+    """
+
+    self.share.brief = "Duplicate reference handle"
+    self.share.description = """
+      Returns another unmanaged reference to the same instance without duplicating it
+      or modifying ownership.
+
+      @param[in] source the reference to share - must reference a valid instance
+      @return another reference to the same instance
+    """
+
+    self.free.brief = "Free referenced instance"
+    self.free.description = """
+      Destroys and releases the referenced instance immediately. Any other handles
+      referencing this instance become invalid. A null reference is ignored.
+
+      @param[in] target the reference to release - the instance is destroyed and its memory freed, a null reference is ignored
+    """
+
+    self.swap.brief = "Swap two references"
+    self.swap.description = """
+      Exchanges the two reference handles in constant time without copying or destroying
+      the referenced instances.
+
+      @param[in,out] left the first reference
+      @param[in,out] right the second reference
+    """
     
     with self.new as f:
       result = f.result.variable("result")

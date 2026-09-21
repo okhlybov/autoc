@@ -201,7 +201,7 @@ class PriorityQueue(_StructRenderer, Collection):
         return {result};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get reference to highest priority element",
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get highest priority element",
       description="""
         Returns a copy of the greatest element per the element comparison without
         modifying the heap.

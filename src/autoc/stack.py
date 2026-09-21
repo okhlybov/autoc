@@ -109,7 +109,7 @@ class Stack(_StructRenderer, Collection):
         return {self._list.pop_front(_target)};
       """
 
-    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to top element",
+    with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable, brief="Get top element",
       description="""
         Returns a copy of the element last pushed onto the stack without removing it.
 

@@ -221,11 +221,12 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     # of these prototypes so the rendered @param entries always match the signatures
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters",
       description="""
-        Constructs the value in place over the target storage which need not hold a pristine
-        value - whatever the target held before is replaced. Every type inherits this
-        operation; the concrete construction semantics are the ones of the type.
+        Constructs the value in place over the uninitialized target storage. Any previous
+        resources held by target must have been destroyed or reset before calling create.
+        Every type inherits this operation; the concrete construction semantics are the
+        ones of the type.
 
-        @param[out] target the value to construct - the constructed value replaces whatever the target held before
+        @param[out] target the storage area in which to construct the value
       """)
     self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value",
       description="""
@@ -271,7 +272,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values",
       description="""
         Establishes the strict weak ordering of the two values per the type ordering
-        semantics - the ordering the ordered containers and the sorting rely on.
+        semantics - the ordering on which ordered containers and sorting rely.
 
         @param[in] left the first value
         @param[in] right the second value

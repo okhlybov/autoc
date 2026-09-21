@@ -27,7 +27,7 @@ class Deque(_StructRenderer, Sequence):
       Supports two way element traversal via the corresponding @ref {self.range} iterator.
 
       Implemented as the doubly linked list.
-      The closest C++ equivalent is [std::deque<>](https://cppreference.com/cpp/container/deque).
+      The closest C++ equivalent is [std::list<>](https://cppreference.com/cpp/container/list).
     """
 
     node_element = self.element.variable("node->element")
@@ -192,7 +192,7 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to front element",
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
       description="""
         Returns a copy of the first element in O(1) without modifying the deque.
 
@@ -222,7 +222,7 @@ class Deque(_StructRenderer, Sequence):
         return {front_element.bind(f.result)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get reference to back element",
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get back element",
       description="""
         Returns a copy of the last element in O(1) without modifying the deque.
 
