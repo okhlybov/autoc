@@ -119,7 +119,7 @@ class Raw(_AliasRenderer, _Reference):
       f.code = f"""
         if({f.target}) {{
           {self.type.destroy(f.target) if self.type.destructible else str()};
-          {self.memory.free(f.target)};
+          {self.memory.free(f"(void*){f.target}")};
         }}
       """
 
