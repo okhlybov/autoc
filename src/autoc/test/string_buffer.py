@@ -54,15 +54,23 @@ x.unit(f"{type.push_slice}(): push substring slices", f"""
 x.unit(f"{type.push_int}(): push numeric integer types", f"""
   {type.push_int(t, -42)};
   {type.push_char(t, "','")};
+  {type.push_uint(t, 0)};
+  {type.push_char(t, "','")};
   {type.push_uint(t, 100)};
   {type.push_char(t, "','")};
-  {type.push_size(t, 999)};
-  TEST_EQUAL_CHARS( {type.view(t)}, "-42,100,999" );
+  {type.push_long(t, "-123456L")};
+  {type.push_char(t, "','")};
+  {type.push_ulong(t, "654321UL")};
+  {type.push_char(t, "','")};
+  {type.push_long(t, 0)};
+  TEST_EQUAL_CHARS( {type.view(t)}, "-42,0,100,-123456,654321,0" );
 """)
 
-x.unit(f"{type.push_double}(): push floating point number", f"""
+x.unit(f"{type.push_double}(): push floating point numbers", f"""
   {type.push_double(t, 3.14)};
-  TEST_EQUAL_CHARS( {type.view(t)}, "3.14" );
+  {type.push_char(t, "','")};
+  {type.push_long_double(t, "2.718L")};
+  TEST_EQUAL_CHARS( {type.view(t)}, "3.14,2.718" );
 """)
 
 x.unit(f"{type.push_format}(): push formatted string", f"""

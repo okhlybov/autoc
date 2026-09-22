@@ -17,6 +17,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.queue` | `Queue` | `Queue<T>` | `Queue<T>::Range` (forward) | FIFO adapter over the deque |
 | `autoc.priority_queue` | `PriorityQueue` | `PriorityQueue<T>` | — | binary heap; `pop` yields the greatest element, duplicates allowed |
 | `autoc.string` | `String` | `String<char>` | `String<char>::Range` (direct access) | string as an index→character map; variadic formatted output (`format`) |
+| `autoc.string_buffer` | `StringBuffer` | `StringBuffer<char>` | — | append-optimized string buffer with scratch accumulation and lazy joining |
 
 ## Sets
 

@@ -11,6 +11,7 @@ class StringBuffer(_StructRenderer, Composite):
   brief = "Append-optimized string buffer with scratch accumulation and lazy joining"
   
   def __init__(self, name, scratch_capacity=128, chunk_shift=4, **kws):
+    self.element = std.char
     self.scratch_capacity = int(scratch_capacity)
     if self.scratch_capacity < 1:
       raise ValueError(f"Scratch capacity must be at least 1, got {self.scratch_capacity}")
@@ -27,12 +28,11 @@ class StringBuffer(_StructRenderer, Composite):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"typedef struct {self.name} {self.name};")
-    super()._render_struct(stream, header)
     stream.append(f"""
       struct {self.name} {{
-        size_t length; /**< @private */
-        size_t scratch_size; /**< @private */
-        char scratch[{self.scratch_capacity + 1}]; /**< @private */
+        {std.size_t} length; /**< @private */
+        {std.size_t} scratch_size; /**< @private */
+        {std.char} scratch[{self.scratch_capacity + 1}]; /**< @private */
         {self._variant} variant; /**< @private */
       }};
     """)
@@ -144,7 +144,7 @@ class StringBuffer(_StructRenderer, Composite):
         return target->length;
       """
 
-    with self.method("int", "empty", {"target": self}, brief="Check if buffer is empty",
+    with self.method(std.int, "empty", {"target": self}, brief="Check if buffer is empty",
       description="""
         Reports whether the buffer contains zero characters in O(1) time.
 
@@ -210,7 +210,7 @@ class StringBuffer(_StructRenderer, Composite):
         target->scratch_size = 0;
       """
 
-    with self.method(None, ("push", "slice"), {"target": inout(self), "str": Indirection("char", constant=True), "size": std.size_t}, brief="Push substring slice into buffer",
+    with self.method(None, ("push", "slice"), {"target": inout(self), "str": Indirection(std.char, constant=True), "size": std.size_t}, brief="Push substring slice into buffer",
       description="""
         Appends `size` characters from `str` into the buffer.
         Small slices are accumulated in the scratch buffer without heap allocations.
@@ -245,7 +245,7 @@ class StringBuffer(_StructRenderer, Composite):
         }}
       """
 
-    with self.method(None, "push", {"target": inout(self), "str": Indirection("char", constant=True)}, brief="Push null-terminated string into buffer",
+    with self.method(None, "push", {"target": inout(self), "str": Indirection(std.char, constant=True)}, brief="Push null-terminated string into buffer",
       description="""
         Appends a null-terminated string into the buffer.
 
@@ -259,7 +259,7 @@ class StringBuffer(_StructRenderer, Composite):
         }}
       """
 
-    with self.method(None, ("push", "char"), {"target": inout(self), "c": "char"}, brief="Push single character into buffer",
+    with self.method(None, ("push", "char"), {"target": inout(self), "c": std.char}, brief="Push single character into buffer",
       description="""
         Appends a single character into the buffer. Fast O(1) inline scratch append.
 
@@ -275,75 +275,7 @@ class StringBuffer(_StructRenderer, Composite):
         target->length += 1;
       """
 
-    with self.method(None, ("push", "int"), {"target": inout(self), "val": "int"}, brief="Push formatted integer into buffer",
-      description="""
-        Formats the integer and appends it to the buffer.
-
-        @param[in,out] target the string buffer
-        @param[in] val integer value to append
-      """) as f:
-      f.code = f"""
-        char buf[32];
-        int n;
-        assert(target);
-        n = sprintf(buf, "%d", val);
-        if(n > 0) {{
-          {self.push_slice("target", "buf", "(size_t)n")};
-        }}
-      """
-
-    with self.method(None, ("push", "uint"), {"target": inout(self), "val": "unsigned int"}, brief="Push formatted unsigned integer into buffer",
-      description="""
-        Formats the unsigned integer and appends it to the buffer.
-
-        @param[in,out] target the string buffer
-        @param[in] val unsigned integer value to append
-      """) as f:
-      f.code = f"""
-        char buf[32];
-        int n;
-        assert(target);
-        n = sprintf(buf, "%u", val);
-        if(n > 0) {{
-          {self.push_slice("target", "buf", "(size_t)n")};
-        }}
-      """
-
-    with self.method(None, ("push", "size"), {"target": inout(self), "val": std.size_t}, brief="Push formatted size_t value into buffer",
-      description="""
-        Formats the size_t value and appends it to the buffer.
-
-        @param[in,out] target the string buffer
-        @param[in] val size_t value to append
-      """) as f:
-      f.code = f"""
-        char buf[32];
-        int n;
-        assert(target);
-        n = sprintf(buf, "%lu", (unsigned long)val);
-        if(n > 0) {{
-          {self.push_slice("target", "buf", "(size_t)n")};
-        }}
-      """
-
-    with self.method(None, ("push", "double"), {"target": inout(self), "val": "double"}, brief="Push formatted double value into buffer",
-      description="""
-        Formats the floating-point value and appends it to the buffer.
-
-        @param[in,out] target the string buffer
-        @param[in] val double value to append
-      """) as f:
-      f.code = f"""
-        char buf[64];
-        int n;
-        assert(target);
-        n = sprintf(buf, "%g", val);
-        if(n > 0) {{
-          {self.push_slice("target", "buf", "(size_t)n")};
-        }}
-      """
-
-    with self.method("int", ("push", "format", "args"), {"target": inout(self), "format": Indirection("char", constant=True), "args": std.va_list}, brief="Push formatted output from va_list into buffer",
+    with self.method(std.int, ("push", "format", "args"), {"target": inout(self), "format": Indirection(std.char, constant=True), "args": std.va_list}, brief="Push formatted output from va_list into buffer",
       description="""
         Formats the output according to the format string and va_list and appends it to the buffer.
 
@@ -356,35 +288,42 @@ class StringBuffer(_StructRenderer, Composite):
       """) as f:
       f.code = f"""
         #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
-          int len;
+          int size;
+          char stack_buf[128];
           char* buf;
           va_list args_copy;
           assert(target);
           assert(format);
           #if defined(__POCC__)
             va_copy(args_copy, args);
-            len = vsnprintf(NULL, 0, format, args_copy);
+            size = vsnprintf(NULL, 0, format, args_copy);
             va_end(args_copy);
           #elif defined(_MSC_VER) && !defined(__clang__)
             va_copy(args_copy, args);
-            len = _vscprintf(format, args_copy);
+            size = _vscprintf(format, args_copy);
             va_end(args_copy);
           #else
             va_copy(args_copy, args);
-            len = vsnprintf(NULL, 0, format, args_copy);
+            size = vsnprintf(NULL, 0, format, args_copy);
             va_end(args_copy);
           #endif
-          if(len <= 0) return len;
-          buf = (char*)malloc((size_t)len + 1);
-          assert(buf);
+          if(size <= 0) return size;
+          if((size_t)size < sizeof(stack_buf)) {{
+            buf = stack_buf;
+          }} else {{
+            buf = (char*)malloc((size_t)size + 1);
+            assert(buf);
+          }}
           #if defined(_MSC_VER) && !defined(__clang__) && !defined(__POCC__)
             vsprintf(buf, format, args);
           #else
-            vsnprintf(buf, (size_t)len + 1, format, args);
+            vsnprintf(buf, (size_t)size + 1, format, args);
           #endif
-          {self.push_slice("target", "buf", "(size_t)len")};
-          free(buf);
-          return len;
+          {self.push_slice("target", "buf", "(size_t)size")};
+          if(buf != stack_buf) {{
+            free(buf);
+          }}
+          return size;
         #else
           (void)target;
           (void)format;
@@ -394,7 +333,7 @@ class StringBuffer(_StructRenderer, Composite):
         #endif
       """
 
-    with self.method("int", ("push", "format"), {"target": inout(self), "format": Indirection("char", constant=True)}, variadic=True, brief="Push formatted output into buffer",
+    with self.method(std.int, ("push", "format"), {"target": inout(self), "format": Indirection(std.char, constant=True)}, variadic=True, brief="Push formatted output into buffer",
       description="""
         Formats the output according to the format string and variable arguments and appends it to the buffer.
 
@@ -405,17 +344,114 @@ class StringBuffer(_StructRenderer, Composite):
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = lambda: f"""
-        int len;
+        int size;
         va_list args;
         assert(target);
         assert(format);
         va_start(args, format);
-        len = {self.push_format_args("target", "format", "args")};
+        size = {self.push_format_args("target", "format", "args")};
         va_end(args);
-        return len;
+        return size;
       """
 
-    with self.method(Indirection("char", constant=True), "view", {"target": inout(self)}, brief="Get coalesced string view",
+    with self.method(None, ("push", "ulong"), {"target": inout(self), "value": std.unsigned_long}, brief="Push formatted unsigned long integer into buffer",
+      description="""
+        Formats the unsigned long integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value unsigned long integer value to append
+      """) as f:
+      f.code = lambda: f"""
+        char buf[sizeof(unsigned long) * 3 + 1];
+        char* p;
+        unsigned long u;
+        assert(target);
+        p = buf + sizeof(buf);
+        u = value;
+        do {{
+          *--p = (char)('0' + (char)(u % 10));
+          u /= 10;
+        }} while(u != 0);
+        {self.push_slice("target", "p", "(size_t)((buf + sizeof(buf)) - p)")};
+      """
+
+    with self.method(None, ("push", "long"), {"target": inout(self), "value": std.long}, brief="Push formatted long integer into buffer",
+      description="""
+        Formats the long integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value long integer value to append
+      """) as f:
+      f.code = lambda: f"""
+        char buf[sizeof(unsigned long) * 3 + 2];
+        char* p;
+        unsigned long u;
+        assert(target);
+        p = buf + sizeof(buf);
+        if(value < 0) {{
+          u = 0UL - (unsigned long)value;
+        }} else {{
+          u = (unsigned long)value;
+        }}
+        do {{
+          *--p = (char)('0' + (char)(u % 10));
+          u /= 10;
+        }} while(u != 0);
+        if(value < 0) {{
+          *--p = '-';
+        }}
+        {self.push_slice("target", "p", "(size_t)((buf + sizeof(buf)) - p)")};
+      """
+
+    with self.method(None, ("push", "uint"), {"target": inout(self), "value": std.unsigned_int}, brief="Push formatted unsigned integer into buffer",
+      description="""
+        Formats the unsigned integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value unsigned integer value to append
+      """) as f:
+      f.code = lambda: f"""
+        assert(target);
+        {self.push_ulong("target", "value")};
+      """
+
+    with self.method(None, ("push", "int"), {"target": inout(self), "value": std.int}, brief="Push formatted integer into buffer",
+      description="""
+        Formats the integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value integer value to append
+      """) as f:
+      f.code = lambda: f"""
+        assert(target);
+        {self.push_long("target", "value")};
+      """
+
+    with self.method(None, ("push", "double"), {"target": inout(self), "value": std.double}, brief="Push formatted double value into buffer",
+      description="""
+        Formats the floating-point value and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value double value to append
+      """) as f:
+      f.code = lambda: f"""
+        assert(target);
+        {self.push_format("target", '"%g"', "value")};
+      """
+
+    with self.method(None, ("push", "long", "double"), {"target": inout(self), "value": std.long_double}, brief="Push formatted long double value into buffer",
+      description="""
+        Formats the long double floating-point value and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] value long double value to append
+      """) as f:
+      f.code = lambda: f"""
+        assert(target);
+        {self.push_format("target", '"%Lg"', "value")};
+      """
+
+    with self.method(Indirection(std.char, constant=True), "view", {"target": inout(self)}, brief="Get coalesced string view",
       description="""
         Lazily coalesces all chunks and scratch into a single contiguous null-terminated
         string and returns a pointer to it. Subsequent calls without intervening pushes
@@ -488,7 +524,7 @@ class StringBuffer(_StructRenderer, Composite):
       f.code = f"""
         char* result;
         assert(target);
-        (void){self.view("target")};
+        {self.view("target")};
         result = target->variant.value.string;
         if(result == _autoc_empty_string) {{
           result = (char*)malloc(1);

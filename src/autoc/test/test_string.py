@@ -69,8 +69,8 @@ x.unit(f"{type.copy}(): copy formatted string", f"""
 
 # Also test a variadic Macro directly to ensure Callable variadic support covers Macro
 variadic_sprintf = Macro(
-  "int",
-  {"buf": out("char*"), "fmt": Indirection("char", constant=True)},
+  std.int,
+  {"buf": out("char*"), "fmt": Indirection(std.char, constant=True)},
   lambda buf, fmt, *args: f"sprintf({buf}, {fmt}{''.join(', ' + str(a) for a in args)})",
   variadic=True
 )

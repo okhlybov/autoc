@@ -158,7 +158,7 @@ class String(autoc.string.String):
 class StringBuffer(autoc.string_buffer.StringBuffer):
   @property
   def _doxygen_type(self):
-    return self.name
+    return f"{self.name}<{self.element}>"
 
 
 class BitSet(autoc.bitset.BitSet):
