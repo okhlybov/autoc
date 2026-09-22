@@ -30,15 +30,44 @@ import autoc.treap_map
 import autoc.record
 import autoc.variant
 import autoc.reference
+import autoc.static_vector
+import autoc.bitset
 
 
 # The manual is written with the default CamelCase identifiers
 autoc.core.decorator = autoc.core.camel_decorator
 
 
+class Placeholder(autoc.core._AliasRenderer, autoc.core.Primitive):
+
+  def render_declarations(self, stream, header):
+    super().render_declarations(stream, header)
+    if header:
+      stream.append(f"""
+        /**
+         * @ingroup {self.name}
+         * @brief {self.brief if self.brief else self.name}
+         */
+        typedef struct {self.name} {self.name};
+      """)
+
+
 # Generic value types standing for the concrete element, key and mapped types
-T = autoc.core.Primitive("T")
-K = autoc.core.Primitive("K")
+T = Placeholder(
+  "T",
+  brief="Generic element type placeholder",
+  description="""
+    Stands for the element type of a sequence, set, stack, queue or priority queue —
+    and the mapped value type of a map.
+  """,
+)
+K = Placeholder(
+  "K",
+  brief="Generic index type placeholder",
+  description="""
+    Stands for the index (key) type of a map.
+  """,
+)
 
 
 # The sentinel operations the intrusive containers need are left symbolic - the manual
@@ -88,6 +117,12 @@ class Vector(autoc.vector.Vector):
     return f"{self.name}<{self.element}>"
 
 
+class StaticVector(autoc.static_vector.StaticVector):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}, N>"
+
+
 class TieredVector(autoc.tiered_vector.TieredVector):
   @property
   def _doxygen_type(self):
@@ -117,6 +152,12 @@ class String(autoc.string.String):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
+
+
+class BitSet(autoc.bitset.BitSet):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<N>"
 
 
 # Sets
@@ -178,6 +219,7 @@ class Raw(autoc.reference.Raw):
 _nested_range(autoc.list, "ListRange")
 _nested_range(autoc.deque, "DequeRange")
 _nested_range(autoc.vector, "VectorRange")
+_nested_range(autoc.static_vector, "StaticVectorRange")
 _nested_range(autoc.tiered_vector, "TieredVectorRange")
 _nested_range(autoc.stack, "StackRange")
 _nested_range(autoc.queue, "QueueRange")
@@ -191,11 +233,15 @@ _nested_range(autoc.treap_map, "TreapMapRange")
 
 
 def configure_module(module):
+  module.add(T)
+  module.add(K)
+
   module.add(String("String"))
 
   module.add(List("List", T))
   module.add(Deque("Deque", T))
   module.add(Vector("Vector", T))
+  module.add(StaticVector("StaticVector", T, 4))
   module.add(TieredVector("TieredVector", T))
   module.add(Stack("Stack", T))
   module.add(Queue("Queue", T))
@@ -209,6 +255,7 @@ def configure_module(module):
   module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
   module.add(TreapMap("TreapMap", T, K))
 
+  module.add(BitSet("BitSet", 64))
   module.add(autoc.record.Record("Record", {"first": T, "second": K}))
   module.add(autoc.variant.Variant("Variant", {"first": T, "second": K}))
 
