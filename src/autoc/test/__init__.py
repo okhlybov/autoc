@@ -19,7 +19,7 @@ def _import_modules(package):
 def configure_module(module):
   _import_modules(autoc.test)
   code = []
-  code.append("void run_codes() {\n")
+  code.append("void run_codes(void) {\n")
   for c in sorted(codes):
     module.add(c)
     code.append(f"run_code({c.name});\n")
@@ -37,12 +37,12 @@ class Unit(autoc.module.Code):
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)
     if header:
-      stream.append(f"void {self.name}();")
+      stream.append(f"void {self.name}(void);")
 
   def render_definitions(self, stream, header):
     super().render_definitions(stream, header)
     if not header:
-      stream.append(f"void {self.name}() {{\n")
+      stream.append(f"void {self.name}(void) {{\n")
       self.render_code(stream)
       stream.append(f"}}\n")
 
@@ -101,7 +101,7 @@ code = autoc.module.Code(
     #define TEST_NOT_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) equality_failure("expected strings non-equality", #x, #y, __FILE__, __LINE__)
     void condition_failure(const char* message, const char* condition, const char* file, int line);
     void equality_failure(const char* message, const char* x, const char* y, const char* file, int line);
-    void run_code(void(*code)());
+    void run_code(void(*code)(void));
     void run_codes();
     extern int run, failed;
   """,
@@ -118,7 +118,7 @@ code = autoc.module.Code(
       failure = 1;
     }
     int run = 0, failed = 0;
-    void run_code(void(*code)()) {
+    void run_code(void(*code)(void)) {
       failure = 0;
       code();
       if(failure) ++failed;
