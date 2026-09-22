@@ -13,7 +13,7 @@ class String(_AliasRenderer, Indirection, Map):
   brief = "Value type wrapper of the C char* string"
   
   def __init__(self, name, *args, **kws):
-    super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.stdio_h, std.string_h, std.stdarg_h, std.stdlib_h, _static_code, _va_copy_code))
+    super().__init__("char", name, "char", std.size_t, prefix=name, dependencies=(std.stdio_h, std.string_h, std.stdarg_h, std.stdlib_h, _static_code, _va_copy_code), **kws)
     self.range = Range(self)
 
   def __setup__(self):
