@@ -1,0 +1,503 @@
+import autoc.std as std
+from autoc.string import String, _va_copy_code
+from autoc.tiered_vector import TieredVector
+from autoc.variant import Variant
+from autoc.core import Composite, _StructRenderer, Indirection, inout
+
+
+#
+class StringBuffer(_StructRenderer, Composite):
+
+  brief = "Append-optimized string buffer with scratch accumulation and lazy joining"
+  
+  def __init__(self, name, scratch_capacity=128, chunk_shift=4, **kws):
+    self.scratch_capacity = int(scratch_capacity)
+    if self.scratch_capacity < 1:
+      raise ValueError(f"Scratch capacity must be at least 1, got {self.scratch_capacity}")
+    self.chunk_shift = int(chunk_shift)
+    
+    super().__init__(name, dependencies=(std.stdio_h, std.stdlib_h, std.string_h, std.stdarg_h, std.assert_h, _va_copy_code), **kws)
+    
+    self._string = String(self._decorate_component("string"), visibility="internal")
+    self._chunks = TieredVector(self._decorate_component("chunks"), self._string, chunk_shift=self.chunk_shift, visibility="internal")
+    self._variant = Variant(self._decorate_component("variant"), {"string": self._string, "chunks": self._chunks}, visibility="internal")
+    
+    self.dependencies.update([self._string, self._chunks, self._variant])
+
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"typedef struct {self.name} {self.name};")
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      struct {self.name} {{
+        size_t length; /**< @private */
+        size_t scratch_size; /**< @private */
+        char scratch[{self.scratch_capacity + 1}]; /**< @private */
+        {self._variant} variant; /**< @private */
+      }};
+    """)
+
+  @property
+  def constructible(self):
+    return True
+
+  @property
+  def destructible(self):
+    return True
+
+  @property
+  def copyable(self):
+    return True
+
+  @property
+  def moveable(self):
+    return True
+
+  @property
+  def swappable(self):
+    return True
+
+  @property
+  def orderable(self):
+    return False
+
+  @property
+  def comparable(self):
+    return False
+
+  @property
+  def hashable(self):
+    return False
+
+  def __setup__(self):
+    super().__setup__()
+
+    self.description = f"""
+      Append-optimized string buffer combining an inline scratch buffer ({self.scratch_capacity} bytes)
+      for fast non-allocating small appends, a tiered vector of string chunks for amortized O(1) growth,
+      and lazy coalescing into a single contiguous null-terminated string on view.
+    """
+
+    with self.create as f:
+      f.code = f"""
+        assert(target);
+        target->length = 0;
+        target->scratch_size = 0;
+        target->scratch[0] = '\\0';
+        target->variant.tag = 0;
+        target->variant.value.string = (char*)_autoc_empty_string;
+      """
+
+    with self.destroy as f:
+      f.code = f"""
+        assert(target);
+        if(target->variant.tag == 0) {{
+          if(target->variant.value.string && target->variant.value.string != _autoc_empty_string) {{
+            free(target->variant.value.string);
+          }}
+        }} else if(target->variant.tag == 1) {{
+          {self._chunks.destroy("(&target->variant.value.chunks)")};
+        }}
+      """
+
+    with self.copy as f:
+      f.code = f"""
+        assert(target);
+        assert(source);
+        target->length = source->length;
+        target->scratch_size = source->scratch_size;
+        if(source->scratch_size > 0) {{
+          memcpy(target->scratch, source->scratch, source->scratch_size);
+        }}
+        if(source->variant.tag == 0) {{
+          if(source->variant.value.string && source->variant.value.string != _autoc_empty_string) {{
+            target->variant.value.string = {self._string.new("source->variant.value.string")};
+          }} else {{
+            target->variant.value.string = (char*)_autoc_empty_string;
+          }}
+          target->variant.tag = 0;
+        }} else if(source->variant.tag == 1) {{
+          {self._chunks.copy("(&target->variant.value.chunks)", "(&source->variant.value.chunks)")};
+          target->variant.tag = 1;
+        }} else {{
+          target->variant.tag = -1;
+        }}
+      """
+
+    with self.move as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(source);
+        *target = *source;
+        {self.create("source")};
+      """
+
+    with self.method(std.size_t, "size", {"target": self}, brief="Get total length of buffer",
+      description="""
+        Returns the total accumulated character count in O(1) time.
+
+        @param[in] target the string buffer to measure
+        @return number of characters in the buffer
+      """) as f:
+      f.inline_code = """
+        assert(target);
+        return target->length;
+      """
+
+    with self.method("int", "empty", {"target": self}, brief="Check if buffer is empty",
+      description="""
+        Reports whether the buffer contains zero characters in O(1) time.
+
+        @param[in] target the string buffer to check
+        @return non-zero if the buffer is empty
+      """) as f:
+      f.inline_code = """
+        assert(target);
+        return target->length == 0;
+      """
+
+    with self.method(None, "clear", {"target": inout(self)}, brief="Clear buffer contents",
+      description="""
+        Releases any allocated memory and resets the buffer to an empty state in O(chunks) time.
+
+        @param[in,out] target the string buffer to clear
+      """) as f:
+      f.code = f"""
+        assert(target);
+        if(target->variant.tag == 0) {{
+          if(target->variant.value.string && target->variant.value.string != _autoc_empty_string) {{
+            free(target->variant.value.string);
+          }}
+        }} else if(target->variant.tag == 1) {{
+          {self._chunks.destroy("(&target->variant.value.chunks)")};
+        }}
+        target->variant.tag = 0;
+        target->variant.value.string = (char*)_autoc_empty_string;
+        target->length = 0;
+        target->scratch_size = 0;
+        target->scratch[0] = '\\0';
+      """
+
+    self._ensure_chunks = self.method(None, ("ensure", "chunks"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Ensure variant is in chunks mode (internal)")
+    with self._ensure_chunks as f:
+      f.code = f"""
+        char* old;
+        assert(target);
+        if(target->variant.tag == 1) return;
+        if(target->variant.tag == 0) {{
+          old = target->variant.value.string;
+          target->variant.tag = -1;
+          {self._chunks.create("(&target->variant.value.chunks)")};
+          target->variant.tag = 1;
+          if(old && old != _autoc_empty_string && *old != '\\0') {{
+            {self._chunks.push("(&target->variant.value.chunks)", "old")};
+            free(old);
+          }}
+        }} else {{
+          {self._chunks.create("(&target->variant.value.chunks)")};
+          target->variant.tag = 1;
+        }}
+      """
+
+    self._flush_scratch = self.method(None, ("flush", "scratch"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Flush scratch buffer to chunks (internal)")
+    with self._flush_scratch as f:
+      f.code = f"""
+        assert(target);
+        if(target->scratch_size == 0) return;
+        {self._ensure_chunks("target")};
+        target->scratch[target->scratch_size] = '\\0';
+        {self._chunks.push("(&target->variant.value.chunks)", "target->scratch")};
+        target->scratch_size = 0;
+      """
+
+    with self.method(None, ("push", "slice"), {"target": inout(self), "str": Indirection("char", constant=True), "size": std.size_t}, brief="Push substring slice into buffer",
+      description="""
+        Appends `size` characters from `str` into the buffer.
+        Small slices are accumulated in the scratch buffer without heap allocations.
+        When scratch fills up, it is flushed into the chunk table.
+
+        @param[in,out] target the string buffer
+        @param[in] str pointer to character sequence
+        @param[in] size number of characters to push
+      """) as f:
+      f.code = f"""
+        char* chunk;
+        assert(target);
+        if(size == 0 || !str) return;
+        target->length += size;
+        if(size <= ({self.scratch_capacity} - target->scratch_size)) {{
+          memcpy(target->scratch + target->scratch_size, str, size);
+          target->scratch_size += size;
+        }} else {{
+          {self._flush_scratch("target")};
+          if(size <= {self.scratch_capacity}) {{
+            memcpy(target->scratch, str, size);
+            target->scratch_size = size;
+          }} else {{
+            chunk = (char*)malloc(size + 1);
+            assert(chunk);
+            memcpy(chunk, str, size);
+            chunk[size] = '\\0';
+            {self._ensure_chunks("target")};
+            {self._chunks.push("(&target->variant.value.chunks)", "chunk")};
+            free(chunk);
+          }}
+        }}
+      """
+
+    with self.method(None, "push", {"target": inout(self), "str": Indirection("char", constant=True)}, brief="Push null-terminated string into buffer",
+      description="""
+        Appends a null-terminated string into the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] str null-terminated string to append
+      """) as f:
+      f.code = f"""
+        assert(target);
+        if(str) {{
+          {self.push_slice("target", "str", "strlen(str)")};
+        }}
+      """
+
+    with self.method(None, ("push", "char"), {"target": inout(self), "c": "char"}, brief="Push single character into buffer",
+      description="""
+        Appends a single character into the buffer. Fast O(1) inline scratch append.
+
+        @param[in,out] target the string buffer
+        @param[in] c character to append
+      """) as f:
+      f.code = f"""
+        assert(target);
+        if(target->scratch_size == {self.scratch_capacity}) {{
+          {self._flush_scratch("target")};
+        }}
+        target->scratch[target->scratch_size++] = c;
+        target->length += 1;
+      """
+
+    with self.method(None, ("push", "int"), {"target": inout(self), "val": "int"}, brief="Push formatted integer into buffer",
+      description="""
+        Formats the integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] val integer value to append
+      """) as f:
+      f.code = f"""
+        char buf[32];
+        int n;
+        assert(target);
+        n = sprintf(buf, "%d", val);
+        if(n > 0) {{
+          {self.push_slice("target", "buf", "(size_t)n")};
+        }}
+      """
+
+    with self.method(None, ("push", "uint"), {"target": inout(self), "val": "unsigned int"}, brief="Push formatted unsigned integer into buffer",
+      description="""
+        Formats the unsigned integer and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] val unsigned integer value to append
+      """) as f:
+      f.code = f"""
+        char buf[32];
+        int n;
+        assert(target);
+        n = sprintf(buf, "%u", val);
+        if(n > 0) {{
+          {self.push_slice("target", "buf", "(size_t)n")};
+        }}
+      """
+
+    with self.method(None, ("push", "size"), {"target": inout(self), "val": std.size_t}, brief="Push formatted size_t value into buffer",
+      description="""
+        Formats the size_t value and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] val size_t value to append
+      """) as f:
+      f.code = f"""
+        char buf[32];
+        int n;
+        assert(target);
+        n = sprintf(buf, "%lu", (unsigned long)val);
+        if(n > 0) {{
+          {self.push_slice("target", "buf", "(size_t)n")};
+        }}
+      """
+
+    with self.method(None, ("push", "double"), {"target": inout(self), "val": "double"}, brief="Push formatted double value into buffer",
+      description="""
+        Formats the floating-point value and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] val double value to append
+      """) as f:
+      f.code = f"""
+        char buf[64];
+        int n;
+        assert(target);
+        n = sprintf(buf, "%g", val);
+        if(n > 0) {{
+          {self.push_slice("target", "buf", "(size_t)n")};
+        }}
+      """
+
+    with self.method("int", ("push", "format", "args"), {"target": inout(self), "format": Indirection("char", constant=True), "args": std.va_list}, brief="Push formatted output from va_list into buffer",
+      description="""
+        Formats the output according to the format string and va_list and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] format the format string
+        @param[in] args the variable arguments list
+        @return number of characters written, or negative on encoding error
+
+        @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
+      """) as f:
+      f.code = f"""
+        #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+          int len;
+          char* buf;
+          va_list args_copy;
+          assert(target);
+          assert(format);
+          #if defined(__POCC__)
+            va_copy(args_copy, args);
+            len = vsnprintf(NULL, 0, format, args_copy);
+            va_end(args_copy);
+          #elif defined(_MSC_VER) && !defined(__clang__)
+            va_copy(args_copy, args);
+            len = _vscprintf(format, args_copy);
+            va_end(args_copy);
+          #else
+            va_copy(args_copy, args);
+            len = vsnprintf(NULL, 0, format, args_copy);
+            va_end(args_copy);
+          #endif
+          if(len <= 0) return len;
+          buf = (char*)malloc((size_t)len + 1);
+          assert(buf);
+          #if defined(_MSC_VER) && !defined(__clang__) && !defined(__POCC__)
+            vsprintf(buf, format, args);
+          #else
+            vsnprintf(buf, (size_t)len + 1, format, args);
+          #endif
+          {self.push_slice("target", "buf", "(size_t)len")};
+          free(buf);
+          return len;
+        #else
+          (void)target;
+          (void)format;
+          (void)args;
+          assert(0 && "string buffer formatting requires vsnprintf support");
+          return -1;
+        #endif
+      """
+
+    with self.method("int", ("push", "format"), {"target": inout(self), "format": Indirection("char", constant=True)}, variadic=True, brief="Push formatted output into buffer",
+      description="""
+        Formats the output according to the format string and variable arguments and appends it to the buffer.
+
+        @param[in,out] target the string buffer
+        @param[in] format the format string
+        @return number of characters written, or negative on encoding error
+
+        @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
+      """) as f:
+      f.code = lambda: f"""
+        int len;
+        va_list args;
+        assert(target);
+        assert(format);
+        va_start(args, format);
+        len = {self.push_format_args("target", "format", "args")};
+        va_end(args);
+        return len;
+      """
+
+    with self.method(Indirection("char", constant=True), "view", {"target": inout(self)}, brief="Get coalesced string view",
+      description="""
+        Lazily coalesces all chunks and scratch into a single contiguous null-terminated
+        string and returns a pointer to it. Subsequent calls without intervening pushes
+        are O(1).
+
+        @param[in,out] target the string buffer
+        @return pointer to the null-terminated contiguous string
+      """) as f:
+      f.code = f"""
+        size_t i, count, chunk_len;
+        char* buf;
+        char* p;
+        const char* chunk;
+        assert(target);
+        if(target->variant.tag == 0 && target->scratch_size == 0) {{
+          return target->variant.value.string ? target->variant.value.string : _autoc_empty_string;
+        }}
+        if(target->length == 0) {{
+          if(target->variant.tag == 1) {{
+            {self._chunks.destroy("(&target->variant.value.chunks)")};
+          }}
+          target->variant.tag = 0;
+          target->variant.value.string = (char*)_autoc_empty_string;
+          target->scratch_size = 0;
+          return _autoc_empty_string;
+        }}
+        buf = (char*)malloc(target->length + 1);
+        assert(buf);
+        p = buf;
+        if(target->variant.tag == 1) {{
+          count = target->variant.value.chunks.size;
+          for(i = 0; i < count; ++i) {{
+            chunk = target->variant.value.chunks.chunks[i >> {self.chunk_shift}][i & {self._chunks.chunk_mask}];
+            if(chunk) {{
+              chunk_len = strlen(chunk);
+              memcpy(p, chunk, chunk_len);
+              p += chunk_len;
+            }}
+          }}
+          {self._chunks.destroy("(&target->variant.value.chunks)")};
+        }} else if(target->variant.tag == 0) {{
+          char* old = target->variant.value.string;
+          if(old && old != _autoc_empty_string) {{
+            chunk_len = strlen(old);
+            memcpy(p, old, chunk_len);
+            p += chunk_len;
+            free(old);
+          }}
+        }}
+        if(target->scratch_size > 0) {{
+          memcpy(p, target->scratch, target->scratch_size);
+          p += target->scratch_size;
+          target->scratch_size = 0;
+        }}
+        *p = '\\0';
+        target->variant.tag = 0;
+        target->variant.value.string = buf;
+        return buf;
+      """
+
+    with self.method(self._string, "take", {"target": inout(self)}, brief="Extract contiguous string and reset buffer",
+      description="""
+        Coalesces the buffer contents if needed, transfers ownership of the allocated
+        string to the caller, and resets the buffer to an empty state in O(1) after coalescing.
+        The returned string must be freed by string destruction or free().
+
+        @param[in,out] target the string buffer
+        @return the owned null-terminated string
+      """) as f:
+      f.code = f"""
+        char* result;
+        assert(target);
+        (void){self.view("target")};
+        result = target->variant.value.string;
+        if(result == _autoc_empty_string) {{
+          result = (char*)malloc(1);
+          assert(result);
+          result[0] = '\\0';
+        }}
+        target->variant.tag = 0;
+        target->variant.value.string = (char*)_autoc_empty_string;
+        target->length = 0;
+        target->scratch_size = 0;
+        return result;
+      """

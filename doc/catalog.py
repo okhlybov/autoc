@@ -21,6 +21,7 @@ import autoc.stack
 import autoc.queue
 import autoc.priority_queue
 import autoc.string
+import autoc.string_buffer
 import autoc.chained_hash_set
 import autoc.chained_hash_map
 import autoc.intrusive_hash_set
@@ -154,6 +155,12 @@ class String(autoc.string.String):
     return f"{self.name}<{self.element}>"
 
 
+class StringBuffer(autoc.string_buffer.StringBuffer):
+  @property
+  def _doxygen_type(self):
+    return self.name
+
+
 class BitSet(autoc.bitset.BitSet):
   @property
   def _doxygen_type(self):
@@ -237,6 +244,7 @@ def configure_module(module):
   module.add(K)
 
   module.add(String("String"))
+  module.add(StringBuffer("StringBuffer"))
 
   module.add(List("List", T))
   module.add(Deque("Deque", T))
