@@ -524,8 +524,23 @@ class Composite(_Named, _Traitful):
 
 class _StructRenderer(_GroupRenderer):
 
+  opaque = True # Structs are opaque by default
+
   def _render_struct(self, stream, header):
     self._render_documentation(stream, header)
+    if not isinstance(self, Indirection):
+      if self.public:
+        stream.append(f"/** @ingroup {self.name} */\n")
+      else:
+        stream.append("/** @private */\n")
+      stream.append(f"typedef struct {self.name} {self.name};\n")
+      if self.public:
+        if getattr(self, "opaque", True):
+          stream.append(f"/**\n  @ingroup {self.name}\n  @brief The opaque handle representing @ref {self} value.\n*/\n")
+        else:
+          stream.append(f"/** @ingroup {self.name} */\n")
+      else:
+        stream.append("/** @private */\n")
 
   def render_declarations(self, stream, header):
     super().render_declarations(stream, header)

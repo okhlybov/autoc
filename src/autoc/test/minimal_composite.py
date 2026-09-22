@@ -17,7 +17,8 @@ class Type(_StructRenderer, Composite):
       f.inline_code = "assert(target);"
 
   def _render_struct(self, stream, header):
-    stream.append(f"typedef struct {{ int value; }} {self.name};")
+    super()._render_struct(stream, header)
+    stream.append(f"struct {self.name} {{ int value; }};")
 
 
 x = autoc.test.Type(type := Type("minimal_composite"))

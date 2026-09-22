@@ -413,12 +413,12 @@ class TieredVector(_StructRenderer, Map, Sequence):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._chunk_pp} chunks; /**< @private */
         {std.size_t} chunk_count; /**< @private */
         {std.size_t} chunk_capacity; /**< @private */
         {std.size_t} size; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -430,10 +430,10 @@ class Range(_Range, DirectAccess):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
         {std.size_t} front, back; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def __setup__(self):

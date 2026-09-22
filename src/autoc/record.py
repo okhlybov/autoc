@@ -139,8 +139,6 @@ class Record(_StructRenderer, Composite):
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
-    stream.append(f"typedef struct {self.name} {self.name};\n")
-    super()._render_struct(stream, header)
     stream.append(f"struct {self.name} {{\n")
     for field, type in self.fields.items():
       stream.append(f"{type} {field};")

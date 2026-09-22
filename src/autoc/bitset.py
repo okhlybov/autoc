@@ -346,7 +346,7 @@ class BitSet(_StructRenderer, Composite):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         unsigned char words[{self._word_count}]; /**< @private */
-      }} {self.name};
+      }};
     """)

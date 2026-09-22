@@ -413,10 +413,10 @@ class Vector(_StructRenderer, Map, Sequence):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.element)} elements; /**< @private */
         {self.index} size; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -426,10 +426,10 @@ class Range(_Range, DirectAccess):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
         {self.iterable.index} front, /**< @private */ back; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def _copy(self, result, parameters, **kws):

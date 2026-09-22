@@ -236,9 +236,9 @@ class PriorityQueue(_StructRenderer, Collection):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._element_p} elements; /**< @private */
         {std.size_t} capacity; /**< @private */
         {std.size_t} size; /**< @private */
-      }} {self.name};
+      }};
     """)

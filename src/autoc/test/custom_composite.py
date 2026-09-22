@@ -41,10 +41,11 @@ class Type(_StructRenderer, Composite):
       f.code = "return *target->value;"
     
   def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         int* value;
-      }} {self.name};
+      }};
     """)
     
 

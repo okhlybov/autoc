@@ -194,9 +194,9 @@ class Map(_StructRenderer, Map):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._set.variable("set").definition}; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -215,9 +215,9 @@ class Range(_Range, Forward):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._range.name} range; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def __setup__(self):

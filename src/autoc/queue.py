@@ -148,9 +148,9 @@ class Queue(_StructRenderer, Collection):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._deque.variable("deque").definition}; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -162,11 +162,11 @@ class Range(_Range, Forward):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
         {self.iterable._deque.node}* front; /**< @private */
         {self.iterable._deque.node}* back; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def __setup__(self):

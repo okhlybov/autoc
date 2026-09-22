@@ -27,7 +27,6 @@ class StringBuffer(_StructRenderer, Composite):
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
-    stream.append(f"typedef struct {self.name} {self.name};")
     stream.append(f"""
       struct {self.name} {{
         {std.size_t} length; /**< @private */

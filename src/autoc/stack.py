@@ -135,9 +135,9 @@ class Stack(_StructRenderer, Collection):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self._list.variable("list").definition}; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -149,10 +149,10 @@ class Range(_Range, Forward):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
         {self.iterable._list.node}* node; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def __setup__(self):

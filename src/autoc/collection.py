@@ -23,10 +23,6 @@ class _Range(_StructRenderer, Range):
   def __setup__(self):
     super().__setup__()
     
-    self.description1 = f"""
-      The opaque value representing @ref {self} value.
-    """
-    
     with self.copy as f:
       f.inline_code = f"""
         assert(target);

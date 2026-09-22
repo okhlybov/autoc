@@ -325,11 +325,11 @@ class Set(_StructRenderer, Set):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self.element}* elements; /**< @private */
         {std.size_t} capacity; /**< @private */
         {std.size_t} size; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -341,10 +341,10 @@ class Range(_Range, Forward):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
         {std.size_t} front; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def _copy(self, result, parameters, **kws):

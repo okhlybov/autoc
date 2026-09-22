@@ -206,10 +206,10 @@ class List(_StructRenderer, Sequence):
     """)
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self.node}* front; /**< @private */
         {std.size_t} size; /**< @private */
-      }} {self.name};
+      }};
     """)
 
 
@@ -219,9 +219,9 @@ class Range(_Range, Forward):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {self.iterable.node}* front; /**< @private */
-      }} {self.name};
+      }};
     """)
     
   def __setup__(self):

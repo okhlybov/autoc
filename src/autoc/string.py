@@ -287,10 +287,10 @@ class Range(_Range, DirectAccess):
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
-      typedef struct {{
+      struct {self.name} {{
         {Indirection(self.iterable.type, constant=True)} iterable; /**< @private */
         {self.iterable.index} front, back; /**< @private */
-      }} {self.name};
+      }};
     """)
 
   def __setup__(self):
