@@ -178,46 +178,46 @@ class String(_AliasRenderer, Indirection, Map):
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = """
-        int len;
-        char* buf;
-        va_list args_copy;
-        assert(target);
-        assert(format);
-        #if defined(__POCC__)
-          /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER */
-          va_copy(args_copy, args);
-          len = vsnprintf(NULL, 0, format, args_copy);
-          va_end(args_copy);
-        #elif defined(_MSC_VER) && !defined(__clang__)
-          va_copy(args_copy, args);
-          len = _vscprintf(format, args_copy);
-          va_end(args_copy);
-        #elif (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__GNUC__) || defined(__clang__)
-          va_copy(args_copy, args);
-          len = vsnprintf(NULL, 0, format, args_copy);
-          va_end(args_copy);
+        #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+          int len;
+          char* buf;
+          va_list args_copy;
+          assert(target);
+          assert(format);
+          #if defined(__POCC__)
+            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER */
+            va_copy(args_copy, args);
+            len = vsnprintf(NULL, 0, format, args_copy);
+            va_end(args_copy);
+          #elif defined(_MSC_VER) && !defined(__clang__)
+            va_copy(args_copy, args);
+            len = _vscprintf(format, args_copy);
+            va_end(args_copy);
+          #else
+            va_copy(args_copy, args);
+            len = vsnprintf(NULL, 0, format, args_copy);
+            va_end(args_copy);
+          #endif
+          if(len < 0) return len;
+          buf = (char*)malloc((size_t)len + 1);
+          assert(buf);
+          #if defined(_MSC_VER) && !defined(__clang__) && !defined(__POCC__)
+            vsprintf(buf, format, args);
+          #else
+            vsnprintf(buf, (size_t)len + 1, format, args);
+          #endif
+          if(*target && *target != _autoc_empty_string) {
+            free(*target);
+          }
+          *target = buf;
+          return len;
         #else
-          (void)args_copy;
-          assert(0 && "string formatting requires vsnprintf support");
-          return -1;
-        #endif
-        if(len < 0) return len;
-        buf = (char*)malloc((size_t)len + 1);
-        assert(buf);
-        #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || defined(__POCC__) || defined(__GNUC__) || defined(__clang__)
-          vsnprintf(buf, (size_t)len + 1, format, args);
-        #elif defined(_MSC_VER) && !defined(__clang__)
-          vsprintf(buf, format, args);
-        #else
-          (void)buf;
+          (void)target;
+          (void)format;
           (void)args;
+          assert(0 && "string formatting requires vsnprintf() support");
           return -1;
         #endif
-        if(*target && *target != _autoc_empty_string) {
-          free(*target);
-        }
-        *target = buf;
-        return len;
       """
 
     with self.method("int", "format", {"target": inout(Indirection(self)), "format": Indirection("char", constant=True)}, variadic=True, brief="Format output into string",
