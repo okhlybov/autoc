@@ -1,3 +1,4 @@
+import os
 import sys
 import pathlib
 
@@ -9,22 +10,29 @@ def interpolate(template, **items):
   return s
 
 
-def generate(project):
-  items = dict(project=project, module=project)
-  pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
-  pathlib.Path(".vscode").mkdir(parents=True, exist_ok=True)
-  for file, template in {
-    "cmake/AutoC.cmake": _autoc_cmake,
-    "CMakeLists.txt": _cmakelists_txt,
-    "CMakePresets.json": _cmakepresets_json,
-    f"{project}.c": _project_c,
-    f"{project}.py": _project_py,
-    f"{project}.code-workspace": _code_workspace,
-    ".vscode/launch.json": _launch_json,
-    ".gitignore": _gitignore,
-  }.items():
-    with open(file, "w") as f:
-      f.write(interpolate(template, **items))
+def generate(project, directory="."):
+  target_path = pathlib.Path(directory).resolve()
+  target_path.mkdir(parents=True, exist_ok=True)
+  orig_cwd = os.getcwd()
+  try:
+    os.chdir(target_path)
+    items = dict(project=project, module=project)
+    pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
+    pathlib.Path(".vscode").mkdir(parents=True, exist_ok=True)
+    for file, template in {
+      "cmake/AutoC.cmake": _autoc_cmake,
+      "CMakeLists.txt": _cmakelists_txt,
+      "CMakePresets.json": _cmakepresets_json,
+      f"{project}.c": _project_c,
+      f"{project}.py": _project_py,
+      f"{project}.code-workspace": _code_workspace,
+      ".vscode/launch.json": _launch_json,
+      ".gitignore": _gitignore,
+    }.items():
+      with open(file, "w") as f:
+        f.write(interpolate(template, **items))
+  finally:
+    os.chdir(orig_cwd)
 
 
 _project_py = """
@@ -89,20 +97,20 @@ _cmakepresets_json = """{
   "version": 3,
   "configurePresets": [
     {
-      "name": "base",
+      "name": "Common",
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}"
     },
     {
-      "name": "debug",
-      "inherits": "base",
+      "name": "Debug",
+      "inherits": "Common",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "release",
-      "inherits": "base",
+      "name": "Release",
+      "inherits": "Common",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -110,12 +118,12 @@ _cmakepresets_json = """{
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug"
+      "name": "Debug",
+      "configurePreset": "Debug"
     },
     {
-      "name": "release",
-      "configurePreset": "release"
+      "name": "Release",
+      "configurePreset": "Release"
     }
   ]
 }"""
@@ -178,10 +186,14 @@ function(add_autoc_module module)
     VERBATIM
   )
   add_custom_target(${module_target} DEPENDS ${module_state})
-  add_dependencies(${module}-auto ${module_target})
+  if(TARGET ${module}-auto)
+    add_dependencies(${module}-auto ${module_target})
+  endif()
 endfunction()
 """
 
 
 if __name__ == "__main__":
-  generate(sys.argv[1])
+  project = sys.argv[1]
+  directory = sys.argv[2] if len(sys.argv) > 2 else "."
+  generate(project, directory=directory)
