@@ -111,6 +111,8 @@ class Deque(autoc.deque.Deque):
 class Vector(autoc.vector.Vector):
   @property
   def _doxygen_type(self):
+    if self.inline_capacity > 0:
+      return f"{self.name}<{self.element}, {self.inline_capacity}>"
     return f"{self.name}<{self.element}>"
 
 

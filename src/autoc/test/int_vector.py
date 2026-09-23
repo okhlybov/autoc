@@ -211,3 +211,46 @@ x.unit(f"{type.resize}(): repeated up and down cycles", f"""
   TEST_EQUAL( {type.get(t, 1)}, 1 );
   for(i = 2; i < 5; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
 """)
+
+x.setup(f"""
+  int i;
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.push}(): push into empty vector grows geometrically", f"""
+  TEST_EQUAL( {type.size(t)}, 0 );
+  TEST_EQUAL( {type.capacity(t)}, 0 );
+  {type.push(t, 10)};
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_TRUE( {type.capacity(t)} >= 1 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+
+  for(i = 1; i < 20; ++i) {type.push(t, "(i + 1) * 10")};
+  TEST_EQUAL( {type.size(t)}, 20 );
+  TEST_TRUE( {type.capacity(t)} >= 20 );
+  for(i = 0; i < 20; ++i) TEST_EQUAL( {type.get(t, "i")}, (i + 1) * 10 );
+""")
+
+x.unit(f"{type.pop}(): pop elements in LIFO order", f"""
+  for(i = 0; i < 5; ++i) {type.push(t, "i + 1")};
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_EQUAL( {type.pop(t)}, 5 );
+  TEST_EQUAL( {type.pop(t)}, 4 );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.get(t, 2)}, 3 );
+  TEST_EQUAL( {type.pop(t)}, 3 );
+  TEST_EQUAL( {type.pop(t)}, 2 );
+  TEST_EQUAL( {type.pop(t)}, 1 );
+  TEST_TRUE( {type.empty(t)} );
+""")
+
+x.unit(f"{type.data}(): access contiguous buffer", f"""
+  for(i = 0; i < 4; ++i) {type.push(t, "i * 2")};
+  int *data = {type.data(t)};
+  TEST_NOT_NULL( data );
+  for(i = 0; i < 4; ++i) TEST_EQUAL( data[i], i * 2 );
+""")

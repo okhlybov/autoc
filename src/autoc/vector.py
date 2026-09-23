@@ -11,9 +11,27 @@ class Vector(_StructRenderer, Map, Sequence):
 
   brief = "Direct access sequence container"
   
-  def __init__(self, name, element, **kws):
-    super().__init__(name, element, std.size_t, **kws)
+  def __init__(self, name, element, inline_capacity=0, *args, dependencies=(), **kws):
+    self.inline_capacity = int(inline_capacity)
+    if self.inline_capacity < 0:
+      raise ValueError(f"Vector inline_capacity must be non-negative, got {self.inline_capacity}")
+    super().__init__(name, element, std.size_t, *args, dependencies=(*dependencies, std.string_h), **kws)
     self.range = Range(self)
+
+  def _data(self, target):
+    if self.inline_capacity > 0:
+      return f"({target}->capacity <= {self.inline_capacity} ? {target}->storage.inline_elements : {target}->storage.heap_elements)"
+    return f"({target}->elements)"
+
+  def _free_heap(self, target):
+    if self.inline_capacity > 0:
+      return f"if({target}->capacity > {self.inline_capacity}) {{ {self.memory.free(f'{target}->storage.heap_elements')}; }}"
+    return f"if({target}->elements) {{ {self.memory.free(f'{target}->elements')}; }}"
+
+  def _set_heap(self, target, ptr, capacity):
+    if self.inline_capacity > 0:
+      return f"{target}->storage.heap_elements = {ptr}; {target}->capacity = {capacity};"
+    return f"{target}->elements = {ptr}; {target}->capacity = {capacity};"
 
   def __setup__(self):
     super().__setup__()
@@ -23,13 +41,15 @@ class Vector(_StructRenderer, Map, Sequence):
       Supports bidirectional element traversal via the corresponding @ref {self.range} iterator as well as subranging with direct indexed access to the subrange's elements.
 
       Implemented as the contiguous array of elements.
+      {"Supports small buffer optimization (SBO) with inline capacity of " + str(self.inline_capacity) + " elements avoiding heap allocations until exceeded." if self.inline_capacity > 0 else "Dynamically allocates contiguous element storage on the heap."}
       The closest C++ equivalent is [std::vector<>](https://cppreference.com/cpp/container/vector).
     """
 
-    left_i = self.element.variable("left->elements[index]")
-    right_i = self.element.variable("right->elements[index]")
-    source_i = self.element.variable("source->elements[index]")
-    target_i = self.element.variable("target->elements[index]")
+    data = self._data("target")
+    left_i = self.element.variable(f"{self._data('left')}[index]")
+    right_i = self.element.variable(f"{self._data('right')}[index]")
+    source_i = self.element.variable(f"{self._data('source')}[index]")
+    target_i = self.element.variable(f"{data}[index]")
 
     with self.empty as f:
       f.inline_code = f"""
@@ -48,15 +68,56 @@ class Vector(_StructRenderer, Map, Sequence):
         assert(target);
         return target->size;
       """
+
+    with self.method(self.index, "capacity", {"target": self}, brief="Get the current allocated capacity",
+      description="""
+        Returns the number of elements the vector can hold without reallocating storage.
+
+        @param[in] target the vector to query
+        @return the current capacity
+      """) as f:
+      f.inline_code = f"""
+        assert(target);
+        return target->capacity;
+      """
+
+    with self.method(Indirection(self.element), "data", {"target": inout(self)}, brief="Get pointer to the contiguous element buffer",
+      description="""
+        Returns a pointer to the contiguous element buffer. The pointer remains valid
+        until the vector is resized, reallocated by push, or destroyed.
+
+        @param[in,out] target the vector to query
+        @return pointer to the first element
+      """) as f:
+      f.inline_code = f"""
+        assert(target);
+        return {data};
+      """
     
     with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private", brief="Allocate the element storage with given capacity (private)") as f:
-      f.code = f"""
-        assert(target);
-        if(capacity > 0) {{
-          target->elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->elements);
-        }} else target->elements = NULL;
-        target->size = capacity;
-      """
+      if self.inline_capacity > 0:
+        f.code = f"""
+          assert(target);
+          if({f.capacity} > {self.inline_capacity}) {{
+            target->storage.heap_elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->storage.heap_elements);
+            target->capacity = {f.capacity};
+          }} else {{
+            target->capacity = {self.inline_capacity};
+          }}
+          target->size = {f.capacity};
+        """
+      else:
+        f.code = f"""
+          assert(target);
+          if({f.capacity} > 0) {{
+            target->elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->elements);
+            target->capacity = {f.capacity};
+          }} else {{
+            target->elements = NULL;
+            target->capacity = 0;
+          }}
+          target->size = {f.capacity};
+        """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
     with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create vector with the given number of default-initialized elements",
@@ -69,28 +130,36 @@ class Vector(_StructRenderer, Map, Sequence):
         @param[in] size the number of default-initialized elements to create
       """) as f:
       if self.element.zero_initializable:
-        f.code = f"""
-          assert(target);
-          if(size > 0) {{
-            target->elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->elements);
-            target->size = size;
-          }} else {{
-            target->elements = NULL;
-            target->size = 0;
-          }}
-        """
+        if self.inline_capacity > 0:
+          f.code = f"""
+            assert(target);
+            if({f.size} > {self.inline_capacity}) {{
+              target->storage.heap_elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->storage.heap_elements);
+              target->capacity = {f.size};
+            }} else {{
+              memset(target->storage.inline_elements, 0, {f.size} * sizeof({self.element}));
+              target->capacity = {self.inline_capacity};
+            }}
+            target->size = {f.size};
+          """
+        else:
+          f.code = f"""
+            assert(target);
+            if({f.size} > 0) {{
+              target->elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->elements);
+              target->capacity = {f.size};
+            }} else {{
+              target->elements = NULL;
+              target->capacity = 0;
+            }}
+            target->size = {f.size};
+          """
       else:
         f.code = f"""
           {self.index} index;
           assert(target);
-          if(size > 0) {{
-            {self.index} index;
-            {self.allocate(*f.arguments)};
-            for(index = 0; index < size; ++index) {self.element.create(target_i)};
-          }} else {{
-            target->elements = NULL;
-            target->size = 0;
-          }}
+          {self.allocate(*f.arguments)};
+          for(index = 0; index < {f.size}; ++index) {self.element.create(target_i)};
         """
 
     with self.get as f:
@@ -141,13 +210,20 @@ class Vector(_StructRenderer, Map, Sequence):
       if self.element.zero_initializable:
         f.code = f"""
           {self.index} index;
-          {Indirection(self.element)} elements;
           assert(target);
           if({f.size} > target->size) {{
-            elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(elements);
-            for(index = 0; index < target->size; ++index) {self.element.copy(self.element.variable("elements[index]"), target_i)};
-            {self.memory.free("target->elements")};
-            target->elements = elements;
+            if({f.size} > target->capacity) {{
+              {Indirection(self.element)} elements;
+              elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(elements);
+              for(index = 0; index < target->size; ++index) {{
+                {self.element.copy(self.element.variable("elements[index]"), target_i)};
+                {destroy_i};
+              }}
+              {self._free_heap("target")}
+              {self._set_heap("target", "elements", f.size)}
+            }} else {{
+              memset(&({data}[target->size]), 0, ({f.size} - target->size) * sizeof({self.element}));
+            }}
           }} else {{
             for(index = {f.size}; index < target->size; ++index) {{
               {destroy_i};
@@ -158,14 +234,21 @@ class Vector(_StructRenderer, Map, Sequence):
       else:
         f.code = f"""
           {self.index} index;
-          {Indirection(self.element)} elements;
           assert(target);
           if({f.size} > target->size) {{
-            elements = {self.memory.allocate(self.element, f.size)}; assert(elements);
-            for(index = 0; index < target->size; ++index) {self.element.copy(self.element.variable("elements[index]"), target_i)};
-            for(index = target->size; index < {f.size}; ++index) {self.element.create(self.element.variable("elements[index]"))};
-            {self.memory.free("target->elements")};
-            target->elements = elements;
+            if({f.size} > target->capacity) {{
+              {Indirection(self.element)} elements;
+              elements = {self.memory.allocate(self.element, f.size)}; assert(elements);
+              for(index = 0; index < target->size; ++index) {{
+                {self.element.copy(self.element.variable("elements[index]"), target_i)};
+                {destroy_i};
+              }}
+              {self._free_heap("target")}
+              {self._set_heap("target", "elements", f.size)}
+            }}
+            for(index = target->size; index < {f.size}; ++index) {{
+              {self.element.create(target_i)};
+            }}
           }} else {{
             for(index = {f.size}; index < target->size; ++index) {{
               {destroy_i};
@@ -174,28 +257,79 @@ class Vector(_StructRenderer, Map, Sequence):
           target->size = {f.size};
         """
 
-    with self.create as f:
-      f.inline_code = """
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
+      description="""
+        Appends the element to the back in amortized O(1), reallocating the buffer with geometric
+        doubling when the capacity is exhausted.
+
+        @param[in,out] target the vector to add to
+        @param[in] element the element to add to the back
+      """) as f:
+      f.code = f"""
         assert(target);
-        target->elements = NULL;
-        target->size = 0;
-      """
-    
-    with self.destroy as f:
-      if self.element.destructible:
-        f.code = f"""
-          {self.index} index;
-          assert(target);
-          if(target->size > 0) {{
-            for(index = 0; index < target->size; ++index) {self.element.destroy(target_i)};
-            {self.memory.free("target->elements")};
+        if(target->size == target->capacity) {{
+          {self.index} index, new_capacity;
+          {Indirection(self.element)} elements;
+          new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
+          elements = {self.memory.allocate(self.element, "new_capacity")}; assert(elements);
+          for(index = 0; index < target->size; ++index) {{
+            {self.element.copy(self.element.variable("elements[index]"), target_i)};
+            {destroy_i};
           }}
-        """
-      else:
+          {self._free_heap("target")}
+          {self._set_heap("target", "elements", "new_capacity")}
+        }}
+        {self.element.copy(self.element.variable(f"{data}[target->size]"), f.element)};
+        ++target->size;
+      """
+
+    with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
+      description="""
+        Removes and returns the back element in O(1). The vector must not be empty.
+
+        @param[in,out] target the vector to remove from - must not be empty
+        @return the removed back element
+      """) as f:
+      result = f.result.variable("result")
+      last_i = self.element.variable(f"{data}[target->size]")
+      destroy_last = f"{self.element.destroy(last_i)};" if self.element.destructible else ""
+      f.code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        --target->size;
+        {self.element.move(result, last_i)};
+        {destroy_last}
+        return {result};
+      """
+
+    with self.create as f:
+      if self.inline_capacity > 0:
         f.inline_code = f"""
           assert(target);
-          if(target->size > 0) {self.memory.free("target->elements")};
+          target->size = 0;
+          target->capacity = {self.inline_capacity};
         """
+      else:
+        f.inline_code = """
+          assert(target);
+          target->elements = NULL;
+          target->size = 0;
+          target->capacity = 0;
+        """
+    
+    with self.destroy as f:
+      destroy_loop = f"""
+        {self.index} index;
+        if(target->size > 0) {{
+          for(index = 0; index < target->size; ++index) {self.element.destroy(target_i)};
+        }}
+      """ if self.element.destructible else ""
+      f.code = f"""
+        assert(target);
+        {destroy_loop}
+        {self._free_heap("target")}
+      """
 
     # FIXME should come from sequence    
     if self.comparable:
@@ -222,13 +356,34 @@ class Vector(_StructRenderer, Map, Sequence):
       """
 
     with self.move as f:
-      f.code = f"""
-        assert(target);
-        assert(source);
-        target->elements = source->elements;
-        target->size = source->size;
-        {self.create(f.source)};
-      """
+      if self.inline_capacity > 0:
+        f.code = f"""
+          {self.index} index;
+          assert(target);
+          assert(source);
+          if(source->capacity > {self.inline_capacity}) {{
+            target->storage.heap_elements = source->storage.heap_elements;
+            target->size = source->size;
+            target->capacity = source->capacity;
+            {self.create(f.source)};
+          }} else {{
+            target->size = source->size;
+            target->capacity = {self.inline_capacity};
+            for(index = 0; index < source->size; ++index) {{
+              {self.element.move(target_i, source_i)};
+            }}
+            {self.create(f.source)};
+          }}
+        """
+      else:
+        f.code = f"""
+          assert(target);
+          assert(source);
+          target->elements = source->elements;
+          target->size = source->size;
+          target->capacity = source->capacity;
+          {self.create(f.source)};
+        """
 
     # Sorting is defined for the orderable, copyable and swappable element types: the sort exchanges
     # the elements so it requires swappability in addition to orderability while the pivot is still
@@ -241,12 +396,12 @@ class Vector(_StructRenderer, Map, Sequence):
     # for the types the respective constraints disallow
     sort_constraint = lambda: self.element.orderable and self.element.copyable and self.element.swappable
 
-    element_i = self.element.variable("target->elements[i]")
-    element_j = self.element.variable("target->elements[j]")
-    element_lo = self.element.variable("target->elements[lo]")
-    element_mid = self.element.variable("target->elements[mid]")
-    element_hi = self.element.variable("target->elements[hi]")
-    element_prev = self.element.variable("target->elements[j-1]")
+    element_i = self.element.variable(f"{data}[i]")
+    element_j = self.element.variable(f"{data}[j]")
+    element_lo = self.element.variable(f"{data}[lo]")
+    element_mid = self.element.variable(f"{data}[mid]")
+    element_hi = self.element.variable(f"{data}[hi]")
+    element_prev = self.element.variable(f"{data}[j-1]")
     pivot = self.element.variable("pivot")
 
     with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
@@ -327,7 +482,7 @@ class Vector(_StructRenderer, Map, Sequence):
       f.code = lambda: f"""
         size_t i;
         assert(target);
-        for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable("target->elements[i]"), self.element.variable("target->elements[target->size-1-i]"))};
+        for(i = 0; i < target->size/2; ++i) {self.element.swap(self.element.variable(f"{data}[i]"), self.element.variable(f"{data}[target->size-1-i]"))};
       """
 
     with self.method("int", ("is", "sorted"), {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
@@ -342,7 +497,7 @@ class Vector(_StructRenderer, Map, Sequence):
         size_t index;
         assert(target);
         for(index = 1; index < target->size; ++index) {{
-          if({self.element.compare(self.element.variable("target->elements[index]"), self.element.variable("target->elements[index-1]"))} < 0) return 0;
+          if({self.element.compare(self.element.variable(f"{data}[index]"), self.element.variable(f"{data}[index-1]"))} < 0) return 0;
         }}
         return 1;
       """
@@ -365,7 +520,7 @@ class Vector(_StructRenderer, Map, Sequence):
         high = target->size;
         while(low < high) {{
           mid = low + (high - low)/2;
-          if({self.element.compare(self.element.variable("target->elements[mid]"), f.element)} < 0) low = mid + 1;
+          if({self.element.compare(self.element.variable(f"{data}[mid]"), f.element)} < 0) low = mid + 1;
           else high = mid;
         }}
         return low;
@@ -388,7 +543,7 @@ class Vector(_StructRenderer, Map, Sequence):
         high = target->size;
         while(low < high) {{
           mid = low + (high - low)/2;
-          if({self.element.compare(self.element.variable("target->elements[mid]"), f.element)} <= 0) low = mid + 1;
+          if({self.element.compare(self.element.variable(f"{data}[mid]"), f.element)} <= 0) low = mid + 1;
           else high = mid;
         }}
         return low;
@@ -407,17 +562,30 @@ class Vector(_StructRenderer, Map, Sequence):
         size_t low;
         assert(target);
         low = {self.lower_bound(f.target, f.element)};
-        return low < target->size && !{self.element.compare(self.element.variable("target->elements[low]"), f.element)};
+        return low < target->size && !{self.element.compare(self.element.variable(f"{data}[low]"), f.element)};
       """
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
-    stream.append(f"""
-      struct {self.name} {{
-        {Indirection(self.element)} elements; /**< @private */
-        {self.index} size; /**< @private */
-      }};
-    """)
+    if self.inline_capacity > 0:
+      stream.append(f"""
+        struct {self.name} {{
+          {self.index} size; /**< @private */
+          {self.index} capacity; /**< @private */
+          union {{
+            {self.element} inline_elements[{self.inline_capacity}]; /**< @private */
+            {Indirection(self.element)} heap_elements; /**< @private */
+          }} storage; /**< @private */
+        }};
+      """)
+    else:
+      stream.append(f"""
+        struct {self.name} {{
+          {Indirection(self.element)} elements; /**< @private */
+          {self.index} size; /**< @private */
+          {self.index} capacity; /**< @private */
+        }};
+      """)
 
 
 #
