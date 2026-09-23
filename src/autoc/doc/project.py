@@ -24,12 +24,24 @@ def generate(directory=".", project="doc"):
     doc_pages_str = " ".join(str(p.resolve()) for p in autoc.doc.pages)
     doc_mainpage_str = str(autoc.doc.mainpage.resolve())
 
+    autoc_source = pathlib.Path(autoc.__file__).resolve().parent.parent
+    try:
+      rel_path = os.path.relpath(autoc_source, target_path)
+      common = os.path.commonpath([str(autoc_source), str(target_path)])
+      if common in ("/", "\\", ""):
+        src_path_str = str(autoc_source)
+      else:
+        src_path_str = rel_path
+    except ValueError:
+      src_path_str = str(autoc_source)
+
     items = dict(
       project=project,
       module=project,
       version=autoc.__version__,
       doc_pages=doc_pages_str,
       doc_mainpage=doc_mainpage_str,
+      src_path=src_path_str,
     )
 
     pathlib.Path("cmake").mkdir(parents=True, exist_ok=True)
@@ -79,9 +91,9 @@ def generate(directory=".", project="doc"):
 _project_py = """import sys
 import pathlib
 
-src_path = pathlib.Path(__file__).resolve().parent / "../src"
+src_path = (pathlib.Path(__file__).resolve().parent / "@src_path@").resolve()
 if src_path.is_dir():
-  sys.path.insert(0, str(src_path.resolve()))
+  sys.path.insert(0, str(src_path))
 
 import autoc
 import autoc.doc

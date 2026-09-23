@@ -31,7 +31,28 @@ def generate(directory=".", project="test"):
       cmake_lists.write_text(content, encoding="utf-8")
 
     # 4. Write test-specific {project}.py
-    items = dict(project=project, module=project)
+    autoc_source = pathlib.Path(autoc.__file__).resolve().parent.parent
+    try:
+      rel_path = os.path.relpath(autoc_source, target_path)
+      common = os.path.commonpath([str(autoc_source), str(target_path)])
+      if common in ("/", "\\", ""):
+        src_path_str = str(autoc_source)
+      else:
+        src_path_str = rel_path
+    except ValueError:
+      src_path_str = str(autoc_source)
+
+    if os.path.isabs(src_path_str):
+      extra_path = src_path_str
+    else:
+      extra_path = f"${{workspaceFolder}}/{src_path_str}"
+
+    items = dict(
+      project=project,
+      module=project,
+      src_path=src_path_str,
+      extra_path=extra_path,
+    )
     with open(f"{project}.py", "w", encoding="utf-8") as f:
       f.write(autoc.project.interpolate(_project_py, **items))
 
@@ -59,9 +80,9 @@ def generate(directory=".", project="test"):
 _project_py = """import sys
 import pathlib
 
-src_path = pathlib.Path(__file__).resolve().parent / "../src"
+src_path = (pathlib.Path(__file__).resolve().parent / "@src_path@").resolve()
 if src_path.is_dir():
-  sys.path.insert(0, str(src_path.resolve()))
+  sys.path.insert(0, str(src_path))
 
 import autoc.test
 import autoc.cmake
@@ -92,7 +113,10 @@ _code_workspace = """{
     }
   ],
   "settings": {
-    "cmake.sourceDirectory": "${workspaceFolder}"
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "python.analysis.extraPaths": [
+      "@extra_path@"
+    ]
   }
 }"""
 
