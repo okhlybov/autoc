@@ -65,7 +65,7 @@ class Set(_StructRenderer, Set):
         target->size = 0;
         target->capacity = _autoc_ceil_power2(capacity);
         assert(!(target->capacity & (target->capacity - 1))); /* verify the capacity is a power of 2 */
-        {target_elements} = {self.memory.allocate(self.element, "target->capacity")}; assert({target_elements});
+        {target_elements} = {self.memory.allocate(self.element, "target->capacity")};
       """
     
     _target = self.variable("_target")

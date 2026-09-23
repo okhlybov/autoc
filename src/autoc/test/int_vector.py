@@ -254,3 +254,24 @@ x.unit(f"{type.data}(): access contiguous buffer", f"""
   TEST_NOT_NULL( data );
   for(i = 0; i < 4; ++i) TEST_EQUAL( data[i], i * 2 );
 """)
+
+x.unit(f"{type.compact}(): compact capacity to size", f"""
+  for(i = 0; i < 16; ++i) {type.push(t, "i + 1")};
+  TEST_EQUAL( {type.size(t)}, 16 );
+  TEST_TRUE( {type.capacity(t)} >= 16 );
+
+  for(i = 0; i < 11; ++i) {type.pop(t)};
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_TRUE( {type.capacity(t)} >= 16 );
+
+  {type.compact(t)};
+  TEST_EQUAL( {type.size(t)}, 5 );
+  TEST_EQUAL( {type.capacity(t)}, 5 );
+  for(i = 0; i < 5; ++i) TEST_EQUAL( {type.get(t, "i")}, i + 1 );
+
+  for(i = 0; i < 5; ++i) {type.pop(t)};
+  TEST_TRUE( {type.empty(t)} );
+  {type.compact(t)};
+  TEST_EQUAL( {type.capacity(t)}, 0 );
+  TEST_NULL( {type.data(t)} );
+""")

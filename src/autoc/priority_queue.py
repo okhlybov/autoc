@@ -70,7 +70,7 @@ class PriorityQueue(_StructRenderer, Collection):
       f.code = f"""
         assert(target);
         if({f.capacity} > 0) {{
-          target->elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->elements);
+          target->elements = {self.memory.allocate(self.element, f.capacity)};
         }} else target->elements = NULL;
         target->capacity = {f.capacity};
         target->size = 0;
@@ -97,7 +97,7 @@ class PriorityQueue(_StructRenderer, Collection):
         size_t index;
         assert(target);
         assert(source);
-        target->elements = {self.memory.allocate(self.element, "source->capacity")}; assert(target->elements);
+        target->elements = {self.memory.allocate(self.element, "source->capacity")};
         target->capacity = source->capacity;
         target->size = source->size;
         for(index = 0; index < source->size; ++index) {self.element.copy(self.element.variable("target->elements[index]"), self.element.variable("source->elements[index]"))};
@@ -129,7 +129,7 @@ class PriorityQueue(_StructRenderer, Collection):
         {self._element_p} elements;
         assert(target);
         new_capacity = target->capacity ? target->capacity*2 : 8;
-        elements = {self.memory.allocate(self.element, "new_capacity")}; assert(elements);
+        elements = {self.memory.allocate(self.element, "new_capacity")};
         for(index = 0; index < target->size; ++index) {self.element.copy(self.element.variable("elements[index]"), self.element.variable("target->elements[index]"))};
         {self.memory.free("target->elements")};
         target->elements = elements;

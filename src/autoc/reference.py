@@ -102,7 +102,7 @@ class Raw(_AliasRenderer, _Reference):
       result = f.result.variable("result")
       f.inline_code = f"""
         {result.definition};
-        {result} = {self.memory.allocate(self.type)}; assert({result});
+        {result} = {self.memory.allocate(self.type)};
         {self.type.create(result, *f.arguments)};
         return {result};
       """
@@ -178,7 +178,7 @@ class Counted(_StructRenderer, _Reference):
       value = self.type.variable("storage->value")
       f.inline_code = f"""
         {self._layout}* storage;
-        storage = {self.memory.allocate(f"sizeof({self._layout})", cast=self._layout)}; assert(storage);
+        storage = {self.memory.allocate(f"sizeof({self._layout})", cast=self._layout)};
         {self.type.create(value, *f.arguments)};
         storage->count = 1;
         return ({f.result})storage;

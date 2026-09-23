@@ -81,7 +81,7 @@ class Deque(_StructRenderer, Sequence):
         target->size = size = {self.size("source")};
         while(size--) {{
           {self.node}* node;
-          node = {self.memory.allocate(self.node)}; assert(node);
+          node = {self.memory.allocate(self.node)};
           node->prev = target->back;
           node->next = NULL;
           if(target->back) target->back->next = node; else target->front = node;
@@ -117,7 +117,7 @@ class Deque(_StructRenderer, Sequence):
       f.code = f"""
         {self.node}* node;
         assert(target);
-        node = {self.memory.allocate(self.node)}; assert(node);
+        node = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
         node->prev = NULL;
         node->next = target->front;
@@ -160,7 +160,7 @@ class Deque(_StructRenderer, Sequence):
       f.code = f"""
         {self.node}* node;
         assert(target);
-        node = {self.memory.allocate(self.node)}; assert(node);
+        node = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
         node->next = NULL;
         node->prev = target->back;

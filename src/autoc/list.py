@@ -80,7 +80,7 @@ class List(_StructRenderer, Sequence):
         target->size = size = {self.size("source")};
         while(size--) {{
           {self.node}* node;
-          node = {self.memory.allocate(self.node)}; assert(node);
+          node = {self.memory.allocate(self.node)};
           node->next = target->front;
           target->front = node;
         }}
@@ -113,7 +113,7 @@ class List(_StructRenderer, Sequence):
       f.code = f"""
         {self.node}* node;
         assert(target);
-        node = {self.memory.allocate(self.node)}; assert(node);
+        node = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
         node->next = target->front;
         target->front = node;

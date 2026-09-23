@@ -232,3 +232,146 @@ x.unit(f"{type.range.new}(): traverse inlined vector via range", f"""
   }}
   TEST_EQUAL( sum, 10 );
 """)
+
+x.unit(f"{type.range.new}(): traverse inlined vector crossing inline capacity boundary", f"""
+  {r.definition};
+  int sum = 0, expected = 0;
+  for(i = 1; i <= 10; ++i) {{
+    {type.push(t, "i")};
+    expected += i;
+  }}
+  TEST_EQUAL( {type.size(t)}, 10 );
+  TEST_NOT_EQUAL( {type.data(t)}, t.storage.inline_elements );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  /* Forward range traversal */
+  for(r = {type.range.new(t)}; !{type.range.empty(r)}; {type.range.move_front(r)}) {{
+    sum += {type.range.front(r)};
+  }}
+  TEST_EQUAL( sum, expected );
+
+  /* Backward range traversal */
+  r = {type.range.new(t)};
+  TEST_EQUAL( {type.range.size(r)}, 10 );
+  for(i = 10; i >= 1; --i) {{
+    TEST_FALSE( {type.range.empty(r)} );
+    TEST_EQUAL( {type.range.back(r)}, i );
+    {type.range.move_back(r)};
+  }}
+  TEST_TRUE( {type.range.empty(r)} );
+
+  /* Direct indexing via range */
+  r = {type.range.new(t)};
+  for(i = 0; i < 10; ++i) {{
+    TEST_EQUAL( {type.range.get(r, "i")}, i + 1 );
+    TEST_EQUAL( *{type.range.view(r, "i")}, i + 1 );
+  }}
+""")
+
+x.unit(f"{type.range.new}(): range iteration across storage transition on same instance", f"""
+  {r.definition};
+  int sum = 0;
+
+  /* Phase 1: Inlined buffer mode (3 elements <= 4) */
+  {type.push(t, 10)};
+  {type.push(t, 20)};
+  {type.push(t, 30)};
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.capacity(t)}, 4 );
+  TEST_EQUAL( {type.data(t)}, t.storage.inline_elements );
+
+  sum = 0;
+  for(r = {type.range.new(t)}; !{type.range.empty(r)}; {type.range.move_front(r)}) {{
+    sum += {type.range.front(r)};
+  }}
+  TEST_EQUAL( sum, 60 );
+
+  r = {type.range.new(t)};
+  TEST_EQUAL( {type.range.size(r)}, 3 );
+  TEST_EQUAL( {type.range.front(r)}, 10 );
+  TEST_EQUAL( {type.range.back(r)}, 30 );
+  TEST_EQUAL( {type.range.get(r, 1)}, 20 );
+
+  /* Phase 2: Spill the very same instance into dynamic buffer (push to 7 elements > 4) */
+  {type.push(t, 40)};
+  {type.push(t, 50)};
+  {type.push(t, 60)};
+  {type.push(t, 70)};
+  TEST_EQUAL( {type.size(t)}, 7 );
+  TEST_TRUE( {type.capacity(t)} >= 7 );
+  TEST_NOT_EQUAL( {type.data(t)}, t.storage.inline_elements );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  sum = 0;
+  for(r = {type.range.new(t)}; !{type.range.empty(r)}; {type.range.move_front(r)}) {{
+    sum += {type.range.front(r)};
+  }}
+  TEST_EQUAL( sum, 280 );
+
+  r = {type.range.new(t)};
+  TEST_EQUAL( {type.range.size(r)}, 7 );
+  TEST_EQUAL( {type.range.front(r)}, 10 );
+  TEST_EQUAL( {type.range.back(r)}, 70 );
+  for(i = 0; i < 7; ++i) {{
+    TEST_EQUAL( {type.range.get(r, "i")}, (i + 1) * 10 );
+    TEST_EQUAL( *{type.range.view(r, "i")}, (i + 1) * 10 );
+  }}
+""")
+
+x.unit(f"{type.compact}(): revert heap spilled vector back to inlined buffer", f"""
+  for(i = 0; i < 8; ++i) {type.push(t, "(i + 1) * 10")};
+  TEST_EQUAL( {type.size(t)}, 8 );
+  TEST_TRUE( {type.capacity(t)} >= 8 );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  /* Pop 6 elements so size becomes 2 (<= inline capacity 4) */
+  for(i = 0; i < 6; ++i) {type.pop(t)};
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  /* compact should revert to inline buffer */
+  {type.compact(t)};
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.capacity(t)}, 4 );
+  TEST_EQUAL( {type.data(t)}, t.storage.inline_elements );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 20 );
+
+  /* Further operations work on the reverted inline buffer */
+  {type.push(t, 30)};
+  {type.push(t, 40)};
+  TEST_EQUAL( {type.size(t)}, 4 );
+  TEST_EQUAL( {type.capacity(t)}, 4 );
+  TEST_EQUAL( {type.data(t)}, t.storage.inline_elements );
+""")
+
+x.unit(f"{type.compact}(): shrink heap vector without reverting when size > inline capacity", f"""
+  for(i = 0; i < 16; ++i) {type.push(t, "i + 1")};
+  TEST_EQUAL( {type.size(t)}, 16 );
+  TEST_TRUE( {type.capacity(t)} >= 16 );
+
+  /* Pop down to 6 elements (which is still > inline capacity 4) */
+  for(i = 0; i < 10; ++i) {type.pop(t)};
+  TEST_EQUAL( {type.size(t)}, 6 );
+
+  /* compact should reduce heap capacity to exact size 6 */
+  {type.compact(t)};
+  TEST_EQUAL( {type.size(t)}, 6 );
+  TEST_EQUAL( {type.capacity(t)}, 6 );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+  for(i = 0; i < 6; ++i) TEST_EQUAL( {type.get(t, "i")}, i + 1 );
+""")
+
+x.unit(f"{type.compact}(): shrink empty spilled vector to inline buffer", f"""
+  for(i = 0; i < 8; ++i) {type.push(t, "i + 1")};
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  for(i = 0; i < 8; ++i) {type.pop(t)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.data(t)}, t.storage.heap_elements );
+
+  {type.compact(t)};
+  TEST_TRUE( {type.empty(t)} );
+  TEST_EQUAL( {type.capacity(t)}, 4 );
+  TEST_EQUAL( {type.data(t)}, t.storage.inline_elements );
+""")

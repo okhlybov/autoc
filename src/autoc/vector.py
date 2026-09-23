@@ -99,7 +99,7 @@ class Vector(_StructRenderer, Map, Sequence):
         f.code = f"""
           assert(target);
           if({f.capacity} > {self.inline_capacity}) {{
-            target->storage.heap_elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->storage.heap_elements);
+            target->storage.heap_elements = {self.memory.allocate(self.element, f.capacity)};
             target->capacity = {f.capacity};
           }} else {{
             target->capacity = {self.inline_capacity};
@@ -110,7 +110,7 @@ class Vector(_StructRenderer, Map, Sequence):
         f.code = f"""
           assert(target);
           if({f.capacity} > 0) {{
-            target->elements = {self.memory.allocate(self.element, f.capacity)}; assert(target->elements);
+            target->elements = {self.memory.allocate(self.element, f.capacity)};
             target->capacity = {f.capacity};
           }} else {{
             target->elements = NULL;
@@ -134,7 +134,7 @@ class Vector(_StructRenderer, Map, Sequence):
           f.code = f"""
             assert(target);
             if({f.size} > {self.inline_capacity}) {{
-              target->storage.heap_elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->storage.heap_elements);
+              target->storage.heap_elements = {self.memory.allocate(self.element, f.size, zero=True)};
               target->capacity = {f.size};
             }} else {{
               memset(target->storage.inline_elements, 0, {f.size} * sizeof({self.element}));
@@ -146,7 +146,7 @@ class Vector(_StructRenderer, Map, Sequence):
           f.code = f"""
             assert(target);
             if({f.size} > 0) {{
-              target->elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(target->elements);
+              target->elements = {self.memory.allocate(self.element, f.size, zero=True)};
               target->capacity = {f.size};
             }} else {{
               target->elements = NULL;
@@ -214,7 +214,7 @@ class Vector(_StructRenderer, Map, Sequence):
           if({f.size} > target->size) {{
             if({f.size} > target->capacity) {{
               {Indirection(self.element)} elements;
-              elements = {self.memory.allocate(self.element, f.size, zero=True)}; assert(elements);
+              elements = {self.memory.allocate(self.element, f.size, zero=True)};
               for(index = 0; index < target->size; ++index) {{
                 {self.element.copy(self.element.variable("elements[index]"), target_i)};
                 {destroy_i};
@@ -238,7 +238,7 @@ class Vector(_StructRenderer, Map, Sequence):
           if({f.size} > target->size) {{
             if({f.size} > target->capacity) {{
               {Indirection(self.element)} elements;
-              elements = {self.memory.allocate(self.element, f.size)}; assert(elements);
+              elements = {self.memory.allocate(self.element, f.size)};
               for(index = 0; index < target->size; ++index) {{
                 {self.element.copy(self.element.variable("elements[index]"), target_i)};
                 {destroy_i};
@@ -271,7 +271,7 @@ class Vector(_StructRenderer, Map, Sequence):
           {self.index} index, new_capacity;
           {Indirection(self.element)} elements;
           new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
-          elements = {self.memory.allocate(self.element, "new_capacity")}; assert(elements);
+          elements = {self.memory.allocate(self.element, "new_capacity")};
           for(index = 0; index < target->size; ++index) {{
             {self.element.copy(self.element.variable("elements[index]"), target_i)};
             {destroy_i};
@@ -302,6 +302,62 @@ class Vector(_StructRenderer, Map, Sequence):
         {destroy_last}
         return {result};
       """
+
+    with self.method(None, "compact", {"target": inout(self)}, constraint=lambda: self.element.copyable, brief="Compact buffer capacity to fit element count",
+      description="""
+        Reduces the allocated capacity down to the current size. If the vector has inline capacity
+        and the current element count fits within it, dynamic heap memory is freed and the elements
+        revert to the inlined buffer.
+
+        @param[in,out] target the vector to compact
+      """) as f:
+      destroy_heap_i = str(self.element.destroy(self.element.variable("heap[index]"))) + ";" if self.element.destructible else str()
+      if self.inline_capacity > 0:
+        f.code = f"""
+          {self.index} index;
+          assert(target);
+          if(target->capacity > {self.inline_capacity}) {{
+            if(target->size <= {self.inline_capacity}) {{
+              {Indirection(self.element)} heap = target->storage.heap_elements;
+              for(index = 0; index < target->size; ++index) {{
+                {self.element.copy(self.element.variable("target->storage.inline_elements[index]"), self.element.variable("heap[index]"))};
+                {destroy_heap_i}
+              }}
+              {self.memory.free("heap")};
+              target->capacity = {self.inline_capacity};
+            }} else if(target->size < target->capacity) {{
+              {Indirection(self.element)} elements = {self.memory.allocate(self.element, "target->size")};
+              for(index = 0; index < target->size; ++index) {{
+                {self.element.copy(self.element.variable("elements[index]"), target_i)};
+                {destroy_i};
+              }}
+              {self.memory.free("target->storage.heap_elements")};
+              target->storage.heap_elements = elements;
+              target->capacity = target->size;
+            }}
+          }}
+        """
+      else:
+        f.code = f"""
+          {self.index} index;
+          assert(target);
+          if(target->size == 0) {{
+            if(target->elements) {{
+              {self.memory.free("target->elements")};
+              target->elements = NULL;
+            }}
+            target->capacity = 0;
+          }} else if(target->size < target->capacity) {{
+            {Indirection(self.element)} elements = {self.memory.allocate(self.element, "target->size")};
+            for(index = 0; index < target->size; ++index) {{
+              {self.element.copy(self.element.variable("elements[index]"), target_i)};
+              {destroy_i};
+            }}
+            {self.memory.free("target->elements")};
+            target->elements = elements;
+            target->capacity = target->size;
+          }}
+        """
 
     with self.create as f:
       if self.inline_capacity > 0:

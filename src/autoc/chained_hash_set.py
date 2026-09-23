@@ -60,7 +60,7 @@ class Set(_StructRenderer, Set):
         assert(target);
         assert(capacity > 0);
         target->capacity = _autoc_ceil_power2(capacity);
-        target->buckets = {self.memory.allocate(self._node_p, "target->capacity", zero=True)}; assert(target->buckets);
+        target->buckets = {self.memory.allocate(self._node_p, "target->capacity", zero=True)};
         target->size = 0;
       """
 
@@ -117,7 +117,7 @@ class Set(_StructRenderer, Set):
         new_capacity = _autoc_ceil_power2((size_t)(new_size/{self.capacity_threshold})); /* predict new capacity after size changing respecting the desired capacity threshold */
         if(new_capacity < 8) new_capacity = 8; /* enforce minimum viable capacity */
         if(new_capacity != target->capacity) {{
-          buckets = {self.memory.allocate(self._node_p, "new_capacity", zero=True)}; assert(buckets);
+          buckets = {self.memory.allocate(self._node_p, "new_capacity", zero=True)};
           for(index = 0; index < target->capacity; ++index) {{
             for(n = target->buckets[index]; n; n = _n) {{
               _n = n->next;
@@ -153,7 +153,7 @@ class Set(_StructRenderer, Set):
         if({self.contains(f.target, f.element)}) return 0;
         {self.resize(f.target, "target->size+1")};
         bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
-        n = {self.memory.allocate(self.node)}; assert(n);
+        n = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
         n->next = target->buckets[bucket];
         target->buckets[bucket] = n;
@@ -216,7 +216,7 @@ class Set(_StructRenderer, Set):
         for(index = 0; index < source->capacity; ++index) {{
           for(source_n = source->buckets[index]; source_n; source_n = source_n->next) {{
             bucket = {self.element.hash_lookup_hash(source_element)} & (target->capacity-1); /* direct planting in order to prevent from triggering the subsequent resizings */
-            n = {self.memory.allocate(self.node)}; assert(n);
+            n = {self.memory.allocate(self.node)};
             {self.element.copy(target_element, source_element)};
             n->next = target->buckets[bucket];
             target->buckets[bucket] = n;

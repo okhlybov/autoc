@@ -166,7 +166,7 @@ class Map(_StructRenderer, Map):
         }} else {{
           {self._set.resize(_target, "target->set.size+1")};
           bucket = {self.index.hash(f.index)} & (target->set.capacity-1); /* the capacity might have changed - recompute the bucket */
-          {n} = {self.memory.allocate(set.node)}; assert(n);
+          {n} = {self.memory.allocate(set.node)};
           {entry.emplace_index(node_entry, f.index)};
           {entry.emplace_element(node_entry, f.element)};
           n->next = target->set.buckets[bucket];

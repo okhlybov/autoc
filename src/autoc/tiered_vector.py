@@ -237,7 +237,7 @@ class TieredVector(_StructRenderer, Map, Sequence):
           assert(target);
           if({f.size} > 0) {{
             needed = ({f.size} + {self.chunk_mask}) >> {self.chunk_shift};
-            target->chunks = {self.memory.allocate(self._chunk_p, "needed")}; assert(target->chunks);
+            target->chunks = {self.memory.allocate(self._chunk_p, "needed")};
             target->chunk_capacity = needed;
             for(index = 0; index < needed; ++index) {{
               target->chunks[index] = {self.memory.allocate(self.element, f"{1 << self.chunk_shift}", zero=True)};

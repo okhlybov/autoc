@@ -153,7 +153,7 @@ class Set(_StructRenderer, Set):
           parent = *link;
           link = order > 0 ? &parent->left : &parent->right;
         }}
-        n = {self.memory.allocate(self.node)}; assert(n);
+        n = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
         n->left = n->right = NULL;
         n->parent = parent;
