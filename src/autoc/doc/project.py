@@ -21,19 +21,19 @@ def generate(directory=".", project="doc"):
   try:
     os.chdir(target_path)
     import autoc
-    doc_pages_str = " ".join(str(p.resolve()) for p in autoc.doc.pages)
-    doc_mainpage_str = str(autoc.doc.mainpage.resolve())
+    doc_pages_str = " ".join(p.resolve().as_posix() for p in autoc.doc.pages)
+    doc_mainpage_str = autoc.doc.mainpage.resolve().as_posix()
 
     autoc_source = pathlib.Path(autoc.__file__).resolve().parent.parent
     try:
       rel_path = os.path.relpath(autoc_source, target_path)
       common = os.path.commonpath([str(autoc_source), str(target_path)])
       if common in ("/", "\\", ""):
-        src_path_str = str(autoc_source)
+        src_path_str = pathlib.Path(autoc_source).as_posix()
       else:
-        src_path_str = rel_path
+        src_path_str = pathlib.Path(rel_path).as_posix()
     except ValueError:
-      src_path_str = str(autoc_source)
+      src_path_str = pathlib.Path(autoc_source).as_posix()
 
     items = dict(
       project=project,
@@ -67,12 +67,12 @@ def generate(directory=".", project="doc"):
     with autoc.module.Module(project, source_count=0) as m:
       autoc.doc.configure_module(m)
 
-    pages_list = ";".join(str(p.resolve()) for p in autoc.doc.pages)
+    pages_list = ";".join(p.resolve().as_posix() for p in autoc.doc.pages)
     cmake_contents = f"""
     set({project}_HEADER ${{CMAKE_CURRENT_SOURCE_DIR}}/{m.header.file_name})
     set({project}_SOURCES )
     set({project}_DOC_PAGES "{pages_list}")
-    set({project}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve()}")
+    set({project}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve().as_posix()}")
     set({project}_VERSION "{autoc.__version__}")
 """
     cmake_file = f"{project}.cmake"
@@ -105,12 +105,12 @@ name = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else
 with autoc.module.Module(name, source_count=0) as m:
   autoc.doc.configure_module(m)
 
-pages_list = ";".join(str(p.resolve()) for p in autoc.doc.pages)
+pages_list = ";".join(p.resolve().as_posix() for p in autoc.doc.pages)
 contents = f\"\"\"
     set({name}_HEADER ${{CMAKE_CURRENT_SOURCE_DIR}}/{m.header.file_name})
     set({name}_SOURCES )
     set({name}_DOC_PAGES "{pages_list}")
-    set({name}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve()}")
+    set({name}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve().as_posix()}")
     set({name}_VERSION "{autoc.__version__}")
 \"\"\"
 cmake_file = f"{name}.cmake"

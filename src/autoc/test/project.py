@@ -36,11 +36,11 @@ def generate(directory=".", project="test"):
       rel_path = os.path.relpath(autoc_source, target_path)
       common = os.path.commonpath([str(autoc_source), str(target_path)])
       if common in ("/", "\\", ""):
-        src_path_str = str(autoc_source)
+        src_path_str = pathlib.Path(autoc_source).as_posix()
       else:
-        src_path_str = rel_path
+        src_path_str = pathlib.Path(rel_path).as_posix()
     except ValueError:
-      src_path_str = str(autoc_source)
+      src_path_str = pathlib.Path(autoc_source).as_posix()
 
     if os.path.isabs(src_path_str):
       extra_path = src_path_str
