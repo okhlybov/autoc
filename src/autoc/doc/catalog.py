@@ -7,11 +7,6 @@
 # reference: List<T>, Map<K, T>, List<T>::Range and so on while every operation keeps
 # its generated C identifier so an entry in the manual matches the generated code.
 
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "src"))
-
 import autoc.core
 import autoc.list
 import autoc.deque
@@ -271,4 +266,3 @@ def configure_module(module):
   module.add(Raw(T, name="Raw"))
 
   return module
-
