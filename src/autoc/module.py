@@ -267,7 +267,7 @@ class _State(dict):
   def read(self):
     if os.path.exists(self.file_name):
       if self.module.stateful:
-        with open(self.file_name, "rt") as io:
+        with open(self.file_name, "rt", encoding="utf-8") as io:
           for line in io:
             line = line.strip()
             if not line:
@@ -283,7 +283,7 @@ class _State(dict):
     return self
 
   def write(self):
-    with open(self.file_name, "wt") as io:
+    with open(self.file_name, "wt", encoding="utf-8") as io:
       for file_name, digest in sorted(self.items()):
         io.write(f"{digest} *{file_name}\n")
     return self
@@ -292,7 +292,7 @@ class _State(dict):
 class _StreamFile:
   def __init__(self, path, mode="wt", *args, **kws):
     super().__init__(*args, **kws)
-    self.__file = open(path, mode)
+    self.__file = open(path, mode, encoding="utf-8")
     self.__digest = hashlib.md5()
     self.path = path
 

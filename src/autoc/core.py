@@ -191,6 +191,12 @@ class _Documented(Entity, _VisibilityManager):
 
 #
 class _GroupRenderer(_Documented):
+  __group_counter = 0
+
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    _GroupRenderer.__group_counter += 1
+    self._group_id = _GroupRenderer.__group_counter
 
   # A documented type owning a doxygen group. The group identifier is the type
   # name so the member @ingroup references and the @defgroup declaration always
@@ -219,7 +225,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     # The descriptions are type-agnostic because every type inherits them through
     # method_from()/macro_from() - the concrete declarations keep the parameter names
     # of these prototypes so the rendered @param entries always match the signatures
-    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters",
+    self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, purpose="Lifetime management", brief="Create the value with default parameters",
       description="""
         Constructs the value in place over the uninitialized target storage. Any previous
         resources held by target must have been destroyed or reset before calling create.
@@ -228,14 +234,14 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
 
         @param[out] target the storage area in which to construct the value
       """)
-    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value",
+    self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, purpose="Lifetime management", brief="Destroy the value",
       description="""
         Releases the resources held by the value leaving it invalid - it must be reconstructed
         before any further use. Destroying a trivial value-less type is a no-op.
 
         @param[in] target the value to destroy - the released resources leave the value invalid
       """)
-    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value",
+    self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, purpose="Lifetime management", brief="Create a copy of the value",
       description="""
         Constructs the target as an independent copy of the source - the two values do not
         share any resources afterwards. Every type inherits this operation through the
@@ -244,7 +250,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[out] target the value to construct as the copy
         @param[in] source the value to copy
       """)
-    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location",
+    self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, purpose="Lifetime management", brief="Move the value to a new location",
       description="""
         Transfers the source contents to the target leaving the source in a valid empty
         state - typically a cheaper pointer transfer than the copy.
@@ -252,7 +258,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[out] target the value to construct as the destination
         @param[in,out] source the value to move from - left in a valid empty state
       """)
-    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values",
+    self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, purpose="Lifetime management", brief="Swap two values",
       description="""
         Exchanges the contents of the two values - for the handle-like types it is a constant
         time exchange of the internal pointers requiring no pristine state on either side.
@@ -260,7 +266,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in,out] left the first value
         @param[in,out] right the second value
       """)
-    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality",
+    self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, purpose="State query", brief="Compare two values by equality",
       description="""
         Checks the two values for equality per the type equality semantics - required to be
         consistent with the hash so the equal values always compare and hash alike.
@@ -269,7 +275,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in] right the second value
         @return non-zero if the values are equal and zero otherwise
       """)
-    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values",
+    self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, purpose="State query", brief="Compute ordering relation of two values",
       description="""
         Establishes the strict weak ordering of the two values per the type ordering
         semantics - the ordering on which ordered containers and sorting rely.
@@ -278,7 +284,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in] right the second value
         @return a negative value, zero or a positive value as the first value is less than, equal to or greater than the second one
       """)
-    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value",
+    self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, purpose="State query", brief="Compute a hash of the value",
       description="""
         Computes a hash of the value over the hasher of the enclosing module - the equal
         values are guaranteed to produce the same hash making it usable by the hash-based
@@ -330,6 +336,74 @@ def camel_decorator(type, identifier, hidden=False):
 decorator = camel_decorator
 
 
+def _infer_purpose(identifier):
+  if isinstance(identifier, (list, tuple)):
+    name = "_".join(str(x) for x in identifier).lower()
+  elif isinstance(identifier, str):
+    name = identifier.lower()
+  else:
+    return None
+
+  # 1. Iteration
+  if name in ("next",) or name.startswith(("move_front", "move_back")):
+    return "Iteration"
+
+  # 2. Lifetime management
+  if (
+    name in ("new", "move", "free", "share", "take")
+    or name.startswith(("create", "destroy", "copy", "swap", "allocate"))
+  ):
+    return "Lifetime management"
+
+  # 3. State query
+  if (
+    name in ("empty", "size", "capacity", "contains", "indexed", "equal", "compare", "hash", "count", "any", "none", "test")
+    or name.startswith((
+      "empty_", "size_", "capacity_", "contains_", "indexed_",
+      "equal_", "compare_", "hash_", "count_", "any_", "none_",
+      "test_", "is_", "binary_search", "find_first"
+    ))
+  ):
+    return "State query"
+
+  # 4. Modifiers
+  if (
+    name in ("push", "pop", "put", "remove", "clear", "enqueue", "dequeue", "set", "flip", "insert", "delete",
+             "union", "intersection", "difference", "symmetric_difference", "compact", "extend")
+    or name.startswith((
+      "push_", "pop_", "put_", "remove_", "clear_", "enqueue_", "dequeue_",
+      "set_", "flip_", "insert_", "delete_", "assign_", "discard_",
+      "union_", "intersection_", "difference_", "symmetric_difference_",
+      "compact_", "extend_", "emplace_", "ensure_", "flush_", "replace_"
+    ))
+  ):
+    return "Modifiers"
+
+  # 5. Element access
+  if (
+    name in ("front", "back", "top", "get", "view", "at", "data", "first", "second")
+    or name.endswith("_view")
+    or name.startswith((
+      "front_", "back_", "top_", "get_", "view_", "at_", "find_view",
+      "data_", "lower_bound", "upper_bound", "first_", "second_",
+      "index_front", "index_back", "index_view", "locate_"
+    ))
+  ):
+    return "Element access"
+
+  # 6. Operations
+  if (
+    name in ("sort", "reverse", "format", "fill", "resize", "link")
+    or name.startswith((
+      "sort_", "reverse_", "format_", "fill_", "resize_",
+      "rotate_", "sift_", "merge_", "split_"
+    ))
+  ):
+    return "Operations"
+
+  return None
+
+
 # Mixin for named types which can have methods/components/attributes etc.
 class _Named(Type):
   
@@ -341,16 +415,19 @@ class _Named(Type):
     self.__attributes = set()
 
   #
-  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, **kws):
+  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, purpose=None, **kws):
     # The owning type is recorded so the rendered documentation groups the member
     # under its type - the explicitly attributed method_from() calls take precedence
     kws.setdefault("type", self)
+    if purpose is None:
+      purpose = _infer_purpose(identifier)
     x = Function(
       result,
       self.decorate(identifier, hidden=hidden),
       parameters,
       *args,
       abstract=abstract if abstract else False,
+      purpose=purpose,
       **kws
     )
     # Method by itself does not depend on its owning type - only though explicit parameters
@@ -369,12 +446,14 @@ class _Named(Type):
   def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
     kws.setdefault("variadic", getattr(m, "variadic", False))
+    kws.setdefault("purpose", getattr(m, "purpose", None))
     return self.macro(attribute, m._result, m._parameters, *args, brief=m.brief, description=m.description, **kws)
     
   #
   def method_from(self, identifier, *args, attribute=None, **kws):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
     kws.setdefault("variadic", getattr(m, "variadic", False))
+    kws.setdefault("purpose", getattr(m, "purpose", None))
     return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, brief=m.brief, description=m.description, type=self, **kws)
   
   #
@@ -722,13 +801,14 @@ def inout(obj):
 # Basic callable descriptor
 class Callable(_Documented):
   
-  def __init__(self, result, parameters, *args, constraint=lambda: True, variadic=False, **kws):
+  def __init__(self, result, parameters, *args, constraint=lambda: True, variadic=False, purpose=None, **kws):
     super().__init__(*args, **kws)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
     self._parameters = parameters
     self.constraint = constraint
     self.variadic = bool(variadic)
+    self.purpose = purpose
     
   @property
   def active(self):
@@ -906,16 +986,18 @@ def _defined(operation):
 class Function(_Functional, _Parametrized, _VisibilityManager):
   
   @classmethod
-  def of(self, callable, name, constraint=None, **kws):
+  def of(self, callable, name, constraint=None, purpose=None, **kws):
     kws.setdefault("variadic", getattr(callable, "variadic", False))
+    kws.setdefault("purpose", getattr(callable, "purpose", None) if purpose is None else purpose)
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
-  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), type=None, **kws):
-    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), **kws)
+  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), type=None, purpose=None, **kws):
+    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), purpose=purpose, **kws)
     self.name = str(name)
     self.linkage = linkage
     self.__abstract = abstract
     self.type = type # Object this function is attached to
+    self.purpose = purpose
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
     for x in self.arguments:
       setattr(self, x.name, x)
@@ -994,8 +1076,15 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
     if self.active:
       super().render_declarations(stream, header)
       if (header and not self.internal) or (not header and self.internal):
-        self._render_documentation(stream,header)
-        self._render_declaration(stream)
+        if header and self.public and self.type and getattr(self.type, "public", False) and getattr(self, "purpose", None):
+          disc = chr(0x200b) * getattr(self.type, "_group_id", 1)
+          stream.append(f"/** @name {self.purpose}{disc}\n *  @{{\n */\n")
+          self._render_documentation(stream, header)
+          self._render_declaration(stream)
+          stream.append("/** @} */\n")
+        else:
+          self._render_documentation(stream, header)
+          self._render_declaration(stream)
 
   #
   def render_definitions(self, stream, header):

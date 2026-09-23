@@ -51,7 +51,7 @@ class Collection(Composite):
 
   def __setup__(self):
     super().__setup__()
-    self.method("int", "empty", {"target": self}, brief="Check if the container holds no elements",
+    self.method("int", "empty", {"target": self}, purpose="State query", brief="Check if the container holds no elements",
       description="""
         Reports whether the container holds no elements at all - the protocol operation
         inherited by every container. Equivalent to `size() == 0` and O(1) for every
@@ -60,7 +60,7 @@ class Collection(Composite):
         @param[in] target the container to check
         @return non-zero if the container holds no elements
       """)
-    self.method(std.size_t, "size", {"target": self}, brief="Get the number of elements in the container",
+    self.method(std.size_t, "size", {"target": self}, purpose="State query", brief="Get the number of elements in the container",
       description="""
         Returns the number of elements currently held by the container - the protocol
         operation inherited by every container. O(1) for every container that tracks
@@ -69,7 +69,7 @@ class Collection(Composite):
         @param[in] target the container to measure
         @return the number of elements held by the container
       """)
-    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Check if the container holds the element",
+    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, purpose="State query", brief="Check if the container holds the element",
       description="""
         Looks the element up per the container lookup mechanics without modifying the
         container. The cost matches the underlying implementation: expected O(1) for
