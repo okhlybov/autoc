@@ -60,40 +60,59 @@ and is reachable from the @ref List page as well.
 
 Requires Python ≥ 3.13. `autoc` itself has zero dependencies.
 
-**1. Define a module** — e.g. `mymodule.py`:
+**1. Define a module** — e.g. `runme.py`:
 
 ```python
-from autoc.module import Module
-from autoc.vector import Vector
-from autoc.hash_map import Map
+import autoc.module
+import autoc.cmake
+import autoc.string_buffer
+import autoc.list
 
-with Module("mymodule") as m:
-  m.add(Vector("int_vector", "int"))
-  m.add(Map("str2double", "const char*", "double"))
+# Create a C source code module `runme`
+with autoc.module.Module("runme") as m:
+  # Add concrete type implementations
+  m.add(autoc.string_buffer.StringBuffer("StringBuffer"))
+  m.add(autoc.list.List("List", "int"))
+
+# Create a CMake project (optional)
+autoc.cmake.CMake(m)
 ```
 
-**2. Generate** — run the script; `autoc` writes `mymodule_auto.h` / `mymodule_auto.c`
-(splitting into several sources when a module grows too large for one translation unit).
+**2. Generate** — run the script with `python runme.py`; `autoc` writes `runme_auto.h` and `runme_auto.c`
 
-**3. Use** — from C:
+**3. Use** — `runme.c`:
 
 ```c
-#include "mymodule_auto.h"
+#include <stdio.h>
+#include "runme_auto.h" /* Include auto-generated interface code */
 
-int_vector v;
-int_vector_create(&v);
-int_vector_set(&v, 0, 42);
-assert(int_vector_get(&v, 0) == 42);
-
-/* iterate */
-int_vector_range r;
-for(r = int_vector_range_new(&v); !int_vector_range_empty(&r);
-    int_vector_range_move_front(&r)) {
-  printf("%d\n", int_vector_range_front(&r));
+int main(int argc, char** argv) {
+  StringBuffer buffer; /* Define the C string buffer object */
+  List list; /* Define the list of ints object */
+  StringBufferCreate(&buffer); /* Create empty buffer */
+  ListCreate(&list); /* Create empty list object */
+  for(int i = 1; i <= 3; ++i) {
+    ListPushFront(&list, i); /* Push a series of integers to list */
+  }
+  /* Iterate through the list */
+  for(ListRange r = ListRangeNew(&list); !ListRangeEmpty(&r); ListRangeMoveFront(&r)) {
+    /* Push the list's elements to the string buffer */
+    StringBufferPushInt(&buffer, *ListRangeFrontView(&r) /* Get a constant view of the current range;s element*/ );
+  }
+  /* Push formatterd strings to the string buffer */
+  StringBufferPushFormat(&buffer, "... ");
+  StringBufferPushFormat(&buffer, "Hello, %s!\n", "autoc");
+  printf(StringBufferView(&buffer)); /* Coalesce the buffer chunks into a contiguous string and print it */
+  /* Destroy the objects and free allocated memory */
+  ListDestroy(&list);
+  StringBufferDestroy(&buffer); 
+  return 0;
 }
-
-int_vector_destroy(&v);
 ```
+
+**4. Compile** - `cc runme.c runme_auto.c`
+
+**5. Run** - `./a.out`
 
 Every generated type speaks the same vocabulary of value semantics:
 
