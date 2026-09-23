@@ -27,6 +27,7 @@ import autoc.record
 import autoc.variant
 import autoc.reference
 import autoc.static_vector
+import autoc.array
 import autoc.bitset
 
 
@@ -111,6 +112,12 @@ class Vector(autoc.vector.Vector):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
+
+
+class Array(autoc.array.Array):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}, N>"
 
 
 class StaticVector(autoc.static_vector.StaticVector):
@@ -221,6 +228,7 @@ class Raw(autoc.reference.Raw):
 _nested_range(autoc.list, "ListRange")
 _nested_range(autoc.deque, "DequeRange")
 _nested_range(autoc.vector, "VectorRange")
+_nested_range(autoc.array, "ArrayRange")
 _nested_range(autoc.static_vector, "StaticVectorRange")
 _nested_range(autoc.tiered_vector, "TieredVectorRange")
 _nested_range(autoc.stack, "StackRange")
@@ -244,6 +252,7 @@ def configure_module(module):
   module.add(List("List", T))
   module.add(Deque("Deque", T))
   module.add(Vector("Vector", T))
+  module.add(Array("Array", T, 4))
   module.add(StaticVector("StaticVector", T, 4))
   module.add(TieredVector("TieredVector", T))
   module.add(Stack("Stack", T))
