@@ -175,7 +175,7 @@ class String(_AliasRenderer, Indirection, Map):
         @param[in] args the variable arguments list
         @return number of characters written, or negative on encoding error
         
-        @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
+        @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = """
         #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
@@ -230,7 +230,7 @@ class String(_AliasRenderer, Indirection, Map):
         @param[in] format the format string
         @return number of characters written, or negative on encoding error
 
-        @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
+        @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = lambda: f"""
         int len;
