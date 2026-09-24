@@ -52,7 +52,7 @@ class RandomSeeder(Code):
       /** @private */
       AUTOC_EXTERN
         void
-      #if defined(_WIN32) && (defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
+      #if defined(_WIN32) && (defined(__POCC__) || defined(AUTOC_MSVC) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
         __cdecl
       #endif
       _autoc_randomize_seed(void);
@@ -61,7 +61,7 @@ class RandomSeeder(Code):
       #include <time.h>
       #ifdef _WIN32
         #include <process.h>
-        #if defined(_MSC_VER) && !defined(__POCC__) && !defined(__clang__) && !defined(__GNUC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__TINYC__) && !defined(__LCC__)
+        #if defined(AUTOC_MSVC)
           #define _autoc_getpid() ((unsigned)_getpid())
         #else
           #define _autoc_getpid() ((unsigned)getpid())
@@ -88,7 +88,7 @@ class RandomSeeder(Code):
         #pragma startup _autoc_randomize_seed
       #elif defined(__LCC__)
         #pragma startup _autoc_randomize_seed
-      #elif defined(_MSC_VER)
+      #elif defined(AUTOC_MSVC)
         #pragma section(".CRT$XCU", read)
         __declspec(allocate(".CRT$XCU"))
         static void (*_autoc_init_ptr)(void) = _autoc_randomize_seed;
@@ -102,7 +102,7 @@ class RandomSeeder(Code):
           /* Pelles C check comes first as it might define _MSC_VER in /Ze mode */
           unsigned word;
           if(_rand_s(&word) == 0) return word;
-        #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+        #elif defined(AUTOC_MSVC)
           /* Genuine MSVC CRT provides rand_s() */
           unsigned word;
           if(rand_s(&word) == 0) return word;
@@ -132,7 +132,7 @@ class RandomSeeder(Code):
         return (unsigned)(time(NULL) ^ _autoc_getpid() ^ clock());
       }
       void
-      #if defined(_WIN32) && (defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
+      #if defined(_WIN32) && (defined(__POCC__) || defined(AUTOC_MSVC) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
         __cdecl
       #endif
       _autoc_randomize_seed() {

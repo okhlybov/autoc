@@ -94,7 +94,7 @@ for bits in (8, 16, 32, 64):
 
  
 _complex_code = Code(
-  dependencies=(complex_h, tgmath_h),
+  dependencies=(complex_h, tgmath_h, autoc.core._linkage_code),
   interface="""
     #ifdef __cplusplus
       #include <complex>
@@ -102,7 +102,7 @@ _complex_code = Code(
       using autoc_double_complex_t = std::complex<double>;
       using autoc_long_double_complex_t = std::complex<long double>;
     #else
-      #if (defined(_MSC_VER) && !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__POCC__)) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || (defined(__LCC__) && !defined(__e2k__))
+      #if defined(AUTOC_MSVC) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || (defined(__LCC__) && !defined(__e2k__))
         #error This C compiler does not support C99 _Complex types. Compile as C++ or use a compiler with C99 complex support.
       #endif
       typedef float complex autoc_float_complex_t;

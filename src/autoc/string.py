@@ -63,10 +63,7 @@ class String(_AliasRenderer, Indirection, Map):
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
             return strdup(source);
-          #elif defined(__POCC__)
-            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER in /Ze mode */
-            return _strdup(source);
-          #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          #elif defined(AUTOC_MSVC) || defined(__POCC__)
             return _strdup(source);
           #elif defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || defined(__TINYC__)
             return strdup(source);
@@ -177,13 +174,13 @@ class String(_AliasRenderer, Indirection, Map):
         @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = """
-        #if defined(__POCC__) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+        #if defined(AUTOC_HAS_VSNPRINTF) || defined(AUTOC_HAS_VSCPRINTF)
           int len;
           char* buf;
           va_list args_copy;
           assert(target);
           assert(format);
-          #if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          #if defined(AUTOC_HAS_VSCPRINTF)
             va_copy(args_copy, args);
             len = _vscprintf(format, args_copy);
             va_end(args_copy);
@@ -194,12 +191,12 @@ class String(_AliasRenderer, Indirection, Map):
           #endif
           if(len < 0) return len;
           buf = (char*)_autoc_malloc((size_t)len + 1);
-          #if defined(_MSC_VER) && (_MSC_VER >= 1400) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          #if defined(AUTOC_HAS_VSPRINTF_S)
             vsprintf_s(buf, (size_t)len + 1, format, args);
-          #elif defined(_MSC_VER) && (_MSC_VER < 1400) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
-            vsprintf(buf, format, args);
-          #else
+          #elif defined(AUTOC_HAS_VSNPRINTF)
             vsnprintf(buf, (size_t)len + 1, format, args);
+          #else
+            vsprintf(buf, format, args);
           #endif
           if(*target && *target != _autoc_empty_string) {
             free(*target);
@@ -259,13 +256,13 @@ _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
 """)
 
 
-_va_copy_code = Code(dependencies=(std.stdarg_h, std.stdio_h, std.string_h), definitions="""
+_va_copy_code = Code(dependencies=(std.stdarg_h, std.stdio_h, std.string_h, autoc.core._linkage_code), definitions="""
   #ifndef va_copy
     #if defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)
       #define va_copy(d, s) __builtin_va_copy(d, s)
     #elif defined(__va_copy)
       #define va_copy(d, s) __va_copy(d, s)
-    #elif defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__)
+    #elif defined(__POCC__) || defined(AUTOC_MSVC) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__)
       #define va_copy(d, s) ((d) = (s))
     #else
       #define va_copy(d, s) memcpy(&(d), &(s), sizeof(va_list))

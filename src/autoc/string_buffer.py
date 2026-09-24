@@ -287,14 +287,14 @@ class StringBuffer(_StructRenderer, Composite):
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = f"""
-        #if defined(__POCC__) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+        #if defined(AUTOC_HAS_VSNPRINTF) || defined(AUTOC_HAS_VSCPRINTF)
           int size;
           char stack_buf[128];
           char* buf;
           va_list args_copy;
           assert(target);
           assert(format);
-          #if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          #if defined(AUTOC_HAS_VSCPRINTF)
             va_copy(args_copy, args);
             size = _vscprintf(format, args_copy);
             va_end(args_copy);
@@ -309,12 +309,12 @@ class StringBuffer(_StructRenderer, Composite):
           }} else {{
             buf = (char*)_autoc_malloc((size_t)size + 1);
           }}
-          #if defined(_MSC_VER) && (_MSC_VER >= 1400) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          #if defined(AUTOC_HAS_VSPRINTF_S)
             vsprintf_s(buf, (size_t)size + 1, format, args);
-          #elif defined(_MSC_VER) && (_MSC_VER < 1400) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
-            vsprintf(buf, format, args);
-          #else
+          #elif defined(AUTOC_HAS_VSNPRINTF)
             vsnprintf(buf, (size_t)size + 1, format, args);
+          #else
+            vsprintf(buf, format, args);
           #endif
           {self.push_slice("target", "buf", "(size_t)size")};
           if(buf != stack_buf) {{

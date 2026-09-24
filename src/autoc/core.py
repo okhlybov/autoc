@@ -1036,7 +1036,42 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
 _linkage_spec_c = {"external": "AUTOC_EXTERN ", "inline": "AUTOC_STATIC_INLINE "}
 
 
-_linkage_code = Code(interface="""
+_linkage_code = Code(interface=r"""
+  #if defined(_MSC_VER)
+    #if !defined(__clang__) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && \
+        !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && \
+        !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+      #if defined(__cplusplus)
+        #define AUTOC_CXX_MSVC 1
+      #else
+        #define AUTOC_CC_MSVC 1
+      #endif
+      #define AUTOC_MSVC 1
+    #else
+      #if defined(__cplusplus)
+        #define AUTOC_CXX_MSVC_COMPAT 1
+      #else
+        #define AUTOC_CC_MSVC_COMPAT 1
+      #endif
+      #define AUTOC_MSVC_COMPAT 1
+    #endif
+  #endif
+
+  #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+      (defined(__cplusplus) && __cplusplus >= 201103L) || \
+      (defined(_MSC_VER) && _MSC_VER >= 1900) || \
+       defined(__POCC__) || defined(__TINYC__) || defined(__BORLANDC__) || \
+       defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || \
+      (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+    #define AUTOC_HAS_VSNPRINTF 1
+  #endif
+  #if defined(AUTOC_MSVC) && (_MSC_VER < 1900)
+    #define AUTOC_HAS_VSCPRINTF 1
+  #endif
+  #if defined(AUTOC_MSVC) && (_MSC_VER >= 1400) && (_MSC_VER < 1900)
+    #define AUTOC_HAS_VSPRINTF_S 1
+  #endif
+
   #ifndef AUTOC_EXTERN
     #ifdef __cplusplus
       #define AUTOC_EXTERN extern "C"
@@ -1045,11 +1080,14 @@ _linkage_code = Code(interface="""
     #endif
   #endif
   #ifndef AUTOC_STATIC_INLINE
-    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__POCC_STDC_VERSION__) && __POCC_STDC_VERSION__ >= 199901L) || defined(__TINYC__)
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+        (defined(__POCC_STDC_VERSION__) && __POCC_STDC_VERSION__ >= 199901L) || defined(__TINYC__)
       #define AUTOC_STATIC_INLINE static inline
-    #elif defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__WATCOMC__) || defined(__LCC__)
+    #elif defined(AUTOC_MSVC) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || \
+        defined(__SC__) || defined(__WATCOMC__) || defined(__LCC__)
       #define AUTOC_STATIC_INLINE static __inline
-    #elif !defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__POCC__) || defined(__ARMCC_VERSION) || defined(__ARMCOMPILER_VERSION) || defined(__ARMCC_COMPILER_VERSION))
+    #elif !defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || \
+        defined(__POCC__) || defined(__ARMCC_VERSION) || defined(__ARMCOMPILER_VERSION) || defined(__ARMCC_COMPILER_VERSION))
       #define AUTOC_STATIC_INLINE static inline
     #else
       #define AUTOC_STATIC_INLINE static
