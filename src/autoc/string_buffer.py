@@ -1,4 +1,5 @@
 import autoc.std as std
+import autoc.memory
 from autoc.string import String, _va_copy_code
 from autoc.tiered_vector import TieredVector
 from autoc.variant import Variant
@@ -17,7 +18,7 @@ class StringBuffer(_StructRenderer, Composite):
       raise ValueError(f"Scratch capacity must be at least 1, got {self.scratch_capacity}")
     self.chunk_shift = int(chunk_shift)
     
-    super().__init__(name, dependencies=(std.stdio_h, std.stdlib_h, std.string_h, std.stdarg_h, std.assert_h, _va_copy_code), **kws)
+    super().__init__(name, dependencies=(std.stdio_h, std.stdlib_h, std.string_h, std.stdarg_h, std.assert_h, autoc.memory._allocate_code, _va_copy_code), **kws)
     
     self._string = String(self._decorate_component("string"), visibility="internal")
     self._chunks = TieredVector(self._decorate_component("chunks"), self._string, chunk_shift=self.chunk_shift, visibility="internal")
@@ -286,18 +287,14 @@ class StringBuffer(_StructRenderer, Composite):
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = f"""
-        #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+        #if defined(__POCC__) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
           int size;
           char stack_buf[128];
           char* buf;
           va_list args_copy;
           assert(target);
           assert(format);
-          #if defined(__POCC__)
-            va_copy(args_copy, args);
-            size = vsnprintf(NULL, 0, format, args_copy);
-            va_end(args_copy);
-          #elif defined(_MSC_VER) && !defined(__clang__)
+          #if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
             va_copy(args_copy, args);
             size = _vscprintf(format, args_copy);
             va_end(args_copy);
@@ -310,10 +307,11 @@ class StringBuffer(_StructRenderer, Composite):
           if((size_t)size < sizeof(stack_buf)) {{
             buf = stack_buf;
           }} else {{
-            buf = (char*)malloc((size_t)size + 1);
-            assert(buf);
+            buf = (char*)_autoc_malloc((size_t)size + 1);
           }}
-          #if defined(_MSC_VER) && !defined(__clang__) && !defined(__POCC__)
+          #if defined(_MSC_VER) && (_MSC_VER >= 1400) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+            vsprintf_s(buf, (size_t)size + 1, format, args);
+          #elif defined(_MSC_VER) && (_MSC_VER < 1400) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
             vsprintf(buf, format, args);
           #else
             vsnprintf(buf, (size_t)size + 1, format, args);

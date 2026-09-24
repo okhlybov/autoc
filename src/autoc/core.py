@@ -1045,9 +1045,11 @@ _linkage_code = Code(interface="""
     #endif
   #endif
   #ifndef AUTOC_STATIC_INLINE
-    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+    #if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__POCC_STDC_VERSION__) && __POCC_STDC_VERSION__ >= 199901L) || defined(__TINYC__)
       #define AUTOC_STATIC_INLINE static inline
-    #elif !defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__POCC__) || defined(__ARMCC_VERSION) || defined(__ARMCC_COMPILER_VERSION))
+    #elif defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__WATCOMC__) || defined(__LCC__)
+      #define AUTOC_STATIC_INLINE static __inline
+    #elif !defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__POCC__) || defined(__ARMCC_VERSION) || defined(__ARMCOMPILER_VERSION) || defined(__ARMCC_COMPILER_VERSION))
       #define AUTOC_STATIC_INLINE static inline
     #else
       #define AUTOC_STATIC_INLINE static

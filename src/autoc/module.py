@@ -69,7 +69,8 @@ class Header(_EntityContainer, _SmartRenderer):
 
   @property
   def tag(self):
-    return f"{self.module.name}_auto_h".upper()
+    clean = re.sub(r'[^A-Za-z0-9_]', '_', self.module.name)
+    return f"{clean}_auto_h".upper()
 
   @property
   def stream(self):

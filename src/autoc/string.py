@@ -1,5 +1,6 @@
 import autoc.core
 import autoc.std as std
+import autoc.memory
 from autoc.map import Map
 from autoc.module import Code
 from autoc.range import DirectAccess
@@ -13,7 +14,7 @@ class String(_AliasRenderer, Indirection, Map):
   brief = "Value type wrapper of the C char* string"
   
   def __init__(self, name, *args, **kws):
-    super().__init__(std.char, name, std.char, std.size_t, prefix=name, dependencies=(std.stdio_h, std.string_h, std.stdarg_h, std.stdlib_h, _static_code, _va_copy_code), **kws)
+    super().__init__(std.char, name, std.char, std.size_t, prefix=name, dependencies=(std.stdio_h, std.string_h, std.stdarg_h, std.stdlib_h, autoc.memory._allocate_code, _static_code, _va_copy_code), **kws)
     self.range = Range(self)
 
   def __setup__(self):
@@ -63,19 +64,17 @@ class String(_AliasRenderer, Indirection, Map):
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
             return strdup(source);
           #elif defined(__POCC__)
-            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER */
+            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER in /Ze mode */
             return _strdup(source);
-          #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
+          #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
             return _strdup(source);
-          #elif defined(__MINGW32__) || defined(__MINGW64__)
+          #elif defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || defined(__TINYC__)
             return strdup(source);
-          #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L || defined(_GNU_SOURCE)
+          #elif defined(__MINGW32__) || defined(__MINGW64__) || (defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L) || defined(_GNU_SOURCE) || defined(__unix__) || defined(__APPLE__)
             return strdup(source);
           #else
-            size_t n;
-            char *s;
-            n = strlen(source)+1;
-            s = (char*)malloc(n); assert(s);
+            size_t n = strlen(source) + 1;
+            char *s = (char*)_autoc_malloc(n);
             memcpy(s, source, n);
             return s;
           #endif
@@ -178,18 +177,13 @@ class String(_AliasRenderer, Indirection, Map):
         @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
       """) as f:
       f.code = """
-        #if defined(__POCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
+        #if defined(__POCC__) || defined(__TINYC__) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__) || (defined(_MSC_VER) && !defined(__clang__)) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || (defined(__cplusplus) && __cplusplus >= 201103L) || (!defined(__STRICT_ANSI__) && (defined(__GNUC__) || defined(__clang__)))
           int len;
           char* buf;
           va_list args_copy;
           assert(target);
           assert(format);
-          #if defined(__POCC__)
-            /* Pelles C check must come before _MSC_VER — Pelles C may define _MSC_VER */
-            va_copy(args_copy, args);
-            len = vsnprintf(NULL, 0, format, args_copy);
-            va_end(args_copy);
-          #elif defined(_MSC_VER) && !defined(__clang__)
+          #if defined(_MSC_VER) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
             va_copy(args_copy, args);
             len = _vscprintf(format, args_copy);
             va_end(args_copy);
@@ -199,9 +193,10 @@ class String(_AliasRenderer, Indirection, Map):
             va_end(args_copy);
           #endif
           if(len < 0) return len;
-          buf = (char*)malloc((size_t)len + 1);
-          assert(buf);
-          #if defined(_MSC_VER) && !defined(__clang__) && !defined(__POCC__)
+          buf = (char*)_autoc_malloc((size_t)len + 1);
+          #if defined(_MSC_VER) && (_MSC_VER >= 1400) && (_MSC_VER < 1900) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+            vsprintf_s(buf, (size_t)len + 1, format, args);
+          #elif defined(_MSC_VER) && (_MSC_VER < 1400) && !defined(__clang__) && !defined(__POCC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
             vsprintf(buf, format, args);
           #else
             vsnprintf(buf, (size_t)len + 1, format, args);
@@ -266,11 +261,11 @@ _static_code = Code(dependencies=(autoc.core._linkage_code,), interface=f"""
 
 _va_copy_code = Code(dependencies=(std.stdarg_h, std.stdio_h, std.string_h), definitions="""
   #ifndef va_copy
-    #if defined(__GNUC__) || defined(__clang__)
+    #if defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)
       #define va_copy(d, s) __builtin_va_copy(d, s)
-    #elif defined(__POCC__)
-      #define va_copy(d, s) ((d) = (s))
-    #elif defined(_MSC_VER)
+    #elif defined(__va_copy)
+      #define va_copy(d, s) __va_copy(d, s)
+    #elif defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__)
       #define va_copy(d, s) ((d) = (s))
     #else
       #define va_copy(d, s) memcpy(&(d), &(s), sizeof(va_list))

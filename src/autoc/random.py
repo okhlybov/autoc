@@ -52,7 +52,7 @@ class RandomSeeder(Code):
       /** @private */
       AUTOC_EXTERN
         void
-      #if defined(__POCC__)
+      #if defined(_WIN32) && (defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
         __cdecl
       #endif
       _autoc_randomize_seed(void);
@@ -61,44 +61,63 @@ class RandomSeeder(Code):
       #include <time.h>
       #ifdef _WIN32
         #include <process.h>
+        #if defined(_MSC_VER) && !defined(__POCC__) && !defined(__clang__) && !defined(__GNUC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__DMC__) && !defined(__SC__) && !defined(__TINYC__) && !defined(__LCC__)
+          #define _autoc_getpid() ((unsigned)_getpid())
+        #else
+          #define _autoc_getpid() ((unsigned)getpid())
+        #endif
       #else
         #include <unistd.h>
+        #define _autoc_getpid() ((unsigned)getpid())
       #endif
-      #if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__ARMCC_VERSION) || defined(__ARMCC_COMPILER_VERSION) || defined(__xlC__)
+      #if defined(__cplusplus)
+        namespace {
+          struct _AutocRandomSeederInit {
+            _AutocRandomSeederInit() { _autoc_randomize_seed(); }
+          } _autoc_random_seeder_init;
+        }
+      #elif defined(__GNUC__) || defined(__clang__) || defined(__TINYC__) || defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER) || defined(__ARMCC_VERSION) || defined(__ARMCOMPILER_VERSION) || defined(__ARMCC_COMPILER_VERSION) || defined(__xlC__)
         void _autoc_randomize_seed(void) __attribute__((__constructor__));
       #elif defined(__PGI) || defined(__NVCOMPILER)
         #pragma init (_autoc_randomize_seed)
       #elif defined(__POCC__)
         #pragma startup _autoc_randomize_seed
-      #elif defined(__BORLANDC__)
+      #elif defined(__BORLANDC__) || defined(__TURBOC__)
         #pragma startup _autoc_randomize_seed 100
+      #elif defined(__DMC__) || defined(__SC__)
+        #pragma startup _autoc_randomize_seed
+      #elif defined(__LCC__)
+        #pragma startup _autoc_randomize_seed
       #elif defined(_MSC_VER)
         #pragma section(".CRT$XCU", read)
         __declspec(allocate(".CRT$XCU"))
-        void (*my_init)(void) = _autoc_randomize_seed;
+        static void (*_autoc_init_ptr)(void) = _autoc_randomize_seed;
       #else
-        _Pragma("warning: _autoc_randomize_seed() will not be called automatically; call it manually from main() or compile as C++")
+        #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+          _Pragma("warning: _autoc_randomize_seed() will not be called automatically; call it manually from main() or compile as C++")
+        #endif
       #endif
       static unsigned _autoc_entropy_word(void) {
         #if defined(__POCC__)
-          /* Pelles C check comes first as it might define _MSC_VER as well */
+          /* Pelles C check comes first as it might define _MSC_VER in /Ze mode */
           unsigned word;
-          _rand_s(&word);
-          return word;
-        #elif defined(_MSC_VER) && !(defined(__INTEL_COMPILER) || defined(__INTEL_LLVM_COMPILER))
-          /* Intel compilers define _MSC_VER on Windows yet their CRTs lack rand_s() */
+          if(_rand_s(&word) == 0) return word;
+        #elif defined(_MSC_VER) && !defined(__INTEL_COMPILER) && !defined(__INTEL_LLVM_COMPILER) && !defined(__DMC__) && !defined(__SC__) && !defined(__BORLANDC__) && !defined(__TURBOC__) && !defined(__LCC__) && !defined(__TINYC__)
+          /* Genuine MSVC CRT provides rand_s() */
           unsigned word;
-          rand_s(&word);
-          return word;
-        #elif defined(__MINGW32__) || defined(__MINGW64__)
-          /* MinGW-w64 with UCRT provides rand_s via <stdlib.h> */
-          #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201410L || defined(_UCRT)
-            unsigned word;
-            rand_s(&word);
-            return word;
-          #else
-            return (unsigned)(time(NULL) ^ getpid() ^ clock());
-          #endif
+          if(rand_s(&word) == 0) return word;
+        #elif (defined(__MINGW32__) || defined(__MINGW64__)) && (defined(_UCRT) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201410L))
+          /* MinGW-w64 with UCRT */
+          unsigned word;
+          if(rand_s(&word) == 0) return word;
+        #endif
+
+        /* Standard-compliant ISO C11 high-resolution time entropy */
+        #if defined(TIME_UTC) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+          struct timespec ts;
+          if(timespec_get(&ts, TIME_UTC)) {
+            return (unsigned)(ts.tv_nsec ^ _autoc_getpid() ^ (unsigned)ts.tv_sec);
+          }
         #elif defined(_POSIX_C_SOURCE) && _POSIX_C_SOURCE >= 200809L
           struct timespec ts;
           #if defined(CLOCK_REALTIME)
@@ -106,12 +125,17 @@ class RandomSeeder(Code):
           #else
             clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
           #endif
-          return (unsigned)(ts.tv_nsec ^ getpid());
-        #else
-          return (unsigned)(time(NULL) ^ getpid() ^ clock());
+          return (unsigned)(ts.tv_nsec ^ _autoc_getpid());
         #endif
+
+        /* Universal fallback */
+        return (unsigned)(time(NULL) ^ _autoc_getpid() ^ clock());
       }
-      void _autoc_randomize_seed() {
+      void
+      #if defined(_WIN32) && (defined(__POCC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__) || defined(__DMC__) || defined(__SC__) || defined(__LCC__))
+        __cdecl
+      #endif
+      _autoc_randomize_seed() {
         _autoc_seed = (size_t)_autoc_entropy_word();
         if(sizeof(size_t) > sizeof(unsigned)) {
           _autoc_seed <<= (sizeof(size_t) - sizeof(unsigned))*CHAR_BIT;
