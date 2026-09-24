@@ -216,10 +216,6 @@ class Counted(autoc.reference.Counted):
     return f"{self.name}<{self.type}>"
 
 
-class Arc(Counted):
-  pass
-
-
 class Raw(autoc.reference.Raw):
   @property
   def _doxygen_type(self):
@@ -248,32 +244,35 @@ def configure_module(module):
   module.add(T)
   module.add(K)
 
+  module.add(Array("Array", T, 4))
+  module.add(BitSet("BitSet", 64))
+  module.add(ChainedHashMap("ChainedHashMap", T, K))
+  module.add(ChainedHashSet("ChainedHashSet", T))
+  module.add(Counted(T, name="Counted"))
+  module.add(Deque("Deque", T))
+  module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
+  module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
+  module.add(List("List", T))
+  module.add(PriorityQueue("PriorityQueue", T))
+  module.add(Queue("Queue", T))
+  module.add(Raw(T, name="Raw"))
+  module.add(autoc.record.Record("Record", {"first": T, "second": K}))
+  module.add(Stack("Stack", T))
+  module.add(StaticVector("StaticVector", T, 4))
   module.add(String("String"))
   module.add(StringBuffer("StringBuffer"))
-
-  module.add(List("List", T))
-  module.add(Deque("Deque", T))
-  module.add(Vector("Vector", T))
-  module.add(Array("Array", T, 4))
-  module.add(StaticVector("StaticVector", T, 4))
   module.add(TieredVector("TieredVector", T))
-  module.add(Stack("Stack", T))
-  module.add(Queue("Queue", T))
-  module.add(PriorityQueue("PriorityQueue", T))
-
-  module.add(ChainedHashSet("ChainedHashSet", T))
-  module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
-  module.add(TreapSet("TreapSet", T))
-
-  module.add(ChainedHashMap("ChainedHashMap", T, K))
-  module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
   module.add(TreapMap("TreapMap", T, K))
-
-  module.add(BitSet("BitSet", 64))
-  module.add(autoc.record.Record("Record", {"first": T, "second": K}))
+  module.add(TreapSet("TreapSet", T))
   module.add(autoc.variant.Variant("Variant", {"first": T, "second": K}))
+  module.add(Vector("Vector", T))
 
-  module.add(Counted(T, name="Counted"))
-  module.add(Raw(T, name="Raw"))
+  # Ensure documentation topics are sorted with generic element types (T, K) on top
+  sorted_groups = sorted(
+    [e for e in module.entities if getattr(e, "public", False) and hasattr(e, "_doxygen_type")],
+    key=lambda e: (0 if e.name == "T" else (1 if e.name == "K" else 2), e._doxygen_type),
+  )
+  group_decls = "\n".join(f"/** @defgroup {e.name} {e._doxygen_type} */" for e in sorted_groups)
+  module.add(autoc.core.Code(interface=f"\n{group_decls}\n"))
 
   return module

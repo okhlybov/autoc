@@ -169,6 +169,8 @@ set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${DOC_FILTERED_MAINPAGE}")
 set(DOXYGEN_OPTIMIZE_OUTPUT_FOR_C YES)
 set(DOXYGEN_EXTRACT_ALL NO)
 set(DOXYGEN_EXTRACT_STATIC YES)
+set(DOXYGEN_SORT_MEMBER_DOCS YES)
+set(DOXYGEN_SORT_BRIEF_DOCS YES)
 # The manual documents groups and members; the raw C compounds (and the internal
 # container components) are not its subject so their undoc warnings are silenced
 set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
@@ -255,6 +257,7 @@ QUIET                  = YES
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = NO
 SHOW_INCLUDE_FILES     = NO
+SORT_MEMBER_DOCS       = YES
 SORT_BRIEF_DOCS        = YES
 """
 
