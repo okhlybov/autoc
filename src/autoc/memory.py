@@ -10,24 +10,22 @@ _allocate_code = Code(
   interface="""
     /** @private */
     AUTOC_EXTERN void* _autoc_malloc(size_t size);
-
     /** @private */
     AUTOC_EXTERN void* _autoc_calloc(size_t count, size_t size);
   """,
   implementation="""
     void* _autoc_malloc(size_t size) {
       void* ptr = malloc(size);
-      assert(ptr != NULL || size == 0);
       if(!ptr && size > 0) {
+        assert(0 && "malloc() returned NULL");
         abort();
       }
       return ptr;
     }
-
     void* _autoc_calloc(size_t count, size_t size) {
       void* ptr = calloc(count, size);
-      assert(ptr != NULL || count == 0 || size == 0);
-      if(!ptr && count > 0 && size > 0) {
+      if(!ptr && count*size > 0) {
+        assert(0 && "calloc() returned NULL");
         abort();
       }
       return ptr;
