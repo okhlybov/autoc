@@ -29,6 +29,7 @@ import autoc.reference
 import autoc.static_vector
 import autoc.array
 import autoc.bitset
+import autoc.circular_buffer
 
 
 # The manual is written with the default CamelCase identifiers
@@ -222,6 +223,18 @@ class Raw(autoc.reference.Raw):
     return f"{self.name}<{self.type}>"
 
 
+class StaticCircularBuffer(autoc.circular_buffer.StaticCircularBuffer):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
+class DynamicCircularBuffer(autoc.circular_buffer.DynamicCircularBuffer):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
 # Specialize the ranges of every container before any of them is instantiated
 _nested_range(autoc.list, "ListRange")
 _nested_range(autoc.deque, "DequeRange")
@@ -238,6 +251,7 @@ _nested_range(autoc.treap_set, "TreapSetRange")
 _nested_range(autoc.chained_hash_map, "ChainedHashMapRange")
 _nested_range(autoc.intrusive_hash_map, "IntrusiveHashMapRange")
 _nested_range(autoc.treap_map, "TreapMapRange")
+_nested_range(autoc.circular_buffer, "CircularBufferRange")
 
 
 def configure_module(module):
@@ -250,6 +264,7 @@ def configure_module(module):
   module.add(ChainedHashSet("ChainedHashSet", T))
   module.add(Counted(T, name="Counted"))
   module.add(Deque("Deque", T))
+  module.add(DynamicCircularBuffer("DynamicCircularBuffer", T))
   module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
   module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
   module.add(List("List", T))
@@ -258,6 +273,7 @@ def configure_module(module):
   module.add(Raw(T, name="Raw"))
   module.add(autoc.record.Record("Record", {"first": T, "second": K}))
   module.add(Stack("Stack", T))
+  module.add(StaticCircularBuffer("StaticCircularBuffer", T, 4))
   module.add(StaticVector("StaticVector", T, 4))
   module.add(String("String"))
   module.add(StringBuffer("StringBuffer"))
