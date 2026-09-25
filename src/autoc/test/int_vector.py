@@ -34,7 +34,7 @@ x.cleanup(f"""
 
 x.unit(f"{type.sort}(): sort empty vector", f"""
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   TEST_EQUAL( {type.size(t)}, 0 );
 """)
 
@@ -50,9 +50,9 @@ x.cleanup(f"""
 
 x.unit(f"{type.sort}(): sort descending vector", f"""
   for(i = 0; i < 8; ++i) {type.set(t, "i", "8 - i")};
-  TEST_FALSE( {type.is_sorted(t)} );
+  TEST_FALSE( {type.sorted(t)} );
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, i + 1 );
 """)
 
@@ -61,21 +61,21 @@ x.unit(f"{type.sort}(): sort vector with duplicates", f"""
   {type.set(t, 0, 3)}; {type.set(t, 1, 1)}; {type.set(t, 2, 4)}; {type.set(t, 3, 1)};
   {type.set(t, 4, 3)}; {type.set(t, 5, 2)}; {type.set(t, 6, 4)}; {type.set(t, 7, 2)};
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, expected[i] );
 """)
 
 x.unit(f"{type.sort}(): sort all equal elements", f"""
   for(i = 0; i < 8; ++i) {type.set(t, "i", 7)};
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   TEST_EQUAL( {type.get(t, 3)}, 7 );
 """)
 
 x.unit(f"{type.sort}(): sort already sorted vector", f"""
   for(i = 0; i < 8; ++i) {type.set(t, "i", "i")};
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
 """)
 
@@ -96,7 +96,7 @@ x.unit(f"{type.sort}(): sort permutation of 64 elements", f"""
   for(i = 0; i < 64; ++i) sum += {type.get(t, "i")};
   TEST_EQUAL( sum, 2016 );
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   TEST_EQUAL( {type.get(t, 0)}, 0 );
   TEST_EQUAL( {type.get(t, 63)}, 63 );
   sum = 0;
@@ -117,7 +117,7 @@ x.cleanup(f"""
 x.unit(f"{type.reverse}(): reverse descending vector into ascending", f"""
   for(i = 0; i < 8; ++i) {type.set(t, "i", "8 - i")};
   {type.reverse(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 8; ++i) TEST_EQUAL( {type.get(t, "i")}, i + 1 );
 """)
 

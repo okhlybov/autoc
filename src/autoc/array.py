@@ -1,6 +1,7 @@
 import autoc.std as std
 from autoc.hash import XorRot
 from autoc.map import Map
+from autoc.sortable import Sortable
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
 from autoc.collection import _Range
@@ -8,7 +9,7 @@ from autoc.core import out, inout, Callable, Indirection, _StructRenderer
 
 
 #
-class Array(_StructRenderer, Map, Sequence):
+class Array(_StructRenderer, Map, Sortable, Sequence):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 
@@ -58,6 +59,12 @@ class Array(_StructRenderer, Map, Sequence):
   @property
   def zero_initializable(self):
     return self.element.zero_initializable
+
+  def _element_c(self, target, index):
+    return self.element.variable(f"{target}->elements[{index}]")
+
+  def _size_c(self, target):
+    return str(self._size)
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

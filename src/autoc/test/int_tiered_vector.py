@@ -154,7 +154,7 @@ x.unit(f"{range}(): direct access by offset and range size", f"""
 x.unit(f"{type.sort}(): sort across chunks", f"""
   for(i = 0; i < 100; ++i) {type.push(t, "(i*37 + 11)%100")};
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 100; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
 """)
 
@@ -163,11 +163,11 @@ x.unit(f"{type.sort}(): sort already sorted and reverse sorted", f"""
   {type.create_size(t, 40)};
   for(i = 0; i < 40; ++i) {type.set(t, "i", "i")};
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   {type.reverse(t)};
-  TEST_FALSE( {type.is_sorted(t)} );
+  TEST_FALSE( {type.sorted(t)} );
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
 """)
 
@@ -178,6 +178,23 @@ x.unit(f"{type.reverse}(): reverse twice restores", f"""
   {type.reverse(t)};
   {type.reverse(t)};
   for(i = 0; i < 40; ++i) TEST_EQUAL( {type.get(t, "i")}, (i*7)%40 );
+""")
+
+x.unit(f"{type.binary_search}(), {type.lower_bound}(), {type.upper_bound}(): binary search on tiered vector", f"""
+  {type.destroy(t)};
+  {type.create_size(t, 50)};
+  for(i = 0; i < 50; ++i) {type.set(t, "i", "i * 2")};
+  /* elements are 0, 2, 4, ..., 98 */
+  TEST_TRUE( {type.binary_search(t, 20)} );
+  TEST_TRUE( {type.binary_search(t, 0)} );
+  TEST_TRUE( {type.binary_search(t, 98)} );
+  TEST_FALSE( {type.binary_search(t, 21)} );
+  TEST_FALSE( {type.binary_search(t, -1)} );
+  TEST_FALSE( {type.binary_search(t, 100)} );
+
+  TEST_EQUAL( {type.lower_bound(t, 20)}, 10 );
+  TEST_EQUAL( {type.lower_bound(t, 21)}, 11 );
+  TEST_EQUAL( {type.upper_bound(t, 20)}, 11 );
 """)
 
 

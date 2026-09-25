@@ -120,6 +120,46 @@ x.unit(f"{type.range}(): iterate range forward and backward", f"""
   TEST_EQUAL( {type.range.front(r)}, 2 );
 """)
 
+x.unit(f"{type.sort}(), {type.sorted}(), {type.reverse}(): sort and reverse array", f"""
+  {type.set(t, 0, 40)};
+  {type.set(t, 1, 10)};
+  {type.set(t, 2, 30)};
+  {type.set(t, 3, 20)};
+  TEST_FALSE( {type.sorted(t)} );
+
+  {type.sort(t)};
+  TEST_TRUE( {type.sorted(t)} );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 20 );
+  TEST_EQUAL( {type.get(t, 2)}, 30 );
+  TEST_EQUAL( {type.get(t, 3)}, 40 );
+
+  {type.reverse(t)};
+  TEST_FALSE( {type.sorted(t)} );
+  TEST_EQUAL( {type.get(t, 0)}, 40 );
+  TEST_EQUAL( {type.get(t, 1)}, 30 );
+  TEST_EQUAL( {type.get(t, 2)}, 20 );
+  TEST_EQUAL( {type.get(t, 3)}, 10 );
+""")
+
+x.unit(f"{type.binary_search}(), {type.lower_bound}(), {type.upper_bound}(): binary search on sorted array", f"""
+  {type.set(t, 0, 10)};
+  {type.set(t, 1, 20)};
+  {type.set(t, 2, 30)};
+  {type.set(t, 3, 40)};
+
+  TEST_TRUE( {type.binary_search(t, 20)} );
+  TEST_TRUE( {type.binary_search(t, 10)} );
+  TEST_TRUE( {type.binary_search(t, 40)} );
+  TEST_FALSE( {type.binary_search(t, 25)} );
+  TEST_FALSE( {type.binary_search(t, 5)} );
+  TEST_FALSE( {type.binary_search(t, 50)} );
+
+  TEST_EQUAL( {type.lower_bound(t, 20)}, 1 );
+  TEST_EQUAL( {type.lower_bound(t, 25)}, 2 );
+  TEST_EQUAL( {type.upper_bound(t, 20)}, 2 );
+""")
+
 
 x.setup(f"""
   {t1.definition};

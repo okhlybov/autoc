@@ -192,9 +192,9 @@ x.unit(f"{type.sort}(): sort inlined vector", f"""
   {type.push(t, 10)};
   {type.push(t, 30)};
   {type.push(t, 20)};
-  TEST_FALSE( {type.is_sorted(t)} );
+  TEST_FALSE( {type.sorted(t)} );
   {type.sort(t)};
-  TEST_TRUE( {type.is_sorted(t)} );
+  TEST_TRUE( {type.sorted(t)} );
   TEST_EQUAL( {type.get(t, 0)}, 10 );
   TEST_EQUAL( {type.get(t, 1)}, 20 );
   TEST_EQUAL( {type.get(t, 2)}, 30 );
