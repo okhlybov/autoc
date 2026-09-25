@@ -11,17 +11,18 @@ class StringBuffer(_StructRenderer, Composite):
 
   brief = "Append-optimized string buffer with scratch accumulation and lazy joining"
   
-  def __init__(self, name, scratch_capacity=128, chunk_shift=4, **kws):
+  def __init__(self, name, scratch_capacity=128, chunk_shift=4, formatting_operations=True, **kws):
+    self.formatting_operations = bool(formatting_operations)
     self.element = std.char
     self.scratch_capacity = int(scratch_capacity)
     if self.scratch_capacity < 1:
       raise ValueError(f"Scratch capacity must be at least 1, got {self.scratch_capacity}")
     self.chunk_shift = int(chunk_shift)
     
-    super().__init__(name, dependencies=(std.stdio_h, std.stdlib_h, std.string_h, std.stdarg_h, std.assert_h, autoc.memory._allocate_code, _va_copy_code), **kws)
+    super().__init__(name, dependencies=(std.stdlib_h, std.string_h, std.assert_h, autoc.memory._allocate_code), **kws)
     
-    self._string = String(self._decorate_component("string"), visibility="internal")
-    self._chunks = TieredVector(self._decorate_component("chunks"), self._string, chunk_shift=self.chunk_shift, visibility="internal")
+    self._string = String(self._decorate_component("string"), visibility="internal", formatting_operations=False)
+    self._chunks = TieredVector(self._decorate_component("chunks"), self._string, chunk_shift=self.chunk_shift, visibility="internal", sorting_operations=False)
     self._variant = Variant(self._decorate_component("variant"), {"string": self._string, "chunks": self._chunks}, visibility="internal")
     
     self.dependencies.update([self._string, self._chunks, self._variant])
@@ -245,7 +246,9 @@ class StringBuffer(_StructRenderer, Composite):
         }}
       """
 
-    with self.method(None, "push", {"target": inout(self), "str": Indirection(std.char, constant=True)}, brief="Push null-terminated string into buffer",
+    with self.method(None, "push", {"target": inout(self), "str": Indirection(std.char, constant=True)},
+      references=(self.push_slice,),
+      brief="Push null-terminated string into buffer",
       description="""
         Appends a null-terminated string into the buffer.
 
@@ -275,7 +278,11 @@ class StringBuffer(_StructRenderer, Composite):
         target->length += 1;
       """
 
-    with self.method(std.int, ("push", "format", "args"), {"target": inout(self), "format": Indirection(std.char, constant=True), "args": std.va_list}, brief="Push formatted output from va_list into buffer",
+    with self.method(std.int, ("push", "format", "args"), {"target": inout(self), "format": Indirection(std.char, constant=True), "args": std.va_list},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      dependencies=(std.stdio_h, std.stdarg_h, _va_copy_code),
+      brief="Push formatted output from va_list into buffer",
       description="""
         Formats the output according to the format string and va_list and appends it to the buffer.
 
@@ -330,7 +337,13 @@ class StringBuffer(_StructRenderer, Composite):
         #endif
       """
 
-    with self.method(std.int, ("push", "format"), {"target": inout(self), "format": Indirection(std.char, constant=True)}, variadic=True, brief="Push formatted output into buffer",
+    with self.method(std.int, ("push", "format"), {"target": inout(self), "format": Indirection(std.char, constant=True)},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      dependencies=(std.stdarg_h,),
+      references=(self.push_format_args,),
+      variadic=True,
+      brief="Push formatted output into buffer",
       description="""
         Formats the output according to the format string and variable arguments and appends it to the buffer.
 
@@ -351,7 +364,9 @@ class StringBuffer(_StructRenderer, Composite):
         return size;
       """
 
-    with self.method(None, ("push", "ulong"), {"target": inout(self), "value": std.unsigned_long}, brief="Push formatted unsigned long integer into buffer",
+    with self.method(None, ("push", "ulong"), {"target": inout(self), "value": std.unsigned_long},
+      references=(self.push_slice,),
+      brief="Push formatted unsigned long integer into buffer",
       description="""
         Formats the unsigned long integer and appends it to the buffer.
 
@@ -372,7 +387,9 @@ class StringBuffer(_StructRenderer, Composite):
         {self.push_slice("target", "p", "(size_t)((buf + sizeof(buf)) - p)")};
       """
 
-    with self.method(None, ("push", "long"), {"target": inout(self), "value": std.long}, brief="Push formatted long integer into buffer",
+    with self.method(None, ("push", "long"), {"target": inout(self), "value": std.long},
+      references=(self.push_slice,),
+      brief="Push formatted long integer into buffer",
       description="""
         Formats the long integer and appends it to the buffer.
 
@@ -400,7 +417,9 @@ class StringBuffer(_StructRenderer, Composite):
         {self.push_slice("target", "p", "(size_t)((buf + sizeof(buf)) - p)")};
       """
 
-    with self.method(None, ("push", "uint"), {"target": inout(self), "value": std.unsigned_int}, brief="Push formatted unsigned integer into buffer",
+    with self.method(None, ("push", "uint"), {"target": inout(self), "value": std.unsigned_int},
+      references=(self.push_ulong,),
+      brief="Push formatted unsigned integer into buffer",
       description="""
         Formats the unsigned integer and appends it to the buffer.
 
@@ -412,7 +431,9 @@ class StringBuffer(_StructRenderer, Composite):
         {self.push_ulong("target", "value")};
       """
 
-    with self.method(None, ("push", "int"), {"target": inout(self), "value": std.int}, brief="Push formatted integer into buffer",
+    with self.method(None, ("push", "int"), {"target": inout(self), "value": std.int},
+      references=(self.push_long,),
+      brief="Push formatted integer into buffer",
       description="""
         Formats the integer and appends it to the buffer.
 
@@ -424,7 +445,11 @@ class StringBuffer(_StructRenderer, Composite):
         {self.push_long("target", "value")};
       """
 
-    with self.method(None, ("push", "double"), {"target": inout(self), "value": std.double}, brief="Push formatted double value into buffer",
+    with self.method(None, ("push", "double"), {"target": inout(self), "value": std.double},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      references=(self.push_format,),
+      brief="Push formatted double value into buffer",
       description="""
         Formats the floating-point value and appends it to the buffer.
 
@@ -436,7 +461,11 @@ class StringBuffer(_StructRenderer, Composite):
         {self.push_format("target", '"%g"', "value")};
       """
 
-    with self.method(None, ("push", "long", "double"), {"target": inout(self), "value": std.long_double}, brief="Push formatted long double value into buffer",
+    with self.method(None, ("push", "long", "double"), {"target": inout(self), "value": std.long_double},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      references=(self.push_format,),
+      brief="Push formatted long double value into buffer",
       description="""
         Formats the long double floating-point value and appends it to the buffer.
 
@@ -509,7 +538,9 @@ class StringBuffer(_StructRenderer, Composite):
         return buf;
       """
 
-    with self.method(self._string, "take", {"target": inout(self)}, brief="Extract contiguous string and reset buffer",
+    with self.method(self._string, "take", {"target": inout(self)},
+      references=(self.view,),
+      brief="Extract contiguous string and reset buffer",
       description="""
         Coalesces the buffer contents if needed, transfers ownership of the allocated
         string to the caller, and resets the buffer to an empty state in O(1) after coalescing.

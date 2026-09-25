@@ -145,12 +145,24 @@ class _VisibilityManager:
     return self.visibility == "internal"
 
 
+_optional_group_names = {
+  "sorting_operations": "Sortable",
+  "algebraic_operations": "AlgebraicSet",
+  "formatting_operations": "Formatting",
+}
+
+
+def _optional_group_note(group):
+  return f"An optional operation belonging to the {_optional_group_names.get(group)} function group."
+
+
 class _Documented(Entity, _VisibilityManager):
   
-  def __init__(self, *args, brief=None, description=None, **kws):
+  def __init__(self, *args, brief=None, description=None, optional_group=None, **kws):
     super().__init__(*args, **kws)
     self.__manage_attr("brief", brief)
     self.__manage_attr("description", description)
+    self.__manage_attr("optional_group", optional_group)
 
   def __manage_attr(self, attr, value):
     if value:
@@ -187,6 +199,8 @@ class _Documented(Entity, _VisibilityManager):
       # to the least indented lines of the comment - leaving the embedded commands
       # unrecognized and rendered verbatim - so normalize the common prefix away
       stream.append(textwrap.dedent(self.description))
+    if getattr(self, "optional_group", None):
+      stream.append(f"\n_{_optional_group_note(self.optional_group)}_\n")
 
 
 #
@@ -369,12 +383,14 @@ class _Named(Type):
   def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
     kws.setdefault("variadic", getattr(m, "variadic", False))
+    kws.setdefault("optional_group", getattr(m, "optional_group", None))
     return self.macro(attribute, m._result, m._parameters, *args, brief=m.brief, description=m.description, **kws)
     
   #
   def method_from(self, identifier, *args, attribute=None, **kws):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
     kws.setdefault("variadic", getattr(m, "variadic", False))
+    kws.setdefault("optional_group", getattr(m, "optional_group", None))
     return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, brief=m.brief, description=m.description, type=self, **kws)
   
   #
@@ -405,7 +421,7 @@ class _Named(Type):
     # By recording the attribute names instead of real method objects makes it possible to
     # disable object emitting by setting the respective attribute to None
     # prior entering this method (__setup__ is a perfect place for this)
-    self.references.update( [t for x in self.__attributes if hasattr(self, x) and not (t := getattr(self, x)) is None] )
+    self.references.update( [t for x in self.__attributes if hasattr(self, x) and not (t := getattr(self, x)) is None and getattr(t, "active", True)] )
 
 
 #
@@ -753,7 +769,7 @@ class Callable(_Documented):
 
   # Create function type borrowing the signature
   def functional(self, name):
-    return Functional.of(name, self, brief=self.brief, description=self.description, variadic=self.variadic)
+    return Functional.of(name, self, brief=self.brief, description=self.description, optional_group=getattr(self, "optional_group", None), variadic=self.variadic)
   
   class Parameter:
     def __init__(self, type):
@@ -870,6 +886,7 @@ class Macro(_Parametrized):
   @classmethod
   def of(self, callable, emitter, constraint=None, **kws):
     kws.setdefault("variadic", getattr(callable, "variadic", False))
+    kws.setdefault("optional_group", getattr(callable, "optional_group", None))
     return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, brief=callable.brief, description=callable.description, **kws)
   
   def __init__(self, result, parameters, emitter, **kws):
@@ -908,10 +925,11 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   @classmethod
   def of(self, callable, name, constraint=None, **kws):
     kws.setdefault("variadic", getattr(callable, "variadic", False))
+    kws.setdefault("optional_group", getattr(callable, "optional_group", None))
     return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
 
-  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), type=None, **kws):
-    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), **kws)
+  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), references=(), type=None, **kws):
+    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), references=references, **kws)
     self.name = str(name)
     self.linkage = linkage
     self.__abstract = abstract

@@ -116,7 +116,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         {self.element.copy(slot, f.element)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable,
+      references=(self.get,),
+      brief="Get front element",
       description="""
         Returns a copy of the oldest element at the front in O(1).
         The circular buffer must not be empty.
@@ -130,7 +132,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         return {self.get(f.target, 0)};
       """
 
-    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get constant view of front element",
+    with self.method(self.element.view_type, ("front", "view"), {"target": self},
+      references=(self.view,),
+      brief="Get constant view of front element",
       description="""
         Returns a constant pointer to the oldest element at the front in O(1) without copying it.
         The circular buffer must not be empty.
@@ -144,7 +148,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         return {self.view(f.target, 0)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get back element",
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable,
+      references=(self.get,),
+      brief="Get back element",
       description="""
         Returns a copy of the newest element at the back in O(1).
         The circular buffer must not be empty.
@@ -158,7 +164,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         return {self.get(f.target, "target->size - 1")};
       """
 
-    with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get constant view of back element",
+    with self.method(self.element.view_type, ("back", "view"), {"target": self},
+      references=(self.view,),
+      brief="Get constant view of back element",
       description="""
         Returns a constant pointer to the newest element at the back in O(1) without copying it.
         The circular buffer must not be empty.
@@ -197,7 +205,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         }}
       """
 
-    with self.method(None, ("push", "back"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Append element to back",
+    with self.method(None, ("push", "back"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable,
+      references=(self.push,),
+      brief="Append element to back",
       description="""
         Appends the element to the back of the circular buffer in O(1) (synonym for push).
         If the buffer is already full, the oldest element at the front is overwritten.
@@ -258,7 +268,9 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
         return {result};
       """
 
-    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front",
+    with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable,
+      references=(self.pop,),
+      brief="Remove and return element from front",
       description="""
         Removes and returns the oldest element from the front of the circular buffer in O(1) (synonym for pop).
 

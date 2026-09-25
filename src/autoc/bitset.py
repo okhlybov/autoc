@@ -8,7 +8,8 @@ class BitSet(_StructRenderer, Composite):
 
   brief = "Fixed-size bit array with set algebra operations"
 
-  def __init__(self, name, capacity, *args, hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, capacity, *args, algebraic_operations=True, hasher=XorRot(), dependencies=(), **kws):
+    self.algebraic_operations = bool(algebraic_operations)
     self._capacity = int(capacity)
     if self._capacity < 1:
       raise ValueError(f"BitSet capacity must be at least 1, got {self._capacity}")
@@ -263,6 +264,8 @@ class BitSet(_StructRenderer, Composite):
     # --- set algebra (in-place) ---
 
     with self.method(None, ("assign", "union"), {"target": inout(self), "source": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
       brief="In-place bitwise OR (union)",
       description="""
         Computes the union of two bit arrays: `target |= source`.
@@ -278,6 +281,8 @@ class BitSet(_StructRenderer, Composite):
       """
 
     with self.method(None, ("assign", "intersection"), {"target": inout(self), "source": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
       brief="In-place bitwise AND (intersection)",
       description="""
         Computes the intersection of two bit arrays: `target &= source`.
@@ -293,6 +298,8 @@ class BitSet(_StructRenderer, Composite):
       """
 
     with self.method(None, ("assign", "difference"), {"target": inout(self), "source": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
       brief="In-place bitwise AND NOT (difference)",
       description="""
         Computes the difference of two bit arrays: `target &= ~source`.
@@ -308,6 +315,8 @@ class BitSet(_StructRenderer, Composite):
       """
 
     with self.method(None, ("assign", "symmetric", "difference"), {"target": inout(self), "source": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
       brief="In-place bitwise XOR (symmetric difference)",
       description="""
         Computes the symmetric difference of two bit arrays: `target ^= source`.
@@ -325,6 +334,8 @@ class BitSet(_StructRenderer, Composite):
     # --- predicates ---
 
     with self.method("int", ("is", "subset"), {"left": self, "right": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
       brief="Test whether left is a subset of right",
       description="""
         Returns non-zero if every bit set in `left` is also set in `right`.

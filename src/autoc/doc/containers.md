@@ -74,3 +74,15 @@ import in your module script; the *type* is the class you instantiate with a con
 All concrete containers in one module share a single generated header, and each brings its
 own group in this manual, so the operations of `ChainedHashSet` and `IntrusiveHashSet` never
 have to be guessed: they are documented side by side.
+
+## Optional feature groups
+
+To reduce generated code size and eliminate unused C standard library dependencies (such as `<stdio.h>` or `<stdarg.h>`), specialized container operations are categorized into optional feature groups. By default, all optional groups are enabled (`True`) so types provide full functionality unless explicitly configured otherwise. Enclosing containers (such as maps backed by sets, or string buffers holding chunk vectors) automatically disable groups they do not use.
+
+| Optional Group | Parameter | Containers | Methods | Description |
+|---|---|---|---|---|
+| Set Algebra | `algebraic_operations=True` | `Set` (`ChainedHashSet`, `IntrusiveHashSet`, `TreapSet`), `BitSet` | `union`, `difference`, `intersection`, `symmetric_difference`, `is_subset`, `is_superset`, `assign_union`, `assign_intersection`, `assign_difference`, `assign_symmetric_difference` | Mathematical set algebra. Automatically disabled on sets used internally by maps. |
+| Sorting & Search | `sorting_operations=True` | `Sortable` (`Vector`, `TieredVector`, `Array`) | `sort`, `reverse`, `sorted`, `lower_bound`, `upper_bound`, `binary_search` | Quicksort, reversal, sortedness check, and binary search algorithms. Automatically disabled on chunk vectors inside `StringBuffer`. |
+| Formatted Output | `formatting_operations=True` | `String`, `StringBuffer` | `format`, `format_args`, `push_format`, `push_format_args`, `push_double`, `push_long_double` | `printf`-style formatted output and floating-point conversions, requiring `<stdio.h>` and `<stdarg.h>`. Automatically disabled on internal string instances. |
+
+In the reference manual, every method belonging to an optional group is marked with an italic note indicating its function group (for example, *An optional operation belonging to the Sortable function group.*).

@@ -17,6 +17,7 @@ class Map(_StructRenderer, Map):
       self._decorate_component("set"),
       _Entry(self._decorate_component("entry"), self.element, self.index, visibility="internal"),
       visibility="internal",
+      algebraic_operations=False,
       is_empty=is_empty,
       mark_empty=mark_empty,
       is_deleted=is_deleted,

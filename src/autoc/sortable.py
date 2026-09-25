@@ -6,6 +6,10 @@ from autoc.core import inout
 # for direct-access sequence containers.
 class Sortable:
 
+  def __init__(self, *args, sorting_operations=True, **kws):
+    self.sorting_operations = bool(sorting_operations)
+    super().__init__(*args, **kws)
+
   def _element_c(self, target, index):
     raise NotImplementedError
 
@@ -16,7 +20,9 @@ class Sortable:
     super().__setup__()
 
     index_type = getattr(self, "index", std.size_t)
-    sort_constraint = lambda: self.element.orderable and self.element.copyable and self.element.swappable
+    sort_constraint = lambda: self.sorting_operations and self.element.orderable and self.element.copyable and self.element.swappable
+    reverse_constraint = lambda: self.sorting_operations and self.element.swappable
+    search_constraint = lambda: self.sorting_operations and self.element.orderable
 
     element_i = lambda target="target": self._element_c(target, "i")
     element_j = lambda target="target": self._element_c(target, "j")
@@ -37,7 +43,7 @@ class Sortable:
         }}
       """
 
-    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": index_type, "hi": index_type}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using quicksort (internal)") as f:
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": index_type, "hi": index_type}, hidden=True, visibility="internal", constraint=sort_constraint, references=(self.sort_insertion,), brief="Sort range using quicksort (internal)") as f:
       f.code = lambda f=f: f"""
         size_t i, j, mid;
         {pivot.definition};
@@ -77,7 +83,7 @@ class Sortable:
         }}
       """
 
-    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, brief="Sort elements in ascending order",
+    with self.method(None, "sort", {"target": inout(self)}, constraint=sort_constraint, optional_group="sorting_operations", references=(self.sort_range,), brief="Sort elements in ascending order",
       description="""
         Sorts the elements in ascending order in expected O(n log n) with a quicksort
         variant: ranges of less than 16 elements are insertion sorted, the pivot is the
@@ -93,7 +99,7 @@ class Sortable:
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
-    with self.method(None, "reverse", {"target": inout(self)}, constraint=lambda: self.element.swappable, brief="Reverse the order of elements",
+    with self.method(None, "reverse", {"target": inout(self)}, constraint=reverse_constraint, optional_group="sorting_operations", brief="Reverse the order of elements",
       description="""
         Reverses the element order in place in O(n) by exchanging the mirrored element
         pairs. It needs nothing but the element swappability - no copies or destructions
@@ -109,7 +115,7 @@ class Sortable:
         }}
       """
 
-    with self.method("int", "sorted", {"target": self}, constraint=lambda: self.element.orderable, brief="Check if elements are sorted in ascending order",
+    with self.method("int", "sorted", {"target": self}, constraint=search_constraint, optional_group="sorting_operations", brief="Check if elements are sorted in ascending order",
       description="""
         Walks the container once in O(n) returning non-zero when every element is not less
         than its predecessor. An empty or single element container is considered sorted.
@@ -126,7 +132,7 @@ class Sortable:
         return 1;
       """
 
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the first position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", brief="Get the first position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the leftmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -149,7 +155,7 @@ class Sortable:
         return low;
       """
 
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Get the last position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", brief="Get the last position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the rightmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -172,7 +178,7 @@ class Sortable:
         return low;
       """
 
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=lambda: self.element.orderable, brief="Check if the element is present in the sorted container",
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", references=(self.lower_bound,), brief="Check if the element is present in the sorted container",
       description="""
         Binary searches the sorted container in O(log n) for the element. The container must be
         sorted in the ascending order beforehand.

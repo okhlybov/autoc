@@ -8,6 +8,10 @@ from autoc.collection import Collection
 #
 class Set(Collection):
   
+  def __init__(self, name, element, *args, algebraic_operations=True, **kws):
+    self.algebraic_operations = bool(algebraic_operations)
+    super().__init__(name, element, *args, **kws)
+
   def __setup__(self):
     super().__setup__()
     
@@ -41,9 +45,10 @@ class Set(Collection):
     range = self.range
     r = range.variable("r")
     temp = self.variable("temp")
-    algebra_constraint = lambda: self.element.copyable and self.element.comparable
+    algebra_constraint = lambda: self.algebraic_operations and self.element.copyable and self.element.comparable
+    subset_constraint = lambda: self.algebraic_operations and self.element.comparable
 
-    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Add all elements from other set",
+    with self.method("int", "union", {"target": inout(self), "other": self}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Add all elements from other set",
       description="""
         Adds every element of the other set which the target does not hold yet by walking
         the other set's range and putting its elements. The other set is not modified.
@@ -66,7 +71,7 @@ class Set(Collection):
         return added;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove all elements found in other set",
+    with self.method("int", "difference", {"target": inout(self), "other": self}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Remove all elements found in other set",
       description="""
         Removes every element of the target which the other set holds by walking the other
         set's range and removing its elements. The other set is not modified.
@@ -94,7 +99,7 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Keep only elements also present in other set",
+    with self.method("int", "intersection", {"target": inout(self), "other": self}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Keep only elements also present in other set",
       description="""
         Removes every element of the target which the other set does not hold. The other set
         is traversed via a temporary copy of the target so the removals do not disturb the walk.
@@ -122,7 +127,7 @@ class Set(Collection):
         return removed;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, brief="Remove elements in both sets, add elements in only one",
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": self}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Remove elements in both sets, add elements in only one",
       description="""
         Removes the elements the two sets share and adds the elements only the other set
         holds, making the target hold the elements present in exactly one of the sets.
@@ -151,7 +156,7 @@ class Set(Collection):
         return changed;
       """
 
-    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements are in other set",
+    with self.method("int", ("is", "subset"), {"target": self, "other": self}, constraint=subset_constraint, optional_group="algebraic_operations", brief="Check if all elements are in other set",
       description="""
         Walks the target's range and looks every element up in the other set, aborting on
         the first missing one.
@@ -170,7 +175,7 @@ class Set(Collection):
         return 1;
       """
 
-    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=lambda: self.element.comparable, brief="Check if all elements of other are in this set",
+    with self.method("int", ("is", "superset"), {"target": self, "other": self}, constraint=subset_constraint, optional_group="algebraic_operations", brief="Check if all elements of other are in this set",
       description="""
         Walks the other set's range and looks every element up in the target, aborting on
         the first missing one.

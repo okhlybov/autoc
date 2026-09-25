@@ -17,6 +17,7 @@ class Map(_StructRenderer, Map):
       self._decorate_component("set"),
       _Entry(self._decorate_component("entry"), self.element, self.index, visibility="internal"),
       visibility="internal",
+      algebraic_operations=False,
     )
     self.dependencies.add(self._set)
     self.range = Range(self)

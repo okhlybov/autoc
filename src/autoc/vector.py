@@ -12,11 +12,11 @@ class Vector(_StructRenderer, Map, Sortable, Sequence):
 
   brief = "Direct access sequence container"
   
-  def __init__(self, name, element, inline_capacity=0, *args, dependencies=(), **kws):
+  def __init__(self, name, element, inline_capacity=0, *args, sorting_operations=True, dependencies=(), **kws):
     self.inline_capacity = int(inline_capacity)
     if self.inline_capacity < 0:
       raise ValueError(f"Vector inline_capacity must be non-negative, got {self.inline_capacity}")
-    super().__init__(name, element, std.size_t, *args, dependencies=(*dependencies, std.string_h), **kws)
+    super().__init__(name, element, std.size_t, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.string_h), **kws)
     self.range = Range(self)
 
   def _data(self, target):

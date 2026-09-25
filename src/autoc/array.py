@@ -13,11 +13,11 @@ class Array(_StructRenderer, Map, Sortable, Sequence):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 
-  def __init__(self, name, element, size, *args, hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, element, size, *args, sorting_operations=True, hasher=XorRot(), dependencies=(), **kws):
     self._size = int(size)
     if self._size < 1:
       raise ValueError(f"Array size must be at least 1, got {self._size}")
-    super().__init__(name, element, std.size_t, *args, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+    super().__init__(name, element, std.size_t, *args, sorting_operations=sorting_operations, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
     self.range = Range(self)
 
   @property
@@ -222,7 +222,9 @@ class Array(_StructRenderer, Map, Sortable, Sequence):
         {self.element.copy(slot, f.element)};
       """
 
-    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the front element",
+    with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable,
+      references=(self.get,),
+      brief="Get a copy of the front element",
       description="""
         Returns a copy of the first element in the array.
 
@@ -234,7 +236,9 @@ class Array(_StructRenderer, Map, Sortable, Sequence):
         return {self.get(f.target, 0)};
       """
 
-    with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get a constant view of the front element",
+    with self.method(self.element.view_type, ("front", "view"), {"target": self},
+      references=(self.view,),
+      brief="Get a constant view of the front element",
       description="""
         Returns a constant view of the first element in the array without copying it.
 
@@ -246,7 +250,9 @@ class Array(_StructRenderer, Map, Sortable, Sequence):
         return {self.view(f.target, 0)};
       """
 
-    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the back element",
+    with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable,
+      references=(self.get,),
+      brief="Get a copy of the back element",
       description="""
         Returns a copy of the last element in the array.
 
@@ -258,7 +264,9 @@ class Array(_StructRenderer, Map, Sortable, Sequence):
         return {self.get(f.target, self._size - 1)};
       """
 
-    with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get a constant view of the back element",
+    with self.method(self.element.view_type, ("back", "view"), {"target": self},
+      references=(self.view,),
+      brief="Get a constant view of the back element",
       description="""
         Returns a constant view of the last element in the array without copying it.
 

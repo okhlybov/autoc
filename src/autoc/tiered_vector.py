@@ -20,10 +20,10 @@ class TieredVector(_StructRenderer, Map, Sortable, Sequence):
 
   brief = "Append-optimized direct access sequence container"
   
-  def __init__(self, name, element, chunk_shift=16, **kws):
+  def __init__(self, name, element, chunk_shift=16, sorting_operations=True, **kws):
     # memset is needed to zero-initialize the elements of the types which are
     # zero initializable but not default constructible
-    super().__init__(name, element, std.size_t, dependencies=(std.string_h,), **kws)
+    super().__init__(name, element, std.size_t, dependencies=(std.string_h,), sorting_operations=sorting_operations, **kws)
     self.chunk_shift = int(chunk_shift)
     self.chunk_mask = (1 << self.chunk_shift) - 1
     self._chunk_p = Indirection(self.element)
@@ -118,7 +118,9 @@ class TieredVector(_StructRenderer, Map, Sortable, Sequence):
           }}
         """
 
-    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
+    with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable,
+      references=(self.extend,),
+      brief="Add element to back",
       description="""
         Appends the element in amortized O(1): the element lands in the last chunk and a fresh
         chunk of the fixed tier capacity is allocated when the current one fills up. Existing
@@ -163,7 +165,9 @@ class TieredVector(_StructRenderer, Map, Sortable, Sequence):
     else:
       resize_create_i = f"memset(&({resize_slot('target->size')}), 0, sizeof({self.element}));"
 
-    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Resize the vector to the given number of elements",
+    with self.method(None, "resize", {"target": inout(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable,
+      references=(self.extend,),
+      brief="Resize the vector to the given number of elements",
       description="""
         Changes the number of elements: growing default-initializes the new elements in place
         extending the chunk table - no element migration is ever needed since the chunks are

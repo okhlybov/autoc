@@ -372,7 +372,9 @@ class Set(_StructRenderer, Set):
         return 1 + {self.count(f"{f.node}->left")} + {self.count(f"{f.node}->right")};
       """
 
-    with self.method(self._node_p, ('union', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Union of two node trees (internal)") as f:
+    algebra_constraint = lambda: self.algebraic_operations and self.element.copyable and self.element.comparable
+
+    with self.method(self._node_p, ('union', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=algebra_constraint, brief="Union of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -395,7 +397,7 @@ class Set(_StructRenderer, Set):
         return {f.a};
       """
 
-    with self.method(self._node_p, ('intersection', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Intersect two node trees (internal)") as f:
+    with self.method(self._node_p, ('intersection', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=algebra_constraint, brief="Intersect two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -427,7 +429,7 @@ class Set(_StructRenderer, Set):
         return {self.merge_nodes("left_result", "right_result")};
       """
 
-    with self.method(self._node_p, ('difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Difference of two node trees (internal)") as f:
+    with self.method(self._node_p, ('difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=algebra_constraint, brief="Difference of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -454,7 +456,7 @@ class Set(_StructRenderer, Set):
         return {f.a};
       """
 
-    with self.method(self._node_p, ('symmetric_difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Symmetric difference of two node trees (internal)") as f:
+    with self.method(self._node_p, ('symmetric_difference', 'nodes'), {"a": Callable.Parameter(self._node_p), "b": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", constraint=algebra_constraint, brief="Symmetric difference of two node trees (internal)") as f:
       f.code = lambda f=f: f"""
         {self.node}* low;
         {self.node}* high;
@@ -486,7 +488,7 @@ class Set(_StructRenderer, Set):
 
     # The consuming implementations of the algebraic operations: both operands are merged
     # at the node level and the other set is left empty
-    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Add all elements from other set",
+    with self.method("int", "union", {"target": inout(self), "other": inout(self)}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Add all elements from other set",
       description="""
         Merges the two node trees at the node level in expected O(m log(n/m)). The other
         set's nodes are taken over so it is left empty - both operands must be distinct
@@ -497,7 +499,7 @@ class Set(_StructRenderer, Set):
         @return the number of elements added
       """) as f:
       other_root = f"{f.other}->root"
-      f.code = f"""
+      f.code = lambda f=f, other_root=other_root: f"""
         size_t previous;
         assert(target);
         assert({f.other});
@@ -511,7 +513,7 @@ class Set(_StructRenderer, Set):
         return target->size - previous;
       """
 
-    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove all elements found in other set",
+    with self.method("int", "difference", {"target": inout(self), "other": inout(self)}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Remove all elements found in other set",
       description="""
         Removes the nodes whose elements the other tree holds at the node level in expected
         O(m log(n/m)). The other set's nodes are taken over so it is left empty - both
@@ -522,7 +524,7 @@ class Set(_StructRenderer, Set):
         @return the number of elements removed
       """) as f:
       other_root = f"{f.other}->root"
-      f.code = f"""
+      f.code = lambda f=f, other_root=other_root: f"""
         size_t previous;
         assert(target);
         assert({f.other});
@@ -541,7 +543,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Keep only elements also present in other set",
+    with self.method("int", "intersection", {"target": inout(self), "other": inout(self)}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Keep only elements also present in other set",
       description="""
         Keeps the nodes whose elements the other tree holds at the node level in expected
         O(m log(n/m)). The other set's nodes are taken over so it is left empty - both
@@ -552,7 +554,7 @@ class Set(_StructRenderer, Set):
         @return the number of elements removed
       """) as f:
       other_root = f"{f.other}->root"
-      f.code = f"""
+      f.code = lambda f=f, other_root=other_root: f"""
         size_t previous;
         assert(target);
         assert({f.other});
@@ -566,7 +568,7 @@ class Set(_StructRenderer, Set):
         return previous - target->size;
       """
 
-    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Remove elements in both sets, add elements in only one",
+    with self.method("int", ("symmetric", "difference"), {"target": inout(self), "other": inout(self)}, constraint=algebra_constraint, optional_group="algebraic_operations", brief="Remove elements in both sets, add elements in only one",
       description="""
         Produces the tree holding the elements present in exactly one of the sets at the
         node level in expected O(m log(n/m)). The other set's nodes are taken over so it
@@ -577,7 +579,7 @@ class Set(_StructRenderer, Set):
         @return the number of elements added or removed
       """) as f:
       other_root = f"{f.other}->root"
-      f.code = f"""
+      f.code = lambda f=f, other_root=other_root: f"""
         size_t previous, other_size;
         assert(target);
         assert({f.other});

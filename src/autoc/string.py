@@ -13,8 +13,9 @@ class String(_AliasRenderer, Indirection, Map):
   
   brief = "Value type wrapper of the C char* string"
   
-  def __init__(self, name, *args, **kws):
-    super().__init__(std.char, name, std.char, std.size_t, prefix=name, dependencies=(std.stdio_h, std.string_h, std.stdarg_h, std.stdlib_h, autoc.memory._allocate_code, _static_code, _va_copy_code), **kws)
+  def __init__(self, name, *args, formatting_operations=True, **kws):
+    self.formatting_operations = bool(formatting_operations)
+    super().__init__(std.char, name, std.char, std.size_t, prefix=name, dependencies=(std.string_h, std.stdlib_h, autoc.memory._allocate_code, _static_code), **kws)
     self.range = Range(self)
 
   def __setup__(self):
@@ -160,7 +161,11 @@ class String(_AliasRenderer, Indirection, Map):
         return hash;
       """
 
-    with self.method(std.int, ("format", "args"), {"target": inout(Indirection(self)), "format": Indirection(std.char, constant=True), "args": std.va_list}, brief="Format output into string from va_list",
+    with self.method(std.int, ("format", "args"), {"target": inout(Indirection(self)), "format": Indirection(std.char, constant=True), "args": std.va_list},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      dependencies=(std.stdio_h, std.stdarg_h, _va_copy_code),
+      brief="Format output into string from va_list",
       description="""
         Formats the output according to the format string and variable arguments list,
         replacing the previous contents of target. The target string buffer is allocated
@@ -212,7 +217,13 @@ class String(_AliasRenderer, Indirection, Map):
         #endif
       """
 
-    with self.method(std.int, "format", {"target": inout(Indirection(self)), "format": Indirection(std.char, constant=True)}, variadic=True, brief="Format output into string",
+    with self.method(std.int, "format", {"target": inout(Indirection(self)), "format": Indirection(std.char, constant=True)},
+      constraint=lambda: self.formatting_operations,
+      optional_group="formatting_operations",
+      dependencies=(std.stdarg_h,),
+      references=(self.format_args,),
+      variadic=True,
+      brief="Format output into string",
       description="""
         Formats the output according to the format string and variable arguments,
         replacing the previous contents of target. The target string buffer is allocated

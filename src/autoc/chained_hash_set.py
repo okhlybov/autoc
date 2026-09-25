@@ -64,7 +64,9 @@ class Set(_StructRenderer, Set):
         target->size = 0;
       """
 
-    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Create set with given capacity (internal)") as f:
+    with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal",
+      references=(self.allocate, self.create),
+      brief="Create set with given capacity (internal)") as f:
       f.code = f"""
         assert(target);
         if(capacity) {{
@@ -74,7 +76,9 @@ class Set(_StructRenderer, Set):
         }}
       """
 
-    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t}, brief="Create set with estimated element count",
+    with self.method(None, ("create", "size"), {"target": out(self), "size": std.size_t},
+      references=(self.create_capacity,),
+      brief="Create set with estimated element count",
       description="""
         Creates the set preallocating the hash table for the estimated element count - the
         table capacity is the given estimate divided by the load factor threshold and rounded
