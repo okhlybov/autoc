@@ -88,7 +88,7 @@ pip install .
 
 ```sh
 mkdir readings && cd readings
-python -m autoc.project readings
+python -m autoc.cmake.project readings
 ```
 
 This is the layout you get — a working CMake project with the generator already wired in:

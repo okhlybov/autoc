@@ -1,7 +1,7 @@
 import os
 import sys
 import pathlib
-import autoc.project
+import autoc.cmake.project
 import autoc.test
 import autoc.module
 import autoc.cmake
@@ -11,8 +11,8 @@ def generate(directory=".", project="test"):
   target_path = pathlib.Path(directory).resolve()
   target_path.mkdir(parents=True, exist_ok=True)
 
-  # 1. Leverage existing autoc.project scaffolder
-  autoc.project.generate(project, directory=target_path)
+  # 1. Leverage existing autoc.cmake.project scaffolder
+  autoc.cmake.project.generate(project, directory=target_path)
 
   orig_cwd = os.getcwd()
   try:
@@ -54,11 +54,11 @@ def generate(directory=".", project="test"):
       extra_path=extra_path,
     )
     with open(f"{project}.py", "w", encoding="utf-8") as f:
-      f.write(autoc.project.interpolate(_project_py, **items))
+      f.write(autoc.cmake.project.interpolate(_project_py, **items))
 
     # 5. Write .gitignore
     with open(".gitignore", "w", encoding="utf-8") as f:
-      f.write(autoc.project.interpolate(_gitignore, **items))
+      f.write(autoc.cmake.project.interpolate(_gitignore, **items))
 
     # 6. Configure VS Code workspace
     code_workspace = pathlib.Path(f"{project}.code-workspace")
@@ -66,7 +66,7 @@ def generate(directory=".", project="test"):
     if code_workspace.exists():
       code_workspace.unlink()
     with open(autoc_workspace, "w", encoding="utf-8") as f:
-      f.write(autoc.project.interpolate(_code_workspace, **items))
+      f.write(autoc.cmake.project.interpolate(_code_workspace, **items))
 
     # 7. Bootstrap the test module
     with autoc.module.Module(project) as m:
