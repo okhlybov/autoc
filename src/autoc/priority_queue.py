@@ -4,7 +4,7 @@ from autoc.core import inout, out, Indirection, _StructRenderer
 
 
 #
-class PriorityQueue(_StructRenderer, Collection):
+class Queue(_StructRenderer, Collection):
   # The extraction-ordered container: the elements are consumed in the priority order -
   # top returns the greatest element per the element comparison. The binary heap over the
   # flat array gives the guaranteed O(log n) push/pop with the contiguous cache friendly

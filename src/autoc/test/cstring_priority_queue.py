@@ -1,11 +1,11 @@
 from autoc.test import *
-from autoc.priority_queue import PriorityQueue
+from autoc.priority_queue import Queue
 from autoc.test.cstring import cstring, s
 
 # The resource bearing elements exercise the move-out pop and the destroy path:
 # the popped strings are released by the caller, the remaining ones by the container
 
-x = Type(type := PriorityQueue("cstring_priority_queue", cstring))
+x = Type(type := Queue("cstring_priority_queue", cstring))
 
 t = type.variable("t")
 

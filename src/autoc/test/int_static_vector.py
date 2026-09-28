@@ -1,7 +1,7 @@
 from autoc.test import *
-from autoc.static_vector import StaticVector
+from autoc.static_vector import Vector
 
-x = Type(type := StaticVector("int_static_vector", "int", 4))
+x = Type(type := Vector("int_static_vector", "int", 4))
 
 t = type.variable("t")
 t1 = type.variable("t1")

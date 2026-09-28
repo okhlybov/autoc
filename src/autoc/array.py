@@ -1,15 +1,15 @@
 import autoc.std as std
 from autoc.hash import XorRot
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
 from autoc.collection import _Range
-from autoc.core import out, inout, Callable, Indirection, _StructRenderer
+from autoc.core import inout, Callable, Indirection, _StructRenderer
 
 
 #
-class Array(_StructRenderer, Map, Sortable, Sequence):
+class Array(_StructRenderer, Indexed, Sortable, Sequence):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 

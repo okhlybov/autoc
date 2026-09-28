@@ -12,13 +12,14 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.deque` | `Deque` | `Deque<T>` | `Deque<T>::Range` (bidirectional) | doubly linked; both ends are `O(1)` |
 | `autoc.vector` | `Vector` | `Vector<T>` | `Vector<T>::Range` (direct access) | contiguous dynamic storage, amortized `O(1)` push/pop, indexed access, sorting and binary search; optional inline capacity for small buffer optimization |
 | `autoc.array` | `Array` | `Array<T, N>` | `Array<T, N>::Range` (direct access) | fixed size, stack-allocated contiguous C array, zero heap allocation |
-| `autoc.static_vector` | `StaticVector` | `StaticVector<T, N>` | `StaticVector<T, N>::Range` (direct access) | fixed capacity, stack-allocated, zero heap allocation; backed by variant |
-| `autoc.tiered_vector` | `TieredVector` | `TieredVector<T>` | `TieredVector<T>::Range` (direct access) | chunked; amortized `O(1)` append with stable addresses |
+| `autoc.static_vector` | `Vector` | `StaticVector<T, N>` | `StaticVector<T, N>::Range` (direct access) | fixed capacity, stack-allocated, zero heap allocation; backed by variant |
+| `autoc.circular_buffer` | `Static`, `Dynamic` | `StaticCircularBuffer<T>`, `DynamicCircularBuffer<T>` | `StaticCircularBuffer<T>::Range`, `DynamicCircularBuffer<T>::Range` (direct access) | stack or heap-allocated circular ring buffer |
+| `autoc.tiered_vector` | `Vector` | `TieredVector<T>` | `TieredVector<T>::Range` (direct access) | chunked; amortized `O(1)` append with stable addresses |
 | `autoc.stack` | `Stack` | `Stack<T>` | `Stack<T>::Range` (forward) | LIFO adapter over the list |
 | `autoc.queue` | `Queue` | `Queue<T>` | `Queue<T>::Range` (forward) | FIFO adapter over the deque |
-| `autoc.priority_queue` | `PriorityQueue` | `PriorityQueue<T>` | — | binary heap; `pop` yields the greatest element, duplicates allowed |
+| `autoc.priority_queue` | `Queue` | `PriorityQueue<T>` | — | binary heap; `pop` yields the greatest element, duplicates allowed |
 | `autoc.string` | `String` | `String<char>` | `String<char>::Range` (direct access) | string as an index→character map; variadic formatted output (`format`) |
-| `autoc.string_buffer` | `StringBuffer` | `StringBuffer<char>` | — | append-optimized string buffer with scratch accumulation and lazy joining |
+| `autoc.string_buffer` | `Buffer` | `StringBuffer<char>` | — | append-optimized string buffer with scratch accumulation and lazy joining |
 
 ## Sets
 
@@ -40,8 +41,8 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key over the treap set; supports lexicographic comparison |
 | `autoc.rb_map` | `Map` | `RBMap<K, T>` | forward | ordered by key over the red-black tree set |
 | `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
-| `autoc.tree_map` | `TreeMap` | — | — | generic binary search tree map base parameterized by tree set backend |
-| `autoc.map` | `Map` | — | — | abstract interface shared by the map implementations |
+| `autoc.tree_map` | `Map` | — | — | generic binary search tree map base parameterized by tree set backend |
+| `autoc.mapping` | `Mapping` | — | — | abstract interface shared by the map implementations |
 | `autoc.hash_map` | `_Entry` | — | — | shared key→value entry record used by the map implementations |
 
 ## Value types

@@ -1,7 +1,7 @@
 import autoc.core
 import autoc.std as std
 import autoc.memory
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.module import Code
 from autoc.range import DirectAccess
 from autoc.collection import _Range
@@ -9,7 +9,7 @@ from autoc.core import inout, Indirection, Callable, _AliasRenderer
 
 
 #
-class String(_AliasRenderer, Indirection, Map):
+class String(_AliasRenderer, Indirection, Indexed):
   
   brief = "Value type wrapper of the C char* string"
   

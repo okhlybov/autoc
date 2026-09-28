@@ -1,7 +1,7 @@
 from autoc.test import *
-from autoc.priority_queue import PriorityQueue
+from autoc.priority_queue import Queue
 
-x = Type(type := PriorityQueue("int_priority_queue", "int"))
+x = Type(type := Queue("int_priority_queue", "int"))
 
 t = type.variable("t")
 t2 = type.variable("t2")

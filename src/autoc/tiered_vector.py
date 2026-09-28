@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.range import DirectAccess
 from autoc.sequence import Sequence
@@ -8,7 +8,7 @@ from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 
 
 #
-class TieredVector(_StructRenderer, Map, Sortable, Sequence):
+class Vector(_StructRenderer, Indexed, Sortable, Sequence):
   # The append-optimized direct-access container: the elements are stored in fixed size
   # chunks addressed through the chunk table which makes the growth allocation-only
   # (no element copying, stable element addresses) while keeping the O(1) indexed access

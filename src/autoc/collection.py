@@ -16,6 +16,12 @@ class _Range(_StructRenderer, Range):
 
   # A range is a non-owning cursor whose display name is its own identifier and
   # which belongs to the group of the container it spans
+  @property
+  def _doxygen_type(self):
+    if hasattr(self.iterable, "_doxygen_type"):
+      return f"{self.iterable._doxygen_type}::Range"
+    return super()._doxygen_type
+
   def _render_description(self, stream):
     super()._render_description(stream)
     stream.append(f"\n@ingroup {self.iterable.name}\n")

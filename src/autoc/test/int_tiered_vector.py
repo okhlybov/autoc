@@ -1,10 +1,10 @@
 from autoc.test import *
-from autoc.tiered_vector import TieredVector
+from autoc.tiered_vector import Vector
 
 # The small chunk shift exercises the multi chunk growth and the chunk table
 # doubling without the large element counts
 
-x = Type(type := TieredVector("int_tiered_vector", "int", chunk_shift=4))
+x = Type(type := Vector("int_tiered_vector", "int", chunk_shift=4))
 
 t = type.variable("t")
 t2 = type.variable("t2")

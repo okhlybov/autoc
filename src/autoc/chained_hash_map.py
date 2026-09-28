@@ -1,26 +1,24 @@
-from autoc.map import Map
-from autoc.range import Forward
+from autoc.mapping import Mapping
 from autoc.hash_map import _Entry
 from autoc.chained_hash_set import Set
-from autoc.collection import _Range
-from autoc.core import Indirection, Callable, _StructRenderer
+from autoc.core import Indirection
 
 
 #
-class Map(_StructRenderer, Map):
+class Map(Mapping):
 
   brief = "Hash map from index to element using bucket chaining - stable entry addresses, no sentinel values"
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
-      self._decorate_component("set"),
-      _Entry(self._decorate_component("entry"), self.element, self.index, visibility="internal"),
+      self._decorate_component("set", abbreviate=True),
+      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
     )
     self.dependencies.add(self._set)
-    self.range = Range(self)
+    self._setup_range()
 
   @property
   def orderable(self):
@@ -37,91 +35,12 @@ class Map(_StructRenderer, Map):
       The closest C++ equivalent is [std::unordered_map<>](https://cppreference.com/cpp/container/unordered_map).
     """
 
-    _target = self._set.variable("target->set")
-    _source = self._set.variable("source->set")
-    _left = self._set.variable("left->set")
-    _right = self._set.variable("right->set")
-
-    with self.create as f:
-      f.code = f"""
-        assert(target);
-        {self._set.create(_target)};
-      """
-
-    with self.destroy as f:
-      f.code = f"""
-        assert(target);
-        {self._set.destroy(_target)};
-      """
-
-    with self.copy as f:
-      f.code = f"""
-        assert(target);
-        assert(source);
-        {self._set.copy(_target, _source)};
-      """
-
-    with self.move as f:
-      f.code = f"""
-        assert(target);
-        assert(source);
-        {self._set.move(_target, _source)};
-      """
-
-    with self.equal as f:
-      f.code = f"""
-        assert(left);
-        assert(right);
-        return {self._set.equal(_left, _right)};
-      """
-
-    with self.hash as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.hash(_target)};
-      """
-
-    with self.empty as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.empty(_target)};
-      """
-
-    with self.size as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.size(_target)};
-      """
-
     set = self._set
     entry = set.element
     n = Indirection(set.node).variable("n")
     node_entry = entry.variable("n->element")
     node_index = entry.index.variable("n->element.index")
-
-    with self.contains as f:
-      r = set.range.variable("r")
-      f.code = f"""
-        {r.definition};
-        assert(target);
-        for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
-          if({self.element.equal(entry.element_view(set.range.front_view(r)), f.element)}) return 1;
-        }}
-        return 0;
-      """
-
-    with self.indexed as f:
-      f.code = f"""
-        size_t bucket;
-        {n.definition};
-        assert(target);
-        if(!target->set.buckets) return 0;
-        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
-        for(n = target->set.buckets[bucket]; n; n = n->next) {{
-          if({self.index.equal(node_index, f.index)}) return 1;
-        }}
-        return 0;
-      """
+    _target = self._set.variable("target->set")
 
     with self.view as f:
       f.code = f"""
@@ -134,23 +53,6 @@ class Map(_StructRenderer, Map):
           if({self.index.equal(node_index, f.index)}) return {entry.element_view(node_entry).bind(self.element.view_type)};
         }}
         return ({self.element.view_type})0;
-      """
-
-    with self.get as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        size_t bucket;
-        {n.definition};
-        {result.definition};
-        assert(target);
-        if(!target->set.buckets) abort();
-        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
-        for(n = target->set.buckets[bucket]; n; n = n->next) {{
-          if({self.index.equal(node_index, f.index)}) break;
-        }}
-        if(!n) abort();
-        {self.element.copy(result, entry.element_view(node_entry))};
-        return {result};
       """
 
     with self.set as f:
@@ -174,116 +76,4 @@ class Map(_StructRenderer, Map):
           target->set.buckets[bucket] = n;
           ++target->set.size;
         }}
-      """
-
-  def _render_struct(self, stream, header):
-    super()._render_struct(stream, header)
-    stream.append(f"""
-      struct {self.name} {{
-        {self._set.variable("set").definition}; /**< @private */
-      }};
-    """)
-
-
-#
-class Range(_Range, Forward):
-
-  brief = "Forward range over the map indices and elements"
-
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable, *args, **kws)
-    self._range = iterable._set.range
-    self._entry = iterable._set.element
-    self.index = iterable.index
-    self.dependencies.update((self._entry, self._range))
-
-  def _render_struct(self, stream, header):
-    super()._render_struct(stream, header)
-    stream.append(f"""
-      struct {self.name} {{
-        {self._range.name} range; /**< @private */
-      }};
-    """)
-
-  def __setup__(self):
-    super().__setup__()
-
-    _target_range = self._range.variable("target->range")
-
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map",
-      description="""
-        Creates the range over the bucket chain array scanning the buckets until the first
-        occupied one. The traversal order is unspecified - it follows the hash table layout.
-        The range must not outlive the map and the map must not be modified while the range
-        is traversed.
-
-        @param[in] iterable the map to span
-        @return the range covering the whole map in unspecified order
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(iterable);
-        result.range = {self._range.new(f"&{f.iterable}->set")};
-        return {result};
-      """
-
-    with self.empty as f:
-      f.code = f"""
-        assert(target);
-        return {self._range.empty(_target_range)};
-      """
-
-    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get view of front index",
-      description="""
-        Returns a pointer to the index of the entry found first in the table layout.
-        The view is valid while that entry is held by the map.
-
-        @param[in] target the non-empty range to inspect
-        @return a constant view of the front index
-      """) as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        return {self._entry.index_view(self._range.front_view(_target_range)).bind(self.index.view_type)};
-      """
-
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self.element.copy(result, self._entry.element_view(self._range.front_view(_target_range)))};
-        return {result};
-      """
-
-    with self.front_view as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        return {self._entry.element_view(self._range.front_view(_target_range)).bind(self.element.view_type)};
-      """
-
-    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get front index",
-      description="""
-        Returns a copy of the index of the entry found first in the table layout.
-
-        @param[in] target the non-empty range to inspect
-        @return a copy of the front index
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self.index.copy(result, self._entry.index_view(self._range.front_view(_target_range)))};
-        return {result};
-      """
-
-    with self.move_front as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self._range.move_front(_target_range)};
       """

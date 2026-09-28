@@ -1,10 +1,10 @@
 from autoc.test import *
-from autoc.circular_buffer import StaticCircularBuffer, DynamicCircularBuffer
+from autoc.circular_buffer import Static, Dynamic
 
 #
-# 1. Tests for StaticCircularBuffer
+# 1. Tests for Static circular buffer
 #
-x = Type(type := StaticCircularBuffer("int_scb", "int", 4))
+x = Type(type := Static("int_scb", "int", 4))
 
 t = type.variable("t")
 t2 = type.variable("t2")
@@ -247,9 +247,9 @@ x.unit(f"{type.contains}(): test contains for present and absent elements", f"""
 
 
 #
-# 2. Tests for DynamicCircularBuffer
+# 2. Tests for Dynamic circular buffer
 #
-y = Type(dtype := DynamicCircularBuffer("int_dcb", "int"))
+y = Type(dtype := Dynamic("int_dcb", "int"))
 
 dt = dtype.variable("dt")
 dt2 = dtype.variable("dt2")

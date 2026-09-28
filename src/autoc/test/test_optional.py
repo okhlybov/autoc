@@ -1,15 +1,14 @@
 from autoc.test import *
 from autoc.vector import Vector
 from autoc.array import Array
-from autoc.tiered_vector import TieredVector
+from autoc.tiered_vector import Vector as TieredVector
 from autoc.chained_hash_set import Set as ChainedHashSet
 from autoc.chained_hash_map import Map as ChainedHashMap
-from autoc.intrusive_hash_map import Map as IntrusiveHashMap
 from autoc.treap_set import Set as TreapSet
 from autoc.treap_map import Map as TreapMap
 from autoc.bitset import BitSet
 from autoc.string import String
-from autoc.string_buffer import StringBuffer
+from autoc.string_buffer import Buffer as StringBuffer
 
 
 # 1. Verify sorting_operations on Vector, TieredVector, and Array

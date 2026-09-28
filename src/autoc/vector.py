@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
@@ -8,7 +8,7 @@ from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 
 
 #
-class Vector(_StructRenderer, Map, Sortable, Sequence):
+class Vector(_StructRenderer, Indexed, Sortable, Sequence):
 
   brief = "Direct access sequence container"
   

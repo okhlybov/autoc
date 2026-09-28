@@ -127,13 +127,13 @@ class Array(autoc.array.Array):
     return f"{self.name}<{self.element}, N>"
 
 
-class StaticVector(autoc.static_vector.StaticVector):
+class StaticVector(autoc.static_vector.Vector):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}, N>"
 
 
-class TieredVector(autoc.tiered_vector.TieredVector):
+class TieredVector(autoc.tiered_vector.Vector):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
@@ -152,7 +152,7 @@ class Queue(autoc.queue.Queue):
     return f"{self.name}<{self.element}>"
 
 
-class PriorityQueue(autoc.priority_queue.PriorityQueue):
+class PriorityQueue(autoc.priority_queue.Queue):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
@@ -164,7 +164,7 @@ class String(autoc.string.String):
     return f"{self.name}<{self.element}>"
 
 
-class StringBuffer(autoc.string_buffer.StringBuffer):
+class StringBuffer(autoc.string_buffer.Buffer):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
@@ -251,13 +251,13 @@ class Raw(autoc.reference.Raw):
     return f"{self.name}<{self.type}>"
 
 
-class StaticCircularBuffer(autoc.circular_buffer.StaticCircularBuffer):
+class StaticCircularBuffer(autoc.circular_buffer.Static):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
 
 
-class DynamicCircularBuffer(autoc.circular_buffer.DynamicCircularBuffer):
+class DynamicCircularBuffer(autoc.circular_buffer.Dynamic):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.element}>"
@@ -278,11 +278,6 @@ _nested_range(autoc.intrusive_hash_set, "IntrusiveHashSetRange")
 _nested_range(autoc.treap_set, "TreapSetRange")
 _nested_range(autoc.rb_set, "RBSetRange")
 _nested_range(autoc.avl_set, "AVLSetRange")
-_nested_range(autoc.chained_hash_map, "ChainedHashMapRange")
-_nested_range(autoc.intrusive_hash_map, "IntrusiveHashMapRange")
-_nested_range(autoc.treap_map, "TreapMapRange")
-_nested_range(autoc.rb_map, "RBMapRange")
-_nested_range(autoc.avl_map, "AVLMapRange")
 _nested_range(autoc.circular_buffer, "CircularBufferRange")
 
 

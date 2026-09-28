@@ -1,11 +1,11 @@
 from autoc.test import *
-from autoc.circular_buffer import StaticCircularBuffer, DynamicCircularBuffer
+from autoc.circular_buffer import Static, Dynamic
 from autoc.test.cstring import cstring, s
 
 #
-# 1. Tests for StaticCircularBuffer with cstring
+# 1. Tests for Static circular buffer with cstring
 #
-x = Type(type := StaticCircularBuffer("cstring_scb", cstring, 3))
+x = Type(type := Static("cstring_scb", cstring, 3))
 
 t = type.variable("t")
 t2 = type.variable("t2")
@@ -92,9 +92,9 @@ x.unit(f"{type.copy}(), {type.equal}(): copy and equality with cstring", f"""
 
 
 #
-# 2. Tests for DynamicCircularBuffer with cstring
+# 2. Tests for Dynamic circular buffer with cstring
 #
-y = Type(dtype := DynamicCircularBuffer("cstring_dcb", cstring))
+y = Type(dtype := Dynamic("cstring_dcb", cstring))
 
 dt = dtype.variable("dt")
 dt2 = dtype.variable("dt2")

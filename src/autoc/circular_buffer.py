@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
 from autoc.collection import _Range
@@ -7,7 +7,7 @@ from autoc.core import out, inout, Callable, Indirection, Macro, _StructRenderer
 
 
 # Common base class for circular ring buffer containers
-class _CircularBuffer(_StructRenderer, Map, Sequence):
+class _CircularBuffer(_StructRenderer, Indexed, Sequence):
 
   brief = "Ring buffer container with bounded capacity and overwrite semantics"
 
@@ -342,14 +342,14 @@ class _CircularBuffer(_StructRenderer, Map, Sequence):
 
 
 # Fixed-capacity stack-allocated circular ring buffer
-class StaticCircularBuffer(_CircularBuffer):
+class Static(_CircularBuffer):
 
   brief = "Fixed-capacity stack-allocated circular ring buffer"
 
   def __init__(self, name, element, capacity, *args, **kws):
     self._fixed_capacity = int(capacity)
     if self._fixed_capacity < 1:
-      raise ValueError(f"StaticCircularBuffer capacity must be at least 1, got {self._fixed_capacity}")
+      raise ValueError(f"Static capacity must be at least 1, got {self._fixed_capacity}")
     super().__init__(name, element, *args, **kws)
 
   @property
@@ -456,7 +456,7 @@ class StaticCircularBuffer(_CircularBuffer):
 
 
 # Bounded heap-allocated circular ring buffer with runtime capacity and resizing
-class DynamicCircularBuffer(_CircularBuffer):
+class Dynamic(_CircularBuffer):
 
   brief = "Bounded heap-allocated circular ring buffer with runtime capacity and resizing"
 

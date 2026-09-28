@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.map import Map
+from autoc.indexed import Indexed
 from autoc.record import Record
 from autoc.variant import Variant
 from autoc.sequence import Sequence
@@ -9,7 +9,7 @@ from autoc.core import out, inout, Callable, Indirection, _StructRenderer
 
 
 #
-class StaticVector(_StructRenderer, Map, Sequence):
+class Vector(_StructRenderer, Indexed, Sequence):
 
   brief = "Fixed-capacity stack-allocated direct access sequence container"
 

@@ -1,8 +1,8 @@
 from autoc.test import *
-from autoc.static_vector import StaticVector
+from autoc.static_vector import Vector
 from autoc.test.primitive_arc import type as arc
 
-x = Type(type := StaticVector("arc_static_vector", arc, 3))
+x = Type(type := Vector("arc_static_vector", arc, 3))
 
 t = type.variable("t")
 t1 = type.variable("t1")

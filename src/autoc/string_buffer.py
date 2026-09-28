@@ -1,13 +1,13 @@
 import autoc.std as std
 import autoc.memory
 from autoc.string import String, _va_copy_code
-from autoc.tiered_vector import TieredVector
+from autoc.tiered_vector import Vector as TieredVector
 from autoc.variant import Variant
 from autoc.core import Composite, _StructRenderer, Indirection, inout
 
 
 #
-class StringBuffer(_StructRenderer, Composite):
+class Buffer(_StructRenderer, Composite):
 
   brief = "Append-optimized string buffer with scratch accumulation and lazy joining"
   

@@ -1,10 +1,5 @@
 from autoc.avl_set import Set as AVLSet
-from autoc.tree_map import TreeMap, Range as _Range
-
-
-#
-class Range(_Range):
-  pass
+from autoc.tree_map import Map as TreeMap
 
 
 #

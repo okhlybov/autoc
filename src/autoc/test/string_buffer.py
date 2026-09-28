@@ -1,10 +1,10 @@
 from autoc.test import *
-from autoc.string_buffer import StringBuffer
+from autoc.string_buffer import Buffer
 from autoc.test.cstring import cstring, s
 
 
 # Use scratch_capacity=16 so tests exercise scratch boundary crossings and chunk flushes
-x = Type(type := StringBuffer("string_buffer", scratch_capacity=16, chunk_shift=4))
+x = Type(type := Buffer("string_buffer", scratch_capacity=16, chunk_shift=4))
 
 t = type.variable("t")
 t2 = type.variable("t2")

@@ -71,7 +71,7 @@ import autoc.list
 # Create a C source code module `runme`
 with autoc.module.Module("runme") as m:
   # Add concrete type implementations
-  m.add(autoc.string_buffer.StringBuffer("StringBuffer"))
+  m.add(autoc.string_buffer.Buffer("StringBuffer"))
   m.add(autoc.list.List("List", "int"))
 
 # Create a CMake project (optional)

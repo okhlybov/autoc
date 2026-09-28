@@ -1,21 +1,18 @@
-from autoc.map import Map
-from autoc.range import Forward
+from autoc.mapping import Mapping
 from autoc.hash_map import _Entry
 from autoc.intrusive_hash_set import Set
-from autoc.collection import _Range
-from autoc.core import Indirection, _StructRenderer, Callable
 
 
 #
-class Map(_StructRenderer, Map):
+class Map(Mapping):
   
   brief = "Map from index to element over open addressing with sentinel values"
 
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = Set(
-      self._decorate_component("set"),
-      _Entry(self._decorate_component("entry"), self.element, self.index, visibility="internal"),
+      self._decorate_component("set", abbreviate=True),
+      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
       is_empty=is_empty,
@@ -24,7 +21,7 @@ class Map(_StructRenderer, Map):
       mark_deleted=mark_deleted,
     )
     self.dependencies.add(self._set)
-    self.range = Range(self)
+    self._setup_range()
 
   @property
   def orderable(self):
@@ -43,247 +40,77 @@ class Map(_StructRenderer, Map):
       The closest C++ equivalent is [std::unordered_map<>](https://cppreference.com/cpp/container/unordered_map).
     """
 
-    _target = self.variable("target->set")
-    _source = self.variable("source->set")
-    _left = self.variable("left->set")
-    _right = self.variable("right->set")
-    
-    with self.create as f:
-      f.code = f"""
-        assert(target);
-        {self._set.create(_target)};
-      """
-    
-    with self.destroy as f:
-      f.code = f"""
-        assert(target);
-        {self._set.destroy(_target)};
-      """
-    
-    with self.copy as f:
-      f.code = f"""
-        assert(target);
-        assert(source);
-        {self._set.copy(_target, _source)};
-      """
-
-    with self.move as f:
-      f.code = f"""
-        assert(target);
-        assert(source);
-        {self._set.move(_target, _source)};
-      """
-        
-    with self.equal as f:
-      f.code = f"""
-        assert(left);
-        assert(right);
-        return {self._set.equal(_left, _right)};
-      """
-    
-    with self.hash as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.hash(_target)};
-      """
-    
-    with self.empty as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.empty(_target)};
-      """
-    
-    with self.size as f:
-      f.code = f"""
-        assert(target);
-        return {self._set.size(_target)};
-      """
-
     set = self._set
     entry = set.element
     _entry = entry.variable("entry")
-    _entry_p = Indirection(entry).variable("entry_p")
-    
-    range = set.range
-    r = range.variable("r")
-    
-    with self.contains as f:
-      f.code = f"""
-        {r.definition};
-        assert(target);
-        for(r = {range.new(_target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.element.equal(entry.element_view(range.front_view(r)), f.element)}) return 1;
-        }}
-        return 0;
-      """
+    _target = self._set.variable("target->set")
+    slot = entry.variable("target->set.elements[i]")
+    slot_index = self.index.variable("target->set.elements[i].index")
 
-    # FIXME get rid of the transient entry creation in the following code
-      
-    with self.indexed as f:
-      f.code = f"""
-        int result;
-        {_entry.definition};
-        assert(target);
-        {entry.emplace_index(_entry, f.index)}; /* no element is required for the search operation */
-        result = {set.contains(_target, _entry)};
-        {entry.destroy_element(_entry)};
-        return result;
-      """
-    
     with self.view as f:
       f.code = f"""
-        size_t i;
-        {_entry.definition};
-        {_entry_p.definition};
+        /*
+          Direct open-addressing lookup without transient entry allocation:
+          Hashes the search index directly and probes slots using the index comparator
+          and sentinel checks, avoiding stack-allocated dummy entry copies.
+        */
+        size_t i, start;
         assert(target);
-        /* emplace() codes do not destroy previous contents */
-        {entry.emplace_index(_entry, f.index)}; /* no element is required for the search operation */
-        entry_p = {set.locate_element(_target, "&i", _entry)}; /* try to find an existing entry with the specified index */
-        {entry.destroy_index(_entry)};
-        return {entry.element_view(_entry_p)};
+        if(target->set.elements) {{
+          assert(target->set.capacity > 0);
+          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          for(i = start; i < target->set.capacity; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                return {entry.element_view(slot).bind(self.element.view_type)};
+              }}
+            }} else goto not_found;
+          }}
+          for(i = 0; i < start; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                return {entry.element_view(slot).bind(self.element.view_type)};
+              }}
+            }} else goto not_found;
+          }}
+        }}
+        not_found:
+        return ({self.element.view_type})0;
       """
 
-    with self.get as f:
-      _element_p = entry.element_p.variable("element_p")
-      result = f.result.variable("result")
-      f.code = f"""
-        {_element_p.definition};
-        {result.definition};
-        assert(target);
-        {_element_p} = ({_element_p.type}){self.view(f.target, f.index)};
-        if({_element_p}) {{
-          {self.element.copy(result, _element_p)};
-          return {result};
-        }} else abort();
-      """
-     
     with self.set as f:
       f.code = f"""
-        size_t i;
+        /*
+          Direct open-addressing search to replace existing element in-place,
+          or insert a new entry into the set if absent.
+        */
+        size_t i, start;
         {_entry.definition};
-        {_entry_p.definition};
         assert(target);
-        /* emplace() codes do not destroy previous contents */
-        {entry.emplace_index(_entry, f.index)}; /* no element is required for the search operation */
-        entry_p = {set.locate_element(_target, "&i", _entry)}; /* try to find an existing entry with the specified index */
-        if(entry_p) {{
-          {entry.replace_element(_entry_p, f.element)}; /* a set's entry with specified index already exists - replace its element's contents in-place */
-        }} else {{
-          /* no entry with specified index exists in the set - put new fully initialized entry */
-          {entry.emplace_element(_entry, f.element)}; /* set element field to finalize the entry */
-          {set.put(_target, _entry)}; /* put brand new entry into the set */
-          {entry.destroy_element(_entry)};
+        if(target->set.elements) {{
+          assert(target->set.capacity > 0);
+          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          for(i = start; i < target->set.capacity; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                {entry.replace_element(slot, f.element)};
+                return;
+              }}
+            }} else goto do_insert;
+          }}
+          for(i = 0; i < start; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                {entry.replace_element(slot, f.element)};
+                return;
+              }}
+            }} else goto do_insert;
+          }}
         }}
+        do_insert:
+        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_element(_entry, f.element)};
+        {set.put(_target, _entry)};
+        {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
-      """
-
-  def _render_struct(self, stream, header):
-    super()._render_struct(stream, header)
-    stream.append(f"""
-      struct {self.name} {{
-        {self._set.variable("set").definition}; /**< @private */
-      }};
-    """)
-
-
-#
-class Range(_Range, Forward):
-
-  brief = "Forward range over the map indices and elements"
-
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable, *args, **kws)
-    self._range = iterable._set.range
-    self._entry = iterable._set.element
-    self.index = iterable.index
-    self.dependencies.update((self._entry, self._range))
-
-  def _render_struct(self, stream, header):
-    super()._render_struct(stream, header)
-    stream.append(f"""
-      struct {self.name} {{
-        {self._range.name} range; /**< @private */
-      }};
-    """)
-
-  def __setup__(self):
-    super().__setup__()
-
-    _target_range = self._range.variable("target->range")
-
-    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole map",
-      description="""
-        Creates the range over the element table scanning for the first live slot. The
-        traversal order is unspecified - it follows the table layout. The range must not
-        outlive the map and the map must not be modified while the range is traversed.
-
-        @param[in] iterable the map to span
-        @return the range covering the whole map in unspecified order
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(iterable);
-        result.range = {self._range.new(f"&{f.iterable}->set")};
-        return {result};
-      """
-
-    with self.empty as f:
-      f.code = f"""
-        assert(target);
-        return {self._range.empty(_target_range)};
-      """
-
-    with self.method(self.index.view_type, ("index", "front", "view"), {"target": self}, brief="Get a constant view of the front index",
-      description="""
-        Returns a pointer to the index of the entry found first in the table layout.
-        The view is valid while that entry is held by the map.
-
-        @param[in] target the non-empty range to inspect
-        @return a constant view of the front index
-      """) as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        return {self._entry.index_view(self._range.front_view(_target_range))};
-      """
-
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self.element.copy(result, self._entry.element_view(self._range.front_view(_target_range)))};
-        return {result};
-      """
-
-    with self.front_view as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        return {self._entry.element_view(self._range.front_view(_target_range))};
-      """
-
-    with self.method(self.index, ("index", "front"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get a copy of the front index",
-      description="""
-        Returns a copy of the index of the entry found first in the table layout.
-
-        @param[in] target the non-empty range to inspect
-        @return a copy of the front index
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
-        {result.definition};
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self.index.copy(result, self._entry.index_view(self._range.front_view(_target_range)))};
-        return {result};
-      """
-
-    with self.move_front as f:
-      f.code = f"""
-        assert(target);
-        assert(!{self.empty(f.target)});
-        {self._range.move_front(_target_range)};
       """

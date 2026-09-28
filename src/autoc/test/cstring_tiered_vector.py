@@ -1,11 +1,11 @@
 from autoc.test import *
-from autoc.tiered_vector import TieredVector
+from autoc.tiered_vector import Vector
 from autoc.test.cstring import cstring, s
 
 # The resource bearing elements exercise the destroy path over the chunks:
 # every pushed string is released exactly once on the container destruction
 
-x = Type(type := TieredVector("cstring_tiered_vector", cstring, chunk_shift=4))
+x = Type(type := Vector("cstring_tiered_vector", cstring, chunk_shift=4))
 
 t = type.variable("t")
 t2 = type.variable("t2")
