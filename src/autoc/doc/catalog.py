@@ -23,6 +23,10 @@ import autoc.intrusive_hash_set
 import autoc.intrusive_hash_map
 import autoc.treap_set
 import autoc.treap_map
+import autoc.rb_set
+import autoc.rb_map
+import autoc.avl_set
+import autoc.avl_map
 import autoc.record
 import autoc.variant
 import autoc.reference
@@ -191,6 +195,18 @@ class TreapSet(autoc.treap_set.Set):
     return f"{self.name}<{self.element}>"
 
 
+class RBSet(autoc.rb_set.Set):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
+class AVLSet(autoc.avl_set.Set):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
 # Maps - the index (key) comes first in the C++-flavoured presentation
 class ChainedHashMap(autoc.chained_hash_map.Map):
   @property
@@ -205,6 +221,18 @@ class IntrusiveHashMap(autoc.intrusive_hash_map.Map):
 
 
 class TreapMap(autoc.treap_map.Map):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.index}, {self.element}>"
+
+
+class RBMap(autoc.rb_map.Map):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.index}, {self.element}>"
+
+
+class AVLMap(autoc.avl_map.Map):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.index}, {self.element}>"
@@ -248,9 +276,13 @@ _nested_range(autoc.string, "StringRange")
 _nested_range(autoc.chained_hash_set, "ChainedHashSetRange")
 _nested_range(autoc.intrusive_hash_set, "IntrusiveHashSetRange")
 _nested_range(autoc.treap_set, "TreapSetRange")
+_nested_range(autoc.rb_set, "RBSetRange")
+_nested_range(autoc.avl_set, "AVLSetRange")
 _nested_range(autoc.chained_hash_map, "ChainedHashMapRange")
 _nested_range(autoc.intrusive_hash_map, "IntrusiveHashMapRange")
 _nested_range(autoc.treap_map, "TreapMapRange")
+_nested_range(autoc.rb_map, "RBMapRange")
+_nested_range(autoc.avl_map, "AVLMapRange")
 _nested_range(autoc.circular_buffer, "CircularBufferRange")
 
 
@@ -259,6 +291,8 @@ def configure_module(module):
   module.add(K)
 
   module.add(Array("Array", T, 4))
+  module.add(AVLMap("AVLMap", T, K))
+  module.add(AVLSet("AVLSet", T))
   module.add(BitSet("BitSet", 64))
   module.add(ChainedHashMap("ChainedHashMap", T, K))
   module.add(ChainedHashSet("ChainedHashSet", T))
@@ -271,6 +305,8 @@ def configure_module(module):
   module.add(PriorityQueue("PriorityQueue", T))
   module.add(Queue("Queue", T))
   module.add(Raw(T, name="Raw"))
+  module.add(RBMap("RBMap", T, K))
+  module.add(RBSet("RBSet", T))
   module.add(autoc.record.Record("Record", {"first": T, "second": K}))
   module.add(Stack("Stack", T))
   module.add(StaticCircularBuffer("StaticCircularBuffer", T, 4))

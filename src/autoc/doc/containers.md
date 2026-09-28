@@ -26,7 +26,9 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|---|
 | `autoc.chained_hash_set` | `Set` | `ChainedHashSet<T>` | forward | bucket chaining; no sentinels, stable element addresses, safe default |
 | `autoc.intrusive_hash_set` | `Set` | `IntrusiveHashSet<T>` | forward | flat open addressing; needs sentinel values for the element type |
-| `autoc.treap_set` | `Set` | `TreapSet<T>` | forward | ordered; iterates sorted, supports the algebraic set operations |
+| `autoc.treap_set` | `Set` | `TreapSet<T>` | forward | ordered; iterates sorted, randomized BST with algebraic set operations |
+| `autoc.rb_set` | `Set` | `RBSet<T>` | forward | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
+| `autoc.avl_set` | `Set` | `AVLSet<T>` | forward | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
 | `autoc.set` | `Set` | — | — | abstract interface shared by the set implementations |
 
 ## Maps
@@ -35,7 +37,10 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|---|
 | `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | forward | bucket chaining over an internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | forward | flat open addressing; entries carry the sentinels |
-| `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key; supports lexicographic comparison |
+| `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key over the treap set; supports lexicographic comparison |
+| `autoc.rb_map` | `Map` | `RBMap<K, T>` | forward | ordered by key over the red-black tree set |
+| `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
+| `autoc.tree_map` | `TreeMap` | — | — | generic binary search tree map base parameterized by tree set backend |
 | `autoc.map` | `Map` | — | — | abstract interface shared by the map implementations |
 | `autoc.hash_map` | `_Entry` | — | — | shared key→value entry record used by the map implementations |
 
