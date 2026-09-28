@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.record import Record
-from autoc.core import inout, Callable, Indirection, _StructRenderer, Macro
+from autoc.core import inout, Callable, _StructRenderer, Macro
 from autoc.collection import _Range
 from autoc.range import Forward
 from autoc.indexed import Indexed

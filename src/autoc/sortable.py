@@ -1,20 +1,15 @@
 import autoc.std as std
 from autoc.core import inout
+from autoc.searchable import Searchable
 
 
 # Mixin class providing in-place sorting, reversal, and binary search algorithms
 # for direct-access sequence containers.
-class Sortable:
+class Sortable(Searchable):
 
   def __init__(self, *args, sorting_operations=True, **kws):
     self.sorting_operations = bool(sorting_operations)
-    super().__init__(*args, **kws)
-
-  def _element_c(self, target, index):
-    raise NotImplementedError
-
-  def _size_c(self, target):
-    return f"{target}->size"
+    super().__init__(*args, search_operations=sorting_operations, search_optional_group="sorting_operations", **kws)
 
   def __setup__(self):
     super().__setup__()
@@ -24,12 +19,12 @@ class Sortable:
     reverse_constraint = lambda: self.sorting_operations and self.element.swappable
     search_constraint = lambda: self.sorting_operations and self.element.orderable
 
-    element_i = lambda target="target": self._element_c(target, "i")
-    element_j = lambda target="target": self._element_c(target, "j")
-    element_lo = lambda target="target": self._element_c(target, "lo")
-    element_mid = lambda target="target": self._element_c(target, "mid")
-    element_hi = lambda target="target": self._element_c(target, "hi")
-    element_prev = lambda target="target": self._element_c(target, "j-1")
+    element_i = lambda target="target": self._element(target, "i")
+    element_j = lambda target="target": self._element(target, "j")
+    element_lo = lambda target="target": self._element(target, "lo")
+    element_mid = lambda target="target": self._element(target, "mid")
+    element_hi = lambda target="target": self._element(target, "hi")
+    element_prev = lambda target="target": self._element(target, "j-1")
     pivot = self.element.variable("pivot")
 
     with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": index_type, "hi": index_type}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
@@ -95,7 +90,7 @@ class Sortable:
       """) as f:
       f.code = lambda f=f: f"""
         assert(target);
-        if({self._size_c(f.target)} > 1) {self.sort_range(f.target, 0, f"{self._size_c(f.target)}-1")};
+        if({self._target_size(f.target)} > 1) {self.sort_range(f.target, 0, f"{self._target_size(f.target)}-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
@@ -110,8 +105,8 @@ class Sortable:
       f.code = lambda f=f: f"""
         size_t i;
         assert(target);
-        for(i = 0; i < {self._size_c(f.target)}/2; ++i) {{
-          {self.element.swap(self._element_c(f.target, "i"), self._element_c(f.target, f"{self._size_c(f.target)}-1-i"))};
+        for(i = 0; i < {self._target_size(f.target)}/2; ++i) {{
+          {self.element.swap(self._element(f.target, "i"), self._element(f.target, f"{self._target_size(f.target)}-1-i"))};
         }}
       """
 
@@ -126,70 +121,8 @@ class Sortable:
       f.code = lambda f=f: f"""
         size_t index;
         assert(target);
-        for(index = 1; index < {self._size_c(f.target)}; ++index) {{
-          if({self.element.compare(self._element_c(f.target, "index"), self._element_c(f.target, "index-1"))} < 0) return 0;
+        for(index = 1; index < {self._target_size(f.target)}; ++index) {{
+          if({self.element.compare(self._element(f.target, "index"), self._element(f.target, "index-1"))} < 0) return 0;
         }}
         return 1;
-      """
-
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", brief="Get the first position the element can be inserted at keeping the order",
-      description="""
-        Binary searches the sorted container in O(log n) returning the leftmost position the
-        element can be inserted at keeping the ascending order. The container must be sorted
-        in the ascending order beforehand.
-
-        @param[in] target the sorted container to search
-        @param[in] element the element to insert
-        @return the position of the first element not less than the given one
-      """) as f:
-      f.code = lambda f=f: f"""
-        size_t low, high, mid;
-        assert(target);
-        low = 0;
-        high = {self._size_c(f.target)};
-        while(low < high) {{
-          mid = low + (high - low)/2;
-          if({self.element.compare(self._element_c(f.target, "mid"), f.element)} < 0) low = mid + 1;
-          else high = mid;
-        }}
-        return low;
-      """
-
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", brief="Get the last position the element can be inserted at keeping the order",
-      description="""
-        Binary searches the sorted container in O(log n) returning the rightmost position the
-        element can be inserted at keeping the ascending order. The container must be sorted
-        in the ascending order beforehand.
-
-        @param[in] target the sorted container to search
-        @param[in] element the element to compare with
-        @return the position of the first element greater than the given one
-      """) as f:
-      f.code = lambda f=f: f"""
-        size_t low, high, mid;
-        assert(target);
-        low = 0;
-        high = {self._size_c(f.target)};
-        while(low < high) {{
-          mid = low + (high - low)/2;
-          if({self.element.compare(self._element_c(f.target, "mid"), f.element)} <= 0) low = mid + 1;
-          else high = mid;
-        }}
-        return low;
-      """
-
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group="sorting_operations", references=(self.lower_bound,), brief="Check if the element is present in the sorted container",
-      description="""
-        Binary searches the sorted container in O(log n) for the element. The container must be
-        sorted in the ascending order beforehand.
-
-        @param[in] target the sorted container to search
-        @param[in] element the element to look for
-        @return non-zero if the element is present in the container
-      """) as f:
-      f.code = lambda f=f: f"""
-        size_t low;
-        assert(target);
-        low = {self.lower_bound(f.target, f.element)};
-        return low < {self._size_c(f.target)} && !{self.element.compare(self._element_c(f.target, "low"), f.element)};
       """

@@ -12,7 +12,9 @@ class Indexed(Collection):
 
   def __setup__(self):
     super().__setup__()
+    
     valid_index = lambda: self.index.comparable or self.index.orderable
+    
     self.method("int", "indexed", {"target": self, "index": self.index}, constraint=valid_index, brief="Check if the collection holds the index",
       description="""
         Looks the index up per the collection lookup mechanics without modifying the collection.
@@ -23,6 +25,7 @@ class Indexed(Collection):
         @param[in] index the index to look for
         @return non-zero if the collection holds an element at the index
       """)
+    
     self.method(None, "set", {"target": inout(self), "index": self.index, "element": self.element}, constraint=lambda: valid_index() and self.element.copyable, brief="Set the element at index",
       description="""
         Associates the element with the index - either storing it at the brand new entry
@@ -34,6 +37,7 @@ class Indexed(Collection):
         @param[in] index the index to assign the element at
         @param[in] element the element to store - the element previously held at the index is destroyed
       """)
+    
     self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: valid_index() and self.element.copyable, brief="Get a copy of the element at index",
       description="""
         Returns an owned copy of the element associated with the index - use `view` when
@@ -44,6 +48,7 @@ class Indexed(Collection):
         @param[in] index the index to read the element at - must be present in the collection
         @return a copy of the element held at the index
       """)
+    
     self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=valid_index, brief="Get a constant view of the element at index",
       description="""
         Returns a pointer to the element associated with the index without copying it.

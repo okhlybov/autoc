@@ -30,8 +30,11 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
     self._chunk_pp = Indirection(self._chunk_p)
     self.range = Range(self)
 
-  def _element_c(self, target, index):
+  def _element(self, target, index):
     return self.element.variable(f"{target}->chunks[({index}) >> {self.chunk_shift}][({index}) & {self.chunk_mask}]")
+
+  def _target_size(self, target):
+    return f"{target}->size"
 
   def __setup__(self):
     super().__setup__()

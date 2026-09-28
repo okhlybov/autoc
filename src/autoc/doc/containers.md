@@ -30,6 +30,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.treap_set` | `Set` | `TreapSet<T>` | forward | ordered; iterates sorted, randomized BST with algebraic set operations |
 | `autoc.rb_set` | `Set` | `RBSet<T>` | forward | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
 | `autoc.avl_set` | `Set` | `AVLSet<T>` | forward | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
+| `autoc.flat_set` | `Set` | `FlatSet<T>` | direct access | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
 | `autoc.set` | `Set` | — | — | abstract interface shared by the set implementations |
 
 ## Maps
@@ -41,6 +42,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key over the treap set; supports lexicographic comparison |
 | `autoc.rb_map` | `Map` | `RBMap<K, T>` | forward | ordered by key over the red-black tree set |
 | `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
+| `autoc.flat_map` | `Map` | `FlatMap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
 | `autoc.tree_map` | `Map` | — | — | generic binary search tree map base parameterized by tree set backend |
 | `autoc.mapping` | `Mapping` | — | — | abstract interface shared by the map implementations |
 
@@ -68,9 +70,13 @@ import in your module script; the *type* is the class you instantiate with a con
 5. **Do you need uniqueness with the element's own hash and equality?** Use
    @ref ChainedHashSet (the safe default) or @ref IntrusiveHashSet when the element type can
    reserve two sentinel states and the flat layout matters.
-6. **Do you need the elements in sorted order, or ordering-based queries?** Use @ref TreapSet.
+6. **Do you need the elements in sorted order, or ordering-based queries?** Use @ref FlatSet
+   for compact contiguous cache-friendly storage and fast binary search lookups (when mutations
+   are infrequent), or @ref AVLSet / @ref RBSet / @ref TreapSet when frequent insertions and
+   deletions require O(log n) tree mutations.
 7. **Do you map keys to values?** Pick the map in the same family as the set you would have
-   picked — @ref ChainedHashMap, @ref IntrusiveHashMap or @ref TreapMap.
+   picked — @ref FlatMap for cache locality and flat memory, or @ref ChainedHashMap,
+   @ref IntrusiveHashMap, @ref AVLMap, @ref RBMap, @ref TreapMap.
 8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
 9. **Do you need a compact set of flags, booleans, or small integer universe?** Use
@@ -86,7 +92,7 @@ To reduce generated code size and eliminate unused C standard library dependenci
 
 | Optional Group | Parameter | Containers | Methods | Description |
 |---|---|---|---|---|
-| Set Algebra | `algebraic_operations=True` | `Set` (`ChainedHashSet`, `IntrusiveHashSet`, `TreapSet`), `BitSet` | `union`, `difference`, `intersection`, `symmetric_difference`, `is_subset`, `is_superset`, `assign_union`, `assign_intersection`, `assign_difference`, `assign_symmetric_difference` | Mathematical set algebra. Automatically disabled on sets used internally by maps. |
+| Set Algebra | `algebraic_operations=True` | `Set` (`ChainedHashSet`, `IntrusiveHashSet`, `TreapSet`, `RBSet`, `AVLSet`, `FlatSet`), `BitSet` | `union`, `difference`, `intersection`, `symmetric_difference`, `is_subset`, `is_superset`, `assign_union`, `assign_intersection`, `assign_difference`, `assign_symmetric_difference` | Mathematical set algebra. Automatically disabled on sets used internally by maps. |
 | Sorting & Search | `sorting_operations=True` | `Sortable` (`Vector`, `TieredVector`, `Array`) | `sort`, `reverse`, `sorted`, `lower_bound`, `upper_bound`, `binary_search` | Quicksort, reversal, sortedness check, and binary search algorithms. Automatically disabled on chunk vectors inside `StringBuffer`. |
 | Formatted Output | `formatting_operations=True` | `String`, `StringBuffer` | `format`, `format_args`, `push_format`, `push_format_args`, `push_double`, `push_long_double` | `printf`-style formatted output and floating-point conversions, requiring `<stdio.h>` and `<stdarg.h>`. Automatically disabled on internal string instances. |
 

@@ -29,7 +29,7 @@ Requires Python ≥ 3.13. `autoc` itself has zero dependencies.
 ```python
 from autoc.module import Module
 from autoc.vector import Vector
-from autoc.hash_map import Map
+from autoc.chained_hash_map import Map
 import autoc.std as std
 
 with Module("mymodule") as m:
@@ -244,6 +244,8 @@ consumed 23
 | `autoc.rb_map` | `Map` | ordered map over the red-black tree set |
 | `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups |
 | `autoc.avl_map` | `Map` | ordered map over the AVL tree set |
+| `autoc.flat_set` | `Set` | contiguous sorted dynamic array with binary search lookup, cache-friendly layout |
+| `autoc.flat_map` | `Map` | ordered map over a contiguous sorted array of key-value pairs (AoS layout) |
 | `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
 | `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
 | `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |

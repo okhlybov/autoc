@@ -34,8 +34,11 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
       return f"{target}->storage.heap_elements = {ptr}; {target}->capacity = {capacity};"
     return f"{target}->elements = {ptr}; {target}->capacity = {capacity};"
 
-  def _element_c(self, target, index):
+  def _element(self, target, index):
     return self.element.variable(f"{self._data(target)}[{index}]")
+
+  def _target_size(self, target):
+    return f"{target}->size"
 
   def __setup__(self):
     super().__setup__()

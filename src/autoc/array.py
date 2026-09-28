@@ -60,10 +60,10 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
   def zero_initializable(self):
     return self.element.zero_initializable
 
-  def _element_c(self, target, index):
+  def _element(self, target, index):
     return self.element.variable(f"{target}->elements[{index}]")
 
-  def _size_c(self, target):
+  def _target_size(self, target):
     return str(self._size)
 
   def _render_struct(self, stream, header):

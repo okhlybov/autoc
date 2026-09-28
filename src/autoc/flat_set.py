@@ -1,0 +1,439 @@
+import autoc.std as std
+import autoc.set
+from autoc.collection import _Range
+from autoc.range import DirectAccess
+from autoc.searchable import Searchable
+from autoc.core import inout, _StructRenderer, Indirection, Callable
+
+
+#
+class Set(_StructRenderer, Searchable, autoc.set.Set):
+
+  brief = "Contiguous sorted array set with binary search lookup and cache-friendly layout"
+
+  def __init__(self, name, element, *args, algebraic_operations=True, dependencies=(), **kws):
+    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.size_t), **kws)
+    self.range = Range(self)
+
+  def _element(self, target, index):
+    return self.element.variable(f"{target}->elements[{index}]")
+
+  def _target_size(self, target):
+    return f"{target}->size"
+
+  @property
+  def orderable(self):
+    return True
+
+  @property
+  def copyable(self):
+    return self.element.copyable and self.element.comparable
+
+  def __setup__(self):
+    super().__setup__()
+
+    self.description = f"""
+      Requires the element type (@ref {self.element}) to be *Orderable* and *Copyable*.
+      Supports bidirectional element traversal and direct indexed access via the corresponding @ref {self.range} iterator - elements are yielded in ascending order.
+
+      Implemented as a contiguous sorted dynamic array with binary search lookup.
+      Provides O(log n) lookup, O(n) insertion and deletion, and superior cache locality over tree-based sets.
+      The closest C++ equivalent is [std::flat_set<>](https://en.cppreference.com/w/cpp/container/flat_set) / `boost::container::flat_set`.
+    """
+
+    destroy_i = f"{self.element.destroy(self.element.variable('target->elements[i]'))};" if self.element.destructible else ""
+    destroy_low = f"{self.element.destroy(self.element.variable('target->elements[low]'))};" if self.element.destructible else ""
+    destroy_last = f"{self.element.destroy(self.element.variable('target->elements[target->size - 1]'))};" if self.element.destructible else ""
+    state = self.hasher.state_t.variable("state")
+
+    with self.size as f:
+      f.inline_code = """
+        assert(target);
+        return target->size;
+      """
+
+    with self.empty as f:
+      f.inline_code = """
+        assert(target);
+        return target->size == 0;
+      """
+
+    with self.create as f:
+      f.inline_code = """
+        assert(target);
+        target->elements = NULL;
+        target->size = 0;
+        target->capacity = 0;
+      """
+
+    with self.method(std.size_t, "capacity", {"target": self}, brief="Get the current allocated capacity",
+      description="""
+        Returns the number of elements the set can hold without reallocating storage.
+
+        @param[in] target the set to query
+        @return the current capacity
+      """) as f:
+      f.inline_code = """
+        assert(target);
+        return target->capacity;
+      """
+
+    with self.method(Indirection(self.element), "data", {"target": inout(self)}, brief="Get pointer to the contiguous element buffer",
+      description="""
+        Returns a pointer to the contiguous element buffer. The pointer remains valid
+        until the set is modified or destroyed.
+
+        @param[in,out] target the set to query
+        @return pointer to the first element
+      """) as f:
+      f.inline_code = """
+        assert(target);
+        return target->elements;
+      """
+
+    with self.method(None, "reserve", {"target": inout(self), "capacity": std.size_t}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Reserve storage capacity",
+      description="""
+        Ensures the set has allocated storage for at least the given number of elements.
+
+        @param[in,out] target the set to expand
+        @param[in] capacity the minimum capacity to reserve
+      """) as f:
+      f.code = f"""
+        assert(target);
+        if({f.capacity} > target->capacity) {{
+          {Indirection(self.element)} new_elements;
+          size_t i;
+          new_elements = {self.memory.allocate(self.element, f.capacity)};
+          for(i = 0; i < target->size; ++i) {{
+            {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
+            {destroy_i}
+          }}
+          if(target->elements) {{
+            {self.memory.free("target->elements")};
+          }}
+          target->elements = new_elements;
+          target->capacity = {f.capacity};
+        }}
+      """
+
+    with self.method(None, "compact", {"target": inout(self)}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Compact buffer capacity to fit element count",
+      description="""
+        Reduces the allocated capacity down to the current size.
+
+        @param[in,out] target the set to compact
+      """) as f:
+      f.code = f"""
+        assert(target);
+        if(target->size == 0) {{
+          if(target->elements) {{
+            {self.memory.free("target->elements")};
+            target->elements = NULL;
+          }}
+          target->capacity = 0;
+        }} else if(target->size < target->capacity) {{
+          {Indirection(self.element)} new_elements;
+          size_t i;
+          new_elements = {self.memory.allocate(self.element, "target->size")};
+          for(i = 0; i < target->size; ++i) {{
+            {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
+            {destroy_i}
+          }}
+          {self.memory.free("target->elements")};
+          target->elements = new_elements;
+          target->capacity = target->size;
+        }}
+      """
+
+    with self.destroy as f:
+      destroy_loop = f"""
+        size_t i;
+        for(i = 0; i < target->size; ++i) {{
+          {self.element.destroy(self.element.variable("target->elements[i]"))};
+        }}
+      """ if self.element.destructible else ""
+      f.code = f"""
+        assert(target);
+        if(target->elements) {{
+          {destroy_loop}
+          {self.memory.free("target->elements")};
+        }}
+      """
+
+    with self.contains as f:
+      f.references.add(self.binary_search)
+      f.inline_code = f"""
+        assert(target);
+        return {self.binary_search(f.target, f.element)};
+      """
+
+    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, references=(self.lower_bound,), brief="Find element and return view",
+      description="""
+        Looks up the element via binary search in O(log n).
+        The returned view points into the contiguous array and stays valid while the set is not modified.
+
+        @param[in] target the set to search
+        @param[in] element the element to look for
+        @return a constant view of the found element or NULL when absent
+      """) as f:
+      f.code = f"""
+        size_t low;
+        assert(target);
+        low = {self.lower_bound(f.target, f.element)};
+        if(low < target->size && !{self.element.compare(self._element(f.target, "low"), f.element)}) {{
+          return {self.element.variable("target->elements[low]").bind(f.result)};
+        }}
+        return ({self.element.view_type})NULL;
+      """
+
+    with self.put as f:
+      f.references.add(self.lower_bound)
+      f.code = f"""
+        size_t low, i;
+        assert(target);
+        low = {self.lower_bound(f.target, f.element)};
+        if(low < target->size && !{self.element.compare(self._element(f.target, "low"), f.element)}) {{
+          return 0;
+        }}
+        if(target->size == target->capacity) {{
+          size_t new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
+          {Indirection(self.element)} new_elements = {self.memory.allocate(self.element, "new_capacity")};
+          for(i = 0; i < low; ++i) {{
+            {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
+            {destroy_i}
+          }}
+          {self.element.copy(self.element.variable("new_elements[low]"), f.element)};
+          for(i = low; i < target->size; ++i) {{
+            {self.element.move(self.element.variable("new_elements[i + 1]"), self.element.variable("target->elements[i]"))};
+            {destroy_i}
+          }}
+          if(target->elements) {{
+            {self.memory.free("target->elements")};
+          }}
+          target->elements = new_elements;
+          target->capacity = new_capacity;
+        }} else {{
+          for(i = target->size; i > low; --i) {{
+            {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i - 1]"))};
+          }}
+          if(low < target->size) {{
+            {destroy_low}
+          }}
+          {self.element.copy(self.element.variable("target->elements[low]"), f.element)};
+        }}
+        ++target->size;
+        return 1;
+      """
+
+    with self.remove as f:
+      f.references.add(self.lower_bound)
+      f.code = f"""
+        size_t low, i;
+        assert(target);
+        low = {self.lower_bound(f.target, f.element)};
+        if(low < target->size && !{self.element.compare(self._element(f.target, "low"), f.element)}) {{
+          {destroy_low}
+          for(i = low; i + 1 < target->size; ++i) {{
+            {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i + 1]"))};
+          }}
+          if(low + 1 < target->size) {{
+            {destroy_last}
+          }}
+          --target->size;
+          return 1;
+        }}
+        return 0;
+      """
+
+    with self.copy as f:
+      f.code = f"""
+        size_t i;
+        assert(target);
+        assert(source);
+        if(source->size > 0) {{
+          target->elements = {self.memory.allocate(self.element, "source->size")};
+          target->size = source->size;
+          target->capacity = source->size;
+          for(i = 0; i < source->size; ++i) {{
+            {self.element.copy(self.element.variable("target->elements[i]"), self.element.variable("source->elements[i]"))};
+          }}
+        }} else {{
+          target->elements = NULL;
+          target->size = 0;
+          target->capacity = 0;
+        }}
+      """
+
+    with self.move as f:
+      f.code = """
+        assert(target);
+        assert(source);
+        target->elements = source->elements;
+        target->size = source->size;
+        target->capacity = source->capacity;
+        source->elements = NULL;
+        source->size = 0;
+        source->capacity = 0;
+      """
+
+    with self.equal as f:
+      f.code = f"""
+        size_t i;
+        assert(left);
+        assert(right);
+        if(left->size != right->size) return 0;
+        for(i = 0; i < left->size; ++i) {{
+          if(!{self.element.equal(self.element.variable("left->elements[i]"), self.element.variable("right->elements[i]"))})
+            return 0;
+        }}
+        return 1;
+      """
+
+    with self.compare as f:
+      f.code = f"""
+        size_t i, min_size;
+        int cmp;
+        assert(left);
+        assert(right);
+        min_size = left->size < right->size ? left->size : right->size;
+        for(i = 0; i < min_size; ++i) {{
+          cmp = {self.element.compare(self.element.variable("left->elements[i]"), self.element.variable("right->elements[i]"))};
+          if(cmp != 0) return cmp;
+        }}
+        return left->size < right->size ? -1 : (left->size > right->size ? 1 : 0);
+      """
+
+    with self.hash as f:
+      f.code = f"""
+        size_t result;
+        size_t i;
+        {state.definition};
+        assert(target);
+        {self.hasher.create(state)};
+        for(i = 0; i < target->size; ++i) {{
+          {self.hasher.update(state, self.element.hash(self.element.variable("target->elements[i]")))};
+        }}
+        result = {self.hasher.hash(state)};
+        {self.hasher.destroy(state)};
+        return result;
+      """
+
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      struct {self.name} {{
+        {Indirection(self.element)} elements; /**< @private */
+        size_t size; /**< @private */
+        size_t capacity; /**< @private */
+      }};
+    """)
+
+
+#
+class Range(_Range, DirectAccess):
+
+  def _render_struct(self, stream, header):
+    super()._render_struct(stream, header)
+    stream.append(f"""
+      struct {self.name} {{
+        {Indirection(self.iterable, constant=True)} iterable; /**< @private */
+        size_t front, /**< @private */ back; /**< @private */
+      }};
+    """)
+
+  def __setup__(self):
+    super().__setup__()
+
+    with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole flat set",
+      description="""
+        Creates the range covering all elements of the set in ascending order.
+        The range must not outlive the set and the set must not be modified while the range is traversed.
+
+        @param[in] iterable the set to span
+        @return the range covering the whole set
+      """) as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(iterable);
+        result.iterable = iterable;
+        result.front = 0;
+        result.back = iterable->size;
+        return {result};
+      """
+
+    with self.empty as f:
+      f.inline_code = """
+        assert(target);
+        return target->front >= target->back;
+      """
+
+    with self.front as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.element.copy(result, self.element.variable("target->iterable->elements[target->front]"))};
+        return {result};
+      """
+
+    with self.front_view as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self.element.variable("target->iterable->elements[target->front]").bind(f.result)};
+      """
+
+    with self.move_front as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        ++target->front;
+      """
+
+    with self.back as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.element.copy(result, self.element.variable("target->iterable->elements[target->back - 1]"))};
+        return {result};
+      """
+
+    with self.back_view as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self.element.variable("target->iterable->elements[target->back - 1]").bind(f.result)};
+      """
+
+    with self.move_back as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        --target->back;
+      """
+
+    with self.get as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(target);
+        assert(target->front + {f.index} < target->back);
+        {self.element.copy(result, self.element.variable(f"target->iterable->elements[target->front + {f.index}]"))};
+        return {result};
+      """
+
+    with self.view as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(target->front + {f.index} < target->back);
+        return {self.element.variable(f"target->iterable->elements[target->front + {f.index}]").bind(f.result)};
+      """
+
+    with self.size as f:
+      f.inline_code = """
+        assert(target);
+        return target->back > target->front ? target->back - target->front : 0;
+      """
