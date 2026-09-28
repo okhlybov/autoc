@@ -10,7 +10,13 @@ def interpolate(template, **items):
   return s
 
 
-def generate(project, directory="."):
+def generate(project, directory=".", build_system="cmake"):
+  if build_system == "meson":
+    return generate_meson(project, directory=directory)
+  return generate_cmake(project, directory=directory)
+
+
+def generate_cmake(project, directory="."):
   target_path = pathlib.Path(directory).resolve()
   target_path.mkdir(parents=True, exist_ok=True)
   orig_cwd = os.getcwd()
@@ -28,6 +34,29 @@ def generate(project, directory="."):
       f"{project}.code-workspace": _code_workspace,
       ".vscode/launch.json": _launch_json,
       ".gitignore": _gitignore,
+    }.items():
+      with open(file, "w") as f:
+        f.write(interpolate(template, **items))
+  finally:
+    os.chdir(orig_cwd)
+
+
+def generate_meson(project, directory="."):
+  target_path = pathlib.Path(directory).resolve()
+  target_path.mkdir(parents=True, exist_ok=True)
+  orig_cwd = os.getcwd()
+  try:
+    os.chdir(target_path)
+    items = dict(project=project, module=project)
+    pathlib.Path(".vscode").mkdir(parents=True, exist_ok=True)
+    for file, template in {
+      "meson.build": _meson_build,
+      "meson_options.txt": _meson_options,
+      f"{project}.c": _project_c,
+      f"{project}.py": _project_py_meson,
+      f"{project}.code-workspace": _code_workspace,
+      ".vscode/launch.json": _launch_json_meson,
+      ".gitignore": _gitignore_meson,
     }.items():
       with open(file, "w") as f:
         f.write(interpolate(template, **items))
@@ -193,7 +222,94 @@ endfunction()
 """
 
 
+_project_py_meson = """
+import sys
+import autoc.module
+import autoc.string
+
+
+with autoc.module.Module(sys.argv[1]) as m:
+  m.add(autoc.string.String("Str"))
+"""
+
+
+_meson_options = """option('regenerate',
+  type: 'feature',
+  value: 'auto',
+  description: 'Regenerate AutoC sources using Python (auto: only if missing)'
+)
+"""
+
+
+_meson_build = """project('@project@', 'c',
+  version: '0.1.0',
+  default_options: ['warning_level=2']
+)
+
+fs = import('fs')
+
+module_name = '@module@'
+gen_h = module_name + '_auto.h'
+gen_c = module_name + '_auto.c'
+has_bundled = fs.exists(gen_h) and fs.exists(gen_c)
+
+regen_opt = get_option('regenerate')
+need_generator = regen_opt.enabled() or (regen_opt.auto() and not has_bundled)
+
+if need_generator
+  py = import('python').find_installation('python3', required: true)
+  autoc_sources = custom_target(
+    module_name + '-auto',
+    input: module_name + '.py',
+    output: [gen_h, gen_c],
+    command: [py, '@INPUT@', module_name]
+  )
+else
+  message('AutoC: Using pre-generated sources (@module@_auto.{h,c})')
+  autoc_sources = files(gen_h, gen_c)
+endif
+
+autoc_dep = declare_dependency(
+  sources: autoc_sources,
+  include_directories: include_directories('.')
+)
+
+executable('@project@',
+  sources: ['@project@.c'],
+  dependencies: [autoc_dep]
+)
+"""
+
+
+_launch_json_meson = """{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Meson Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:mesonbuild.buildDir}/@project@",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}"""
+
+
+_gitignore_meson = """
+build/
+builddir/
+subprojects/
+"""
+
+
 if __name__ == "__main__":
-  project = sys.argv[1]
-  directory = sys.argv[2] if len(sys.argv) > 2 else "."
-  generate(project, directory=directory)
+  import argparse
+  parser = argparse.ArgumentParser(description="Scaffold an AutoC project")
+  parser.add_argument("project", help="Project and module name")
+  parser.add_argument("directory", nargs="?", default=".", help="Target directory (default: .)")
+  parser.add_argument("-b", "--build", choices=["cmake", "meson"], default="cmake", help="Build system (default: cmake)")
+  parser.add_argument("--meson", action="store_true", help="Shortcut for --build=meson")
+  args = parser.parse_args()
+  build_system = "meson" if args.meson else args.build
+  generate(args.project, directory=args.directory, build_system=build_system)
