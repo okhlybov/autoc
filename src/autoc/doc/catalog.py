@@ -32,7 +32,7 @@ import autoc.variant
 import autoc.reference
 import autoc.static_vector
 import autoc.array
-import autoc.bitset
+import autoc.bit_set
 import autoc.circular_buffer
 
 
@@ -170,7 +170,7 @@ class StringBuffer(autoc.string_buffer.Buffer):
     return f"{self.name}<{self.element}>"
 
 
-class BitSet(autoc.bitset.BitSet):
+class BitSet(autoc.bit_set.Set):
   @property
   def _doxygen_type(self):
     return f"{self.name}<N>"

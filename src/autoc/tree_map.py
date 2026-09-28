@@ -1,5 +1,4 @@
-from autoc.mapping import Mapping
-from autoc.hash_map import _Entry
+from autoc.mapping import Mapping, _Entry
 from autoc.core import Indirection
 
 

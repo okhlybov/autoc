@@ -6,7 +6,7 @@ from autoc.chained_hash_set import Set as ChainedHashSet
 from autoc.chained_hash_map import Map as ChainedHashMap
 from autoc.treap_set import Set as TreapSet
 from autoc.treap_map import Map as TreapMap
-from autoc.bitset import BitSet
+from autoc.bit_set import Set as BitSet
 from autoc.string import String
 from autoc.string_buffer import Buffer as StringBuffer
 

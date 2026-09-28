@@ -43,13 +43,12 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
 | `autoc.tree_map` | `Map` | — | — | generic binary search tree map base parameterized by tree set backend |
 | `autoc.mapping` | `Mapping` | — | — | abstract interface shared by the map implementations |
-| `autoc.hash_map` | `_Entry` | — | — | shared key→value entry record used by the map implementations |
 
 ## Value types
 
 | Module | Type | Documented as | Notes |
 |---|---|---|---|
-| `autoc.bitset` | `BitSet` | `BitSet<N>` | fixed-size inline bit array; set algebra, popcount, zero heap allocation |
+| `autoc.bit_set` | `Set` | `BitSet<N>` | fixed-size inline bit array; set algebra, popcount, zero heap allocation |
 | `autoc.record` | `Record` | `Record` | user-defined aggregate of named fields, with generated getters/setters |
 | `autoc.variant` | `Variant` | `Variant` | union holding one value out of a predefined set of types |
 | `autoc.reference` | `Counted` | `Counted<T>` | reference-counted shared instance |

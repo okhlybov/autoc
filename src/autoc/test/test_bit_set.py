@@ -1,7 +1,7 @@
 from autoc.test import *
-from autoc.bitset import BitSet
+from autoc.bit_set import Set
 
-x = Type(type := BitSet("test_bitset", 20))
+x = Type(type := Set("test_bitset", 20))
 
 t = type.variable("t")
 t1 = type.variable("t1")

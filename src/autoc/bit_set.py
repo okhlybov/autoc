@@ -4,7 +4,7 @@ from autoc.core import inout, Composite, _StructRenderer
 
 
 #
-class BitSet(_StructRenderer, Composite):
+class Set(_StructRenderer, Composite):
 
   brief = "Fixed-size bit array with set algebra operations"
 
@@ -12,7 +12,7 @@ class BitSet(_StructRenderer, Composite):
     self.algebraic_operations = bool(algebraic_operations)
     self._capacity = int(capacity)
     if self._capacity < 1:
-      raise ValueError(f"BitSet capacity must be at least 1, got {self._capacity}")
+      raise ValueError(f"Set capacity must be at least 1, got {self._capacity}")
     self._word_count = (self._capacity + 7) // 8
     self._tail_bits = self._capacity % 8
     self._tail_mask = (1 << self._tail_bits) - 1 if self._tail_bits else 0xFF

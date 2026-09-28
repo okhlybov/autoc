@@ -1,5 +1,4 @@
-from autoc.mapping import Mapping
-from autoc.hash_map import _Entry
+from autoc.mapping import Mapping, _Entry
 from autoc.chained_hash_set import Set
 from autoc.core import Indirection
 

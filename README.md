@@ -236,7 +236,6 @@ consumed 23
 | `autoc.string` | `String` | string as an index→character map, direct-access range, variadic formatted output |
 | `autoc.set` | `Set` | abstract hash-set interface (shared base) |
 | `autoc.mapping` | `Mapping` | abstract hash-map interface (shared base) |
-| `autoc.hash_map` | `_Entry` | shared key→value entry record for map implementations |
 | `autoc.chained_hash_set` | `Set` | bucket-chaining hash set — no sentinel values, stable element references, safe default |
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
 | `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
@@ -250,7 +249,7 @@ consumed 23
 | `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
-| `autoc.bitset` | `BitSet` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
+| `autoc.bit_set` | `Set` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
 | `autoc.record` | `Record` | user-defined field aggregates |
 | `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
 | `autoc.reference` | `Raw`, `Counted` | unmanaged / reference-counted handles |
