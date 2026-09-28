@@ -13,11 +13,11 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 
-  def __init__(self, name, element, size, *args, sorting_operations=True, hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, element, size, *args, index=std.size_t, sorting_operations=True, hasher=XorRot(), dependencies=(), **kws):
     self._size = int(size)
     if self._size < 1:
       raise ValueError(f"Array size must be at least 1, got {self._size}")
-    super().__init__(name, element, std.size_t, *args, sorting_operations=sorting_operations, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
     self.range = Range(self)
 
   @property

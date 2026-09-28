@@ -13,11 +13,11 @@ class Vector(_StructRenderer, Indexed, Sequence):
 
   brief = "Fixed-capacity stack-allocated direct access sequence container"
 
-  def __init__(self, name, element, capacity, **kws):
+  def __init__(self, name, element, capacity, *args, index=std.size_t, **kws):
     self._capacity = int(capacity)
     if self._capacity < 1:
       raise ValueError(f"Capacity must be at least 1, got {self._capacity}")
-    super().__init__(name, element, std.size_t, **kws)
+    super().__init__(name, element, index, *args, **kws)
 
     self.tuples = []
     for k in range(1, self._capacity + 1):

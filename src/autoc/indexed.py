@@ -1,3 +1,4 @@
+import autoc.std as std
 from autoc.core import _type, inout
 from autoc.collection import Collection
 
@@ -6,8 +7,8 @@ from autoc.collection import Collection
 class Indexed(Collection):
   
   def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, *args, **kws)
     self.index = _type(index)
+    super().__init__(name, element, *args, **kws)
     self.dependencies.add(self.index)
 
   def __setup__(self):

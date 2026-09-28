@@ -14,6 +14,7 @@ class Map(Mapping):
     self._set = FlatSet(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
+      std.size_t,
       visibility="internal",
       algebraic_operations=False,
     )

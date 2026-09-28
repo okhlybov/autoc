@@ -22,6 +22,10 @@ class Range(Composite):
     self.compare = None
     self.hash = None
 
+  @property
+  def _iterable_name(self):
+    return self.iterable.name if hasattr(self.iterable, "name") else self.iterable
+
 
 #
 class Input(Range):
@@ -76,7 +80,7 @@ class Forward(Input):
     super().__setup__()
 
     self.description = f"""
-      This iterator allows traversing the iterable container (@ref {getattr(self.iterable, 'name', self.iterable)}) in forward direction.
+      This iterator allows traversing the iterable container (@ref {self._iterable_name}) in forward direction.
     """
     
 
@@ -98,7 +102,7 @@ class Backward(Input):
     super().__setup__()
 
     self.description = f"""
-      This iterator allows traversing the iterable container (@ref {getattr(self.iterable, 'name', self.iterable)}) in backward direction.
+      This iterator allows traversing the iterable container (@ref {self._iterable_name}) in backward direction.
     """
 
     self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get a copy of the back element",
@@ -135,7 +139,7 @@ class Bidirectional(Forward, Backward):
     super().__setup__()
     
     self.description = f"""
-      This iterator allows traversing the iterable container (@ref {getattr(self.iterable, 'name', self.iterable)}) in both (forward and backward) directions.
+      This iterator allows traversing the iterable container (@ref {self._iterable_name}) in both (forward and backward) directions.
     """
 
 
@@ -148,7 +152,7 @@ class DirectAccess(Forward, Backward):
     super().__setup__()
 
     self.description = f"""
-      This iterator allows traversing the iterable container (@ref {getattr(self.iterable, 'name', self.iterable)}) in both (forward and backward) directions.
+      This iterator allows traversing the iterable container (@ref {self._iterable_name}) in both (forward and backward) directions.
       In addition, it provides a direct (indexed) access to the range of currently accessible range's elements.
     """
 

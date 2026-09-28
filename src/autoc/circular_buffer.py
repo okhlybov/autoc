@@ -11,8 +11,8 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
 
   brief = "Ring buffer container with bounded capacity and overwrite semantics"
 
-  def __init__(self, name, element, *args, dependencies=(), **kws):
-    super().__init__(name, element, std.size_t, *args, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+  def __init__(self, name, element, *args, index=std.size_t, dependencies=(), **kws):
+    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
     self.range = Range(self)
 
   @property

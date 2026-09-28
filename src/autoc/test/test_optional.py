@@ -295,3 +295,25 @@ assert arr_sort.get not in arr_sort.back.dependencies
 assert arr_sort.view in arr_sort.back_view.references
 assert arr_sort.view not in arr_sort.back_view.dependencies
 
+# Sortable and Searchable index (and index_type alias) is configurable
+assert v_sort.index == std.size_t
+assert v_sort.index_type == std.size_t
+v_custom_idx = Vector("v_custom_idx", "int", index=std.int32_t)
+assert v_custom_idx.index == std.int32_t
+assert v_custom_idx.index_type == std.int32_t
+assert v_custom_idx.sort_insertion.arguments[1].type == std.int32_t
+assert v_custom_idx.sort_insertion.arguments[2].type == std.int32_t
+assert v_custom_idx.sort_range.arguments[1].type == std.int32_t
+assert v_custom_idx.sort_range.arguments[2].type == std.int32_t
+assert v_custom_idx.lower_bound.result == std.int32_t
+assert v_custom_idx.upper_bound.result == std.int32_t
+
+# FlatSet index is positional
+from autoc.flat_set import Set as FlatSet
+fs_default = FlatSet("fs_default", "int", std.size_t)
+assert fs_default.index == std.size_t
+assert fs_default.lower_bound.result == std.size_t
+fs_custom = FlatSet("fs_custom", "int", std.int32_t)
+assert fs_custom.index == std.int32_t
+assert fs_custom.lower_bound.result == std.int32_t
+

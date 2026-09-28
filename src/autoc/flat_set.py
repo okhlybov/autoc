@@ -3,7 +3,7 @@ import autoc.set
 from autoc.collection import _Range
 from autoc.range import DirectAccess
 from autoc.searchable import Searchable
-from autoc.core import inout, _StructRenderer, Indirection, Callable
+from autoc.core import inout, _StructRenderer, Indirection, Callable, _type
 
 
 #
@@ -11,8 +11,9 @@ class Set(_StructRenderer, Searchable, autoc.set.Set):
 
   brief = "Contiguous sorted array set with binary search lookup and cache-friendly layout"
 
-  def __init__(self, name, element, *args, algebraic_operations=True, dependencies=(), **kws):
-    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.size_t), **kws)
+  def __init__(self, name, element, index=std.size_t, *args, algebraic_operations=True, dependencies=(), **kws):
+    self.index = _type(index)
+    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, self.index), **kws)
     self.range = Range(self)
 
   def _element(self, target, index):

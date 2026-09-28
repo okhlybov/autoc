@@ -70,14 +70,14 @@ class _MultiphaseConstructible(type):
 
 # Mixin for types which support all operations
 class _Traitful:
-  
+
   @property
   def constructible(self):
     return True
   
   @property
   def default_constructible(self):
-    return self.constructible and self.create is not None and len(self.create.parameters) == 1
+    return self.constructible and getattr(self, "create", None) is not None and len(self.create.parameters) == 1
 
   @property
   def destructible(self):
@@ -177,7 +177,7 @@ class _Documented(Entity, _VisibilityManager):
   # documentation sub-project which overrides this property per type
   @property
   def _doxygen_type(self):
-    return getattr(self, "name", str(self))
+    return self.name if hasattr(self, "name") else str(self)
   
   def _render_documentation(self, stream, header):
     if self.public:
@@ -200,7 +200,7 @@ class _Documented(Entity, _VisibilityManager):
       # to the least indented lines of the comment - leaving the embedded commands
       # unrecognized and rendered verbatim - so normalize the common prefix away
       stream.append(textwrap.dedent(self.description))
-    if getattr(self, "optional_group", None):
+    if self.optional_group:
       stream.append(f"\n_{_optional_group_note(self.optional_group)}_\n")
 
 
@@ -234,6 +234,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     # The descriptions are type-agnostic because every type inherits them through
     # method_from()/macro_from() - the concrete declarations keep the parameter names
     # of these prototypes so the rendered @param entries always match the signatures
+    
     self.create = Callable(None, {"target": out(self)}, constraint=lambda: self.constructible, brief="Create the value with default parameters",
       description="""
         Constructs the value in place over the uninitialized target storage. Any previous
@@ -243,6 +244,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
 
         @param[out] target the storage area in which to construct the value
       """)
+    
     self.destroy = Callable(None, {"target": self}, constraint=lambda: self.destructible, brief="Destroy the value",
       description="""
         Releases the resources held by the value leaving it invalid - it must be reconstructed
@@ -250,6 +252,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
 
         @param[in] target the value to destroy - the released resources leave the value invalid
       """)
+    
     self.copy = Callable(None, {"target": out(self), "source": self}, constraint=lambda: self.copyable, brief="Create a copy of the value",
       description="""
         Constructs the target as an independent copy of the source - the two values do not
@@ -259,6 +262,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[out] target the value to construct as the copy
         @param[in] source the value to copy
       """)
+    
     self.move = Callable(None, {"target": out(self), "source": out(self)}, constraint=lambda: self.moveable, brief="Move the value to a new location",
       description="""
         Transfers the source contents to the target leaving the source in a valid empty
@@ -267,6 +271,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[out] target the value to construct as the destination
         @param[in,out] source the value to move from - left in a valid empty state
       """)
+    
     self.swap = Callable(None, {"left": inout(self), "right": inout(self)}, constraint=lambda: self.swappable, brief="Swap two values",
       description="""
         Exchanges the contents of the two values - for the handle-like types it is a constant
@@ -275,6 +280,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in,out] left the first value
         @param[in,out] right the second value
       """)
+    
     self.equal = Callable("int", {"left": self, "right": self}, constraint=lambda: self.comparable, brief="Compare two values by equality",
       description="""
         Checks the two values for equality per the type equality semantics - required to be
@@ -284,6 +290,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in] right the second value
         @return non-zero if the values are equal and zero otherwise
       """)
+    
     self.compare = Callable("int", {"left": self, "right": self}, constraint=lambda: self.orderable, brief="Compute ordering relation of two values",
       description="""
         Establishes the strict weak ordering of the two values per the type ordering
@@ -293,6 +300,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in] right the second value
         @return a negative value, zero or a positive value as the first value is less than, equal to or greater than the second one
       """)
+    
     self.hash = Callable("size_t", {"target": self}, constraint=lambda: self.hashable, brief="Compute a hash of the value",
       description="""
         Computes a hash of the value over the hasher of the enclosing module - the equal
@@ -302,6 +310,7 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
         @param[in] target the value to hash
         @return the hash of the value - equal values always hash alike
       """)
+    
     # Methods used by the hash-based containers
     self.hash_lookup_hash = lambda *args: self.hash(*args)
     self.hash_lookup_equal = lambda *args: self.equal(*args)
@@ -356,16 +365,14 @@ class _Named(Type):
     self.__attributes = set()
 
   #
-  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, **kws):
-    # The owning type is recorded so the rendered documentation groups the member
-    # under its type - the explicitly attributed method_from() calls take precedence
-    kws.setdefault("type", self)
+  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, type=None, **kws):
     x = Function(
       result,
       self.decorate(identifier, hidden=hidden),
       parameters,
       *args,
       abstract=abstract if abstract else False,
+      type=self if type is None else type,
       **kws
     )
     # Method by itself does not depend on its owning type - only though explicit parameters
@@ -383,16 +390,12 @@ class _Named(Type):
   #
   def macro_from(self, attribute, *args, **kws):
     m = getattr(self, attribute)
-    kws.setdefault("variadic", getattr(m, "variadic", False))
-    kws.setdefault("optional_group", getattr(m, "optional_group", None))
-    return self.macro(attribute, m._result, m._parameters, *args, brief=m.brief, description=m.description, **kws)
+    return self.macro(attribute, m._result, m._parameters, *args, **{**m._forward_kws, **kws})
     
   #
   def method_from(self, identifier, *args, attribute=None, **kws):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
-    kws.setdefault("variadic", getattr(m, "variadic", False))
-    kws.setdefault("optional_group", getattr(m, "optional_group", None))
-    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, brief=m.brief, description=m.description, type=self, **kws)
+    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, type=self, **{**m._forward_kws, **kws})
   
   #
   def decorate(self, *args, **kws):
@@ -419,10 +422,7 @@ class _Named(Type):
     return self.name
   
   def __register__(self):
-    # By recording the attribute names instead of real method objects makes it possible to
-    # disable object emitting by setting the respective attribute to None
-    # prior entering this method (__setup__ is a perfect place for this)
-    self.references.update( [t for x in self.__attributes if hasattr(self, x) and not (t := getattr(self, x)) is None and getattr(t, "active", True)] )
+    self.references.update([t for x in self.__attributes if hasattr(self, x) and (t := getattr(self, x)) is not None and t.active])
 
 
 #
@@ -552,7 +552,7 @@ class _StructRenderer(_GroupRenderer):
         stream.append("/** @private */\n")
       stream.append(f"typedef struct {self.name} {self.name};\n")
       if self.public:
-        if getattr(self, "opaque", True):
+        if self.opaque:
           stream.append(f"/**\n  @ingroup {self.name}\n  @brief The opaque handle representing @ref {self} value.\n*/\n")
         else:
           stream.append(f"/** @ingroup {self.name} */\n")
@@ -768,9 +768,19 @@ class Callable(_Documented):
     else:
       return Expression(self.result, contents)
 
+  # Callable optional parameters needed to be forwarded on the callable descendant creation
+  @property
+  def _forward_kws(self):
+    return {
+      "brief": self.brief,
+      "description": self.description,
+      "optional_group": self.optional_group,
+      "variadic": self.variadic,
+    }
+
   # Create function type borrowing the signature
   def functional(self, name):
-    return Functional.of(name, self, brief=self.brief, description=self.description, optional_group=getattr(self, "optional_group", None), variadic=self.variadic)
+    return Functional.of(name, self)
   
   class Parameter:
     def __init__(self, type):
@@ -846,8 +856,7 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
 
   @classmethod
   def of(self, name, callable, *args, **kws):
-    kws.setdefault("variadic", getattr(callable, "variadic", False))
-    return self(callable._result, name, callable._parameters, *args, **kws)
+    return self(callable._result, name, callable._parameters, *args, **{**callable._forward_kws, **kws})
 
   def __init__(self, result, name, parameters, *args, **kws):
     super().__init__(name, result, parameters, *args, **kws)
@@ -886,9 +895,7 @@ class Macro(_Parametrized):
   
   @classmethod
   def of(self, callable, emitter, constraint=None, **kws):
-    kws.setdefault("variadic", getattr(callable, "variadic", False))
-    kws.setdefault("optional_group", getattr(callable, "optional_group", None))
-    return self(callable._result, callable._parameters, emitter, constraint=callable.constraint if not constraint else constraint, brief=callable.brief, description=callable.description, **kws)
+    return self(callable._result, callable._parameters, emitter, constraint=constraint or callable.constraint, **{**callable._forward_kws, **kws})
   
   def __init__(self, result, parameters, emitter, **kws):
     super().__init__(result, parameters, **kws)
@@ -925,9 +932,7 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   
   @classmethod
   def of(self, callable, name, constraint=None, **kws):
-    kws.setdefault("variadic", getattr(callable, "variadic", False))
-    kws.setdefault("optional_group", getattr(callable, "optional_group", None))
-    return self(callable._result, name, callable._parameters, constraint=callable.constraint if not constraint else constraint, **kws)
+    return self(callable._result, name, callable._parameters, constraint=constraint or callable.constraint, **{**callable._forward_kws, **kws})
 
   def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), references=(), type=None, **kws):
     super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), references=references, **kws)

@@ -120,7 +120,7 @@ class Range(_Range, Forward):
     super().__setup__()
 
     _target_range = self._range.variable("target->range")
-    is_ordered = getattr(self.iterable, "orderable", False)
+    is_ordered = self.iterable.orderable
     order_doc = "in ascending index order" if is_ordered else "in unspecified order"
     front_doc = "the lowest index" if is_ordered else "the entry found first in the table layout"
 

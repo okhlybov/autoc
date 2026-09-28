@@ -14,7 +14,6 @@ class Sortable(Searchable):
   def __setup__(self):
     super().__setup__()
 
-    index_type = getattr(self, "index", std.size_t)
     sort_constraint = lambda: self.sorting_operations and self.element.orderable and self.element.copyable and self.element.swappable
     reverse_constraint = lambda: self.sorting_operations and self.element.swappable
     search_constraint = lambda: self.sorting_operations and self.element.orderable
@@ -27,9 +26,9 @@ class Sortable(Searchable):
     element_prev = lambda target="target": self._element(target, "j-1")
     pivot = self.element.variable("pivot")
 
-    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": index_type, "hi": index_type}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
       f.code = lambda f=f: f"""
-        size_t i, j;
+        {self.index} i, j;
         assert(target);
         for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
           for(j = i; j > {f.lo} && {self.element.compare(element_prev(f.target), element_j(f.target))} > 0; --j) {{
@@ -38,9 +37,9 @@ class Sortable(Searchable):
         }}
       """
 
-    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": index_type, "hi": index_type}, hidden=True, visibility="internal", constraint=sort_constraint, references=(self.sort_insertion,), brief="Sort range using quicksort (internal)") as f:
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": self.index, "hi": self.index}, hidden=True, visibility="internal", constraint=sort_constraint, references=(self.sort_insertion,), brief="Sort range using quicksort (internal)") as f:
       f.code = lambda f=f: f"""
-        size_t i, j, mid;
+        {self.index} i, j, mid;
         {pivot.definition};
         assert(target);
         while({f.lo} < {f.hi}) {{
@@ -103,7 +102,7 @@ class Sortable(Searchable):
         @param[in,out] target the container to reverse
       """) as f:
       f.code = lambda f=f: f"""
-        size_t i;
+        {self.index} i;
         assert(target);
         for(i = 0; i < {self._target_size(f.target)}/2; ++i) {{
           {self.element.swap(self._element(f.target, "i"), self._element(f.target, f"{self._target_size(f.target)}-1-i"))};
@@ -119,7 +118,7 @@ class Sortable(Searchable):
         @return non-zero if the elements are sorted in ascending order
       """) as f:
       f.code = lambda f=f: f"""
-        size_t index;
+        {self.index} index;
         assert(target);
         for(index = 1; index < {self._target_size(f.target)}; ++index) {{
           if({self.element.compare(self._element(f.target, "index"), self._element(f.target, "index-1"))} < 0) return 0;

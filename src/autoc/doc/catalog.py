@@ -311,7 +311,7 @@ def configure_module(module):
   module.add(Deque("Deque", T))
   module.add(DynamicCircularBuffer("DynamicCircularBuffer", T))
   module.add(FlatMap("FlatMap", T, K))
-  module.add(FlatSet("FlatSet", T))
+  module.add(FlatSet("FlatSet", T, std.size_t))
   module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
   module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
   module.add(List("List", T))
