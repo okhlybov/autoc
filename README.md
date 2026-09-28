@@ -227,14 +227,15 @@ consumed 23
 | Module | Type | Notes |
 |---|---|---|
 | `autoc.vector` | `Vector` | direct-access sequence, bidirectional range |
-| `autoc.static_vector` | `StaticVector` | fixed-capacity stack-allocated sequence, direct-access range, zero heap allocations |
+| `autoc.static_vector` | `Vector` | fixed-capacity stack-allocated sequence, direct-access range, zero heap allocations |
+| `autoc.circular_buffer` | `Static`, `Dynamic` | fixed-capacity stack or dynamic heap circular ring buffer |
 | `autoc.list` | `List` | singly-linked sequence, forward range |
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
 | `autoc.queue` | `Queue` | FIFO adapter over `Deque` |
 | `autoc.stack` | `Stack` | LIFO adapter over `List`, forward range |
 | `autoc.string` | `String` | string as an index→character map, direct-access range, variadic formatted output |
 | `autoc.set` | `Set` | abstract hash-set interface (shared base) |
-| `autoc.map` | `Map` | abstract hash-map interface (shared base) |
+| `autoc.mapping` | `Mapping` | abstract hash-map interface (shared base) |
 | `autoc.hash_map` | `_Entry` | shared key→value entry record for map implementations |
 | `autoc.chained_hash_set` | `Set` | bucket-chaining hash set — no sentinel values, stable element references, safe default |
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
@@ -244,9 +245,9 @@ consumed 23
 | `autoc.rb_map` | `Map` | ordered map over the red-black tree set |
 | `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups |
 | `autoc.avl_map` | `Map` | ordered map over the AVL tree set |
-| `autoc.tree_map` | `TreeMap` | generic binary search tree map parameterized by tree set backend |
-| `autoc.tiered_vector` | `TieredVector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
-| `autoc.priority_queue` | `PriorityQueue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
+| `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
+| `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
+| `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
 | `autoc.bitset` | `BitSet` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
