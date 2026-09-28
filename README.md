@@ -240,6 +240,11 @@ consumed 23
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
 | `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
 | `autoc.treap_map` | `Map` | ordered map over the treap set — iterates in key order, supports lexicographic comparison |
+| `autoc.rb_set` | `Set` | red-black tree — ordered set, guaranteed O(log n) height, <= 3 rotations on delete |
+| `autoc.rb_map` | `Map` | ordered map over the red-black tree set |
+| `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups |
+| `autoc.avl_map` | `Map` | ordered map over the AVL tree set |
+| `autoc.tree_map` | `TreeMap` | generic binary search tree map parameterized by tree set backend |
 | `autoc.tiered_vector` | `TieredVector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
 | `autoc.priority_queue` | `PriorityQueue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
