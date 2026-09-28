@@ -11,7 +11,7 @@ class Set(_StructRenderer, Set):
   brief = "Ordered set of distinct values implemented as an AVL tree - iterates in sorted order"
 
   def __init__(self, *args, dependencies=(), **kws):
-    super().__init__(*args, dependencies=dependencies, **kws)
+    super().__init__(*args, dependencies=(*dependencies, std.size_t), **kws)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.range = Range(self)
@@ -32,6 +32,7 @@ class Set(_StructRenderer, Set):
       Supports one way element traversal via the corresponding @ref {self.range} iterator - the elements are yielded in sorted order.
 
       Implemented as an AVL tree with strictly bounded height <= 1.44 * log2(n + 2).
+      The balance factor (-1, 0, +1) is encoded directly into the lowest 2 bits of the parent pointer, eliminating struct padding.
       The closest C++ equivalent is [std::set<>](https://cppreference.com/cpp/container/set).
     """
 
@@ -71,7 +72,7 @@ class Set(_StructRenderer, Set):
           }} else if(n->right) {{
             n = n->right;
           }} else {{
-            p = n->parent;
+            p = ({self.node}*)(n->parent & ~(size_t)3);
             if(p) {{
               if(p->left == n) p->left = NULL; else p->right = NULL;
             }}
@@ -85,92 +86,51 @@ class Set(_StructRenderer, Set):
     with self.method(None, ("rotate", "left"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate left (internal)") as f:
       f.code = f"""
         {self.node}* r;
-        int hl, hr;
+        {self.node}* p;
         assert(target);
         assert(n);
         r = n->right;
         assert(r);
         n->right = r->left;
-        if(r->left) r->left->parent = n;
-        r->parent = n->parent;
-        if(!n->parent) target->root = r;
-        else if(n == n->parent->left) n->parent->left = r;
-        else n->parent->right = r;
+        if(r->left) r->left->parent = ((size_t)n) | (r->left->parent & 3);
+        p = ({self.node}*)(n->parent & ~(size_t)3);
+        r->parent = ((size_t)p) | (r->parent & 3);
+        if(!p) target->root = r;
+        else if(n == p->left) p->left = r;
+        else p->right = r;
         r->left = n;
-        n->parent = r;
-        hl = n->left ? n->left->height : 0;
-        hr = n->right ? n->right->height : 0;
-        n->height = (hl > hr ? hl : hr) + 1;
-        hl = r->left ? r->left->height : 0;
-        hr = r->right ? r->right->height : 0;
-        r->height = (hl > hr ? hl : hr) + 1;
+        n->parent = ((size_t)r) | (n->parent & 3);
       """
 
     with self.method(None, ("rotate", "right"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate right (internal)") as f:
       f.code = f"""
         {self.node}* l;
-        int hl, hr;
+        {self.node}* p;
         assert(target);
         assert(n);
         l = n->left;
         assert(l);
         n->left = l->right;
-        if(l->right) l->right->parent = n;
-        l->parent = n->parent;
-        if(!n->parent) target->root = l;
-        else if(n == n->parent->left) n->parent->left = l;
-        else n->parent->right = l;
+        if(l->right) l->right->parent = ((size_t)n) | (l->right->parent & 3);
+        p = ({self.node}*)(n->parent & ~(size_t)3);
+        l->parent = ((size_t)p) | (l->parent & 3);
+        if(!p) target->root = l;
+        else if(n == p->left) p->left = l;
+        else p->right = l;
         l->right = n;
-        n->parent = l;
-        hl = n->left ? n->left->height : 0;
-        hr = n->right ? n->right->height : 0;
-        n->height = (hl > hr ? hl : hr) + 1;
-        hl = l->left ? l->left->height : 0;
-        hr = l->right ? l->right->height : 0;
-        l->height = (hl > hr ? hl : hr) + 1;
-      """
-
-    with self.method(Callable.Parameter(self._node_p), ("rebalance", "node"), {"target": inout(self), "p": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rebalance AVL node (internal)") as f:
-      f.code = f"""
-        int hl, hr, bf;
-        assert(target);
-        assert(p);
-        hl = p->left ? p->left->height : 0;
-        hr = p->right ? p->right->height : 0;
-        bf = hl - hr;
-        p->height = (hl > hr ? hl : hr) + 1;
-        if(bf > 1) {{
-          int l_hl = p->left->left ? p->left->left->height : 0;
-          int l_hr = p->left->right ? p->left->right->height : 0;
-          if(l_hl >= l_hr) {{
-            {self.rotate_right(f.target, f.p)};
-          }} else {{
-            {self.rotate_left(f.target, f"{f.p}->left")};
-            {self.rotate_right(f.target, f.p)};
-          }}
-          return {f.p}->parent;
-        }} else if(bf < -1) {{
-          int r_hl = p->right->left ? p->right->left->height : 0;
-          int r_hr = p->right->right ? p->right->right->height : 0;
-          if(r_hr >= r_hl) {{
-            {self.rotate_left(f.target, f.p)};
-          }} else {{
-            {self.rotate_right(f.target, f"{f.p}->right")};
-            {self.rotate_left(f.target, f.p)};
-          }}
-          return {f.p}->parent;
-        }}
-        return {f.p};
+        n->parent = ((size_t)l) | (n->parent & 3);
       """
 
     with self.method(None, "transplant", {"target": inout(self), "u": Callable.Parameter(self._node_p), "v": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Transplant subtrees (internal)") as f:
       f.code = f"""
+        {self.node}* p;
         assert(target);
         assert(u);
-        if(!u->parent) target->root = v;
-        else if(u == u->parent->left) u->parent->left = v;
-        else u->parent->right = v;
-        if(v) v->parent = u->parent;
+        p = ({self.node}*)(u->parent & ~(size_t)3);
+        if(!p) target->root = v;
+        else if(u == p->left) p->left = v;
+        else p->right = v;
+        if(v) v->parent = ((size_t)p) | (v->parent & 3);
       """
 
     with self.contains as f:
@@ -226,22 +186,89 @@ class Set(_StructRenderer, Set):
           curr = order > 0 ? curr->left : curr->right;
         }}
         n = {self.memory.allocate(self.node)};
+        assert(((size_t)n & 3) == 0); /* guard assert: verify allocated node is at least 4-byte aligned for 2-bit balance tag */
         {self.element.copy(node_element, f.element)};
         n->left = n->right = NULL;
-        n->parent = parent;
-        n->height = 1;
+        n->parent = ((size_t)parent) | 0; /* balance factor 0 (balanced) */
         if(!parent) target->root = n;
         else if(order > 0) parent->left = n;
         else parent->right = n;
         ++target->size;
 
-        /* Rebalance: bottom-up */
+        /* Rebalance: bottom-up balance factor adjustment */
+        curr = n;
         p = parent;
         while(p) {{
-          int old_height = p->height;
-          p = {self.rebalance_node(f.target, "p")};
-          if(p->height == old_height) break;
-          p = p->parent;
+          int p_bf = (int)(p->parent & 3);
+          if(curr == p->left) {{
+            if(p_bf == 1) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+              break;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 2;
+              curr = p;
+              p = ({self.node}*)(p->parent & ~(size_t)3);
+            }} else {{
+              {self.node}* b = p->left;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 2) {{
+                {self.rotate_right(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.node}* c = b->right;
+                int c_bf = (int)(c->parent & 3);
+                {self.rotate_left(f.target, "b")};
+                {self.rotate_right(f.target, "p")};
+                if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 1;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 2;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+              break;
+            }}
+          }} else {{
+            if(p_bf == 2) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+              break;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 1;
+              curr = p;
+              p = ({self.node}*)(p->parent & ~(size_t)3);
+            }} else {{
+              {self.node}* b = p->right;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 1) {{
+                {self.rotate_left(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.node}* c = b->left;
+                int c_bf = (int)(c->parent & 3);
+                {self.rotate_right(f.target, "b")};
+                {self.rotate_left(f.target, "p")};
+                if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 2;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 1;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+              break;
+            }}
+          }}
         }}
         return 1;
       """
@@ -252,7 +279,8 @@ class Set(_StructRenderer, Set):
         {self.node}* z;
         {self.node}* y;
         {self.node}* p;
-        {self.node}* start_rebalance;
+        {self.node}* start_rebalance = NULL;
+        int child_was_left = 0;
         int order;
         assert(target);
         z = target->root;
@@ -264,26 +292,30 @@ class Set(_StructRenderer, Set):
         if(!z) return 0;
 
         if(!z->left) {{
-          start_rebalance = z->parent;
+          start_rebalance = ({self.node}*)(z->parent & ~(size_t)3);
+          if(start_rebalance) child_was_left = (z == start_rebalance->left);
           {self.transplant(f.target, "z", "z->right")};
         }} else if(!z->right) {{
-          start_rebalance = z->parent;
+          start_rebalance = ({self.node}*)(z->parent & ~(size_t)3);
+          if(start_rebalance) child_was_left = (z == start_rebalance->left);
           {self.transplant(f.target, "z", "z->left")};
         }} else {{
           y = z->right;
           while(y->left) y = y->left;
-          if(y->parent == z) {{
+          if(({self.node}*)(y->parent & ~(size_t)3) == z) {{
             start_rebalance = y;
+            child_was_left = 0;
           }} else {{
-            start_rebalance = y->parent;
+            start_rebalance = ({self.node}*)(y->parent & ~(size_t)3);
+            child_was_left = 1;
             {self.transplant(f.target, "y", "y->right")};
             y->right = z->right;
-            y->right->parent = y;
+            y->right->parent = ((size_t)y) | (y->right->parent & 3);
           }}
           {self.transplant(f.target, "z", "y")};
           y->left = z->left;
-          y->left->parent = y;
-          y->height = z->height;
+          y->left->parent = ((size_t)y) | (y->left->parent & 3);
+          y->parent = (y->parent & ~(size_t)3) | (z->parent & 3);
         }}
 
         {_destroy_z_element};
@@ -292,8 +324,85 @@ class Set(_StructRenderer, Set):
 
         p = start_rebalance;
         while(p) {{
-          p = {self.rebalance_node(f.target, "p")};
-          p = p->parent;
+          {self.node}* next_p = ({self.node}*)(p->parent & ~(size_t)3);
+          int next_child_was_left = next_p ? (p == next_p->left) : 0;
+          int p_bf = (int)(p->parent & 3);
+
+          if(child_was_left) {{
+            if(p_bf == 2) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 1;
+              break;
+            }} else {{
+              {self.node}* b = p->right;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 0) {{
+                {self.rotate_left(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 1;
+                b->parent = (b->parent & ~(size_t)3) | 2;
+                break;
+              }} else if(b_bf == 1) {{
+                {self.rotate_left(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.node}* c = b->left;
+                int c_bf = (int)(c->parent & 3);
+                {self.rotate_right(f.target, "b")};
+                {self.rotate_left(f.target, "p")};
+                if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 2;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 1;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+            }}
+          }} else {{
+            if(p_bf == 1) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 2;
+              break;
+            }} else {{
+              {self.node}* b = p->left;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 0) {{
+                {self.rotate_right(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 2;
+                b->parent = (b->parent & ~(size_t)3) | 1;
+                break;
+              }} else if(b_bf == 2) {{
+                {self.rotate_right(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.node}* c = b->right;
+                int c_bf = (int)(c->parent & 3);
+                {self.rotate_left(f.target, "b")};
+                {self.rotate_right(f.target, "p")};
+                if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 1;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 2;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+            }}
+          }}
+          p = next_p;
+          child_was_left = next_child_was_left;
         }}
         return 1;
       """
@@ -377,8 +486,7 @@ class Set(_StructRenderer, Set):
         {self.element} element;
         {self.node}* left;
         {self.node}* right;
-        {self.node}* parent;
-        int height; /**< @private */
+        {std.size_t} parent; /**< @private high bits: parent pointer; bits 0-1: balance factor (0: equal, 1: right-heavy, 2: left-heavy) */
       }};
     """)
     super()._render_struct(stream, header)
@@ -460,10 +568,10 @@ class Range(_Range, Forward):
           target->node = target->node->right;
           while(target->node->left) target->node = target->node->left;
         }} else {{
-          p = target->node->parent;
+          p = ({self.iterable.node}*)(target->node->parent & ~(size_t)3);
           while(p && target->node == p->right) {{
             target->node = p;
-            p = p->parent;
+            p = ({self.iterable.node}*)(p->parent & ~(size_t)3);
           }}
           target->node = p;
         }}

@@ -11,7 +11,7 @@ class Set(_StructRenderer, Set):
   brief = "Ordered set of distinct values implemented as a red-black tree - iterates in sorted order"
 
   def __init__(self, *args, dependencies=(), **kws):
-    super().__init__(*args, dependencies=dependencies, **kws)
+    super().__init__(*args, dependencies=(*dependencies, std.size_t), **kws)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.range = Range(self)
@@ -32,6 +32,7 @@ class Set(_StructRenderer, Set):
       Supports one way element traversal via the corresponding @ref {self.range} iterator - the elements are yielded in sorted order.
 
       Implemented as a red-black tree with strictly bounded height <= 2 * log2(n + 1).
+      Node color is encoded directly into the lowest bit of the parent pointer, eliminating struct padding.
       The closest C++ equivalent is [std::set<>](https://cppreference.com/cpp/container/set).
     """
 
@@ -71,7 +72,7 @@ class Set(_StructRenderer, Set):
           }} else if(n->right) {{
             n = n->right;
           }} else {{
-            p = n->parent;
+            p = ({self.node}*)(n->parent & ~(size_t)1);
             if(p) {{
               if(p->left == n) p->left = NULL; else p->right = NULL;
             }}
@@ -85,45 +86,51 @@ class Set(_StructRenderer, Set):
     with self.method(None, ("rotate", "left"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate left (internal)") as f:
       f.code = f"""
         {self.node}* r;
+        {self.node}* p;
         assert(target);
         assert(n);
         r = n->right;
         assert(r);
         n->right = r->left;
-        if(r->left) r->left->parent = n;
-        r->parent = n->parent;
-        if(!n->parent) target->root = r;
-        else if(n == n->parent->left) n->parent->left = r;
-        else n->parent->right = r;
+        if(r->left) r->left->parent = ((size_t)n) | (r->left->parent & 1);
+        p = ({self.node}*)(n->parent & ~(size_t)1);
+        r->parent = ((size_t)p) | (r->parent & 1);
+        if(!p) target->root = r;
+        else if(n == p->left) p->left = r;
+        else p->right = r;
         r->left = n;
-        n->parent = r;
+        n->parent = ((size_t)r) | (n->parent & 1);
       """
 
     with self.method(None, ("rotate", "right"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate right (internal)") as f:
       f.code = f"""
         {self.node}* l;
+        {self.node}* p;
         assert(target);
         assert(n);
         l = n->left;
         assert(l);
         n->left = l->right;
-        if(l->right) l->right->parent = n;
-        l->parent = n->parent;
-        if(!n->parent) target->root = l;
-        else if(n == n->parent->left) n->parent->left = l;
-        else n->parent->right = l;
+        if(l->right) l->right->parent = ((size_t)n) | (l->right->parent & 1);
+        p = ({self.node}*)(n->parent & ~(size_t)1);
+        l->parent = ((size_t)p) | (l->parent & 1);
+        if(!p) target->root = l;
+        else if(n == p->left) p->left = l;
+        else p->right = l;
         l->right = n;
-        n->parent = l;
+        n->parent = ((size_t)l) | (n->parent & 1);
       """
 
     with self.method(None, "transplant", {"target": inout(self), "u": Callable.Parameter(self._node_p), "v": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Transplant subtrees (internal)") as f:
       f.code = f"""
+        {self.node}* p;
         assert(target);
         assert(u);
-        if(!u->parent) target->root = v;
-        else if(u == u->parent->left) u->parent->left = v;
-        else u->parent->right = v;
-        if(v) v->parent = u->parent;
+        p = ({self.node}*)(u->parent & ~(size_t)1);
+        if(!p) target->root = v;
+        else if(u == p->left) p->left = v;
+        else p->right = v;
+        if(v) v->parent = ((size_t)p) | (v->parent & 1);
       """
 
     with self.contains as f:
@@ -181,59 +188,60 @@ class Set(_StructRenderer, Set):
           curr = order > 0 ? curr->left : curr->right;
         }}
         n = {self.memory.allocate(self.node)};
+        assert(((size_t)n & 1) == 0); /* guard assert: verify allocated node is at least 2-byte aligned for 1-bit color tag */
         {self.element.copy(node_element, f.element)};
         n->left = n->right = NULL;
-        n->parent = parent;
-        n->color = 1; /* RED */
+        n->parent = ((size_t)parent) | 1; /* RED */
         if(!parent) target->root = n;
         else if(order > 0) parent->left = n;
         else parent->right = n;
         ++target->size;
 
         /* Rebalance: CLRS fixup */
-        while(n->parent && n->parent->color == 1) {{
-          p = n->parent;
-          g = p->parent;
+        while(n->parent & ~(size_t)1) {{
+          p = ({self.node}*)(n->parent & ~(size_t)1);
+          if((p->parent & 1) == 0) break; /* parent is black */
+          g = ({self.node}*)(p->parent & ~(size_t)1);
           if(!g) break;
           if(p == g->left) {{
             u = g->right;
-            if(u && u->color == 1) {{
-              p->color = 0;
-              u->color = 0;
-              g->color = 1;
+            if(u && (u->parent & 1)) {{
+              p->parent &= ~(size_t)1; /* black */
+              u->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
               n = g;
             }} else {{
               if(n == p->right) {{
                 n = p;
                 {self.rotate_left(f.target, "n")};
-                p = n->parent;
-                g = p->parent;
+                p = ({self.node}*)(n->parent & ~(size_t)1);
+                g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
-              p->color = 0;
-              g->color = 1;
+              p->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
               {self.rotate_right(f.target, "g")};
             }}
           }} else {{
             u = g->left;
-            if(u && u->color == 1) {{
-              p->color = 0;
-              u->color = 0;
-              g->color = 1;
+            if(u && (u->parent & 1)) {{
+              p->parent &= ~(size_t)1; /* black */
+              u->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
               n = g;
             }} else {{
               if(n == p->left) {{
                 n = p;
                 {self.rotate_right(f.target, "n")};
-                p = n->parent;
-                g = p->parent;
+                p = ({self.node}*)(n->parent & ~(size_t)1);
+                g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
-              p->color = 0;
-              g->color = 1;
+              p->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
               {self.rotate_left(f.target, "g")};
             }}
           }}
         }}
-        target->root->color = 0;
+        target->root->parent &= ~(size_t)1; /* root is black */
         return 1;
       """
 
@@ -257,32 +265,32 @@ class Set(_StructRenderer, Set):
         if(!z) return 0;
 
         y = z;
-        y_original_color = y->color;
+        y_original_color = (unsigned char)(y->parent & 1);
         if(!z->left) {{
           x = z->right;
-          x_parent = z->parent;
+          x_parent = ({self.node}*)(z->parent & ~(size_t)1);
           {self.transplant(f.target, "z", "z->right")};
         }} else if(!z->right) {{
           x = z->left;
-          x_parent = z->parent;
+          x_parent = ({self.node}*)(z->parent & ~(size_t)1);
           {self.transplant(f.target, "z", "z->left")};
         }} else {{
           y = z->right;
           while(y->left) y = y->left;
-          y_original_color = y->color;
+          y_original_color = (unsigned char)(y->parent & 1);
           x = y->right;
-          if(y->parent == z) {{
+          if(({self.node}*)(y->parent & ~(size_t)1) == z) {{
             x_parent = y;
           }} else {{
-            x_parent = y->parent;
+            x_parent = ({self.node}*)(y->parent & ~(size_t)1);
             {self.transplant(f.target, "y", "y->right")};
             y->right = z->right;
-            y->right->parent = y;
+            y->right->parent = ((size_t)y) | (y->right->parent & 1);
           }}
           {self.transplant(f.target, "z", "y")};
           y->left = z->left;
-          y->left->parent = y;
-          y->color = z->color;
+          y->left->parent = ((size_t)y) | (y->left->parent & 1);
+          y->parent = (y->parent & ~(size_t)1) | (z->parent & 1);
         }}
 
         {_destroy_z_element};
@@ -290,66 +298,66 @@ class Set(_StructRenderer, Set):
         --target->size;
 
         if(y_original_color == 0) {{
-          while(x != target->root && (!x || x->color == 0)) {{
+          while(x != target->root && (!x || (x->parent & 1) == 0)) {{
             if(x == x_parent->left) {{
               w = x_parent->right;
-              if(w && w->color == 1) {{
-                w->color = 0;
-                x_parent->color = 1;
+              if(w && (w->parent & 1)) {{
+                w->parent &= ~(size_t)1;
+                x_parent->parent |= 1;
                 {self.rotate_left(f.target, "x_parent")};
                 w = x_parent->right;
               }}
-              if((!w || !w->left || w->left->color == 0) && (!w || !w->right || w->right->color == 0)) {{
-                if(w) w->color = 1;
+              if((!w || !w->left || (w->left->parent & 1) == 0) && (!w || !w->right || (w->right->parent & 1) == 0)) {{
+                if(w) w->parent |= 1;
                 x = x_parent;
-                x_parent = x->parent;
+                x_parent = ({self.node}*)(x->parent & ~(size_t)1);
               }} else {{
-                if(!w || !w->right || w->right->color == 0) {{
-                  if(w && w->left) w->left->color = 0;
-                  if(w) w->color = 1;
+                if(!w || !w->right || (w->right->parent & 1) == 0) {{
+                  if(w && w->left) w->left->parent &= ~(size_t)1;
+                  if(w) w->parent |= 1;
                   {self.rotate_right(f.target, "w")};
                   w = x_parent->right;
                 }}
                 if(w) {{
-                  w->color = x_parent->color;
-                  if(w->right) w->right->color = 0;
+                  w->parent = (w->parent & ~(size_t)1) | (x_parent->parent & 1);
+                  if(w->right) w->right->parent &= ~(size_t)1;
                 }}
-                x_parent->color = 0;
+                x_parent->parent &= ~(size_t)1;
                 {self.rotate_left(f.target, "x_parent")};
                 x = target->root;
                 break;
               }}
             }} else {{
               w = x_parent->left;
-              if(w && w->color == 1) {{
-                w->color = 0;
-                x_parent->color = 1;
+              if(w && (w->parent & 1)) {{
+                w->parent &= ~(size_t)1;
+                x_parent->parent |= 1;
                 {self.rotate_right(f.target, "x_parent")};
                 w = x_parent->left;
               }}
-              if((!w || !w->left || w->left->color == 0) && (!w || !w->right || w->right->color == 0)) {{
-                if(w) w->color = 1;
+              if((!w || !w->left || (w->left->parent & 1) == 0) && (!w || !w->right || (w->right->parent & 1) == 0)) {{
+                if(w) w->parent |= 1;
                 x = x_parent;
-                x_parent = x->parent;
+                x_parent = ({self.node}*)(x->parent & ~(size_t)1);
               }} else {{
-                if(!w || !w->left || w->left->color == 0) {{
-                  if(w && w->right) w->right->color = 0;
-                  if(w) w->color = 1;
+                if(!w || !w->left || (w->left->parent & 1) == 0) {{
+                  if(w && w->right) w->right->parent &= ~(size_t)1;
+                  if(w) w->parent |= 1;
                   {self.rotate_left(f.target, "w")};
                   w = x_parent->left;
                 }}
                 if(w) {{
-                  w->color = x_parent->color;
-                  if(w->left) w->left->color = 0;
+                  w->parent = (w->parent & ~(size_t)1) | (x_parent->parent & 1);
+                  if(w->left) w->left->parent &= ~(size_t)1;
                 }}
-                x_parent->color = 0;
+                x_parent->parent &= ~(size_t)1;
                 {self.rotate_right(f.target, "x_parent")};
                 x = target->root;
                 break;
               }}
             }}
           }}
-          if(x) x->color = 0;
+          if(x) x->parent &= ~(size_t)1;
         }}
         return 1;
       """
@@ -433,8 +441,7 @@ class Set(_StructRenderer, Set):
         {self.element} element;
         {self.node}* left;
         {self.node}* right;
-        {self.node}* parent;
-        unsigned char color; /**< @private 0: black, 1: red */
+        {std.size_t} parent; /**< @private high bits: parent pointer; bit 0: color (0: black, 1: red) */
       }};
     """)
     super()._render_struct(stream, header)
@@ -516,10 +523,10 @@ class Range(_Range, Forward):
           target->node = target->node->right;
           while(target->node->left) target->node = target->node->left;
         }} else {{
-          p = target->node->parent;
+          p = ({self.iterable.node}*)(target->node->parent & ~(size_t)1);
           while(p && target->node == p->right) {{
             target->node = p;
-            p = p->parent;
+            p = ({self.iterable.node}*)(p->parent & ~(size_t)1);
           }}
           target->node = p;
         }}
