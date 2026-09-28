@@ -166,7 +166,7 @@ class Set(_StructRenderer, Set):
           if(order == 0) return {node_element.bind(f.result)};
           n = order > 0 ? n->left : n->right;
         }}
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.put as f:

@@ -201,12 +201,12 @@ class Set(_StructRenderer, Set):
         size_t bucket;
         {self.node}* n;
         assert(target);
-        if(!target->buckets) return ({self.element.view_type})0;
+        if(!target->buckets) return ({self.element.view_type})NULL;
         bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
         for(n = target->buckets[bucket]; n; n = n->next) {{
           if({self.element.hash_lookup_equal(node_element, f.element)}) return {node_element.bind(f.result)};
         }}
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.copy as f:

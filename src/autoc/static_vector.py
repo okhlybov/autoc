@@ -193,7 +193,7 @@ class Vector(_StructRenderer, Indexed, Sequence):
         switch({f.index}) {{
           {" ".join(cases)}
         }}
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.set as f:

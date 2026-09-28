@@ -53,7 +53,7 @@ class Map(Mapping):
           if(order == 0) return {entry.element_view(node_entry).bind(self.element.view_type)};
           n = order > 0 ? n->left : n->right;
         }}
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.set as f:

@@ -75,7 +75,7 @@ class Map(Mapping):
           }}
         }}
         not_found:
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.set as f:

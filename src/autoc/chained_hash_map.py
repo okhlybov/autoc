@@ -47,12 +47,12 @@ class Map(Mapping):
         size_t bucket;
         {n.definition};
         assert(target);
-        if(!target->set.buckets) return ({self.element.view_type})0;
+        if(!target->set.buckets) return ({self.element.view_type})NULL;
         bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
         for(n = target->set.buckets[bucket]; n; n = n->next) {{
           if({self.index.equal(node_index, f.index)}) return {entry.element_view(node_entry).bind(self.element.view_type)};
         }}
-        return ({self.element.view_type})0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.set as f:
@@ -61,7 +61,7 @@ class Map(Mapping):
         {n.definition};
         assert(target);
         bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
-        for(n = (target->set.buckets ? target->set.buckets[bucket] : ({n.type})0); n; n = n->next) {{
+        for(n = (target->set.buckets ? target->set.buckets[bucket] : ({n.type})NULL); n; n = n->next) {{
           if({self.index.equal(node_index, f.index)}) break;
         }}
         if(n) {{
