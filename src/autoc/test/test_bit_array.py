@@ -1,7 +1,7 @@
 from autoc.test import *
-from autoc.bit_set import Set
+from autoc.bit_array import Array
 
-x = Type(type := Set("test_bitset", 20))
+x = Type(type := Array("test_bitarray", 20))
 
 t = type.variable("t")
 t1 = type.variable("t1")

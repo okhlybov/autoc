@@ -3,3 +3,9 @@ build
 html
 latex
 *_auto.*
+*.state
+/.vscode/
+/doc/
+/test/
+/src/test/
+/src/.vscode/

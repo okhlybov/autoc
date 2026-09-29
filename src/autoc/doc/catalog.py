@@ -34,7 +34,8 @@ import autoc.variant
 import autoc.reference
 import autoc.static_vector
 import autoc.array
-import autoc.bit_set
+import autoc.bit_array
+import autoc.bit_vector
 import autoc.circular_buffer
 
 
@@ -172,10 +173,14 @@ class StringBuffer(autoc.string_buffer.Buffer):
     return f"{self.name}<{self.element}>"
 
 
-class BitSet(autoc.bit_set.Set):
+class BitArray(autoc.bit_array.Array):
   @property
   def _doxygen_type(self):
     return f"{self.name}<N>"
+
+
+class BitVector(autoc.bit_vector.Vector):
+  pass
 
 
 # Sets
@@ -304,7 +309,8 @@ def configure_module(module):
   module.add(Array("Array", T, 4))
   module.add(AVLMap("AVLMap", T, K))
   module.add(AVLSet("AVLSet", T))
-  module.add(BitSet("BitSet", 64))
+  module.add(BitArray("BitArray", 64))
+  module.add(BitVector("BitVector"))
   module.add(ChainedHashMap("ChainedHashMap", T, K))
   module.add(ChainedHashSet("ChainedHashSet", T))
   module.add(Counted(T, name="Counted"))

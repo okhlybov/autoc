@@ -250,8 +250,8 @@ consumed 23
 | `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
 | `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
-| `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map |
-| `autoc.bit_set` | `Set` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
+| `autoc.bit_array` | `Array` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
+| `autoc.bit_vector` | `Vector` | dynamically resizable packed bit vector, amortized O(1) push/pop, set algebra |
 | `autoc.record` | `Record` | user-defined field aggregates |
 | `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
 | `autoc.reference` | `Raw`, `Counted` | unmanaged / reference-counted handles |

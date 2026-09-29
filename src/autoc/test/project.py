@@ -27,7 +27,7 @@ def generate(directory=".", project="test"):
     cmake_lists = pathlib.Path("CMakeLists.txt")
     if cmake_lists.exists():
       content = cmake_lists.read_text(encoding="utf-8")
-      content = content.replace(f"${{PROJECT_NAME}}.c", "").replace(f"{project}.c", "")
+      content = content.replace(f"${{PROJECT_NAME}}.c", f"${{{project}_SOURCES}}").replace(f"{project}.c", f"${{{project}_SOURCES}}")
       cmake_lists.write_text(content, encoding="utf-8")
 
     # 4. Write test-specific {project}.py

@@ -7,6 +7,7 @@ from autoc.chained_hash_map import Map as ChainedHashMap
 from autoc.treap_set import Set as TreapSet
 from autoc.treap_map import Map as TreapMap
 from autoc.bit_set import Set as BitSet
+from autoc.bit_vector import Vector as BitVector
 from autoc.string import String
 from autoc.string_buffer import Buffer as StringBuffer
 
@@ -87,6 +88,20 @@ assert bs_noalg.count.active
 bs_alg = BitSet("bs_alg", 32)
 assert bs_alg.assign_union.active
 assert bs_alg.is_subset.active
+
+bv_noalg = BitVector("bv_noalg", algebraic_operations=False)
+assert not bv_noalg.assign_union.active
+assert not bv_noalg.assign_intersection.active
+assert not bv_noalg.assign_difference.active
+assert not bv_noalg.assign_symmetric_difference.active
+assert not bv_noalg.is_subset.active
+assert bv_noalg.test.active
+assert bv_noalg.set.active
+assert bv_noalg.count.active
+
+bv_alg = BitVector("bv_alg")
+assert bv_alg.assign_union.active
+assert bv_alg.is_subset.active
 
 
 # 3. Verify formatting_operations on String and StringBuffer
