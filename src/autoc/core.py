@@ -494,6 +494,9 @@ class Composite(_Named, _Traitful):
       # Exchanging the whole representations keeps both values valid - for the containers
       # this is the O(1) bookkeeping exchange regardless of the element type
       f.code = f"""
+        #ifdef __POCC__
+          volatile /* A workaround for the Pelles C 14.50 optimization bug */
+        #endif
         {self} temp;
         temp = *left;
         *left = *right;
