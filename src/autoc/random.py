@@ -61,7 +61,7 @@ class RandomSeeder(Code):
       #include <time.h>
       #ifdef _WIN32
         #include <process.h>
-        #if defined(AUTOC_MSVC)
+        #if defined(AUTOC_MSVC) || defined(__POCC__)
           #define _autoc_getpid() ((unsigned)_getpid())
         #else
           #define _autoc_getpid() ((unsigned)getpid())
