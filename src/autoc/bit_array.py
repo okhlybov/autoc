@@ -360,8 +360,3 @@ class Array(_StructRenderer, Composite):
         unsigned char words[{self._word_count}]; /**< @private */
       }};
     """)
-
-
-# Aliases
-BitArray = Array
-Set = Array

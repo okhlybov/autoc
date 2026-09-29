@@ -258,8 +258,8 @@ class Vector(_StructRenderer, Composite):
         }}
       """
 
-    with self.method(None, ("shrink", "to", "fit"), {"target": inout(self)},
-      brief="Shrink capacity to match current size",
+    with self.method(None, "compact", {"target": inout(self)},
+      brief="Compact capacity to match current size",
       description="""
         Releases unused capacity, reducing memory allocation to the minimum needed for `size` bits.
 
@@ -800,7 +800,3 @@ class Vector(_StructRenderer, Composite):
         size_t capacity; /**< @private */
       }};
     """)
-
-
-# Aliases
-BitVector = Vector

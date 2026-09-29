@@ -8,6 +8,7 @@
 # its generated C identifier so an entry in the manual matches the generated code.
 
 import autoc.core
+import autoc.std as std
 import autoc.list
 import autoc.deque
 import autoc.vector

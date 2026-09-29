@@ -50,6 +50,21 @@ x.unit(f"{type.pop}(): pop bits from bitvector", f"""
   TEST_TRUE( {type.empty(t)} );
 """)
 
+x.unit(f"{type.reserve}()/{type.compact}(): capacity management", f"""
+  {type.reserve(t, 200)};
+  TEST_TRUE( {type.capacity(t)} >= 200 );
+  {type.push(t, 1)};
+  {type.push(t, 0)};
+  {type.push(t, 1)};
+  TEST_EQUAL( {type.size(t)}, 3 );
+  {type.compact(t)};
+  TEST_TRUE( {type.capacity(t)} >= 3 );
+  TEST_TRUE( {type.capacity(t)} < 200 );
+  TEST_EQUAL( {type.get(t, 0)}, 1 );
+  TEST_EQUAL( {type.get(t, 1)}, 0 );
+  TEST_EQUAL( {type.get(t, 2)}, 1 );
+""")
+
 x.unit(f"{type.set}()/get()/flip(): bit modifications", f"""
   size_t i;
   {type.resize(t, 70)};

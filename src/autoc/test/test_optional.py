@@ -6,7 +6,7 @@ from autoc.chained_hash_set import Set as ChainedHashSet
 from autoc.chained_hash_map import Map as ChainedHashMap
 from autoc.treap_set import Set as TreapSet
 from autoc.treap_map import Map as TreapMap
-from autoc.bit_set import Set as BitSet
+from autoc.bit_array import Array as BitArray
 from autoc.bit_vector import Vector as BitVector
 from autoc.string import String
 from autoc.string_buffer import Buffer as StringBuffer
@@ -75,19 +75,19 @@ assert not ts_noalg.symmetric_difference.active
 assert ts_noalg.put.active
 assert ts_noalg.contains.active
 
-bs_noalg = BitSet("bs_noalg", 32, algebraic_operations=False)
-assert not bs_noalg.assign_union.active
-assert not bs_noalg.assign_intersection.active
-assert not bs_noalg.assign_difference.active
-assert not bs_noalg.assign_symmetric_difference.active
-assert not bs_noalg.is_subset.active
-assert bs_noalg.test.active
-assert bs_noalg.set.active
-assert bs_noalg.count.active
+ba_noalg = BitArray("ba_noalg", 32, algebraic_operations=False)
+assert not ba_noalg.assign_union.active
+assert not ba_noalg.assign_intersection.active
+assert not ba_noalg.assign_difference.active
+assert not ba_noalg.assign_symmetric_difference.active
+assert not ba_noalg.is_subset.active
+assert ba_noalg.test.active
+assert ba_noalg.set.active
+assert ba_noalg.count.active
 
-bs_alg = BitSet("bs_alg", 32)
-assert bs_alg.assign_union.active
-assert bs_alg.is_subset.active
+ba_alg = BitArray("ba_alg", 32)
+assert ba_alg.assign_union.active
+assert ba_alg.is_subset.active
 
 bv_noalg = BitVector("bv_noalg", algebraic_operations=False)
 assert not bv_noalg.assign_union.active
@@ -169,22 +169,22 @@ xv.unit(f"{type_v}: operations work when sorting is disabled", f"""
   TEST_EQUAL( {type_v.size(tv)}, 2 );
 """)
 
-xbs = Type(type_bs := BitSet("opt_bitset", 16, algebraic_operations=False))
-tbs = type_bs.variable("tbs")
-xbs.setup(f"""
-  {tbs.definition};
-  {type_bs.create(tbs)};
+xba = Type(type_ba := BitArray("opt_bitarray", 16, algebraic_operations=False))
+tba = type_ba.variable("tba")
+xba.setup(f"""
+  {tba.definition};
+  {type_ba.create(tba)};
 """)
-xbs.unit(f"{type_bs}: bitset operations work when algebra is disabled", f"""
-  {type_bs.set(tbs, 3)};
-  {type_bs.set(tbs, 7)};
-  TEST_TRUE( {type_bs.test(tbs, 3)} );
-  TEST_TRUE( {type_bs.test(tbs, 7)} );
-  TEST_FALSE( {type_bs.test(tbs, 5)} );
-  TEST_EQUAL( {type_bs.count(tbs)}, 2 );
-  {type_bs.clear(tbs, 3)};
-  TEST_FALSE( {type_bs.test(tbs, 3)} );
-  TEST_EQUAL( {type_bs.count(tbs)}, 1 );
+xba.unit(f"{type_ba}: bit array operations work when algebra is disabled", f"""
+  {type_ba.set(tba, 3)};
+  {type_ba.set(tba, 7)};
+  TEST_TRUE( {type_ba.test(tba, 3)} );
+  TEST_TRUE( {type_ba.test(tba, 7)} );
+  TEST_FALSE( {type_ba.test(tba, 5)} );
+  TEST_EQUAL( {type_ba.count(tba)}, 2 );
+  {type_ba.clear(tba, 3)};
+  TEST_FALSE( {type_ba.test(tba, 3)} );
+  TEST_EQUAL( {type_ba.count(tba)}, 1 );
 """)
 
 xsb = Type(type_sb := StringBuffer("opt_string_buffer", formatting_operations=False))
@@ -222,12 +222,19 @@ assert s_alg.is_subset.optional_group == "algebraic_operations"
 assert s_alg.is_superset.optional_group == "algebraic_operations"
 assert s_alg.put.optional_group is None
 
-assert bs_alg.assign_union.optional_group == "algebraic_operations"
-assert bs_alg.assign_intersection.optional_group == "algebraic_operations"
-assert bs_alg.assign_difference.optional_group == "algebraic_operations"
-assert bs_alg.assign_symmetric_difference.optional_group == "algebraic_operations"
-assert bs_alg.is_subset.optional_group == "algebraic_operations"
-assert bs_alg.test.optional_group is None
+assert ba_alg.assign_union.optional_group == "algebraic_operations"
+assert ba_alg.assign_intersection.optional_group == "algebraic_operations"
+assert ba_alg.assign_difference.optional_group == "algebraic_operations"
+assert ba_alg.assign_symmetric_difference.optional_group == "algebraic_operations"
+assert ba_alg.is_subset.optional_group == "algebraic_operations"
+assert ba_alg.test.optional_group is None
+
+assert bv_alg.assign_union.optional_group == "algebraic_operations"
+assert bv_alg.assign_intersection.optional_group == "algebraic_operations"
+assert bv_alg.assign_difference.optional_group == "algebraic_operations"
+assert bv_alg.assign_symmetric_difference.optional_group == "algebraic_operations"
+assert bv_alg.is_subset.optional_group == "algebraic_operations"
+assert bv_alg.test.optional_group is None
 
 assert str_format.format.optional_group == "formatting_operations"
 assert str_format.format_args.optional_group == "formatting_operations"
