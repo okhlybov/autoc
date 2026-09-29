@@ -149,14 +149,27 @@ add_autoc_module(
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c)
-target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME}-auto)
+target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME}-autoc)
 """
 
 
 _autoc_cmake = """
 cmake_minimum_required(VERSION 3.15)
 
-find_package(Python 3.13 REQUIRED)
+if(NOT DEFINED AUTOC)
+  if(DEFINED AUTOC_MODULE_SOURCE AND EXISTS "${AUTOC_MODULE_SOURCE}")
+    set(_autoc_default ON)
+  elseif(DEFINED PROJECT_NAME AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.py")
+    set(_autoc_default ON)
+  else()
+    set(_autoc_default OFF)
+  endif()
+  option(AUTOC "Enable AutoC code generation" ${_autoc_default})
+endif()
+
+if(AUTOC)
+  find_package(Python 3.13 REQUIRED)
+endif()
 
 function(add_autoc_module module)
   set(args DIRECTORY MAIN_DEPENDENCY)
@@ -165,29 +178,42 @@ function(add_autoc_module module)
   if(NOT key_DIRECTORY)
     set(key_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
-  if(NOT key_MAIN_DEPENDENCY)
-    set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
-  endif()
-  set(module_state ${key_DIRECTORY}/${module}.state)
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
   set(module_target ${module}-generate)
-  if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake})
-    message(CHECK_START "Bootstrapping AutoC module " ${module})
-    execute_process(WORKING_DIRECTORY ${key_DIRECTORY} COMMAND ${key_COMMAND} VERBATIM)
-  endif()
-  include(${module_cmake})
-  add_custom_command(
-    OUTPUT ${module_state}
-    BYPRODUCTS ${module_cmake}
-    MAIN_DEPENDENCY ${key_MAIN_DEPENDENCY}
-    DEPENDS ${key_DEPENDS}
-    WORKING_DIRECTORY ${key_DIRECTORY}
-    COMMAND ${key_COMMAND}
-    VERBATIM
-  )
-  add_custom_target(${module_target} DEPENDS ${module_state})
-  if(TARGET ${module}-auto)
-    add_dependencies(${module}-auto ${module_target})
+
+  if(AUTOC)
+    if(NOT key_MAIN_DEPENDENCY)
+      set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
+    endif()
+    set(module_state ${key_DIRECTORY}/${module}.state)
+    if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake})
+      message(CHECK_START "Bootstrapping AutoC module " ${module})
+      execute_process(WORKING_DIRECTORY ${key_DIRECTORY} COMMAND ${key_COMMAND} VERBATIM)
+    endif()
+    include(${module_cmake})
+    add_custom_command(
+      OUTPUT ${module_state}
+      BYPRODUCTS ${module_cmake}
+      MAIN_DEPENDENCY ${key_MAIN_DEPENDENCY}
+      DEPENDS ${key_DEPENDS}
+      WORKING_DIRECTORY ${key_DIRECTORY}
+      COMMAND ${key_COMMAND}
+      VERBATIM
+    )
+    add_custom_target(${module_target} DEPENDS ${module_state})
+    if(TARGET ${module}-autoc)
+      add_dependencies(${module}-autoc ${module_target})
+    elseif(TARGET ${module}-auto)
+      add_dependencies(${module}-auto ${module_target})
+    endif()
+  else()
+    if(NOT EXISTS ${module_cmake})
+      message(FATAL_ERROR "AutoC: Pre-generated file '${module_cmake}' not found and AUTOC code generation is disabled.")
+    endif()
+    include(${module_cmake})
+    if(NOT TARGET ${module_target})
+      add_custom_target(${module_target})
+    endif()
   endif()
 endfunction()
 """

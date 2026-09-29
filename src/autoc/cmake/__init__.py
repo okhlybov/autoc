@@ -2,18 +2,19 @@ def CMake(module):
   cmake = f"{module.name}.cmake"
   sources = " ".join([f"${{CMAKE_CURRENT_SOURCE_DIR}}/{s.file_name}" for s in module.sources])
   # A documentation-only module (source_count = 0) emits no translation units and
-  # therefore declares no library - only the header the documentat  ion is built from
+  # therefore declares no library - only the header the documentation is built from
   library = f"""
-    add_library({module.name}-auto OBJECT ${{{module.name}_SOURCES}})
-    target_include_directories({module.name}-auto INTERFACE $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}>)
-  """ if sources else ""
+    add_library({module.name}-autoc OBJECT ${{{module.name}_SOURCES}})
+    target_include_directories({module.name}-autoc INTERFACE $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}>)
+  """ if sources else str()
   contents = f"""
     set({module.name}_HEADER ${{CMAKE_CURRENT_SOURCE_DIR}}/{module.header.file_name})
     set({module.name}_SOURCES {sources}){library}
   """
   try:
     with open(cmake, "r") as f:
-      if not f.read() == contents: raise Exception()
+      if not f.read() == contents:
+        raise Exception()
   except:
     with open(cmake, "w") as f:
       f.write(contents)
