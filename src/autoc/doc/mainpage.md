@@ -58,7 +58,7 @@ and is reachable from the @ref List page as well.
 
 ## Quick start
 
-Requires Python ≥ 3.13. `autoc` itself has zero dependencies.
+Requires Python ≥ 3.10. `autoc` itself has zero dependencies.
 
 **1. Define a module** — e.g. `runme.py`:
 

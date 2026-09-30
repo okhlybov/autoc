@@ -200,7 +200,7 @@ add_custom_target(autoc-generate DEPENDS @module@-generate)
 
 _autoc_cmake = """cmake_minimum_required(VERSION 3.15)
 
-find_package(Python 3.13 REQUIRED)
+find_package(Python 3.10 REQUIRED)
 
 function(add_autoc_module module)
   set(args DIRECTORY MAIN_DEPENDENCY)

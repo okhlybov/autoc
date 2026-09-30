@@ -6,7 +6,7 @@ binary.
 
 ## 1. Install the generator
 
-From a checkout of this repository (Python ≥ 3.13 required):
+From a checkout of this repository (Python ≥ 3.10 required):
 
 ```sh
 pip install .

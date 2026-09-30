@@ -168,7 +168,7 @@ if(NOT DEFINED AUTOC)
 endif()
 
 if(AUTOC)
-  find_package(Python 3.13 REQUIRED)
+  find_package(Python 3.10 REQUIRED)
 endif()
 
 function(add_autoc_module module)
