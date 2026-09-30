@@ -55,6 +55,10 @@ class _SmartRenderer:
       os.unlink(path)
 
 
+def _sort_entities(entities):
+  return sorted(entities, key=lambda e: e._order_key)
+
+
 #
 class Header(_EntityContainer, _SmartRenderer):
   
@@ -85,7 +89,7 @@ class Header(_EntityContainer, _SmartRenderer):
 
   def render_contents(self, stream):
     self.render_prologue(stream)
-    entities = sorted(self.entities)
+    entities = _sort_entities(self.entities)
     for e in entities:
       for chunk in e._header_declarations:
         stream.write(chunk)
@@ -138,10 +142,10 @@ class Source(_EntityContainer, _SmartRenderer):
     total_entities = set()
     for e in self.entities:
       total_entities.update(e.total_references)
-    for e in sorted(total_entities):
+    for e in _sort_entities(total_entities):
       for chunk in e._source_declarations:
         stream.write(chunk)
-    for e in sorted(self.entities):
+    for e in _sort_entities(self.entities):
       for chunk in e._source_definitions:
         stream.write(chunk)
 
@@ -241,7 +245,7 @@ class Module:
         self.source_count = int((total_complexity / self.source_threshold) + 0.999)  # ceil
     # Allow to disable sources rendering by setting source_count to 0
     if self.source_count > 0:
-      for e in sorted(self.total_entities):
+      for e in _sort_entities(self.total_entities):
         self.sources.sort(key=lambda s: s.complexity)
         self.sources[0].add(e)
 
@@ -365,16 +369,21 @@ class Entity:
   def collect_references(self, entities):
     if self not in entities:
       entities.add(self)
-      for ref in self.references:
-        ref.collect_references(entities)
+      if self.__total_references is not None:
+        entities.update(self.__total_references)
+      else:
+        for ref in self.references:
+          ref.collect_references(entities)
     return entities
 
   def collect_dependencies(self, entities):
     if self not in entities:
       entities.add(self)
-      for dep in self.dependencies:
-        # FIXME
-        dep.collect_dependencies(entities)
+      if self.__total_dependencies is not None:
+        entities.update(self.__total_dependencies)
+      else:
+        for dep in self.dependencies:
+          dep.collect_dependencies(entities)
     return entities
 
   @property
