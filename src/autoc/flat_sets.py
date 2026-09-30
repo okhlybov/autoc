@@ -6,7 +6,7 @@ from autoc.core import inout, _StructRenderer, Indirection, Callable
 
 
 #
-class _Set(_StructRenderer, Searchable, Collection):
+class Set(_StructRenderer, Searchable, Collection):
 
   def __init__(self, name, element, *args, dependencies=(), **kws):
     super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)

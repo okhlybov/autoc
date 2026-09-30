@@ -3,7 +3,7 @@ import autoc.flat_sets
 
 
 #
-class Set(autoc.flat_sets._Set, autoc.multiset._Multiset):
+class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
 
   brief = "Contiguous sorted array multiset with binary search lookup and cache-friendly layout"
 

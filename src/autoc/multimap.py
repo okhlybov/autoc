@@ -124,7 +124,7 @@ class Range(_Range, Forward):
 
 
 # Abstract base class for associative multimaps backed by an underlying multiset
-class _Multimap(_StructRenderer, Collection):
+class Multimap(_StructRenderer, Collection):
 
   brief = "Abstract associative multimap container mapping keys to multiple values backed by an underlying multiset"
 

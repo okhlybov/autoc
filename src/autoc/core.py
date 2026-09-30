@@ -1128,6 +1128,7 @@ _linkage_code = Code(interface=r"""
 _stddef_h = SystemHeader("stddef.h")
 _size_t = Primitive("size_t", dependencies=(_stddef_h,))
 
+# FIXME move to a module which can import autoc.std
 _ceil_power2 = Code(dependencies=(_size_t, _linkage_code), definitions="""
   AUTOC_EXTERN
   size_t _autoc_ceil_power2(size_t value);
@@ -1144,4 +1145,3 @@ _ceil_power2 = Code(dependencies=(_size_t, _linkage_code), definitions="""
     return ++value;
   }
 """)
-

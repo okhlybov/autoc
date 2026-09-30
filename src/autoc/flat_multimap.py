@@ -1,12 +1,12 @@
 import autoc.std as std
 from autoc.mapping import _Entry
-from autoc.multimap import _Multimap
+import autoc.multimap
 from autoc.flat_multiset import Set as FlatMultiset
 from autoc.core import inout
 
 
 #
-class Map(_Multimap):
+class Map(autoc.multimap.Multimap):
 
   brief = "Flat multimap from index to multiple elements backed by a contiguous sorted array of key-value pairs"
 

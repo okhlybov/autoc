@@ -1,9 +1,9 @@
 import autoc.set
-from autoc.flat_sets import _Set
+import autoc.flat_sets
 
 
 #
-class Set(_Set, autoc.set._Set):
+class Set(autoc.flat_sets.Set, autoc.set.Set):
 
   brief = "Contiguous sorted array set with binary search lookup and cache-friendly layout"
 

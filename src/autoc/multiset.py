@@ -4,7 +4,7 @@ from autoc.collection import Collection
 
 
 # Abstract base for all multiset collections
-class _Multiset(Collection):
+class Multiset(Collection):
 
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)

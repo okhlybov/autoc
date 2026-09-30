@@ -1,12 +1,12 @@
 import autoc.std as std
-from autoc.set import _Set
+import autoc.set
 from autoc.range import Forward
 from autoc.collection import _Range
 from autoc.core import inout, _type, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, _Set):
+class Set(_StructRenderer, autoc.set.Set):
 
   brief = "Ordered set of distinct values implemented as a red-black tree - iterates in sorted order"
 
