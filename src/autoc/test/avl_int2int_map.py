@@ -1,7 +1,8 @@
 from autoc.test import *
-from autoc.avl_map import Map
+from autoc.tree_map import Map
+from autoc.avl_set import Set as AVLSet
 
-x = Type(type := Map("avl_int2int_map", "int", "int"))
+x = Type(type := Map("avl_int2int_map", "int", "int", AVLSet))
 
 t = type.variable("t")
 

@@ -1,7 +1,8 @@
 from autoc.test import *
-from autoc.treap_map import Map
+from autoc.tree_map import Map
+from autoc.treap_set import Set as TreapSet
 
-x = Type(type := Map("treap_int2int_hash_map", "int", "int"))
+x = Type(type := Map("treap_int2int_hash_map", "int", "int", TreapSet))
 
 t = type.variable("t")
 

@@ -38,9 +38,7 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|---|
 | `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | forward | bucket chaining over an internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | forward | flat open addressing; entries carry the sentinels |
-| `autoc.treap_map` | `Map` | `TreapMap<K, T>` | forward | ordered by key over the treap set; supports lexicographic comparison |
-| `autoc.rb_map` | `Map` | `RBMap<K, T>` | forward | ordered by key over the red-black tree set |
-| `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
+| `autoc.tree_map` | `Map` | `TreeMap<K, T>` | forward | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
 | `autoc.flat_map` | `Map` | `FlatMap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
 
 ## Multisets
@@ -85,7 +83,7 @@ import in your module script; the *type* is the class you instantiate with a con
    deletions require O(log n) tree mutations.
 7. **Do you map keys to values?** Pick the map in the same family as the set you would have
    picked — @ref FlatMap for cache locality and flat memory, or @ref ChainedHashMap,
-   @ref IntrusiveHashMap, @ref AVLMap, @ref RBMap, @ref TreapMap.
+   @ref IntrusiveHashMap, @ref TreeMap.
 8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
 9. **Do you need a compact set of flags, booleans, or small integer universe?** Use

@@ -1,7 +1,8 @@
 from autoc.test import *
-from autoc.rb_map import Map
+from autoc.tree_map import Map
+from autoc.rb_set import Set as RBSet
 
-x = Type(type := Map("rb_int2int_map", "int", "int"))
+x = Type(type := Map("rb_int2int_map", "int", "int", RBSet))
 
 t = type.variable("t")
 

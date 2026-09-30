@@ -5,7 +5,7 @@ from autoc.tiered_vector import Vector as TieredVector
 from autoc.chained_hash_set import Set as ChainedHashSet
 from autoc.chained_hash_map import Map as ChainedHashMap
 from autoc.treap_set import Set as TreapSet
-from autoc.treap_map import Map as TreapMap
+from autoc.tree_map import Map as TreeMap
 from autoc.bit_array import Array as BitArray
 from autoc.bit_vector import Vector as BitVector
 from autoc.string import String
@@ -176,7 +176,7 @@ assert cmap._set.algebraic_operations is False
 assert not cmap._set.union.active
 assert not cmap._set.is_subset.active
 
-tmap = TreapMap("tmap_test", "int", "int")
+tmap = TreeMap("tmap_test", "int", "int", TreapSet)
 assert tmap._set.algebraic_operations is False
 assert not tmap._set.union.active
 

@@ -27,11 +27,9 @@ import autoc.flat_multimap
 import autoc.intrusive_hash_set
 import autoc.intrusive_hash_map
 import autoc.treap_set
-import autoc.treap_map
 import autoc.rb_set
-import autoc.rb_map
 import autoc.avl_set
-import autoc.avl_map
+import autoc.tree_map
 import autoc.record
 import autoc.variant
 import autoc.reference
@@ -243,19 +241,7 @@ class IntrusiveHashMap(autoc.intrusive_hash_map.Map):
     return f"{self.name}<{self.index}, {self.element}>"
 
 
-class TreapMap(autoc.treap_map.Map):
-  @property
-  def _doxygen_type(self):
-    return f"{self.name}<{self.index}, {self.element}>"
-
-
-class RBMap(autoc.rb_map.Map):
-  @property
-  def _doxygen_type(self):
-    return f"{self.name}<{self.index}, {self.element}>"
-
-
-class AVLMap(autoc.avl_map.Map):
+class TreeMap(autoc.tree_map.Map):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.index}, {self.element}>"
@@ -333,7 +319,6 @@ def configure_module(module):
   module.add(K)
 
   module.add(Array("Array", T, 4))
-  module.add(AVLMap("AVLMap", T, K))
   module.add(AVLSet("AVLSet", T))
   module.add(BitArray("BitArray", 64))
   module.add(BitVector("BitVector"))
@@ -353,7 +338,6 @@ def configure_module(module):
   module.add(PriorityQueue("PriorityQueue", T))
   module.add(Queue("Queue", T))
   module.add(Raw(T, name="Raw"))
-  module.add(RBMap("RBMap", T, K))
   module.add(RBSet("RBSet", T))
   module.add(autoc.record.Record("Record", {"first": T, "second": K}))
   module.add(Stack("Stack", T))
@@ -362,7 +346,7 @@ def configure_module(module):
   module.add(String("String"))
   module.add(StringBuffer("StringBuffer"))
   module.add(TieredVector("TieredVector", T))
-  module.add(TreapMap("TreapMap", T, K))
+  module.add(TreeMap("TreeMap", T, K, RBSet))
   module.add(TreapSet("TreapSet", T))
   module.add(autoc.variant.Variant("Variant", {"first": T, "second": K}))
   module.add(Vector("Vector", T))

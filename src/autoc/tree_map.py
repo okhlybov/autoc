@@ -7,9 +7,9 @@ class Map(Mapping):
 
   brief = "Ordered map from index to element backed by a binary search tree - iterates in index order"
   
-  def __init__(self, name, element, index, set, *args, **kws):
+  def __init__(self, name, element, index, tree_set, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self._set = set(
+    self._set = tree_set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",

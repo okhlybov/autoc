@@ -1,11 +1,12 @@
 from autoc.test import *
-from autoc.treap_map import Map
+from autoc.tree_map import Map
+from autoc.treap_set import Set as TreapSet
 from autoc.test.cstring import cstring, s
 
 # Hash map keyed by a composite (string) index over the treap - the entries are
 # ordered by the string keys and iterated in the lexicographical order
 
-x = Type(type := Map("treap_cstring_int_hash_map", "int", cstring))
+x = Type(type := Map("treap_cstring_int_hash_map", "int", cstring, TreapSet))
 
 t = type.variable("t")
 

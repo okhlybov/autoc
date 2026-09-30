@@ -73,9 +73,9 @@ The container strategies differ in what they guarantee, not just in performance:
   and marks empty and deleted slots with sentinel values supplied by the element type. It is
   the most cache-friendly layout, at the cost of requiring the element to reserve two
   distinguishable states.
-- **Treap** (@ref TreapSet, @ref TreapMap) is a randomized search tree — an ordered container:
-  it iterates in sorted order, supports the ordering-based operations and gives the expected
-  `O(log n)` insert, erase and search. The maps over the treap support lexicographic
+- **Binary search trees** (@ref AVLSet, @ref RBSet, @ref TreapSet, @ref TreeMap) are ordered containers:
+  they iterate in sorted order, support ordering-based operations and provide
+  `O(log n)` insert, erase and search. The maps over trees support lexicographic
   comparison.
 - **Sequences** (@ref List, @ref Deque, @ref Vector, @ref TieredVector) trade access pattern
   against allocation behaviour: forward-linked, doubly-linked, contiguous and chunked
