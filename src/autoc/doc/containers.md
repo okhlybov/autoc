@@ -50,6 +50,12 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.flat_multiset` | `Set` | `FlatMultiset<T>` | direct access | ordered; contiguous sorted dynamic array multiset with binary search and duplicates preserved |
 | `autoc.counter` | `Counter` | `Counter<T>` | forward | multiset tracking element multiplicities; backed by configurable map backend |
 
+## Multimaps
+
+| Module | Type | Documented as | Range | Notes |
+|---|---|---|---|---|
+| `autoc.flat_multimap` | `Map` | `FlatMultimap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) with duplicate keys preserved |
+
 ## Value types
 
 | Module | Type | Documented as | Notes |

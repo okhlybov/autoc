@@ -1,5 +1,5 @@
 import autoc.set
-from autoc._flat_sets import _Set
+from autoc.flat_sets import _Set
 
 
 #

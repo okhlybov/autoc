@@ -1,9 +1,9 @@
 import autoc.multiset
-from autoc._flat_sets import _Set
+import autoc.flat_sets
 
 
 #
-class Set(_Set, autoc.multiset._Multiset):
+class Set(autoc.flat_sets._Set, autoc.multiset._Multiset):
 
   brief = "Contiguous sorted array multiset with binary search lookup and cache-friendly layout"
 
