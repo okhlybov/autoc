@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.set import Set
+from autoc.set import _Set
 from autoc.range import Forward
 from autoc.collection import _Range
 from autoc.random import Randomizer
@@ -7,7 +7,7 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, Set):
+class Set(_StructRenderer, _Set):
 
   brief = "Ordered set of distinct values implemented as a treap - iterates in sorted order"
   

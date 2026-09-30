@@ -21,6 +21,7 @@ import autoc.string_buffer
 import autoc.chained_hash_set
 import autoc.chained_hash_map
 import autoc.flat_set
+import autoc.flat_multiset
 import autoc.flat_map
 import autoc.intrusive_hash_set
 import autoc.intrusive_hash_map
@@ -222,6 +223,12 @@ class FlatSet(autoc.flat_set.Set):
     return f"{self.name}<{self.element}>"
 
 
+class FlatMultiset(autoc.flat_multiset.Set):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
 # Maps - the index (key) comes first in the C++-flavoured presentation
 class ChainedHashMap(autoc.chained_hash_map.Map):
   @property
@@ -308,6 +315,7 @@ _nested_range(autoc.treap_set, "TreapSetRange")
 _nested_range(autoc.rb_set, "RBSetRange")
 _nested_range(autoc.avl_set, "AVLSetRange")
 _nested_range(autoc.flat_set, "FlatSetRange")
+_nested_range(autoc.flat_multiset, "FlatMultisetRange")
 _nested_range(autoc.circular_buffer, "CircularBufferRange")
 _nested_range(autoc.counter, "CounterRange")
 
@@ -328,7 +336,8 @@ def configure_module(module):
   module.add(Deque("Deque", T))
   module.add(DynamicCircularBuffer("DynamicCircularBuffer", T))
   module.add(FlatMap("FlatMap", T, K))
-  module.add(FlatSet("FlatSet", T, std.size_t))
+  module.add(FlatMultiset("FlatMultiset", T))
+  module.add(FlatSet("FlatSet", T))
   module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
   module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
   module.add(List("List", T))

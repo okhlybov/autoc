@@ -11,6 +11,7 @@ from autoc.bit_vector import Vector as BitVector
 from autoc.string import String
 from autoc.string_buffer import Buffer as StringBuffer
 from autoc.counter import Counter
+from autoc.flat_multiset import Set as FlatMultiset
 import autoc.flat_map
 
 
@@ -76,6 +77,28 @@ assert not ts_noalg.intersection.active
 assert not ts_noalg.symmetric_difference.active
 assert ts_noalg.put.active
 assert ts_noalg.contains.active
+
+fms_noalg = FlatMultiset("fms_noalg", "int", algebraic_operations=False)
+assert not fms_noalg.union.active
+assert not fms_noalg.difference.active
+assert not fms_noalg.intersection.active
+assert not fms_noalg.symmetric_difference.active
+assert not fms_noalg.is_subset.active
+assert not fms_noalg.is_superset.active
+assert fms_noalg.put.active
+assert fms_noalg.remove.active
+assert fms_noalg.wipe.active
+assert fms_noalg.count.active
+
+fms_alg = FlatMultiset("fms_alg", "int")
+assert fms_alg.union.active
+assert fms_alg.difference.active
+assert fms_alg.intersection.active
+assert fms_alg.symmetric_difference.active
+assert fms_alg.is_subset.active
+assert fms_alg.is_superset.active
+assert fms_alg.union.optional_group == "algebraic_operations"
+
 
 ba_noalg = BitArray("ba_noalg", 32, algebraic_operations=False)
 assert not ba_noalg.assign_union.active
@@ -271,17 +294,17 @@ assert sbuf_format.push.optional_group is None
 # Verify documentation comment rendering contains optional group note
 stream = []
 v_sort.sort._render_documentation(stream, True)
-rendered_doc = "".join(stream)
+rendered_doc = str().join(stream)
 assert "_An optional operation belonging to the Sortable function group._" in rendered_doc
 
 stream = []
 s_alg.union._render_documentation(stream, True)
-rendered_doc = "".join(stream)
+rendered_doc = str().join(stream)
 assert "_An optional operation belonging to the AlgebraicSet function group._" in rendered_doc
 
 stream = []
 sbuf_format.push_format._render_documentation(stream, True)
-rendered_doc = "".join(stream)
+rendered_doc = str().join(stream)
 assert "_An optional operation belonging to the Formatting function group._" in rendered_doc
 
 
@@ -340,25 +363,18 @@ assert arr_sort.get not in arr_sort.back.dependencies
 assert arr_sort.view in arr_sort.back_view.references
 assert arr_sort.view not in arr_sort.back_view.dependencies
 
-# Sortable and Searchable index (and index_type alias) is configurable
-assert v_sort.index == std.size_t
-assert v_sort.index_type == std.size_t
-v_custom_idx = Vector("v_custom_idx", "int", index=std.int32_t)
-assert v_custom_idx.index == std.int32_t
-assert v_custom_idx.index_type == std.int32_t
-assert v_custom_idx.sort_insertion.arguments[1].type == std.int32_t
-assert v_custom_idx.sort_insertion.arguments[2].type == std.int32_t
-assert v_custom_idx.sort_range.arguments[1].type == std.int32_t
-assert v_custom_idx.sort_range.arguments[2].type == std.int32_t
-assert v_custom_idx.lower_bound.result == std.int32_t
-assert v_custom_idx.upper_bound.result == std.int32_t
+# Sortable and Searchable operations hardcode size_t for array positions
+assert v_sort.lower_bound.result == std.size_t
+assert v_sort.upper_bound.result == std.size_t
+assert v_sort.sort_insertion.arguments[1].type == std.size_t
+assert v_sort.sort_insertion.arguments[2].type == std.size_t
+assert v_sort.sort_range.arguments[1].type == std.size_t
+assert v_sort.sort_range.arguments[2].type == std.size_t
 
-# FlatSet index is positional
+# FlatSet has no index attribute and its search operations return size_t
 from autoc.flat_set import Set as FlatSet
-fs_default = FlatSet("fs_default", "int", std.size_t)
-assert fs_default.index == std.size_t
-assert fs_default.lower_bound.result == std.size_t
-fs_custom = FlatSet("fs_custom", "int", std.int32_t)
-assert fs_custom.index == std.int32_t
-assert fs_custom.lower_bound.result == std.int32_t
+fs = FlatSet("fs", "int")
+assert not hasattr(fs, "index")
+assert fs.lower_bound.result == std.size_t
+assert fs.upper_bound.result == std.size_t
 

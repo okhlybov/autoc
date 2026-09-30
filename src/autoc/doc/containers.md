@@ -31,7 +31,6 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.rb_set` | `Set` | `RBSet<T>` | forward | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
 | `autoc.avl_set` | `Set` | `AVLSet<T>` | forward | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
 | `autoc.flat_set` | `Set` | `FlatSet<T>` | direct access | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
-| `autoc.set` | `Set` | — | — | abstract interface shared by the set implementations |
 
 ## Maps
 
@@ -43,13 +42,12 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.rb_map` | `Map` | `RBMap<K, T>` | forward | ordered by key over the red-black tree set |
 | `autoc.avl_map` | `Map` | `AVLMap<K, T>` | forward | ordered by key over the AVL tree set |
 | `autoc.flat_map` | `Map` | `FlatMap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
-| `autoc.tree_map` | `Map` | — | — | generic binary search tree map base parameterized by tree set backend |
-| `autoc.mapping` | `Mapping` | — | — | abstract interface shared by the map implementations |
 
 ## Multisets
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
+| `autoc.flat_multiset` | `Set` | `FlatMultiset<T>` | direct access | ordered; contiguous sorted dynamic array multiset with binary search and duplicates preserved |
 | `autoc.counter` | `Counter` | `Counter<T>` | forward | multiset tracking element multiplicities; backed by configurable map backend |
 
 ## Value types
@@ -61,7 +59,6 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.variant` | `Variant` | `Variant` | union holding one value out of a predefined set of types |
 | `autoc.reference` | `Counted` | `Counted<T>` | reference-counted shared instance |
 | `autoc.reference` | `Raw` | `Raw<T>` | unmanaged handle to a manually managed instance |
-| `autoc.range` | `Input`/`Forward`/`Backward`/`Bidirectional`/`DirectAccess` | — | the iteration abstractions the container ranges are built from |
 
 ## Choosing a container
 

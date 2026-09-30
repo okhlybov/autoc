@@ -1,12 +1,10 @@
 import autoc.core
-import autoc.std as std
 from autoc.core import inout
-from autoc.module import Code
 from autoc.collection import Collection
 
 
-#
-class Set(Collection):
+# Abstract base for all set collections
+class _Set(Collection):
   
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)
@@ -14,6 +12,17 @@ class Set(Collection):
 
   def __setup__(self):
     super().__setup__()
+
+    self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Find element and return view",
+      description="""
+        Looks up the element per the container lookup mechanics without modifying the container.
+        Returns a constant view of the found element, or NULL when absent.
+
+        @param[in] target the container to search
+        @param[in] element the element to look for
+        @return a constant view of the found element or NULL when absent
+      """)
+
     
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present",
       description="""
@@ -195,22 +204,3 @@ class Set(Collection):
       """
 
     # TODO pop, ...
-
-
-#
-_ceil_power2 = Code(dependencies=(std.size_t, autoc.core._linkage_code), definitions="""
-  AUTOC_EXTERN
-  size_t _autoc_ceil_power2(size_t value);
-""", implementation="""
-  size_t _autoc_ceil_power2(size_t value) {
-    if(value == 0) return 1;
-    --value;
-    value |= value >> 1;
-    value |= value >> 2;
-    value |= value >> 4;
-    value |= value >> 8;
-    value |= value >> 16;
-    if(sizeof(size_t) >= 8) value |= value >> 32;
-    return ++value;
-  }
-""")

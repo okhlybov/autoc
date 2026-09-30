@@ -24,7 +24,7 @@ def configure_module(module):
     module.add(c)
     code.append(f"run_code({c.name});\n")
   code.append("}")
-  module.add(autoc.module.Code(definitions="".join(code)))
+  module.add(autoc.module.Code(definitions=str().join(code)))
 
 
 class Unit(autoc.module.Code):

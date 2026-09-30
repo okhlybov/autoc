@@ -1,8 +1,8 @@
 import autoc.std as std
 from autoc.range import Forward
-from autoc.set import Set, _ceil_power2
+from autoc.set import _Set
 from autoc.collection import _Range
-from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer
+from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer, _ceil_power2
 
 
 class _Macro(Macro):
@@ -13,7 +13,7 @@ class _Macro(Macro):
 
 
 #
-class Set(_StructRenderer, Set):
+class Set(_StructRenderer, _Set):
 
   brief = "Set of distinct elements over open addressing with sentinel values"
   

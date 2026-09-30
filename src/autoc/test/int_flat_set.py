@@ -269,3 +269,26 @@ x.unit("churn: repeated put and remove maintains integrity and order", f"""
   TEST_TRUE( {type.empty(t)} );
 """)
 
+x.unit(f"{type.count}/{type.equal_range}(): single-element set operations", f"""
+  {type.create(t)};
+  TEST_EQUAL( {type.count(t, 10)}, 0 );
+  {type.put(t, 10)};
+  {type.put(t, 20)};
+  TEST_EQUAL( {type.count(t, 10)}, 1 );
+  TEST_EQUAL( {type.count(t, 20)}, 1 );
+  TEST_EQUAL( {type.count(t, 30)}, 0 );
+
+  {{
+    {range} eq = {type.equal_range(t, 10)};
+    TEST_FALSE( {range.empty("&eq")} );
+    TEST_EQUAL( {range.size("&eq")}, 1 );
+    TEST_EQUAL( {range.front("&eq")}, 10 );
+  }}
+  {{
+    {range} eq = {type.equal_range(t, 99)};
+    TEST_TRUE( {range.empty("&eq")} );
+    TEST_EQUAL( {range.size("&eq")}, 0 );
+  }}
+""")
+
+
