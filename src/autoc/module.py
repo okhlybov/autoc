@@ -1,5 +1,6 @@
 import os
 import re
+import glob
 import hashlib
 import autoc
 
@@ -62,10 +63,7 @@ class Header(_EntityContainer, _SmartRenderer):
   def __init__(self, module, *args, **kws):
     super().__init__(*args, **kws)
     self.module = module
-
-  @property
-  def file_name(self):
-    return f"{self.module.name}_auto.h"
+    self.file_name = f"{self.module.name}_auto.h"
 
   @property
   def tag(self):
@@ -117,12 +115,11 @@ class Source(_EntityContainer, _SmartRenderer):
     super().__init__(*args, **kws)
     self.module = module
     self.index = index
+    self.file_name = self._generate_file_name(self.module.name, self.index, self.module.source_count)
 
-  @property
-  def file_name(self):
-    if self.module.source_count < 2:
-      return f"{self.module.name}_auto.c"
-    return f"{self.module.name}_auto{self.index}.c"
+  @classmethod
+  def _generate_file_name(self, prefix, index, count):
+    return f"{prefix}_auto{index}.c" if count > 1 else f"{prefix}_auto.c"
 
   @property
   def stream(self):
@@ -203,21 +200,26 @@ class Module:
       self.__digests = _State(self).read()
     return self.__digests
 
+  def __cleanup_sources(self):
+    produced = {s.file_name for s in self.sources}
+    # FIXME more robust approach to detect the sources location based on the file name generation scheme
+    rxs = tuple(re.compile(f"^{self.__source_ctor._generate_file_name(re.escape(self.name), i, c)}$") for i, c in ((None, 0), (r"\d+", 2)))
+    for f in glob.glob(self.__source_ctor._generate_file_name(self.name, "*", 2)):
+      if f not in produced and any(rx.match(f) for rx in rxs):
+        try:
+          os.unlink(f)
+        except OSError:
+          pass
+    return self
+
   def render(self):
-    previous = set(self.digests) # File names produced by the previous generation run
     self.distribute_entities()
+    self.__cleanup_sources()
     self.header.render()
     for source in self.sources:
       source.render()
     if self.stateful:
       _State(self).collect().write()
-      # Remove outputs of the previous run which are no longer produced
-      produced = {self.header.file_name, *(source.file_name for source in self.sources)}
-      for file_name in previous - produced:
-        try:
-          os.unlink(file_name)
-        except OSError:
-          pass
     return self
 
   @property
