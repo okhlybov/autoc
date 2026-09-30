@@ -246,6 +246,7 @@ consumed 23
 | `autoc.avl_map` | `Map` | ordered map over the AVL tree set |
 | `autoc.flat_set` | `Set` | contiguous sorted dynamic array with binary search lookup, cache-friendly layout |
 | `autoc.flat_map` | `Map` | ordered map over a contiguous sorted array of key-value pairs (AoS layout) |
+| `autoc.counter` | `Counter` | multiset frequency counter tracking element multiplicities over an explicit map backend |
 | `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
 | `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
 | `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |

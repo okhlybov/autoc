@@ -10,6 +10,8 @@ from autoc.bit_array import Array as BitArray
 from autoc.bit_vector import Vector as BitVector
 from autoc.string import String
 from autoc.string_buffer import Buffer as StringBuffer
+from autoc.counter import Counter
+import autoc.flat_map
 
 
 # 1. Verify sorting_operations on Vector, TieredVector, and Array
@@ -102,6 +104,21 @@ assert bv_noalg.count.active
 bv_alg = BitVector("bv_alg")
 assert bv_alg.assign_union.active
 assert bv_alg.is_subset.active
+
+cnt_noalg = Counter("cnt_noalg", "int", autoc.flat_map.Map, algebraic_operations=False)
+assert not cnt_noalg.assign_union.active
+assert not cnt_noalg.assign_intersection.active
+assert not cnt_noalg.assign_difference.active
+assert not cnt_noalg.is_subset.active
+assert cnt_noalg.add.active
+assert cnt_noalg.remove.active
+assert cnt_noalg.count.active
+
+cnt_alg = Counter("cnt_alg", "int", autoc.flat_map.Map)
+assert cnt_alg.assign_union.active
+assert cnt_alg.assign_intersection.active
+assert cnt_alg.assign_difference.active
+assert cnt_alg.is_subset.active
 
 
 # 3. Verify formatting_operations on String and StringBuffer
@@ -235,6 +252,12 @@ assert bv_alg.assign_difference.optional_group == "algebraic_operations"
 assert bv_alg.assign_symmetric_difference.optional_group == "algebraic_operations"
 assert bv_alg.is_subset.optional_group == "algebraic_operations"
 assert bv_alg.test.optional_group is None
+
+assert cnt_alg.assign_union.optional_group == "algebraic_operations"
+assert cnt_alg.assign_intersection.optional_group == "algebraic_operations"
+assert cnt_alg.assign_difference.optional_group == "algebraic_operations"
+assert cnt_alg.is_subset.optional_group == "algebraic_operations"
+assert cnt_alg.add.optional_group is None
 
 assert str_format.format.optional_group == "formatting_operations"
 assert str_format.format_args.optional_group == "formatting_operations"

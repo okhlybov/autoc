@@ -46,6 +46,12 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.tree_map` | `Map` | — | — | generic binary search tree map base parameterized by tree set backend |
 | `autoc.mapping` | `Mapping` | — | — | abstract interface shared by the map implementations |
 
+## Multisets
+
+| Module | Type | Documented as | Range | Notes |
+|---|---|---|---|---|
+| `autoc.counter` | `Counter` | `Counter<T>` | forward | multiset tracking element multiplicities; backed by configurable map backend |
+
 ## Value types
 
 | Module | Type | Documented as | Notes |
@@ -82,6 +88,9 @@ import in your module script; the *type* is the class you instantiate with a con
 9. **Do you need a compact set of flags, booleans, or small integer universe?** Use
    @ref BitArray for zero-heap, fixed-capacity bitwise set algebra, or @ref BitVector
    for dynamic runtime capacity and bitstream operations.
+10. **Do you need to count occurrences of duplicate items (multiset)?** Use @ref Counter
+    with your choice of backend map (e.g. @ref FlatMap for cache efficiency or @ref ChainedHashMap
+    for O(1) hash-based counting).
 
 All concrete containers in one module share a single generated header, and each brings its
 own group in this manual, so the operations of `ChainedHashSet` and `IntrusiveHashSet` never
@@ -93,7 +102,7 @@ To reduce generated code size and eliminate unused C standard library dependenci
 
 | Optional Group | Parameter | Containers | Methods | Description |
 |---|---|---|---|---|
-| Set Algebra | `algebraic_operations=True` | `Set` (`ChainedHashSet`, `IntrusiveHashSet`, `TreapSet`, `RBSet`, `AVLSet`, `FlatSet`), `BitArray`, `BitVector` | `union`, `difference`, `intersection`, `symmetric_difference`, `is_subset`, `is_superset`, `assign_union`, `assign_intersection`, `assign_difference`, `assign_symmetric_difference` | Mathematical set algebra. Automatically disabled on sets used internally by maps. |
+| Set Algebra | `algebraic_operations=True` | `Set` (`ChainedHashSet`, `IntrusiveHashSet`, `TreapSet`, `RBSet`, `AVLSet`, `FlatSet`), `BitArray`, `BitVector`, `Counter` | `union`, `difference`, `intersection`, `symmetric_difference`, `is_subset`, `is_superset`, `assign_union`, `assign_intersection`, `assign_difference`, `assign_symmetric_difference` | Mathematical set algebra. Automatically disabled on sets used internally by maps. |
 | Sorting & Search | `sorting_operations=True` | `Sortable` (`Vector`, `TieredVector`, `Array`) | `sort`, `reverse`, `sorted`, `lower_bound`, `upper_bound`, `binary_search` | Quicksort, reversal, sortedness check, and binary search algorithms. Automatically disabled on chunk vectors inside `StringBuffer`. |
 | Formatted Output | `formatting_operations=True` | `String`, `StringBuffer` | `format`, `format_args`, `push_format`, `push_format_args`, `push_double`, `push_long_double` | `printf`-style formatted output and floating-point conversions, requiring `<stdio.h>` and `<stdarg.h>`. Automatically disabled on internal string instances. |
 

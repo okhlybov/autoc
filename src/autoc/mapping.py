@@ -320,3 +320,23 @@ class Mapping(_StructRenderer, Indexed):
         {self.element.copy(result, _element_p)};
         return {result};
       """
+
+    _entry = entry.variable("entry")
+
+    with self.method("int", "remove", {"target": inout(self), "index": self.index}, brief="Remove entry with specified index",
+      description="""
+        Removes the key-value entry associated with `index` from the map, if present.
+
+        @param[in,out] target the map to modify
+        @param[in] index the key to remove
+        @return 1 if an entry was removed, 0 if not found
+      """) as f:
+      f.code = f"""
+        {_entry.definition};
+        int removed;
+        assert(target);
+        {entry.emplace_index(_entry, f.index)};
+        removed = {set.remove(_target, _entry)};
+        {entry.destroy_index(_entry)};
+        return removed;
+      """

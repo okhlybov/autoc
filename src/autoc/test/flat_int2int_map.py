@@ -62,6 +62,21 @@ x.unit(f"{type.indexed}(): indexed check", f"""
   TEST_FALSE( {type.indexed(t, 15)} );
 """)
 
+x.unit(f"{type.remove}(): remove key from map", f"""
+  {type.create(t)};
+  {type.set(t, 10, 100)};
+  {type.set(t, 20, 200)};
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_FALSE( {type.indexed(t, 10)} );
+  TEST_TRUE( {type.indexed(t, 20)} );
+  TEST_FALSE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_TRUE( {type.remove(t, 20)} );
+  TEST_TRUE( {type.empty(t)} );
+""")
+
 x.unit(f"{type.view}(): view of existing and absent", f"""
   {type.create(t)};
   TEST_NULL( {type.view(t, 10)} );

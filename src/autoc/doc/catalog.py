@@ -38,6 +38,7 @@ import autoc.array
 import autoc.bit_array
 import autoc.bit_vector
 import autoc.circular_buffer
+import autoc.counter
 
 
 # The manual is written with the default CamelCase identifiers
@@ -258,6 +259,13 @@ class FlatMap(autoc.flat_map.Map):
     return f"{self.name}<{self.index}, {self.element}>"
 
 
+# Multisets
+class Counter(autoc.counter.Counter):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
 
 # References
 class Counted(autoc.reference.Counted):
@@ -301,6 +309,7 @@ _nested_range(autoc.rb_set, "RBSetRange")
 _nested_range(autoc.avl_set, "AVLSetRange")
 _nested_range(autoc.flat_set, "FlatSetRange")
 _nested_range(autoc.circular_buffer, "CircularBufferRange")
+_nested_range(autoc.counter, "CounterRange")
 
 
 def configure_module(module):
@@ -315,6 +324,7 @@ def configure_module(module):
   module.add(ChainedHashMap("ChainedHashMap", T, K))
   module.add(ChainedHashSet("ChainedHashSet", T))
   module.add(Counted(T, name="Counted"))
+  module.add(Counter("Counter", T, FlatMap))
   module.add(Deque("Deque", T))
   module.add(DynamicCircularBuffer("DynamicCircularBuffer", T))
   module.add(FlatMap("FlatMap", T, K))
