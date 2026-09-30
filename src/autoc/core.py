@@ -943,6 +943,8 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
     self.linkage = linkage
     self.__abstract = abstract
     self.type = type # Object this function is attached to
+    if self.type:
+      self.references.add(self.type)
     self.arguments = [Variable(t, n) for n, t in self.parameters.items()] # Local variables deduced from function's formal parameters
     for x in self.arguments:
       setattr(self, x.name, x)
