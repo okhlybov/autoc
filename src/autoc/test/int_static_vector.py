@@ -14,7 +14,7 @@ x.setup(f"""
   {type.create(t)};
 """)
 x.cleanup(f"""
-  {type.destroy(t) if type.destructible else ""}
+  {type.destroy(t) if type.destructible else str()};
 """)
 
 x.unit(f"{type.empty}(): test empty static vector", f"""
@@ -131,8 +131,8 @@ x.setup(f"""
   {type.create(t2)};
 """)
 x.cleanup(f"""
-  {type.destroy(t1) if type.destructible else ""}
-  {type.destroy(t2) if type.destructible else ""}
+  {type.destroy(t1) if type.destructible else str()};
+  {type.destroy(t2) if type.destructible else str()};
 """)
 
 x.unit(f"{type.equal}(): compare empty and populated static vectors", f"""
@@ -180,7 +180,7 @@ x.setup(f"""
   {type.create_size(t, 3)};
 """)
 x.cleanup(f"""
-  {type.destroy(t) if type.destructible else ""}
+  {type.destroy(t) if type.destructible else str()};
 """)
 
 x.unit(f"{type.create_size}(): create default-initialized static vector", f"""

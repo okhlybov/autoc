@@ -18,7 +18,7 @@ x.cleanup(f"""
   /* {{type.destroy(t)}}; */
 """)
 
-x.unit(f"{type.create}(): default create record", "")
+x.unit(f"{type.create}(): default create record", str())
 
 x.unit(f"{type.hash}(): hash default created record", f"""
   {type.hash(t)};

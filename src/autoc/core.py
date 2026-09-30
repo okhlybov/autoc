@@ -347,7 +347,7 @@ def camel_decorator(type, identifier, hidden=False):
   ids = []
   if identifier:
     ids = [identifier] if isinstance(identifier, str) else [*identifier]
-  return _hidden_prefix("".join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids]), hidden)
+  return _hidden_prefix(str().join([str(type.prefix)] + [s[0].upper()+s[1:] for s in ids]), hidden)
 
 
 # Global decorator used by all named type descentants unless overridden locally

@@ -15,7 +15,7 @@ x.setup(f"""
   {type.create(t)};
 """)
 x.cleanup(f"""
-  {type.destroy(t) if type.destructible else ""}
+  {type.destroy(t) if type.destructible else str()};
 """)
 
 x.unit(f"{type.empty}(): test initial state", f"""
@@ -208,7 +208,7 @@ x.unit(f"{type.copy}(), {type.equal}(), {type.hash}(): copy, equality, and hash"
   TEST_EQUAL( {type.get(t2, 1)}, 22 );
   TEST_EQUAL( {type.get(t2, 2)}, 33 );
 
-  {type.destroy(t2) if type.destructible else ""};
+  {type.destroy(t2) if type.destructible else str()};
 """)
 
 x.unit(f"{type.move}(), {type.swap}(): move and swap", f"""
@@ -232,7 +232,7 @@ x.unit(f"{type.move}(), {type.swap}(): move and swap", f"""
   TEST_EQUAL( {type.size(t2)}, 1 );
   TEST_EQUAL( {type.front(t2)}, 999 );
 
-  {type.destroy(t2) if type.destructible else ""};
+  {type.destroy(t2) if type.destructible else str()};
 """)
 
 x.unit(f"{type.contains}(): test contains for present and absent elements", f"""

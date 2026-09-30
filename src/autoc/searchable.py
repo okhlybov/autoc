@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.core import _type
 
 
 # Mixin class providing binary search algorithms for direct-access containers.
@@ -9,10 +8,6 @@ class Searchable:
     self.search_operations = bool(search_operations)
     self.search_optional_group = search_optional_group
     super().__init__(*args, **kws)
-
-  @property
-  def index_type(self):
-    return self.index
 
   # Protocol handlers
   
@@ -25,10 +20,10 @@ class Searchable:
   def __setup__(self):
     super().__setup__()
 
-    self.dependencies.add(self.index)
+    self.dependencies.add(std.size_t)
     search_constraint = lambda: self.search_operations and self.element.orderable
 
-    with self.method(self.index, ("lower", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the first position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the first position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the leftmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -39,7 +34,7 @@ class Searchable:
         @return the position of the first element not less than the given one
       """) as f:
       f.code = lambda f=f: f"""
-        {self.index} low, high, mid;
+        size_t low, high, mid;
         assert(target);
         low = 0;
         high = {self._target_size(f.target)};
@@ -51,7 +46,7 @@ class Searchable:
         return low;
       """
 
-    with self.method(self.index, ("upper", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the last position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the last position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the rightmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -62,7 +57,7 @@ class Searchable:
         @return the position of the first element greater than the given one
       """) as f:
       f.code = lambda f=f: f"""
-        {self.index} low, high, mid;
+        size_t low, high, mid;
         assert(target);
         low = 0;
         high = {self._target_size(f.target)};
@@ -84,7 +79,7 @@ class Searchable:
         @return non-zero if the element is present in the container
       """) as f:
       f.code = lambda f=f: f"""
-        {self.index} low;
+        size_t low;
         assert(target);
         low = {self.lower_bound(f.target, f.element)};
         return low < {self._target_size(f.target)} && !{self.element.compare(self._element(f.target, "low"), f.element)};

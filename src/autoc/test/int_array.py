@@ -14,7 +14,7 @@ x.setup(f"""
   {type.create(t)};
 """)
 x.cleanup(f"""
-  {type.destroy(t) if type.destructible else ""}
+  {type.destroy(t) if type.destructible else str()}
 """)
 
 x.unit(f"{type.empty}(): test array empty and size", f"""
@@ -168,8 +168,8 @@ x.setup(f"""
   {type.create(t2)};
 """)
 x.cleanup(f"""
-  {type.destroy(t1) if type.destructible else ""}
-  {type.destroy(t2) if type.destructible else ""}
+  {type.destroy(t1) if type.destructible else str()}
+  {type.destroy(t2) if type.destructible else str()}
 """)
 
 x.unit(f"{type.equal}(): compare arrays", f"""
@@ -247,10 +247,10 @@ xl.setup(f"""
   {type.create(arr_out)};
 """)
 xl.cleanup(f"""
-  {f"{list_t.destroy(tl)};" if list_t.destructible else ""}
-  {f"{type.destroy(arr1)};" if type.destructible else ""}
-  {f"{type.destroy(arr2)};" if type.destructible else ""}
-  {f"{type.destroy(arr_out)};" if type.destructible else ""}
+  {f"{list_t.destroy(tl)};" if list_t.destructible else str()}
+  {f"{type.destroy(arr1)};" if type.destructible else str()}
+  {f"{type.destroy(arr2)};" if type.destructible else str()}
+  {f"{type.destroy(arr_out)};" if type.destructible else str()}
 """)
 
 xl.unit(f"{list_t}: use Array as element in List", f"""
