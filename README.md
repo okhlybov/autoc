@@ -226,36 +226,37 @@ consumed 23
 
 | Module | Type | Notes |
 |---|---|---|
-| `autoc.vector` | `Vector` | direct-access sequence, bidirectional range |
+| `autoc.vector` | `Vector` | direct-access sequence, direct-access range |
+| `autoc.array` | `Array` | fixed-size stack-allocated contiguous C array, direct-access range, zero heap allocation |
 | `autoc.static_vector` | `Vector` | fixed-capacity stack-allocated sequence, direct-access range, zero heap allocations |
-| `autoc.circular_buffer` | `Static`, `Dynamic` | fixed-capacity stack or dynamic heap circular ring buffer |
+| `autoc.circular_buffer` | `Static`, `Dynamic` | fixed-capacity stack or dynamic heap circular ring buffer, direct-access range |
+| `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, direct-access range |
 | `autoc.list` | `List` | singly-linked sequence, forward range |
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
-| `autoc.queue` | `Queue` | FIFO adapter over `Deque` |
 | `autoc.stack` | `Stack` | LIFO adapter over `List`, forward range |
+| `autoc.queue` | `Queue` | FIFO adapter over `Deque`, forward range |
+| `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
 | `autoc.string` | `String` | string as an index→character map, direct-access range, variadic formatted output |
-| `autoc.set` | `Set` | abstract hash-set interface (shared base) |
-| `autoc.mapping` | `Mapping` | abstract hash-map interface (shared base) |
+| `autoc.string_buffer` | `Buffer` | append-optimized string buffer with scratch accumulation and lazy joining |
 | `autoc.chained_hash_set` | `Set` | bucket-chaining hash set — no sentinel values, stable element references, safe default |
-| `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
+| `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
 | `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
 | `autoc.rb_set` | `Set` | red-black tree — ordered set, guaranteed O(log n) height, <= 3 rotations on delete |
 | `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups |
-| `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
 | `autoc.flat_set` | `Set` | contiguous sorted dynamic array with binary search lookup, cache-friendly layout |
+| `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
+| `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map over internal entry set |
+| `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
 | `autoc.flat_map` | `Map` | ordered map over a contiguous sorted array of key-value pairs (AoS layout) |
 | `autoc.flat_multiset` | `Set` | contiguous sorted dynamic array multiset with binary search and duplicates preserved |
-| `autoc.flat_multimap` | `Map` | ordered multimap over a contiguous sorted array of key-value pairs (AoS layout) with duplicate keys preserved |
 | `autoc.counter` | `Counter` | multiset frequency counter tracking element multiplicities over an explicit map backend |
-| `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, O(chunks) teardown |
-| `autoc.priority_queue` | `Queue` | binary heap — guaranteed O(log n) push/pop, top = greatest element, duplicate priorities allowed |
-| `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
+| `autoc.flat_multimap` | `Map` | ordered multimap over a contiguous sorted array of key-value pairs (AoS layout) with duplicate keys preserved |
+| `autoc.multimap` | `Map` | generic multimap mapping keys to multiple values, parameterized by a set and collection container |
 | `autoc.bit_array` | `Array` | fixed-size inline bit array, set algebra, popcount, zero heap allocation |
 | `autoc.bit_vector` | `Vector` | dynamically resizable packed bit vector, amortized O(1) push/pop, set algebra |
 | `autoc.record` | `Record` | user-defined field aggregates |
 | `autoc.variant` | `Variant` | tagged union / sum type over alternative types |
 | `autoc.reference` | `Raw`, `Counted` | unmanaged / reference-counted handles |
-| `autoc.range` | `Input`/`Forward`/`Backward`/`Bidirectional`/`DirectAccess` | iteration abstractions |
 
 ## CMake integration
 

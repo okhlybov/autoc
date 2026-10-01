@@ -25,35 +25,35 @@ import in your module script; the *type* is the class you instantiate with a con
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
-| `autoc.chained_hash_set` | `Set` | `ChainedHashSet<T>` | forward | bucket chaining; no sentinels, stable element addresses, safe default |
-| `autoc.intrusive_hash_set` | `Set` | `IntrusiveHashSet<T>` | forward | flat open addressing; needs sentinel values for the element type |
-| `autoc.treap_set` | `Set` | `TreapSet<T>` | forward | ordered; iterates sorted, randomized BST with algebraic set operations |
-| `autoc.rb_set` | `Set` | `RBSet<T>` | forward | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
-| `autoc.avl_set` | `Set` | `AVLSet<T>` | forward | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
-| `autoc.flat_set` | `Set` | `FlatSet<T>` | direct access | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
+| `autoc.chained_hash_set` | `Set` | `ChainedHashSet<T>` | `ChainedHashSet<T>::Range` (forward) | bucket chaining; no sentinels, stable element addresses, safe default |
+| `autoc.intrusive_hash_set` | `Set` | `IntrusiveHashSet<T>` | `IntrusiveHashSet<T>::Range` (forward) | flat open addressing; needs sentinel values for the element type |
+| `autoc.treap_set` | `Set` | `TreapSet<T>` | `TreapSet<T>::Range` (forward) | ordered; iterates sorted, randomized BST with algebraic set operations |
+| `autoc.rb_set` | `Set` | `RBSet<T>` | `RBSet<T>::Range` (forward) | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
+| `autoc.avl_set` | `Set` | `AVLSet<T>` | `AVLSet<T>::Range` (forward) | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
+| `autoc.flat_set` | `Set` | `FlatSet<T>` | `FlatSet<T>::Range` (direct access) | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
 
 ## Maps
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
-| `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | forward | bucket chaining over an internal entry set |
-| `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | forward | flat open addressing; entries carry the sentinels |
-| `autoc.tree_map` | `Map` | `TreeMap<K, T>` | forward | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
-| `autoc.flat_map` | `Map` | `FlatMap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
+| `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | `ChainedHashMap<K, T>::Range` (forward) | bucket chaining over an internal entry set |
+| `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | `IntrusiveHashMap<K, T>::Range` (forward) | flat open addressing; entries carry the sentinels |
+| `autoc.tree_map` | `Map` | `TreeMap<K, T>` | `TreeMap<K, T>::Range` (forward) | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
+| `autoc.flat_map` | `Map` | `FlatMap<K, T>` | `FlatMap<K, T>::Range` (forward) | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
 
 ## Multisets
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
-| `autoc.flat_multiset` | `Set` | `FlatMultiset<T>` | direct access | ordered; contiguous sorted dynamic array multiset with binary search and duplicates preserved |
-| `autoc.counter` | `Counter` | `Counter<T>` | forward | multiset tracking element multiplicities; backed by configurable map backend |
+| `autoc.flat_multiset` | `Set` | `FlatMultiset<T>` | `FlatMultiset<T>::Range` (direct access) | ordered; contiguous sorted dynamic array multiset with binary search and duplicates preserved |
+| `autoc.counter` | `Counter` | `Counter<T>` | `Counter<T>::Range` (forward) | multiset tracking element multiplicities; backed by configurable map backend |
 
 ## Multimaps
 
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
-| `autoc.flat_multimap` | `Map` | `FlatMultimap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) with duplicate keys preserved |
-| `autoc.multimap` | `Map` | `Multimap<K, T>` | forward | generic multimap mapping keys to multiple values; parameterized by a set and a collection container |
+| `autoc.flat_multimap` | `Map` | `FlatMultimap<K, T>` | `FlatMultimap<K, T>::Range` (forward) | ordered by key over a contiguous sorted array of key-value pairs (AoS) with duplicate keys preserved |
+| `autoc.multimap` | `Map` | `Multimap<K, T>` | `Multimap<K, T>::Range` (forward) | generic multimap mapping keys to multiple values; parameterized by a set and a collection container |
 
 ## Value types
 
@@ -84,15 +84,20 @@ import in your module script; the *type* is the class you instantiate with a con
    deletions require O(log n) tree mutations.
 7. **Do you map keys to values?** Pick the map in the same family as the set you would have
    picked — @ref FlatMap for cache locality and flat memory, or @ref ChainedHashMap,
-   @ref IntrusiveHashMap, @ref TreeMap.
+   @ref IntrusiveHashMap, @ref TreeMap (parameterized by your choice of tree set backend).
 8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
 9. **Do you need a compact set of flags, booleans, or small integer universe?** Use
    @ref BitArray for zero-heap, fixed-capacity bitwise set algebra, or @ref BitVector
    for dynamic runtime capacity and bitstream operations.
-10. **Do you need to count occurrences of duplicate items (multiset)?** Use @ref Counter
-    with your choice of backend map (e.g. @ref FlatMap for cache efficiency or @ref ChainedHashMap
-    for O(1) hash-based counting).
+10. **Do you need a multiset (duplicate items allowed)?** Use @ref FlatMultiset for
+    contiguous sorted dynamic array storage with binary search lookups, or @ref Counter
+    to track element multiplicities over a configurable map backend (e.g. @ref FlatMap
+    for cache efficiency or @ref ChainedHashMap for O(1) hash-based counting).
+11. **Do you associate multiple values with each key (multimap)?** Use @ref FlatMultimap
+    for contiguous sorted array storage with binary search lookups (AoS layout), or
+    @ref Multimap for generic key-to-collection mapping parameterized by an underlying
+    set and collection container (e.g. tree set + vector).
 
 All concrete containers in one module share a single generated header, and each brings its
 own group in this manual, so the operations of `ChainedHashSet` and `IntrusiveHashSet` never

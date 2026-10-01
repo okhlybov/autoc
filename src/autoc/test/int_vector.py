@@ -275,3 +275,32 @@ x.unit(f"{type.compact}(): compact capacity to size", f"""
   TEST_EQUAL( {type.capacity(t)}, 0 );
   TEST_NULL( {type.data(t)} );
 """)
+
+x.unit(f"{type.put}()/{type.remove}(): container protocol addition and removal", f"""
+  TEST_TRUE( {type.put(t, 10)} );
+  TEST_TRUE( {type.put(t, 20)} );
+  TEST_TRUE( {type.put(t, 30)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 20 );
+  TEST_EQUAL( {type.get(t, 2)}, 30 );
+
+  TEST_FALSE( {type.remove(t, 99)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+
+  /* remove middle element */
+  TEST_TRUE( {type.remove(t, 20)} );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 30 );
+
+  /* remove front element */
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_EQUAL( {type.get(t, 0)}, 30 );
+
+  /* remove last remaining */
+  TEST_TRUE( {type.remove(t, 30)} );
+  TEST_TRUE( {type.empty(t)} );
+  TEST_FALSE( {type.remove(t, 30)} );
+""")

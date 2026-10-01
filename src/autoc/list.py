@@ -14,7 +14,7 @@ class List(_StructRenderer, Sequence):
     super().__init__(*args, **kws)
     self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
-    
+
   @property
   def orderable(self):
     return False # TODO
@@ -161,6 +161,37 @@ class List(_StructRenderer, Sequence):
         {self.memory.free("node")};
         --target->size;
         return {result};
+      """
+
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push_front(f.target, f.element)};
+        return 1;
+      """
+
+    with self.remove as f:
+      curr_elem = self.element.variable("curr->element")
+      destroy_curr = f"{self.element.destroy(curr_elem)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        {self.node}* curr;
+        {self.node}* prev;
+        assert(target);
+        prev = NULL;
+        curr = target->front;
+        while(curr) {{
+          if({self.element.equal(curr_elem, f.element)}) {{
+            if(prev) prev->next = curr->next;
+            else target->front = curr->next;
+            {destroy_curr}
+            {self.memory.free("curr")};
+            --target->size;
+            return 1;
+          }}
+          prev = curr;
+          curr = curr->next;
+        }}
+        return 0;
       """
     
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",

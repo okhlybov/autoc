@@ -150,6 +150,19 @@ class Queue(_StructRenderer, Container):
         return {self._deque.back(_target)};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.enqueue(f.target, f.element)};
+        return 1;
+      """
+
+    with self.remove as f:
+      f.code = lambda f=f: f"""
+        assert(target);
+        return {self._deque.remove(_target, f.element)};
+      """
+
     self.description = f"""
       Requires the element type (@ref {self.element}) to be *Copyable*.
       Supports one way element traversal via the corresponding @ref {self.range} iterator.

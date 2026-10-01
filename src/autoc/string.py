@@ -21,6 +21,13 @@ class String(_AliasRenderer, Indirection, Indexed):
   def __setup__(self):
     super().__setup__()
 
+    # FIXME: Subtyping principle violation (LSP): String inherits from Container
+    # but does not support generic single-character element addition or removal via
+    # the container protocol (put/remove), so they are disabled via None. The Container
+    # hierarchy should be refined for specialized sequence types like String.
+    self.put = None
+    self.remove = None
+
     self.description = f"""
       Requires no constraints on the element type - the element type is fixed to `char`.
       Supports two way character traversal via the corresponding @ref {self.range} iterator

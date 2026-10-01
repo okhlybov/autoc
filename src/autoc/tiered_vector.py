@@ -177,6 +177,39 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    curr_var = self._element("target", "index")
+    next_var = self._element("target", "index + 1")
+    dest_curr = f"{self.element.destroy(curr_var)};" if self.element.destructible else ""
+    dest_next = f"{self.element.destroy(next_var)};" if self.element.destructible else ""
+    with self.remove as f:
+      move_shift = (
+        f"{self.element.move(curr_var, next_var)};"
+        if self.element.moveable else
+        f"{self.element.copy(curr_var, next_var)}; {dest_next}"
+      )
+      f.code = lambda f=f: f"""
+        size_t index;
+        assert(target);
+        for(index = 0; index < target->size; ++index) {{
+          if({self.element.equal(curr_var, f.element)}) {{
+            {dest_curr}
+            for(; index + 1 < target->size; ++index) {{
+              {move_shift}
+            }}
+            --target->size;
+            return 1;
+          }}
+        }}
+        return 0;
+      """
+
     # Resize grows the vector by extending the chunk table and default-initializing the
     # new elements in place - no element migration is ever needed since the chunks are
     # stable. Shrinking destroys the removed tail and releases the chunks which became

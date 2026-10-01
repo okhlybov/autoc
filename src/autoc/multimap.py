@@ -283,7 +283,7 @@ class Map(Multimapping):
     super().__setup__()
 
     self.description = f"""
-      Generic multimap parameterized by key set container (@ref {self._set}) and value collection (@ref {self._collection}).
+      Generic multimap parameterized by a key set container and a value collection container.
       Supports one-way traversal over the keys and elements via the corresponding @ref {self.range} iterator.
     """
 
@@ -361,29 +361,6 @@ class Map(Multimapping):
           return {set.compare(_left, _right)};
         """
 
-    # Helper snippet for values insertion
-    # Sequences use push_back, push, or push_front; Sets/Multisets use put
-    if hasattr(col, "push_back"):
-      col_insert = lambda c_ptr, val: f"{col.push_back(c_ptr, val)}"
-    elif hasattr(col, "push"):
-      col_insert = lambda c_ptr, val: f"{col.push(c_ptr, val)}"
-    elif hasattr(col, "push_front"):
-      col_insert = lambda c_ptr, val: f"{col.push_front(c_ptr, val)}"
-    else:
-      col_insert = lambda c_ptr, val: f"{col.put(c_ptr, val)}"
-
-    # Helper snippet for values removal
-    if hasattr(col, "pop_front"):
-      col_remove = lambda c_ptr: f"{col.pop_front(c_ptr)}"
-    elif hasattr(col, "pop"):
-      col_remove = lambda c_ptr: f"{col.pop(c_ptr)}"
-    elif hasattr(col, "pop_back"):
-      col_remove = lambda c_ptr: f"{col.pop_back(c_ptr)}"
-    elif hasattr(col, "remove"):
-      col_remove = lambda c_ptr, val: f"{col.remove(c_ptr, val)}"
-    else:
-      col_remove = None
-
     with self.find_view as f:
       r = set.range.variable("r")
       f.code = f"""
@@ -408,7 +385,7 @@ class Map(Multimapping):
         assert(target);
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         if({found} && !{col.empty(entry.element_view(found))}) {{
           {vr.definition} = {col.range.new(entry.element_view(found))};
@@ -430,7 +407,7 @@ class Map(Multimapping):
         {result.definition};
         {element_view.definition};
         assert(target);
-        {element_view} = {self.view(f.target, f.index)};
+        {element_view} = ({element_view.type}){self.view(f.target, f.index)};
         if(!{element_view}) abort();
         {self.element.copy(result, element_view)};
         return {result};
@@ -444,12 +421,12 @@ class Map(Multimapping):
         assert(target);
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
-          {col_insert(f"&(({entry.name}*){found})->values", f.element)};
+          {col.put(f"&(({entry.name}*){found})->values", f.element)};
           {entry.destroy(_probe)};
         }} else {{
-          {col_insert(self.values_variable("probe.values") if hasattr(self, "values_variable") else "&probe.values", f.element)};
+          {col.put("&probe.values", f.element)};
           {set.put(_target, _probe)};
           {entry.destroy(_probe)};
         }}
@@ -466,7 +443,7 @@ class Map(Multimapping):
         assert(target);
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         cnt = {found} ? {col.size(entry.element_view(found))} : 0;
         return cnt;
@@ -474,30 +451,47 @@ class Map(Multimapping):
 
     with self.remove as f:
       found = Indirection(entry, constant=True).variable("found")
-      if col_remove:
-        rem_code = f"""
-          {col_remove(f"&(({entry.name}*){found})->values")};
-          --target->size;
-          if({col.empty(entry.element_view(found))}) {{
-            {set.remove(_target, _probe)};
-          }}
-          {entry.destroy(_probe)};
-          return 1;
-        """
+      if hasattr(col, "range"):
+        vr = col.range.variable("vr")
+        vr_def = f"{vr.definition};"
+        get_val = f"{vr} = {col.range.new(entry.element_view(found))};"
+        if hasattr(col.range, "back_view"):
+          found_val = f"{col.range.back_view(vr)}"
+        else:
+          found_val = f"{col.range.front_view(vr)}"
+      elif hasattr(col, "top_view"):
+        vr_def = ""
+        get_val = ""
+        found_val = f"{col.top_view(entry.element_view(found))}"
+      elif hasattr(col, "front_view"):
+        vr_def = ""
+        get_val = ""
+        found_val = f"{col.front_view(entry.element_view(found))}"
       else:
-        rem_code = f"""
-          {entry.destroy(_probe)};
-          return 0;
-        """
+        vr_def = ""
+        get_val = ""
+        found_val = ""
+
+      deref = "*" if isinstance(self.element, autoc.core.Primitive) else ""
       f.code = f"""
         {_probe.definition};
         {found.definition};
+        {vr_def}
         assert(target);
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
-          {rem_code}
+          if(!{col.empty(entry.element_view(found))}) {{
+            {get_val}
+            {col.remove(f"&(({entry.name}*){found})->values", f"{deref}({found_val})")};
+            --target->size;
+            if({col.empty(entry.element_view(found))}) {{
+              {set.remove(_target, _probe)};
+            }}
+            {entry.destroy(_probe)};
+            return 1;
+          }}
         }}
         {entry.destroy(_probe)};
         return 0;
@@ -512,7 +506,7 @@ class Map(Multimapping):
         assert(target);
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
           wiped = {col.size(entry.element_view(found))};
           target->size -= wiped;
@@ -537,7 +531,7 @@ class Map(Multimapping):
         result.cur_index = NULL;
         {entry.create(_probe)};
         {self.index.copy(self.index.variable("probe.index"), f.index)};
-        {found} = (const {entry.name}*){set.find_view(_target, _probe)};
+        {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         if({found} && !{col.empty(entry.element_view(found))}) {{
           result.cur_index = {entry.index_view(found)};

@@ -283,6 +283,50 @@ class Vector(_StructRenderer, Indexed, Sequence):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    remove_cases = []
+    for i in range(self._capacity):
+      slot_i = self.element.variable(f"target->variant.value.s{self._capacity}._{i}")
+      destroy_slot = f"{self.element.destroy(slot_i)};" if self.element.destructible else ""
+      shift_stmts = []
+      for j in range(i, self._capacity - 1):
+        curr_slot = self.element.variable(f"target->variant.value.s{self._capacity}._{j}")
+        next_slot = self.element.variable(f"target->variant.value.s{self._capacity}._{j + 1}")
+        dest_next = f"{self.element.destroy(next_slot)};" if self.element.destructible else ""
+        shift_op = (
+          f"{self.element.move(curr_slot, next_slot)};"
+          if self.element.moveable else
+          f"{self.element.copy(curr_slot, next_slot)}; {dest_next}"
+        )
+        shift_stmts.append(f"if({j} < target->variant.tag) {{ {shift_op} }}")
+      shift_code = " ".join(shift_stmts)
+      remove_cases.append(f"""case {i}:
+        if({self.element.equal(slot_i, f.element)}) {{
+          {destroy_slot}
+          {shift_code}
+          --target->variant.tag;
+          return 1;
+        }}
+        break;""")
+
+    with self.remove as f:
+      f.code = lambda f=f: f"""
+        int i;
+        assert(target);
+        for(i = 0; i <= target->variant.tag; ++i) {{
+          switch(i) {{
+            {" ".join(remove_cases)}
+          }}
+        }}
+        return 0;
+      """
+
     with self.method(None, "clear", {"target": inout(self)}, brief="Clear all elements from static vector",
       description="""
         Destroys all elements currently held by the static vector and resets it to the empty state.

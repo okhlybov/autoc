@@ -231,6 +231,12 @@ class Mapping(_StructRenderer, Indexed):
   def __setup__(self):
     super().__setup__()
 
+    # FIXME: Subtyping principle violation (LSP): Mapping inherits from Container
+    # but does not support 1-argument element insertion (it requires key-value insertion
+    # via put(target, key, value) or set(target, key, value)), so put is disabled via None.
+    # The Container hierarchy should be refined to distinguish key-value mappings from element containers.
+    self.put = None
+
     _target = self._set.variable("target->set")
     _source = self._set.variable("source->set")
     _left = self._set.variable("left->set")

@@ -136,6 +136,19 @@ class Stack(_StructRenderer, Container):
         return {self._list.front(_target)};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    with self.remove as f:
+      f.code = lambda f=f: f"""
+        assert(target);
+        return {self._list.remove(_target, f.element)};
+      """
+
     self.range = Range(self)
 
     self.description = f"""

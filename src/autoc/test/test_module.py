@@ -1,6 +1,7 @@
 import os
 import re
 import glob
+import time
 import tempfile
 from autoc.module import Module, Source, Code
 
@@ -152,3 +153,37 @@ with tempfile.TemporaryDirectory() as tmpdir:
   with Module(prefix, source=CustomSource, source_count=1, stateful=False) as m:
     m.add(Code(definitions="int c = 0;"))
   assert sorted(os.listdir(tmpdir)) == ["m_auto.h", "m_custom.c"]
+
+# Test 10: Stateless idempotency (stateful=False preserves timestamps on unchanged re-runs)
+with tempfile.TemporaryDirectory() as tmpdir:
+  prefix = os.path.join(tmpdir, "m")
+  with Module(prefix, stateful=False) as m:
+    m.add(Code(definitions="int a = 1;"))
+  h_path = os.path.join(tmpdir, "m_auto.h")
+  c_path = os.path.join(tmpdir, "m_auto.c")
+  h_mtime1 = os.path.getmtime(h_path)
+  c_mtime1 = os.path.getmtime(c_path)
+
+  time.sleep(0.05)
+
+  with Module(prefix, stateful=False) as m:
+    m.add(Code(definitions="int a = 1;"))
+  h_mtime2 = os.path.getmtime(h_path)
+  c_mtime2 = os.path.getmtime(c_path)
+
+  assert h_mtime1 == h_mtime2, "Header was unnecessarily overwritten in stateless mode!"
+  assert c_mtime1 == c_mtime2, "Source was unnecessarily overwritten in stateless mode!"
+  assert not os.path.exists(os.path.join(tmpdir, "m.state"))
+
+# Test 11: Switch from stateful to stateless removes stray .state file
+with tempfile.TemporaryDirectory() as tmpdir:
+  prefix = os.path.join(tmpdir, "m")
+  with Module(prefix, stateful=True) as m:
+    m.add(Code(definitions="int a = 1;"))
+  state_path = os.path.join(tmpdir, "m.state")
+  assert os.path.exists(state_path)
+
+  with Module(prefix, stateful=False) as m:
+    m.add(Code(definitions="int a = 1;"))
+  assert not os.path.exists(state_path), "Stray .state file was not removed when switched to stateful=False!"
+

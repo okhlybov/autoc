@@ -231,3 +231,37 @@ x.cleanup(f"""
 x.unit(f"{type.equal}(): compare !empty > empty stacks", f"""
   TEST_FALSE( {type.equal(t1, t2)} );
 """)
+
+x.setup(f"""
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.put}()/{type.remove}(): container protocol addition and removal", f"""
+  TEST_TRUE( {type.put(t, 10)} );
+  TEST_TRUE( {type.put(t, 20)} );
+  TEST_TRUE( {type.put(t, 30)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.top(t)}, 30 );
+
+  TEST_FALSE( {type.remove(t, 99)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+
+  /* remove top */
+  TEST_TRUE( {type.remove(t, 30)} );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.top(t)}, 20 );
+
+  /* remove bottom */
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_EQUAL( {type.top(t)}, 20 );
+
+  /* remove remaining */
+  TEST_TRUE( {type.remove(t, 20)} );
+  TEST_TRUE( {type.empty(t)} );
+  TEST_FALSE( {type.remove(t, 20)} );
+""")

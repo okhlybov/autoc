@@ -77,6 +77,13 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
   def __setup__(self):
     super().__setup__()
 
+    # FIXME: Subtyping principle violation (LSP): Array inherits from Container
+    # but has a fixed capacity and cannot support dynamic element addition or removal,
+    # so put and remove are disabled via None. The Container hierarchy should be refined
+    # (e.g. distinguishing fixed-capacity / non-resizable containers from dynamic containers).
+    self.put = None
+    self.remove = None
+
     self.description = f"""
       Fixed-size direct access sequence container holding exactly {self._size} elements.
       Allocates no dynamic heap memory, storing elements inline in a contiguous C array.

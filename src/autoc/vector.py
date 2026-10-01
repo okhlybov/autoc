@@ -343,6 +343,37 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    target_next_i = self.element.variable(f"{data}[index + 1]")
+    destroy_next = f"{self.element.destroy(target_next_i)};" if self.element.destructible else ""
+    with self.remove as f:
+      move_shift = (
+        f"{self.element.move(target_i, target_next_i)};"
+        if self.element.moveable else
+        f"{self.element.copy(target_i, target_next_i)}; {destroy_next}"
+      )
+      f.code = lambda f=f: f"""
+        {self.index} index;
+        assert(target);
+        for(index = 0; index < target->size; ++index) {{
+          if({self.element.equal(target_i, f.element)}) {{
+            {destroy_i};
+            for(; index + 1 < target->size; ++index) {{
+              {move_shift};
+            }}
+            --target->size;
+            return 1;
+          }}
+        }}
+        return 0;
+      """
+
     with self.method(None, "compact", {"target": inout(self)}, constraint=lambda: self.element.copyable, brief="Compact buffer capacity to fit element count",
       description="""
         Reduces the allocated capacity down to the current size. If the vector has inline capacity

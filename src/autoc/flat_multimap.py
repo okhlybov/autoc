@@ -247,7 +247,7 @@ class Map(Multimapping):
         {found.definition};
         assert(target);
         {entry.emplace_index(_entry, f.index)};
-        {found} = {set.find_view(_target, _entry)};
+        {found} = ({found.type}){set.find_view(_target, _entry)};
         {entry.destroy_index(_entry)};
         if({found}) {{
           return {entry.element_view(found)};

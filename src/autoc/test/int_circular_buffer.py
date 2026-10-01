@@ -245,6 +245,35 @@ x.unit(f"{type.contains}(): test contains for present and absent elements", f"""
   TEST_FALSE( {type.contains(t, 40)} );
 """)
 
+x.unit(f"{type.put}()/{type.remove}(): container protocol addition and removal", f"""
+  TEST_TRUE( {type.put(t, 10)} );
+  TEST_TRUE( {type.put(t, 20)} );
+  TEST_TRUE( {type.put(t, 30)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 20 );
+  TEST_EQUAL( {type.get(t, 2)}, 30 );
+
+  TEST_FALSE( {type.remove(t, 99)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+
+  /* remove middle */
+  TEST_TRUE( {type.remove(t, 20)} );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 30 );
+
+  /* remove front */
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_EQUAL( {type.get(t, 0)}, 30 );
+
+  /* remove last remaining */
+  TEST_TRUE( {type.remove(t, 30)} );
+  TEST_TRUE( {type.empty(t)} );
+  TEST_FALSE( {type.remove(t, 30)} );
+""")
+
 
 #
 # 2. Tests for Dynamic circular buffer
@@ -364,4 +393,41 @@ y.unit(f"{dtype.copy}(), {dtype.move}(), {dtype.swap}(): dynamic buffer lifecycl
   TEST_EQUAL( {dtype.front(dt2)}, 999 );
 
   {dtype.destroy(dt2)};
+""")
+
+y.setup(f"""
+  {dt.definition};
+  {dtype.create(dt, 4)};
+""")
+y.cleanup(f"""
+  {dtype.destroy(dt)};
+""")
+
+y.unit(f"{dtype.put}()/{dtype.remove}(): dynamic container protocol addition and removal", f"""
+  TEST_TRUE( {dtype.put(dt, 10)} );
+  TEST_TRUE( {dtype.put(dt, 20)} );
+  TEST_TRUE( {dtype.put(dt, 30)} );
+  TEST_EQUAL( {dtype.size(dt)}, 3 );
+  TEST_EQUAL( {dtype.get(dt, 0)}, 10 );
+  TEST_EQUAL( {dtype.get(dt, 1)}, 20 );
+  TEST_EQUAL( {dtype.get(dt, 2)}, 30 );
+
+  TEST_FALSE( {dtype.remove(dt, 99)} );
+  TEST_EQUAL( {dtype.size(dt)}, 3 );
+
+  /* remove middle */
+  TEST_TRUE( {dtype.remove(dt, 20)} );
+  TEST_EQUAL( {dtype.size(dt)}, 2 );
+  TEST_EQUAL( {dtype.get(dt, 0)}, 10 );
+  TEST_EQUAL( {dtype.get(dt, 1)}, 30 );
+
+  /* remove front */
+  TEST_TRUE( {dtype.remove(dt, 10)} );
+  TEST_EQUAL( {dtype.size(dt)}, 1 );
+  TEST_EQUAL( {dtype.get(dt, 0)}, 30 );
+
+  /* remove last remaining */
+  TEST_TRUE( {dtype.remove(dt, 30)} );
+  TEST_TRUE( {dtype.empty(dt)} );
+  TEST_FALSE( {dtype.remove(dt, 30)} );
 """)

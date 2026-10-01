@@ -270,3 +270,40 @@ x.unit(f"{type.resize}(): repeated up and down cycles", f"""
   for(i = 0; i < 30; ++i) TEST_EQUAL( {type.get(t, "i")}, i );
   for(i = 30; i < 45; ++i) TEST_EQUAL( {type.get(t, "i")}, 0 );
 """)
+
+x.setup(f"""
+  {t.definition};
+  {type.create(t)};
+""")
+x.cleanup(f"""
+  {type.destroy(t)};
+""")
+
+x.unit(f"{type.put}()/{type.remove}(): container protocol addition and removal", f"""
+  TEST_TRUE( {type.put(t, 10)} );
+  TEST_TRUE( {type.put(t, 20)} );
+  TEST_TRUE( {type.put(t, 30)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 20 );
+  TEST_EQUAL( {type.get(t, 2)}, 30 );
+
+  TEST_FALSE( {type.remove(t, 99)} );
+  TEST_EQUAL( {type.size(t)}, 3 );
+
+  /* remove middle element */
+  TEST_TRUE( {type.remove(t, 20)} );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.get(t, 0)}, 10 );
+  TEST_EQUAL( {type.get(t, 1)}, 30 );
+
+  /* remove front element */
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.size(t)}, 1 );
+  TEST_EQUAL( {type.get(t, 0)}, 30 );
+
+  /* remove last remaining */
+  TEST_TRUE( {type.remove(t, 30)} );
+  TEST_TRUE( {type.empty(t)} );
+  TEST_FALSE( {type.remove(t, 30)} );
+""")

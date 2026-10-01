@@ -359,6 +359,41 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    target_idx = lambda idx: f"target->elements[(target->head + {idx}) % {self._capacity('target')}]"
+    curr_slot = self.element.variable(target_idx("index"))
+    next_slot = self.element.variable(target_idx("index + 1"))
+    dest_curr = f"{self.element.destroy(curr_slot)};" if self.element.destructible else ""
+    dest_next = f"{self.element.destroy(next_slot)};" if self.element.destructible else ""
+    with self.remove as f:
+      move_shift = (
+        f"{self.element.move(curr_slot, next_slot)};"
+        if self.element.moveable else
+        f"{self.element.copy(curr_slot, next_slot)}; {dest_next}"
+      )
+      f.code = lambda f=f: f"""
+        size_t index;
+        assert(target);
+        for(index = 0; index < target->size; ++index) {{
+          if({self.element.equal(curr_slot, f.element)}) {{
+            {dest_curr}
+            for(; index + 1 < target->size; ++index) {{
+              {move_shift}
+            }}
+            --target->size;
+            if(target->size == 0) target->head = 0;
+            return 1;
+          }}
+        }}
+        return 0;
+      """
+
     with self.method(None, "clear", {"target": inout(self)}, brief="Clear all elements from the circular buffer",
       description="""
         Destroys all active elements and resets the circular buffer to empty state.

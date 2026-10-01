@@ -278,7 +278,7 @@ class Counter(_StructRenderer, Multiset):
     with self.method(std.size_t, ("remove", "count"), {"target": inout(self), "element": self.element, "count": std.size_t}, brief="Remove element multiplicity",
       description="""
         Decrements the multiplicity of the element by at most `count`.
-        Alias for @ref subtract.
+        Alias for `subtract`.
 
         @param[in,out] target the counter to modify
         @param[in] element the element to remove
@@ -329,7 +329,7 @@ class Counter(_StructRenderer, Multiset):
     with self.method(std.size_t, ("remove", "all"), {"target": inout(self), "element": self.element}, brief="Remove all occurrences of element",
       description="""
         Completely removes the element from the counter regardless of its multiplicity.
-        Alias for @ref wipe.
+        Alias for `wipe`.
 
         @param[in,out] target the counter to modify
         @param[in] element the element to remove completely
@@ -492,7 +492,7 @@ class Counter(_StructRenderer, Multiset):
       brief="In-place multiset union (maximum multiplicities)",
       description="""
         Updates target so that for each element, count(target) = max(count(target), count(other)).
-        Alias for @ref union.
+        Alias for `union`.
 
         @param[in,out] target the destination counter
         @param[in] other the counter to unite with
@@ -507,7 +507,7 @@ class Counter(_StructRenderer, Multiset):
       brief="In-place multiset intersection (minimum multiplicities)",
       description="""
         Updates target so that for each element, count(target) = min(count(target), count(other)).
-        Alias for @ref intersection.
+        Alias for `intersection`.
 
         @param[in,out] target the destination counter
         @param[in] other the counter to intersect with
@@ -522,7 +522,7 @@ class Counter(_StructRenderer, Multiset):
       brief="In-place multiset difference",
       description="""
         Subtracts the multiplicities of elements in `other` from `target`.
-        Alias for @ref difference.
+        Alias for `difference`.
 
         @param[in,out] target the counter to subtract from
         @param[in] other the counter whose multiplicities are subtracted

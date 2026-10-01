@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.hash import Xor
 from autoc.range import Range
 from autoc.memory import Manager
-from autoc.core import Composite, _StructRenderer, _type
+from autoc.core import Composite, _StructRenderer, _type, inout
 
 
 #
@@ -104,6 +104,31 @@ class Container(Composite):
         assert(target);
         return {self.find_view(f.target, f.element)} != NULL;
       """
+
+    # FIXME: Subtyping principle violation (LSP): put and remove assume dynamic single-element
+    # insertion and removal. Descendants like Mapping (key-value), Array (fixed capacity),
+    # and String (specialized sequence) cannot conform and disable them via None.
+    # The Container hierarchy should be refined into finer-grained protocols.
+    self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to container",
+      description="""
+        Adds the element to the container per the container semantics.
+        Every container implementation inherits or provides this protocol operation.
+
+        @param[in,out] target the container to add to
+        @param[in] element the element to add
+        @return non-zero if the element was added
+      """)
+
+    self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element from container if present",
+      description="""
+        Removes the element when the container holds an equal one, leaving the container
+        unchanged otherwise. Every container implementation inherits or provides this
+        protocol operation.
+
+        @param[in,out] target the container to remove from
+        @param[in] element the element to remove
+        @return non-zero if an element was removed and zero if the container held no equal element
+      """)
 
   @property
   def copyable(self):

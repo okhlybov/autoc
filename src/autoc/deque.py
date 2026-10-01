@@ -236,6 +236,34 @@ class Deque(_StructRenderer, Sequence):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push_back(f.target, f.element)};
+        return 1;
+      """
+
+    with self.remove as f:
+      node_elem = self.element.variable("node->element")
+      destroy_node = f"{self.element.destroy(node_elem)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        {self.node}* node;
+        assert(target);
+        node = target->front;
+        while(node) {{
+          if({self.element.equal(node_elem, f.element)}) {{
+            if(node->prev) node->prev->next = node->next; else target->front = node->next;
+            if(node->next) node->next->prev = node->prev; else target->back = node->prev;
+            {destroy_node}
+            {self.memory.free("node")};
+            --target->size;
+            return 1;
+          }}
+          node = node->next;
+        }}
+        return 0;
+      """
+
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable, brief="Get front element",
       description="""
         Returns a copy of the first element in O(1) without modifying the deque.

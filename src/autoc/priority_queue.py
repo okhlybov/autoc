@@ -221,6 +221,33 @@ class Queue(_StructRenderer, Container):
         return {result};
       """
 
+    with self.put as f:
+      f.inline_code = f"""
+        assert(target);
+        {self.push(f.target, f.element)};
+        return 1;
+      """
+
+    with self.remove as f:
+      destroy_slot_idx = f"{self.element.destroy(self.element.variable('target->elements[index]'))};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        size_t index;
+        assert(target);
+        for(index = 0; index < target->size; ++index) {{
+          if({self.element.equal(self.element.variable("target->elements[index]"), f.element)}) {{
+            {destroy_slot_idx}
+            --target->size;
+            if(index < target->size) {{
+              {self.element.move(self.element.variable("target->elements[index]"), slot_size)};
+              {self.sift_down(f.target, "index")};
+              {self.sift_up(f.target, "index")};
+            }}
+            return 1;
+          }}
+        }}
+        return 0;
+      """
+
     with self.method(self.element, "top", {"target": self}, constraint=lambda: self.element.copyable and self.element.orderable, brief="Get highest priority element",
       description="""
         Returns a copy of the greatest element per the element comparison in O(1) - the

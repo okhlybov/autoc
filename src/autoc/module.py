@@ -1,6 +1,7 @@
 import os
 import re
 import glob
+import filecmp
 import hashlib
 import autoc
 
@@ -45,14 +46,18 @@ class _SmartRenderer:
       self.__digest = stream.digest
     finally:
       stream.close()
-    # The freshly rendered contents are verified against the hash sums recorded
-    # by the previous generation run rather than against the on-disk data since
-    # the generated sources are expected to be post-processed (pretty-printed)
-    # by external tools which must not be undone by the idempotent re-runs
-    if not os.path.exists(self.file_name) or self.module.digests.get(self.file_name) != self.__digest:
+    if not os.path.exists(self.file_name):
       os.replace(path, self.file_name)
+    elif self.module.stateful:
+      if self.module.digests.get(self.file_name) != self.__digest:
+        os.replace(path, self.file_name)
+      else:
+        os.unlink(path)
     else:
-      os.unlink(path)
+      if not filecmp.cmp(path, self.file_name, shallow=False):
+        os.replace(path, self.file_name)
+      else:
+        os.unlink(path)
 
 
 def _sort_entities(entities):
@@ -227,6 +232,13 @@ class Module:
       source.render()
     if self.stateful:
       _State(self).collect().write()
+    else:
+      state = _State(self)
+      if os.path.exists(state.file_name):
+        try:
+          os.unlink(state.file_name)
+        except OSError:
+          pass
     return self
 
   @property
