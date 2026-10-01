@@ -1,11 +1,11 @@
 import autoc.std as std
 from autoc.core import Composite, _StructRenderer, Callable, Indirection, inout, _type
-from autoc.collection import Collection, _Range
+from autoc.container import Container, _Range
 from autoc.range import Forward
 
 
 # Multiset container tracking element frequencies
-class Counter(_StructRenderer, Collection):
+class Counter(_StructRenderer, Container):
 
   brief = "Multiset container tracking element frequencies"
 

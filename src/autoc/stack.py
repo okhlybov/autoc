@@ -1,11 +1,11 @@
 from autoc.list import List
 from autoc.range import Forward
-from autoc.collection import Collection, _Range
+from autoc.container import Container, _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
-class Stack(_StructRenderer, Collection):
+class Stack(_StructRenderer, Container):
 
   brief = "Ordered LIFO container with head push/pop"
   

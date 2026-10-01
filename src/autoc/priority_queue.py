@@ -1,10 +1,10 @@
 import autoc.std as std
-from autoc.collection import Collection
+from autoc.container import Container
 from autoc.core import inout, out, Indirection, _StructRenderer
 
 
 #
-class Queue(_StructRenderer, Collection):
+class Queue(_StructRenderer, Container):
   # The extraction-ordered container: the elements are consumed in the priority order -
   # top returns the greatest element per the element comparison. The binary heap over the
   # flat array gives the guaranteed O(log n) push/pop with the contiguous cache friendly

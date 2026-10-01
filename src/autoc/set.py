@@ -1,9 +1,9 @@
 from autoc.core import inout
-from autoc.collection import Collection
+from autoc.container import Container
 
 
 # Abstract base for all set collections
-class Set(Collection):
+class Set(Container):
   
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)

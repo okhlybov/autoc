@@ -1,0 +1,107 @@
+import autoc.std as std
+from autoc.core import _type, inout, Callable, _StructRenderer
+from autoc.container import Container
+
+
+# Pure abstract protocol for multimapping containers associating keys with multiple values
+class Multimapping(_StructRenderer, Container):
+
+  brief = "Abstract associative container mapping keys (indices) to multiple values (elements)"
+
+  def __init__(self, name, element, index, *args, dependencies=(), **kws):
+    self.index = _type(index)
+    super().__init__(name, element, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
+    self.dependencies.add(self.index)
+
+  @property
+  def copyable(self):
+    return self.element.copyable and self.index.copyable
+
+  @property
+  def hashable(self):
+    return self.element.hashable and self.index.hashable
+
+  @property
+  def comparable(self):
+    return self.element.comparable and self.index.comparable
+
+  def __setup__(self):
+    super().__setup__()
+
+    valid_index = lambda: self.index.comparable or self.index.orderable
+
+    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=valid_index, brief="Get view of first element with key",
+      description="""
+        Returns a constant view of the first element associated with the index, or NULL if absent.
+
+        @param[in] target the multimap to query
+        @param[in] index the key to look for
+        @return constant pointer to element, or NULL if not found
+      """)
+
+    self.method("int", "indexed", {"target": self, "index": self.index}, constraint=valid_index, brief="Check if multimap contains key",
+      description="""
+        Checks whether the multimap contains at least one entry with the specified index.
+
+        @param[in] target the multimap to query
+        @param[in] index the key to look for
+        @return non-zero if the key is present, zero otherwise
+      """)
+
+    self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: valid_index() and self.element.copyable, brief="Get copy of first element with key",
+      description="""
+        Returns an owned copy of the first element associated with the index. Aborts if the key is absent.
+
+        @param[in] target the multimap to query
+        @param[in] index the key to look for
+        @return copy of the element
+      """)
+
+    self.method("int", "put", {"target": inout(self), "index": self.index, "element": self.element},
+      constraint=lambda: valid_index() and self.element.copyable, brief="Insert key-value entry into multimap",
+      description="""
+        Inserts a new key-value entry into the multimap, preserving duplicate keys.
+
+        @param[in,out] target the multimap to insert into
+        @param[in] index the key of the new entry
+        @param[in] element the value of the new entry
+        @return always non-zero
+      """)
+
+    self.method("int", "remove", {"target": inout(self), "index": self.index}, constraint=valid_index, brief="Remove one entry with specified key",
+      description="""
+        Removes one occurrence of an entry with the specified index, if present.
+
+        @param[in,out] target the multimap to modify
+        @param[in] index the key to remove
+        @return non-zero if an entry was removed, zero if absent
+      """)
+
+    self.method(std.size_t, "wipe", {"target": inout(self), "index": self.index}, constraint=valid_index, brief="Remove all entries with specified key",
+      description="""
+        Removes all entries associated with the specified index from the multimap.
+
+        @param[in,out] target the multimap to modify
+        @param[in] index the key to remove
+        @return number of entries removed
+      """)
+
+    self.method(std.size_t, "count", {"target": self, "index": self.index}, constraint=valid_index, brief="Count entries with key",
+      description="""
+        Returns the number of entries associated with the specified index.
+
+        @param[in] target the multimap to query
+        @param[in] index the key to count
+        @return number of matching entries
+      """)
+
+    if hasattr(self, "range"):
+      self.method(Callable.Parameter(self.range), ("equal", "range"), {"target": self, "index": self.index}, constraint=valid_index, brief="Get range covering all entries with key",
+        description="""
+          Returns a range spanning all entries with the specified index.
+          If the key is absent, an empty range is returned.
+
+          @param[in] target the multimap to search
+          @param[in] index the key to search for
+          @return range covering all matching entries
+        """)

@@ -280,4 +280,4 @@ The repository's test suite is written the way users write code: Python scripts 
 
 ## License
 
-BSD 2-Clause — see [LICENSE](LICENSE).
+BSD 3-Clause — see [LICENSE](LICENSE).

@@ -1,12 +1,12 @@
 import autoc.std as std
-from autoc.collection import Collection, _Range
+from autoc.container import Container, _Range
 from autoc.range import DirectAccess
 from autoc.searchable import Searchable
 from autoc.core import inout, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, Searchable, Collection):
+class Set(_StructRenderer, Searchable, Container):
 
   def __init__(self, name, element, *args, dependencies=(), **kws):
     super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)

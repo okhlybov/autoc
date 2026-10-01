@@ -1,11 +1,11 @@
 from autoc.deque import Deque
 from autoc.range import Forward
-from autoc.collection import Collection, _Range
+from autoc.container import Container, _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
-class Queue(_StructRenderer, Collection):
+class Queue(_StructRenderer, Container):
 
   brief = "Ordered FIFO container with back push and front pop"
   

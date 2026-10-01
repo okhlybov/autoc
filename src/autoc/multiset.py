@@ -1,10 +1,10 @@
 import autoc.std as std
 from autoc.core import inout, Callable
-from autoc.collection import Collection
+from autoc.container import Container
 
 
 # Abstract base for all multiset collections
-class Multiset(Collection):
+class Multiset(Container):
 
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)

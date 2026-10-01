@@ -53,6 +53,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | Module | Type | Documented as | Range | Notes |
 |---|---|---|---|---|
 | `autoc.flat_multimap` | `Map` | `FlatMultimap<K, T>` | forward | ordered by key over a contiguous sorted array of key-value pairs (AoS) with duplicate keys preserved |
+| `autoc.multimap` | `Map` | `Multimap<K, T>` | forward | generic multimap mapping keys to multiple values; parameterized by a set and a collection container |
 
 ## Value types
 

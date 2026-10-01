@@ -1,9 +1,9 @@
 from autoc.hash import XorRot
-from autoc.collection import Collection
+from autoc.container import Container
 
 
 #
-class Sequence(Collection):
+class Sequence(Container):
   
   def __init__(self, *args, hasher=XorRot(), **kws):
     super().__init__(*args, hasher=hasher, **kws)

@@ -24,6 +24,7 @@ import autoc.flat_set
 import autoc.flat_multiset
 import autoc.flat_map
 import autoc.flat_multimap
+import autoc.multimap
 import autoc.intrusive_hash_set
 import autoc.intrusive_hash_map
 import autoc.treap_set
@@ -260,6 +261,12 @@ class FlatMultimap(autoc.flat_multimap.Map):
     return f"{self.name}<{self.index}, {self.element}>"
 
 
+class Multimap(autoc.multimap.Map):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.index}, {self.element}>"
+
+
 # Multisets
 class Counter(autoc.counter.Counter):
   @property
@@ -310,6 +317,8 @@ _nested_range(autoc.rb_set, "RBSetRange")
 _nested_range(autoc.avl_set, "AVLSetRange")
 _nested_range(autoc.flat_set, "FlatSetRange")
 _nested_range(autoc.flat_multiset, "FlatMultisetRange")
+_nested_range(autoc.flat_multimap, "FlatMultimapRange")
+_nested_range(autoc.multimap, "MultimapRange")
 _nested_range(autoc.circular_buffer, "CircularBufferRange")
 _nested_range(autoc.counter, "CounterRange")
 
@@ -330,6 +339,7 @@ def configure_module(module):
   module.add(DynamicCircularBuffer("DynamicCircularBuffer", T))
   module.add(FlatMap("FlatMap", T, K))
   module.add(FlatMultimap("FlatMultimap", T, K))
+  module.add(Multimap("Multimap", T, K, AVLSet, Vector))
   module.add(FlatMultiset("FlatMultiset", T))
   module.add(FlatSet("FlatSet", T))
   module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))

@@ -1,10 +1,10 @@
 import autoc.std as std
 from autoc.core import _type, inout
-from autoc.collection import Collection
+from autoc.container import Container
 
 
 # Base abstract class for collections whose elements can be indexed by a key or offset
-class Indexed(Collection):
+class Indexed(Container):
   
   def __init__(self, name, element, index, *args, **kws):
     self.index = _type(index)
