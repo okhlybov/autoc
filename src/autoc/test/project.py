@@ -69,9 +69,10 @@ def generate(directory=".", project="test"):
       f.write(autoc.cmake.project.interpolate(_code_workspace, **items))
 
     # 7. Bootstrap the test module
-    with autoc.module.Module(project) as m:
-      autoc.test.configure_module(m)
-    autoc.cmake.CMake(m)
+    with autoc.cmake.CMake(m):
+      with autoc.module.Module(project) as m:
+        autoc.test.configure_module(m)
+
 
   finally:
     os.chdir(orig_cwd)
@@ -90,10 +91,9 @@ import autoc.module
 
 name = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "@module@"
 
-with autoc.module.Module(name) as m:
-  autoc.test.configure_module(m)
-
-autoc.cmake.CMake(m)
+with autoc.cmake.CMake():
+  with autoc.module.Module(name) as m:
+    autoc.test.configure_module(m)
 """
 
 

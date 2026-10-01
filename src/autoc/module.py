@@ -156,6 +156,9 @@ class Source(_EntityContainer, _SmartRenderer):
     """.lstrip())
 
 
+_build_context = None
+
+
 #
 class Module:
 
@@ -254,6 +257,8 @@ class Module:
 
   def __exit__(self, exc_type, exc_value, traceback):
     self.render()
+    if _build_context:
+      _build_context.module = self
     return False
 
 
