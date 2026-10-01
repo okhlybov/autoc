@@ -14,13 +14,14 @@ class Sequence(Container):
     range = self.range
     r = range.variable("r")
     
-    with self.contains as f:
+    with self.find_view as f:
       f.code = f"""
         {r.definition};
+        assert(target);
         for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.element.equal(range.front_view(r), f.element)}) return 1;
+          if({self.element.equal(range.front_view(r), f.element)}) return {range.front_view(r)};
         }}
-        return 0;
+        return ({self.element.view_type})NULL;
       """
 
 

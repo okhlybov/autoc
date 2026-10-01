@@ -384,17 +384,19 @@ class Map(Multimapping):
     else:
       col_remove = None
 
-    with self.contains as f:
+    with self.find_view as f:
       r = set.range.variable("r")
       f.code = f"""
         {r.definition};
         const {entry.name}* e;
+        {self.element.view_type} fv;
         assert(target);
         for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
           e = (const {entry.name}*){set.range.front_view(r)};
-          if({col.contains(entry.element_view("e"), f.element)}) return 1;
+          fv = {col.find_view(entry.element_view("e"), f.element)};
+          if(fv) return fv;
         }}
-        return 0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.view as f:

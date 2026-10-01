@@ -1,12 +1,12 @@
 import autoc.std as std
 
 
-# Mixin class providing binary search algorithms for direct-access containers.
-class Searchable:
+# Mixin class providing binary search and bisection algorithms for direct-access containers.
+class Bisectable:
 
-  def __init__(self, *args, search_operations=True, search_optional_group=None, **kws):
-    self.search_operations = bool(search_operations)
-    self.search_optional_group = search_optional_group
+  def __init__(self, *args, bisection_operations=True, bisection_optional_group=None, search_optional_group=None, **kws):
+    self.bisection_operations = bool(bisection_operations)
+    self.bisection_optional_group = bisection_optional_group
     super().__init__(*args, **kws)
 
   # Protocol handlers
@@ -20,10 +20,10 @@ class Searchable:
   def __setup__(self):
     super().__setup__()
 
-    self.dependencies.add(std.size_t)
-    search_constraint = lambda: self.search_operations and self.element.orderable
+    self.dependencies.add(std.size_t) # FIXME move to dependencies
+    bisect_constraint = lambda: self.bisection_operations and self.element.orderable
 
-    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the first position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("lower", "bound"), {"target": self, "element": self.element}, constraint=bisect_constraint, optional_group=self.bisection_optional_group, brief="Get the first position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the leftmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -46,7 +46,7 @@ class Searchable:
         return low;
       """
 
-    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, brief="Get the last position the element can be inserted at keeping the order",
+    with self.method(std.size_t, ("upper", "bound"), {"target": self, "element": self.element}, constraint=bisect_constraint, optional_group=self.bisection_optional_group, brief="Get the last position the element can be inserted at keeping the order",
       description="""
         Binary searches the sorted container in O(log n) returning the rightmost position the
         element can be inserted at keeping the ascending order. The container must be sorted
@@ -69,7 +69,7 @@ class Searchable:
         return low;
       """
 
-    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=search_constraint, optional_group=self.search_optional_group, references=(self.lower_bound,), brief="Check if the element is present in the sorted container",
+    with self.method("int", ("binary", "search"), {"target": self, "element": self.element}, constraint=bisect_constraint, optional_group=self.bisection_optional_group, references=(self.lower_bound,), brief="Check if the element is present in the sorted container",
       description="""
         Binary searches the sorted container in O(log n) for the element. The container must be
         sorted in the ascending order beforehand.

@@ -1,15 +1,15 @@
 import autoc.std as std
 from autoc.core import inout
-from autoc.searchable import Searchable
+from autoc.bisectable import Bisectable
 
 
 # Mixin class providing in-place sorting, reversal, and binary search algorithms
 # for direct-access sequence containers.
-class Sortable(Searchable):
+class Sortable(Bisectable):
 
   def __init__(self, *args, sorting_operations=True, **kws):
     self.sorting_operations = bool(sorting_operations)
-    super().__init__(*args, search_operations=sorting_operations, search_optional_group="sorting_operations", **kws)
+    super().__init__(*args, bisection_operations=sorting_operations, bisection_optional_group="sorting_operations", **kws)
 
   def __setup__(self):
     super().__setup__()

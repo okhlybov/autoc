@@ -79,7 +79,17 @@ class Container(Composite):
         @return the number of elements held by the container
       """)
     
-    self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Check if the container holds the element",
+    self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Find element and return constant view",
+      description="""
+        Finds the element in the container per the container lookup mechanics and returns
+        a constant view pointing to it, or NULL if the element is not found.
+
+        @param[in] target the container to search
+        @param[in] element the element to look for
+        @return constant view of the found element, or NULL if not found
+      """)
+
+    with self.method("int", "contains", {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, references=(self.find_view,), brief="Check if the container holds the element",
       description="""
         Looks the element up per the container lookup mechanics without modifying the
         container. The cost matches the underlying implementation: expected O(1) for
@@ -89,7 +99,11 @@ class Container(Composite):
         @param[in] target the container to search
         @param[in] element the element to look for
         @return non-zero if the container holds an element equal to the given one
-      """)
+      """) as f:
+      f.inline_code = f"""
+        assert(target);
+        return {self.find_view(f.target, f.element)} != NULL;
+      """
 
   @property
   def copyable(self):

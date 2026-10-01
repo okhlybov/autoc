@@ -192,12 +192,15 @@ class Set(_StructRenderer, autoc.set.Set):
         }}
       """
     
-    with self.contains as f:
+    with self.find_view as f:
       f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
-        return target->elements && {self.locate_element(f.target, "&index", f.element)} != NULL;
+        if({self.locate_element(f.target, "&index", f.element)}) {{
+          return {self.element.variable("target->elements[index]").bind(f.result)};
+        }}
+        return ({self.element.view_type})NULL;
       """
     
     with self.destroy as f:
@@ -251,23 +254,6 @@ class Set(_StructRenderer, autoc.set.Set):
           --target->size;
           return 1;
         }} else return 0;
-      """
-    
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find the element and return a constant view of it",
-      description="""
-        Probes the element table from the hash of the element comparing the live slots -
-        expected O(1) with the load factor bounded by the threshold. The returned view points
-        into the found slot and stays valid while the element is held by the set.
-
-        @param[in] target the set to search
-        @param[in] element the element to look for
-        @return a constant view of the found element or NULL when absent
-      """) as f:
-      f.code = f"""
-        size_t index;
-        assert(target);
-        assert({self.is_element(f.element)});
-        return {self.locate_element(f.target, "&index", f.element).bind(f.result)};
       """
     
     with self.copy as f:

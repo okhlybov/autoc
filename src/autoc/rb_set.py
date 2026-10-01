@@ -133,29 +133,7 @@ class Set(_StructRenderer, autoc.set.Set):
         if(v) v->parent = ((size_t)p) | (v->parent & 1);
       """
 
-    with self.contains as f:
-      f.code = f"""
-        {self.node}* n;
-        int order;
-        assert(target);
-        n = target->root;
-        while(n) {{
-          order = {self.element.compare(node_element, f.element)};
-          if(order == 0) return 1;
-          n = order > 0 ? n->left : n->right;
-        }}
-        return 0;
-      """
-
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view",
-      description="""
-        Descends the red-black tree from the root comparing the elements - guaranteed O(log n).
-        The returned view points into the found node and stays valid while the element is held by the set.
-
-        @param[in] target the set to search
-        @param[in] element the element to look for
-        @return a constant view of the found element or NULL when absent
-      """) as f:
+    with self.find_view as f:
       f.code = f"""
         {self.node}* n;
         int order;

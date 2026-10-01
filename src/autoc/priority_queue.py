@@ -113,14 +113,16 @@ class Queue(_StructRenderer, Container):
         {self.create(f.source)};
       """
 
-    with self.contains as f:
+    with self.find_view as f:
       f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(self.element.variable("target->elements[index]"), f.element)}) return 1;
+          if({self.element.equal(self.element.variable("target->elements[index]"), f.element)}) {{
+            return {self.element.variable("target->elements[index]").bind(f.result)};
+          }}
         }}
-        return 0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.method(None, "_grow", {"target": inout(self)}, hidden=True, visibility="internal", brief="Grow internal buffer if needed (internal)") as f:

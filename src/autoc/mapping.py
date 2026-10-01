@@ -291,15 +291,17 @@ class Mapping(_StructRenderer, Indexed):
     set = self._set
     entry = set.element
 
-    with self.contains as f:
+    with self.find_view as f:
       r = set.range.variable("r")
       f.code = f"""
         {r.definition};
         assert(target);
         for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
-          if({self.element.equal(entry.element_view(set.range.front_view(r)), f.element)}) return 1;
+          if({self.element.equal(entry.element_view(set.range.front_view(r)), f.element)}) {{
+            return {entry.element_view(set.range.front_view(r))};
+          }}
         }}
-        return 0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.indexed as f:

@@ -147,7 +147,7 @@ class _VisibilityManager:
 
 _optional_group_names = {
   "sorting_operations": "Sortable",
-  "search_operations": "Searchable",
+  "bisection_operations": "Bisectable",
   "algebraic_operations": "AlgebraicSet",
   "formatting_operations": "Formatting",
 }

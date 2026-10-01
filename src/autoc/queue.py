@@ -79,10 +79,10 @@ class Queue(_StructRenderer, Container):
         return {self._deque.hash(_target)};
       """
 
-    with self.contains as f:
+    with self.find_view as f:
       f.code = f"""
         assert(target);
-        return {self._deque.contains(_target, f.element)};
+        return {self._deque.find_view(_target, f.element)};
       """
 
     with self.method(None, "enqueue", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back of queue",

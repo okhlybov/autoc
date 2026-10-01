@@ -71,10 +71,10 @@ class Stack(_StructRenderer, Container):
         return {self._list.equal(_left, _right)};
       """
 
-    with self.contains as f:
+    with self.find_view as f:
       f.code = f"""
         assert(target);
-        return {self._list.contains(_target, f.element)};
+        return {self._list.find_view(_target, f.element)};
       """
 
     with self.hash as f:

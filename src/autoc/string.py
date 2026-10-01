@@ -128,10 +128,10 @@ class String(_AliasRenderer, Indirection, Indexed):
         return !strlen(target);
       """
       
-    with self.contains as f:
+    with self.find_view as f:
       f.inline_code = f"""
         assert(target);
-        return strchr(target, element) != NULL;
+        return strchr(target, element);
       """
       
     with self.method_from("equal") as f:

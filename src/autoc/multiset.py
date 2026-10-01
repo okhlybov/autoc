@@ -13,16 +13,6 @@ class Multiset(Container):
   def __setup__(self):
     super().__setup__()
 
-    self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, constraint=lambda: self.element.comparable, brief="Find element and return view",
-      description="""
-        Looks up the element per the container lookup mechanics without modifying the container.
-        Returns a constant view of the found element, or NULL when absent.
-
-        @param[in] target the container to search
-        @param[in] element the element to look for
-        @return a constant view of the found element or NULL when absent
-      """)
-
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element into multiset",
       description="""
         Inserts the element into the multiset, preserving any existing duplicates.

@@ -1,12 +1,12 @@
 import autoc.std as std
 from autoc.container import Container, _Range
 from autoc.range import DirectAccess
-from autoc.searchable import Searchable
+from autoc.bisectable import Bisectable
 from autoc.core import inout, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, Searchable, Container):
+class Set(_StructRenderer, Bisectable, Container):
 
   def __init__(self, name, element, *args, dependencies=(), **kws):
     super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)
@@ -182,22 +182,8 @@ class Set(_StructRenderer, Searchable, Container):
         }}
       """
 
-    with self.contains as f:
-      f.references.add(self.binary_search)
-      f.inline_code = f"""
-        assert(target);
-        return {self.binary_search(f.target, f.element)};
-      """
-
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, references=(self.lower_bound,), brief="Find element and return view",
-      description="""
-        Looks up the element via binary search in O(log n).
-        The returned view points into the contiguous array and stays valid while the container is not modified.
-
-        @param[in] target the container to search
-        @param[in] element the element to look for
-        @return a constant view of the found element or NULL when absent
-      """) as f:
+    with self.find_view as f:
+      f.references.add(self.lower_bound)
       f.code = f"""
         size_t low;
         assert(target);

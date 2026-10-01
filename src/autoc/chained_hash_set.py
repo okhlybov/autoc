@@ -136,17 +136,17 @@ class Set(_StructRenderer, autoc.set.Set):
         }}
       """
 
-    with self.contains as f:
+    with self.find_view as f:
       f.code = f"""
         size_t bucket;
         {self.node}* n;
         assert(target);
-        if(!target->buckets) return 0;
+        if(!target->buckets) return ({self.element.view_type})NULL;
         bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
         for(n = target->buckets[bucket]; n; n = n->next) {{
-          if({self.element.hash_lookup_equal(node_element, f.element)}) return 1;
+          if({self.element.hash_lookup_equal(node_element, f.element)}) return {node_element.bind(f.result)};
         }}
-        return 0;
+        return ({self.element.view_type})NULL;
       """
 
     with self.put as f:
@@ -185,28 +185,6 @@ class Set(_StructRenderer, autoc.set.Set):
           }}
         }}
         return 0;
-      """
-
-    with self.method(self.element.view_type, ("find", "view"), {"target": self, "element": self.element}, brief="Find element and return view",
-      description="""
-        Hashes the element to its bucket and walks the chain comparing the elements -
-        expected O(1) with the load factor bounded by the threshold. The returned view points
-        into the found node and stays valid while the element is held by the set.
-
-        @param[in] target the set to search
-        @param[in] element the element to look for
-        @return a constant view of the found element or NULL when absent
-      """) as f:
-      f.code = f"""
-        size_t bucket;
-        {self.node}* n;
-        assert(target);
-        if(!target->buckets) return ({self.element.view_type})NULL;
-        bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
-        for(n = target->buckets[bucket]; n; n = n->next) {{
-          if({self.element.hash_lookup_equal(node_element, f.element)}) return {node_element.bind(f.result)};
-        }}
-        return ({self.element.view_type})NULL;
       """
 
     with self.copy as f:
