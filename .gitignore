@@ -1,10 +1,12 @@
 __pycache__
+dist
 build
 html
 latex
 *_auto.*
 *.state
 /.vscode/
+/.venv/
 /doc/
 /test/
 /src/test/
