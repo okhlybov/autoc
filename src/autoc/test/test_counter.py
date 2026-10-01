@@ -50,27 +50,48 @@ x.unit(f"{type.add}(): add elements with multiplicity", f"""
   TEST_EQUAL( {type.count(t, 10)}, 5 );
 """)
 
-x.unit(f"{type.remove}(): partial and complete removal", f"""
+x.unit(f"{type.put}()/{type.wipe}(): multiset protocol put and wipe", f"""
+  TEST_TRUE( {type.put(t, 50)} );
+  TEST_EQUAL( {type.count(t, 50)}, 1 );
+  TEST_TRUE( {type.put(t, 50)} );
+  TEST_EQUAL( {type.count(t, 50)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 2 );
+  TEST_EQUAL( {type.wipe(t, 50)}, 2 );
+  TEST_EQUAL( {type.count(t, 50)}, 0 );
+  TEST_EQUAL( {type.size(t)}, 0 );
+""")
+
+x.unit(f"{type.subtract}()/{type.remove}(): partial, single, and complete removal", f"""
   {type.add(t, 10, 5)};
   {type.add(t, 20, 2)};
   TEST_EQUAL( {type.size(t)}, 7 );
   TEST_EQUAL( {type.distinct_size(t)}, 2 );
 
-  /* Partial removal of key 10 */
-  TEST_EQUAL( {type.remove(t, 10, 2)}, 2 );
+  /* Partial removal of key 10 via subtract */
+  TEST_EQUAL( {type.subtract(t, 10, 2)}, 2 );
   TEST_EQUAL( {type.count(t, 10)}, 3 );
   TEST_EQUAL( {type.size(t)}, 5 );
   TEST_EQUAL( {type.distinct_size(t)}, 2 );
 
+  /* Single removal of key 10 via Multiset remove */
+  TEST_TRUE( {type.remove(t, 10)} );
+  TEST_EQUAL( {type.count(t, 10)}, 2 );
+  TEST_EQUAL( {type.size(t)}, 4 );
+
+  /* Partial removal via remove_count alias */
+  TEST_EQUAL( {type.remove_count(t, 10, 1)}, 1 );
+  TEST_EQUAL( {type.count(t, 10)}, 1 );
+
   /* Complete removal of key 20 by exceeding count */
-  TEST_EQUAL( {type.remove(t, 20, 10)}, 2 );
+  TEST_EQUAL( {type.subtract(t, 20, 10)}, 2 );
   TEST_EQUAL( {type.count(t, 20)}, 0 );
   TEST_FALSE( {type.contains(t, 20)} );
-  TEST_EQUAL( {type.size(t)}, 3 );
+  TEST_EQUAL( {type.size(t)}, 1 );
   TEST_EQUAL( {type.distinct_size(t)}, 1 );
 
   /* Remove non-existing element */
-  TEST_EQUAL( {type.remove(t, 999, 1)}, 0 );
+  TEST_EQUAL( {type.subtract(t, 999, 1)}, 0 );
+  TEST_FALSE( {type.remove(t, 999)} );
 """)
 
 x.unit(f"{type.remove_all}(): remove all occurrences of key", f"""
@@ -237,6 +258,23 @@ x.unit(f"{type.is_subset}(): sub-multiset test", f"""
 """)
 
 
+x.unit(f"{type.equal_range}(): get range spanning element occurrences", f"""
+  {r.definition};
+  {type.add(t, 25, 4)};
+
+  {r} = {type.equal_range(t, 25)};
+  TEST_FALSE( {type.range.empty(r)} );
+  TEST_EQUAL( *{type.range.front_view(r)}, 25 );
+  TEST_EQUAL( {type.range.count(r)}, 4 );
+  {type.range.move_front(r)};
+  TEST_TRUE( {type.range.empty(r)} );
+
+  /* Absent element yields empty range */
+  {r} = {type.equal_range(t, 999)};
+  TEST_TRUE( {type.range.empty(r)} );
+""")
+
+
 # Also test Counter backed by ChainedHashMap
 x_hash = Type(type_h := Counter("hash_int_counter", "int", autoc.chained_hash_map.Map))
 th = type_h.variable("th")
@@ -256,9 +294,11 @@ x_hash.unit(f"{type_h}: operates with ChainedHashMap backend", f"""
   TEST_EQUAL( {type_h.distinct_size(th)}, 2 );
   TEST_EQUAL( {type_h.count(th, 100)}, 5 );
   TEST_EQUAL( {type_h.count(th, 200)}, 10 );
-  TEST_EQUAL( {type_h.remove(th, 100, 3)}, 3 );
+  TEST_EQUAL( {type_h.subtract(th, 100, 3)}, 3 );
   TEST_EQUAL( {type_h.count(th, 100)}, 2 );
-  TEST_EQUAL( {type_h.remove_all(th, 200)}, 10 );
-  TEST_EQUAL( {type_h.size(th)}, 2 );
+  TEST_TRUE( {type_h.remove(th, 100)} );
+  TEST_EQUAL( {type_h.count(th, 100)}, 1 );
+  TEST_EQUAL( {type_h.wipe(th, 200)}, 10 );
+  TEST_EQUAL( {type_h.size(th)}, 1 );
   TEST_EQUAL( {type_h.distinct_size(th)}, 1 );
 """)

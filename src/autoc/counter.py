@@ -1,11 +1,12 @@
 import autoc.std as std
-from autoc.core import Composite, _StructRenderer, Callable, Indirection, inout, _type
-from autoc.container import Container, _Range
+from autoc.core import _StructRenderer, Callable, inout
+from autoc.container import _Range
+from autoc.multiset import Multiset
 from autoc.range import Forward
 
 
 # Multiset container tracking element frequencies
-class Counter(_StructRenderer, Container):
+class Counter(_StructRenderer, Multiset):
 
   brief = "Multiset container tracking element frequencies"
 
@@ -13,12 +14,11 @@ class Counter(_StructRenderer, Container):
     if backend is None:
       raise ValueError(f"Counter '{name}' requires an explicit backend map class (e.g. autoc.flat_map.Map, autoc.chained_hash_map.Map)")
     self.backend = backend
-    self.algebraic_operations = bool(algebraic_operations)
-    super().__init__(name, element, *args, dependencies=(*dependencies, std.string_h), **kws)
+    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.string_h), **kws)
     self._map = backend(
       self._decorate_component("map", abbreviate=True),
-      element=std.size_t,
-      index=self.element,
+      std.size_t,
+      self.element,
       visibility="internal",
     )
     self.dependencies.add(self._map)
@@ -197,20 +197,25 @@ class Counter(_StructRenderer, Container):
         target->total_size = 0;
       """
 
-    with self.method(std.size_t, "count", {"target": self, "element": self.element}, brief="Get multiplicity of element",
-      description="""
-        Returns how many times the specified element is present in the counter.
-        Returns 0 if the element is absent.
-
-        @param[in] target the counter to query
-        @param[in] element the element to check
-        @return the multiplicity count of the element
-      """) as f:
+    with self.count as f:
       f.code = f"""
         const size_t* v;
         assert(target);
         v = (const size_t*){self._map.view(_target, f.element)};
         return v ? *v : 0;
+      """
+
+    with self.find_view as f:
+      r = self.range.variable("r")
+      f.code = f"""
+        {r.definition};
+        assert(target);
+        for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+          if({self.element.equal(self.range.front_view(r), f.element)}) {{
+            return {self.range.front_view(r)};
+          }}
+        }}
+        return ({self.element.view_type})NULL;
       """
 
     with self.contains as f:
@@ -241,7 +246,7 @@ class Counter(_StructRenderer, Container):
         target->total_size += count;
       """
 
-    with self.method(std.size_t, "remove", {"target": inout(self), "element": self.element, "count": std.size_t}, brief="Remove element multiplicity",
+    with self.method(std.size_t, "subtract", {"target": inout(self), "element": self.element, "count": std.size_t}, brief="Subtract element multiplicity",
       description="""
         Decrements the multiplicity of the element by at most `count`.
         If the remaining multiplicity reaches zero, the element is removed from the counter.
@@ -270,14 +275,45 @@ class Counter(_StructRenderer, Container):
         return removed;
       """
 
-    with self.method(std.size_t, ("remove", "all"), {"target": inout(self), "element": self.element}, brief="Remove all occurrences of element",
+    with self.method(std.size_t, ("remove", "count"), {"target": inout(self), "element": self.element, "count": std.size_t}, brief="Remove element multiplicity",
       description="""
-        Completely removes the element from the counter regardless of its multiplicity.
+        Decrements the multiplicity of the element by at most `count`.
+        Alias for @ref subtract.
 
         @param[in,out] target the counter to modify
-        @param[in] element the element to remove completely
-        @return the multiplicity removed
+        @param[in] element the element to remove
+        @param[in] count the maximum multiplicity to remove
+        @return the number of occurrences actually removed
       """) as f:
+      f.inline_code = lambda f=f: f"""
+        return {self.subtract(f.target, f.element, f.count)};
+      """
+
+    with self.put as f:
+      f.code = f"""
+        assert(target);
+        {self.add(f.target, f.element, 1)};
+        return 1;
+      """
+
+    with self.remove as f:
+      f.code = f"""
+        const size_t* v;
+        size_t old_count;
+        assert(target);
+        v = (const size_t*){self._map.view(_target, f.element)};
+        if(!v) return 0;
+        old_count = *v;
+        if(old_count <= 1) {{
+          {self._map.remove(_target, f.element)};
+        }} else {{
+          {self._map.set(_target, f.element, "old_count - 1")};
+        }}
+        target->total_size -= 1;
+        return 1;
+      """
+
+    with self.wipe as f:
       f.code = f"""
         const size_t* v;
         size_t old_count;
@@ -290,51 +326,85 @@ class Counter(_StructRenderer, Container):
         return old_count;
       """
 
+    with self.method(std.size_t, ("remove", "all"), {"target": inout(self), "element": self.element}, brief="Remove all occurrences of element",
+      description="""
+        Completely removes the element from the counter regardless of its multiplicity.
+        Alias for @ref wipe.
+
+        @param[in,out] target the counter to modify
+        @param[in] element the element to remove completely
+        @return the multiplicity removed
+      """) as f:
+      f.inline_code = lambda f=f: f"""
+        return {self.wipe(f.target, f.element)};
+      """
+
+    with self.equal_range as f:
+      result = f.result.variable("result")
+      f.code = lambda f=f: f"""
+        {result.definition};
+        size_t cnt;
+        assert(target);
+        cnt = {self.count(f.target, f.element)};
+        result.counter = target;
+        result.is_single = 1;
+        result.single_count = cnt;
+        if(cnt > 0) {{
+          {self.element.copy("result.single_element", f.element)};
+        }}
+        return {result};
+      """
+
     # --- Algebraic multiset operations ---
     r = self.range.variable("r")
 
-    with self.method(None, ("assign", "union"), {"target": inout(self), "other": self},
-      constraint=lambda: self.algebraic_operations,
-      optional_group="algebraic_operations",
-      brief="In-place multiset union (maximum multiplicities)",
-      description="""
-        Updates target so that for each element, count(target) = max(count(target), count(other)).
-
-        @param[in,out] target the destination counter
-        @param[in] other the counter to unite with
-      """) as f:
-      f.code = f"""
+    with self.union as f:
+      f.code = lambda f=f: f"""
+        size_t added = 0;
         {r.definition};
         assert(target);
         assert(other);
-        if(target == other) return;
+        if(target == other) return 0;
         for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {self.element} elem = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
           size_t t_cnt = {self.count(f.target, "elem")};
           if(o_cnt > t_cnt) {{
             {self.add(f.target, "elem", "o_cnt - t_cnt")};
+            added += o_cnt - t_cnt;
           }}
         }}
+        return added;
       """
 
-    with self.method(None, ("assign", "intersection"), {"target": inout(self), "other": self},
-      constraint=lambda: self.algebraic_operations,
-      optional_group="algebraic_operations",
-      brief="In-place multiset intersection (minimum multiplicities)",
-      description="""
-        Updates target so that for each element, count(target) = min(count(target), count(other)).
+    with self.difference as f:
+      f.code = lambda f=f: f"""
+        size_t removed = 0;
+        {r.definition};
+        assert(target);
+        assert(other);
+        if(target == other) {{
+          removed = target->total_size;
+          {self.clear(f.target)};
+          return removed;
+        }}
+        for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+          {self.element} elem = {self.range.front(r)};
+          size_t o_cnt = {self.range.count(r)};
+          removed += {self.subtract(f.target, "elem", "o_cnt")};
+        }}
+        return removed;
+      """
 
-        @param[in,out] target the destination counter
-        @param[in] other the counter to intersect with
-      """) as f:
+    with self.intersection as f:
       temp = self.variable("temp")
-      f.code = f"""
+      f.code = lambda f=f: f"""
+        size_t removed = 0;
         {self.name} {temp};
         {r.definition};
         assert(target);
         assert(other);
-        if(target == other) return;
+        if(target == other) return 0;
         {self.create(temp)};
         {self.copy(temp, f.target)};
         for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
@@ -342,51 +412,59 @@ class Counter(_StructRenderer, Container):
           size_t t_cnt = {self.range.count(r)};
           size_t o_cnt = {self.count(f.other, "elem")};
           if(o_cnt == 0) {{
-            {self.remove_all(f.target, "elem")};
+            removed += {self.wipe(f.target, "elem")};
           }} else if(t_cnt > o_cnt) {{
-            {self.remove(f.target, "elem", "t_cnt - o_cnt")};
+            removed += {self.subtract(f.target, "elem", "t_cnt - o_cnt")};
           }}
         }}
         {self.destroy(temp)};
+        return removed;
       """
 
-    with self.method(None, ("assign", "difference"), {"target": inout(self), "other": self},
-      constraint=lambda: self.algebraic_operations,
-      optional_group="algebraic_operations",
-      brief="In-place multiset difference",
-      description="""
-        Subtracts the multiplicities of elements in `other` from `target`.
-
-        @param[in,out] target the counter to subtract from
-        @param[in] other the counter whose multiplicities are subtracted
-      """) as f:
-      f.code = f"""
+    with self.symmetric_difference as f:
+      temp = self.variable("temp")
+      f.code = lambda f=f: f"""
+        size_t changed = 0;
+        {self.name} {temp};
         {r.definition};
         assert(target);
         assert(other);
         if(target == other) {{
+          changed = target->total_size;
           {self.clear(f.target)};
-          return;
+          return changed;
         }}
+        {self.create(temp)};
         for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {self.element} elem = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          {self.remove(f.target, "elem", "o_cnt")};
+          size_t t_cnt = {self.count(f.target, "elem")};
+          if(o_cnt > t_cnt) {{
+            {self.add(temp, "elem", "o_cnt - t_cnt")};
+          }}
         }}
+        for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+          {self.element} elem = {self.range.front(r)};
+          size_t t_cnt = {self.range.count(r)};
+          size_t o_cnt = {self.count(f.other, "elem")};
+          if(o_cnt > 0) {{
+            size_t rem = t_cnt > o_cnt ? o_cnt : t_cnt;
+            {self.subtract(f.target, "elem", "rem")};
+            changed += rem;
+          }}
+        }}
+        for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+          {self.element} elem = {self.range.front(r)};
+          size_t cnt = {self.range.count(r)};
+          {self.add(f.target, "elem", "cnt")};
+          changed += cnt;
+        }}
+        {self.destroy(temp)};
+        return changed;
       """
 
-    with self.method("int", ("is", "subset"), {"target": self, "other": self},
-      constraint=lambda: self.algebraic_operations,
-      optional_group="algebraic_operations",
-      brief="Test if target is a sub-multiset of other",
-      description="""
-        Returns non-zero if for every element in target, count(target) <= count(other).
-
-        @param[in] target the candidate sub-multiset
-        @param[in] other the candidate super-multiset
-        @return non-zero if target is a sub-multiset of other, zero otherwise
-      """) as f:
-      f.code = f"""
+    with self.is_subset as f:
+      f.code = lambda f=f: f"""
         {r.definition};
         assert(target);
         assert(other);
@@ -399,6 +477,58 @@ class Counter(_StructRenderer, Container):
           if(t_cnt > o_cnt) return 0;
         }}
         return 1;
+      """
+
+    with self.is_superset as f:
+      f.code = lambda f=f: f"""
+        assert(target);
+        assert(other);
+        return {self.is_subset(f.other, f.target)};
+      """
+
+    with self.method(None, ("assign", "union"), {"target": inout(self), "other": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
+      brief="In-place multiset union (maximum multiplicities)",
+      description="""
+        Updates target so that for each element, count(target) = max(count(target), count(other)).
+        Alias for @ref union.
+
+        @param[in,out] target the destination counter
+        @param[in] other the counter to unite with
+      """) as f:
+      f.inline_code = lambda f=f: f"""
+        ((void){self.union(f.target, f.other)});
+      """
+
+    with self.method(None, ("assign", "intersection"), {"target": inout(self), "other": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
+      brief="In-place multiset intersection (minimum multiplicities)",
+      description="""
+        Updates target so that for each element, count(target) = min(count(target), count(other)).
+        Alias for @ref intersection.
+
+        @param[in,out] target the destination counter
+        @param[in] other the counter to intersect with
+      """) as f:
+      f.inline_code = lambda f=f: f"""
+        ((void){self.intersection(f.target, f.other)});
+      """
+
+    with self.method(None, ("assign", "difference"), {"target": inout(self), "other": self},
+      constraint=lambda: self.algebraic_operations,
+      optional_group="algebraic_operations",
+      brief="In-place multiset difference",
+      description="""
+        Subtracts the multiplicities of elements in `other` from `target`.
+        Alias for @ref difference.
+
+        @param[in,out] target the counter to subtract from
+        @param[in] other the counter whose multiplicities are subtracted
+      """) as f:
+      f.inline_code = lambda f=f: f"""
+        ((void){self.difference(f.target, f.other)});
       """
 
 
@@ -418,6 +548,10 @@ class Range(_Range, Forward):
     stream.append(f"""
       struct {self.name} {{
         {self._map_range.name} range; /**< @private */
+        const {self.iterable.name}* counter; /**< @private */
+        {self.element} single_element; /**< @private */
+        size_t single_count; /**< @private */
+        int is_single; /**< @private */
       }};
     """)
 
@@ -445,30 +579,40 @@ class Range(_Range, Forward):
         {result.definition};
         assert(iterable);
         result.range = {self._map_range.new(f"&{f.iterable}->map")};
+        result.counter = iterable;
+        result.single_count = 0;
+        result.is_single = 0;
         return {result};
       """
 
     with self.empty as f:
       f.code = f"""
         assert(target);
+        if(target->is_single) return target->single_count == 0;
         return {self._map_range.empty(_range)};
       """
 
     with self.move_front as f:
       f.code = f"""
         assert(target);
+        if(target->is_single) {{
+          target->single_count = 0;
+          return;
+        }}
         {self._map_range.move_front(_range)};
       """
 
     with self.front_view as f:
       f.code = f"""
         assert(target);
+        if(target->is_single) return &target->single_element;
         return {self._map_range.index_front_view(_range)};
       """
 
     with self.front as f:
       f.code = f"""
         assert(target);
+        if(target->is_single) return target->single_element;
         return {self._map_range.index_front(_range)};
       """
 
@@ -481,5 +625,6 @@ class Range(_Range, Forward):
       """) as f:
       f.code = f"""
         assert(target);
+        if(target->is_single) return target->single_count;
         return *{self._map_range.front_view(_range)};
       """
