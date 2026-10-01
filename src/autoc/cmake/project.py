@@ -185,22 +185,31 @@ function(add_autoc_module module)
     if(NOT key_MAIN_DEPENDENCY)
       set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
     endif()
-    set(module_state ${key_DIRECTORY}/${module}.state)
-    if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake})
-      message(CHECK_START "Bootstrapping AutoC module " ${module})
-      execute_process(WORKING_DIRECTORY ${key_DIRECTORY} COMMAND ${key_COMMAND} VERBATIM)
+    if(NOT key_COMMAND)
+      set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
     endif()
-    include(${module_cmake})
-    add_custom_command(
-      OUTPUT ${module_state}
-      BYPRODUCTS ${module_cmake}
-      MAIN_DEPENDENCY ${key_MAIN_DEPENDENCY}
-      DEPENDS ${key_DEPENDS}
+
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
+
+    message(CHECK_START "Generating AutoC module " ${module})
+    execute_process(
       WORKING_DIRECTORY ${key_DIRECTORY}
       COMMAND ${key_COMMAND}
-      VERBATIM
+      RESULT_VARIABLE gen_res
+      OUTPUT_VARIABLE gen_out
+      ERROR_VARIABLE gen_err
     )
-    add_custom_target(${module_target} DEPENDS ${module_state})
+    if(NOT gen_res EQUAL 0)
+      message(CHECK_FAIL "failed")
+      message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
+    else()
+      message(CHECK_PASS "done")
+    endif()
+
+    include(${module_cmake})
+    if(NOT TARGET ${module_target})
+      add_custom_target(${module_target})
+    endif()
     if(TARGET ${module}-autoc)
       add_dependencies(${module}-autoc ${module_target})
     elseif(TARGET ${module}-auto)
