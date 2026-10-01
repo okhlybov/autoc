@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 import autoc.set
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer, _ceil_power2
 
 
@@ -240,6 +240,27 @@ class Set(_StructRenderer, autoc.set.Set):
           ++target->size;
           return 1;
         }} else return 0;
+      """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      _temp_elem = self.element.variable("temp_elem")
+      _destroy_temp = f"{self.element.destroy(_temp_elem)};" if self.element.destructible else ""
+      _move_or_copy = self.element.move if self.element.moveable else self.element.copy
+      f.code = lambda f=f: f"""
+        size_t index;
+        {_temp_elem.definition};
+        assert(target);
+        {self.element.create(_temp_elem, *create_args)};
+        if(!{self.contains(f.target, _temp_elem)}) {{
+          {self.resize(f.target, "target->size+1")};
+          {_move_or_copy(self.locate_slot(f.target, "&index", _temp_elem), _temp_elem)};
+          ++target->size;
+          return 1;
+        }} else {{
+          {_destroy_temp}
+          return 0;
+        }}
       """
     
     with self.remove as f:

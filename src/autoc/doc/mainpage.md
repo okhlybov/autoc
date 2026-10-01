@@ -68,14 +68,13 @@ import autoc.cmake
 import autoc.string_buffer
 import autoc.list
 
-# Create a C source code module `runme`
-with autoc.module.Module("runme") as m:
-  # Add concrete type implementations
-  m.add(autoc.string_buffer.Buffer("StringBuffer"))
-  m.add(autoc.list.List("List", "int"))
-
 # Create a CMake project (optional)
-autoc.cmake.CMake(m)
+with autoc.cmake.CMake():
+  # Create a C source code module `runme`
+  with autoc.module.Module("runme") as m:
+    # Add concrete type implementations
+    m.add(autoc.string_buffer.Buffer("StringBuffer"))
+    m.add(autoc.list.List("List", "int"))
 ```
 
 **2. Generate** — run the script with `python runme.py`; `autoc` writes `runme_auto.h` and `runme_auto.c`

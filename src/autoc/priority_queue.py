@@ -180,6 +180,24 @@ class Queue(_StructRenderer, Container):
         {self.sift_up(f.target, "target->size - 1")};
       """
 
+    with self.method(None, "emplace", {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable and self.element.orderable and (self.element.copyable or self.element.moveable),
+      brief="Construct element in-place and sift up in priority queue",
+      description="""
+        Constructs an element in-place with forwarded parameters at the leaf and
+        restores the heap invariant with the O(log n) sift-up.
+
+        @param[in,out] target the priority queue to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = lambda f=f: f"""
+        assert(target);
+        if(target->size == target->capacity) {self._grow(f.target)};
+        {self.element.create(slot_size, *create_args)};
+        ++target->size;
+        {self.sift_up(f.target, "target->size - 1")};
+      """
+
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element",
       description="""
         Removes and moves out the greatest element per the element comparison in O(log n) -

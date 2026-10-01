@@ -96,6 +96,20 @@ class Stack(_StructRenderer, Container):
         {self._list.push_front(_target, f.element)};
       """
 
+    with self.method(None, "emplace", {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at top of stack",
+      description="""
+        Constructs an element in-place with forwarded parameters at the top of the stack in O(1)
+        by delegating to the internal list.
+
+        @param[in,out] target the stack to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        assert(target);
+        {self._list.emplace_front(_target, *create_args)};
+      """
+
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from top of stack",
       description="""
         Removes and moves out the top element in O(1) - the element last pushed onto

@@ -77,3 +77,24 @@ class Map(Mapping):
           {entry.destroy_index(_entry)};
         }}
       """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        int order;
+        {n.definition};
+        {_entry.definition};
+        assert(target);
+        n = target->set.root;
+        while(n) {{
+          order = {self.index.compare(node_index, f.index)};
+          if(order == 0) return 0;
+          n = order > 0 ? n->left : n->right;
+        }}
+        {entry.emplace_index(_entry, f.index)};
+        {entry.create_element(_entry, *create_args)};
+        {set.put(_target, _entry)};
+        {entry.destroy_element(_entry)};
+        {entry.destroy_index(_entry)};
+        return 1;
+      """

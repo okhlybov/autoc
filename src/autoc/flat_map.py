@@ -119,3 +119,28 @@ class Map(Mapping):
         {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
       """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        size_t low, high, mid;
+        int order;
+        {_entry.definition};
+        assert(target);
+        low = 0;
+        high = target->set.size;
+        while(low < high) {{
+          mid = low + (high - low) / 2;
+          order = {self.index.compare(index_mid, f.index)};
+          if(order == 0) return 0;
+          if(order < 0) low = mid + 1;
+          else high = mid;
+        }}
+        {entry.emplace_index(_entry, f.index)};
+        {entry.create_element(_entry, *create_args)};
+        {set.put(_target, _entry)};
+        {entry.destroy_element(_entry)};
+        {entry.destroy_index(_entry)};
+        return 1;
+      """
+

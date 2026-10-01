@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 from autoc.sequence import Sequence
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, _type, Callable, _StructRenderer
 
 
@@ -119,6 +119,27 @@ class List(_StructRenderer, Sequence):
         target->front = node;
         ++target->size;
       """
+
+    with self.method(None, ("emplace", "front"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at front",
+      description="""
+        Inserts an element constructed in-place with forwarded parameters at the front in O(1)
+        by allocating a new node and linking it before the current front. Other elements are untouched.
+
+        @param[in,out] target the list to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        {self.node}* node;
+        assert(target);
+        node = {self.memory.allocate(self.node)};
+        {self.element.create(node_element, *create_args)};
+        node->next = target->front;
+        target->front = node;
+        ++target->size;
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_front(target, *args),
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at front (synonym for emplace_front)")
 
     with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front",
       description="""

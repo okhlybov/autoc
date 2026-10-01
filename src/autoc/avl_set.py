@@ -1,7 +1,7 @@
 import autoc.std as std
 import autoc.set
 from autoc.range import Forward
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, _type, _StructRenderer, Indirection, Callable
 
 
@@ -232,6 +232,116 @@ class Set(_StructRenderer, autoc.set.Set):
                 int c_bf = (int)(c->parent & 3);
                 {self.rotate_right(f.target, "b")};
                 {self.rotate_left(f.target, "p")};
+                if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 2;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 1;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+              break;
+            }}
+          }}
+        }}
+        return 1;
+      """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        {self.node}* n;
+        {self.node}* parent;
+        {self.node}* curr;
+        {self.node}* p;
+        int order = 0;
+        assert(target);
+        n = {self.memory.allocate(self.node)};
+        assert(((size_t)n & 3) == 0);
+        {self.element.create(node_element, *create_args)};
+        parent = NULL;
+        curr = target->root;
+        while(curr) {{
+          order = {self.element.compare(curr_element, node_element)};
+          if(order == 0) {{
+            {_destroy_node}
+            {self.memory.free("n")};
+            return 0;
+          }}
+          parent = curr;
+          curr = order > 0 ? curr->left : curr->right;
+        }}
+        n->left = n->right = NULL;
+        n->parent = ((size_t)parent) | 0;
+        if(!parent) target->root = n;
+        else if(order > 0) parent->left = n;
+        else parent->right = n;
+        ++target->size;
+
+        /* Rebalance: bottom-up balance factor adjustment */
+        curr = n;
+        p = parent;
+        while(p) {{
+          int p_bf = (int)(p->parent & 3);
+          if(curr == p->left) {{
+            if(p_bf == 1) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+              break;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 2;
+              curr = p;
+              p = ({self.node}*)(p->parent & ~(size_t)3);
+            }} else {{
+              {self.node}* b = p->left;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 2) {{
+                {self.rotate_right(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.rotate_left(f.target, "b")};
+                {self.rotate_right(f.target, "p")};
+                {self.node}* c = b->parent & ~(size_t)3 ? ({self.node}*)(b->parent & ~(size_t)3) : target->root;
+                int c_bf = (int)(c->parent & 3);
+                if(c_bf == 2) {{
+                  p->parent = (p->parent & ~(size_t)3) | 1;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }} else if(c_bf == 1) {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 2;
+                }} else {{
+                  p->parent = (p->parent & ~(size_t)3) | 0;
+                  b->parent = (b->parent & ~(size_t)3) | 0;
+                }}
+                c->parent = (c->parent & ~(size_t)3) | 0;
+              }}
+              break;
+            }}
+          }} else {{
+            if(p_bf == 2) {{
+              p->parent = (p->parent & ~(size_t)3) | 0;
+              break;
+            }} else if(p_bf == 0) {{
+              p->parent = (p->parent & ~(size_t)3) | 1;
+              curr = p;
+              p = ({self.node}*)(p->parent & ~(size_t)3);
+            }} else {{
+              {self.node}* b = p->right;
+              int b_bf = (int)(b->parent & 3);
+              if(b_bf == 1) {{
+                {self.rotate_left(f.target, "p")};
+                p->parent = (p->parent & ~(size_t)3) | 0;
+                b->parent = (b->parent & ~(size_t)3) | 0;
+              }} else {{
+                {self.rotate_right(f.target, "b")};
+                {self.rotate_left(f.target, "p")};
+                {self.node}* c = b->parent & ~(size_t)3 ? ({self.node}*)(b->parent & ~(size_t)3) : target->root;
+                int c_bf = (int)(c->parent & 3);
                 if(c_bf == 1) {{
                   p->parent = (p->parent & ~(size_t)3) | 2;
                   b->parent = (b->parent & ~(size_t)3) | 0;

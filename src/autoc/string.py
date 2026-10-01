@@ -4,7 +4,7 @@ import autoc.memory
 from autoc.indexed import Indexed
 from autoc.module import Code
 from autoc.range import DirectAccess
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, Indirection, Callable, _AliasRenderer
 
 

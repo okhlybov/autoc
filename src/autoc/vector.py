@@ -3,7 +3,7 @@ from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 
 
@@ -161,7 +161,7 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
             }}
             target->size = {f.size};
           """
-      else:
+      elif self.element.default_constructible:
         f.code = f"""
           {self.index} index;
           assert(target);
@@ -238,7 +238,7 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
           }}
           target->size = {f.size};
         """
-      else:
+      elif self.element.default_constructible:
         f.code = f"""
           {self.index} index;
           assert(target);
@@ -289,6 +289,39 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         {self.element.copy(self.element.variable(f"{data}[target->size]"), f.element)};
         ++target->size;
       """
+
+    with self.method(None, ("emplace", "back"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable and (self.element.copyable or self.element.moveable), brief="Construct element in-place at back",
+      description="""
+        Appends an element constructed in-place with forwarded parameters to the back
+        in amortized O(1), reallocating the buffer with geometric doubling when exhausted.
+
+        @param[in,out] target the vector to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      move_or_copy = (
+        f"{self.element.move(self.element.variable('elements[index]'), target_i)};"
+        if self.element.moveable else
+        f"{self.element.copy(self.element.variable('elements[index]'), target_i)}; {destroy_i};"
+      )
+      f.code = f"""
+        assert(target);
+        if(target->size == target->capacity) {{
+          {self.index} index, new_capacity;
+          {Indirection(self.element)} elements;
+          new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
+          elements = {self.memory.allocate(self.element, "new_capacity")};
+          for(index = 0; index < target->size; ++index) {{
+            {move_or_copy}
+          }}
+          {self._free_heap("target")}
+          {self._set_heap("target", "elements", "new_capacity")}
+        }}
+        {self.element.create(self.element.variable(f"{data}[target->size]"), *create_args)};
+        ++target->size;
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
+      constraint=lambda: self.element.emplaceable and (self.element.copyable or self.element.moveable), brief="Construct element in-place at back (synonym for emplace_back)")
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
       description="""

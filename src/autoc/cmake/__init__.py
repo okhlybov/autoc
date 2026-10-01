@@ -8,6 +8,7 @@ class CMake:
   
   def __enter__(self):
     self.__context = autoc.module._build_context
+    autoc.module._build_context = self
     return self
   
   def __exit__(self, exc_type, exc_value, traceback):

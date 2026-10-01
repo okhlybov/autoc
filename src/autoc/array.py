@@ -4,7 +4,7 @@ from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, Callable, Indirection, _StructRenderer
 
 

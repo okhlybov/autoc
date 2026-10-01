@@ -23,6 +23,17 @@ class Set(Container):
         @param[in] element the element to insert - ignored when the set already holds an equal element
         @return non-zero if the element was inserted and zero if an equal element was already present
       """)
+    self.method("int", "emplace", {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable and self.element.comparable,
+      brief="Construct element in-place if not present",
+      description="""
+        Constructs an element in-place with forwarded parameters and inserts it into the set
+        if no equal element is present yet.
+        Returns non-zero if the element was inserted and zero if an equal element was already present.
+
+        @param[in,out] target the set to insert into
+        @return non-zero if the element was inserted and zero if an equal element was already present
+      """)
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present",
       description="""
         Removes the element when the set holds an equal one, leaving the set unchanged

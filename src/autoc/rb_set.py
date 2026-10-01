@@ -1,7 +1,7 @@
 import autoc.std as std
 import autoc.set
 from autoc.range import Forward
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, _type, _StructRenderer, Indirection, Callable
 
 
@@ -168,6 +168,88 @@ class Set(_StructRenderer, autoc.set.Set):
         n = {self.memory.allocate(self.node)};
         assert(((size_t)n & 1) == 0); /* guard assert: verify allocated node is at least 2-byte aligned for 1-bit color tag */
         {self.element.copy(node_element, f.element)};
+        n->left = n->right = NULL;
+        n->parent = ((size_t)parent) | 1; /* RED */
+        if(!parent) target->root = n;
+        else if(order > 0) parent->left = n;
+        else parent->right = n;
+        ++target->size;
+
+        /* Rebalance: CLRS fixup */
+        while(n->parent & ~(size_t)1) {{
+          p = ({self.node}*)(n->parent & ~(size_t)1);
+          if((p->parent & 1) == 0) break; /* parent is black */
+          g = ({self.node}*)(p->parent & ~(size_t)1);
+          if(!g) break;
+          if(p == g->left) {{
+            u = g->right;
+            if(u && (u->parent & 1)) {{
+              p->parent &= ~(size_t)1; /* black */
+              u->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
+              n = g;
+            }} else {{
+              if(n == p->right) {{
+                n = p;
+                {self.rotate_left(f.target, "n")};
+                p = ({self.node}*)(n->parent & ~(size_t)1);
+                g = ({self.node}*)(p->parent & ~(size_t)1);
+              }}
+              p->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
+              {self.rotate_right(f.target, "g")};
+            }}
+          }} else {{
+            u = g->left;
+            if(u && (u->parent & 1)) {{
+              p->parent &= ~(size_t)1; /* black */
+              u->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
+              n = g;
+            }} else {{
+              if(n == p->left) {{
+                n = p;
+                {self.rotate_right(f.target, "n")};
+                p = ({self.node}*)(n->parent & ~(size_t)1);
+                g = ({self.node}*)(p->parent & ~(size_t)1);
+              }}
+              p->parent &= ~(size_t)1; /* black */
+              g->parent |= 1;          /* red */
+              {self.rotate_left(f.target, "g")};
+            }}
+          }}
+        }}
+        target->root->parent &= ~(size_t)1; /* root is black */
+        return 1;
+      """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        {self.node}* n;
+        {self.node}* parent;
+        {self.node}* curr;
+        {self.node}* p;
+        {self.node}* g;
+        {self.node}* u;
+        int order = 0;
+        assert(target);
+        n = {self.memory.allocate(self.node)};
+        assert(((size_t)n & 1) == 0);
+        {self.element.create(node_element, *create_args)};
+        parent = NULL;
+        curr = target->root;
+        while(curr) {{
+          order = {self.element.compare(curr_element, node_element)};
+          if(order == 0) {{
+            {_destroy_node}
+            {self.memory.free("n")};
+            return 0;
+          }}
+          parent = curr;
+          curr = order > 0 ? curr->left : curr->right;
+        }}
         n->left = n->right = NULL;
         n->parent = ((size_t)parent) | 1; /* RED */
         if(!parent) target->root = n;

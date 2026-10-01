@@ -98,6 +98,19 @@ class Queue(_StructRenderer, Container):
         {self._deque.push_back(_target, f.element)};
       """
 
+    with self.method(None, "emplace", {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back of queue",
+      description="""
+        Constructs an element in-place with forwarded parameters at the back of the queue in O(1).
+
+        @param[in,out] target the queue to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        assert(target);
+        {self._deque.emplace_back(_target, *create_args)};
+      """
+
     with self.method(self.element, "dequeue", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front of queue",
       description="""
         Removes and moves out the element which has been in the queue the longest in O(1).

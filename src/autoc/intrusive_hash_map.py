@@ -113,3 +113,35 @@ class Map(Mapping):
         {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
       """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        size_t i, start;
+        {_entry.definition};
+        assert(target);
+        if(target->set.capacity > 0) {{
+          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          for(i = start; i < target->set.capacity; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                return 0;
+              }}
+            }} else goto do_emplace_insert;
+          }}
+          for(i = 0; i < start; ++i) {{
+            if(!({set.is_empty(slot)})) {{
+              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+                return 0;
+              }}
+            }} else goto do_emplace_insert;
+          }}
+        }}
+        do_emplace_insert:
+        {entry.emplace_index(_entry, f.index)};
+        {entry.create_element(_entry, *create_args)};
+        {set.put(_target, _entry)};
+        {entry.destroy_element(_entry)};
+        {entry.destroy_index(_entry)};
+        return 1;
+      """

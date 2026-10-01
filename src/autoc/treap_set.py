@@ -1,7 +1,7 @@
 import autoc.std as std
 import autoc.set
 from autoc.range import Forward
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.random import Randomizer
 from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable, Expression
 
@@ -141,6 +141,43 @@ class Set(_StructRenderer, autoc.set.Set):
         }}
         n = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
+        n->left = n->right = NULL;
+        n->parent = parent;
+        *link = n;
+        ++target->size;
+        while(n->parent && {self.randomizer.priority(node_parent)} < {self.randomizer.priority(node)}) {{
+          if(n->parent->right == n) {{
+            {self.rotate_left(self.link(f.target, "n->parent"))};
+          }} else {{
+            {self.rotate_right(self.link(f.target, "n->parent"))};
+          }}
+        }}
+        return 1;
+      """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        {self.node}* n;
+        {self.node}* parent;
+        {Indirection(self._node_p)} link;
+        int order;
+        assert(target);
+        n = {self.memory.allocate(self.node)};
+        {self.element.create(node_element, *create_args)};
+        link = &target->root;
+        parent = NULL;
+        while(*link) {{
+          order = {self.element.compare(link_element, node_element)};
+          if(order == 0) {{
+            {_destroy_node}
+            {self.memory.free("n")};
+            return 0;
+          }}
+          parent = *link;
+          link = order > 0 ? &parent->left : &parent->right;
+        }}
         n->left = n->right = NULL;
         n->parent = parent;
         *link = n;

@@ -80,6 +80,17 @@ class _Traitful:
     return self.constructible and getattr(self, "create", None) is not None and len(self.create.parameters) == 1
 
   @property
+  def emplaceable(self):
+    return self.constructible
+
+  @property
+  def constructor_parameters(self):
+    if not hasattr(self, "create") or self.create is None or not hasattr(self.create, "parameters"):
+      return {}
+    from itertools import islice
+    return {str(name): param for name, param in islice(self.create.parameters.items(), 1, None)}
+
+  @property
   def destructible(self):
     return True
 

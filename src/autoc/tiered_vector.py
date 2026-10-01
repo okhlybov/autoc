@@ -3,7 +3,7 @@ from autoc.indexed import Indexed
 from autoc.sortable import Sortable
 from autoc.range import DirectAccess
 from autoc.sequence import Sequence
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 
 
@@ -138,6 +138,26 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         {self.element.copy(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), f.element)};
         ++target->size;
       """
+
+    with self.method(None, ("emplace", "back"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable,
+      references=(self.extend,),
+      brief="Construct element in-place at back",
+      description="""
+        Constructs the element in-place with forwarded parameters at the back in amortized O(1).
+        Existing element addresses stay valid since chunks never move.
+
+        @param[in,out] target the vector to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        assert(target);
+        {self.extend(f.target)};
+        {self.element.create(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), *create_args)};
+        ++target->size;
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back (synonym for emplace_back)")
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
       description="""

@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.record import Record
 from autoc.core import inout, Callable, _StructRenderer, Macro
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.range import Forward
 from autoc.indexed import Indexed
 
@@ -55,6 +55,13 @@ class _Entry(Record):
       f.code = f"""
         assert(target);
         {self.element.copy(_element, f.element)};
+      """
+
+    with self.method(None, ("create", "element"), {"target": inout(self)} | self.element.constructor_parameters, hidden=True, visibility="internal", constraint=lambda: self.element.emplaceable, brief="Create element in-place (internal)") as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        assert(target);
+        {self.element.create(_element, *create_args)};
       """
 
     with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy element (internal)") as f:
@@ -342,3 +349,17 @@ class Mapping(_StructRenderer, Indexed):
         {entry.destroy_index(_entry)};
         return removed;
       """
+
+    self.method("int", "emplace", {"target": inout(self), "index": self.index} | self.element.constructor_parameters,
+      constraint=lambda: (self.index.comparable or self.index.orderable) and self.element.emplaceable,
+      brief="Construct element in-place for key if not present",
+      description="""
+        If `index` is not already present in the map, constructs a new element in-place
+        with the forwarded parameters and associates it with `index`.
+        Returns 1 if a new entry was emplaced, 0 if `index` was already present.
+
+        @param[in,out] target the map to update
+        @param[in] index the key to associate with
+        @return 1 if newly emplaced, 0 if key already exists
+      """)
+

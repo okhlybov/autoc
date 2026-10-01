@@ -4,7 +4,7 @@ from autoc.record import Record
 from autoc.variant import Variant
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import out, inout, Callable, Indirection, _StructRenderer
 
 
@@ -232,6 +232,31 @@ class Vector(_StructRenderer, Indexed, Sequence):
         }}
         ++target->variant.tag;
       """
+
+    with self.method(None, ("emplace", "back"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back of static vector",
+      description="""
+        Constructs the element in-place with forwarded parameters at the back of the static vector in O(1).
+        Asserts that the vector has not reached its maximum capacity.
+
+        @param[in,out] target the static vector to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      cases = []
+      for i in range(self._capacity):
+        slot = f"target->variant.value.s{i+1}._{i}"
+        slot_var = self.element.variable(slot)
+        cases.append(f"case {i}: {{{self.element.create(slot_var, *create_args)};}} break;")
+      f.inline_code = f"""
+        assert(target);
+        assert(target->variant.tag + 1 < {self._capacity});
+        switch(target->variant.tag + 1) {{
+          {" ".join(cases)}
+        }}
+        ++target->variant.tag;
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back (synonym for emplace_back)")
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back of static vector",
       description="""

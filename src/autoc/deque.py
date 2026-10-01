@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.sequence import Sequence
 from autoc.range import Bidirectional
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, _type, Callable, _StructRenderer
 
 
@@ -126,6 +126,27 @@ class Deque(_StructRenderer, Sequence):
         ++target->size;
       """
 
+    with self.method(None, ("emplace", "front"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at front",
+      description="""
+        Inserts an element constructed in-place with forwarded parameters at the front in O(1).
+        Other elements are untouched so their addresses stay valid.
+
+        @param[in,out] target the deque to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        {self.node}* node;
+        assert(target);
+        node = {self.memory.allocate(self.node)};
+        {self.element.create(node_element, *create_args)};
+        node->prev = NULL;
+        node->next = target->front;
+        if(target->front) target->front->prev = node; else target->back = node;
+        target->front = node;
+        ++target->size;
+      """
+
     with self.method(self.element, ("pop", "front"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from front",
       description="""
         Moves the front element out and releases its node in O(1). The returned element
@@ -168,6 +189,29 @@ class Deque(_StructRenderer, Sequence):
         target->back = node;
         ++target->size;
       """
+
+    with self.method(None, ("emplace", "back"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back",
+      description="""
+        Appends an element constructed in-place with forwarded parameters at the back in O(1).
+        Other elements are untouched so their addresses stay valid.
+
+        @param[in,out] target the deque to add to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        {self.node}* node;
+        assert(target);
+        node = {self.memory.allocate(self.node)};
+        {self.element.create(node_element, *create_args)};
+        node->next = NULL;
+        node->prev = target->back;
+        if(target->back) target->back->next = node; else target->front = node;
+        target->back = node;
+        ++target->size;
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back (synonym for emplace_back)")
 
     with self.method(self.element, ("pop", "back"), {"target": inout(self)}, constraint=lambda: self.element.moveable, brief="Remove and return element from back",
       description="""

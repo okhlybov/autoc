@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.indexed import Indexed
 from autoc.sequence import Sequence
 from autoc.range import DirectAccess
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import out, inout, Callable, Indirection, Macro, _StructRenderer
 
 
@@ -240,6 +240,59 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
           {self.element.copy(new_head_slot, f.element)};
         }} else {{
           {self.element.copy(new_head_slot, f.element)};
+          ++target->size;
+        }}
+        target->head = new_head;
+      """
+
+    with self.method(None, ("emplace", "back"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back",
+      description="""
+        Constructs the element in-place with forwarded parameters at the back of the circular buffer in O(1).
+        If the buffer is already full, the oldest element at the front is overwritten.
+
+        @param[in,out] target the circular buffer to append to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      head_slot = self.element.variable("target->elements[target->head]")
+      destroy_head = f"{self.element.destroy(head_slot)};" if self.element.destructible else ""
+      new_slot = self.element.variable(f"target->elements[(target->head + target->size) % {self._capacity('target')}]")
+      f.code = f"""
+        assert(target);
+        assert({self._capacity("target")} > 0);
+        if(target->size == {self._capacity("target")}) {{
+          {destroy_head}
+          {self.element.create(head_slot, *create_args)};
+          target->head = (target->head + 1) % {self._capacity("target")};
+        }} else {{
+          {self.element.create(new_slot, *create_args)};
+          ++target->size;
+        }}
+      """
+    self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at back (synonym for emplace_back)")
+
+    with self.method(None, ("emplace", "front"), {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct element in-place at front",
+      description="""
+        Constructs the element in-place with forwarded parameters at the front of the circular buffer in O(1).
+        If the buffer is already full, the newest element at the back is overwritten.
+
+        @param[in,out] target the circular buffer to prepend to
+      """) as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      new_head_slot = self.element.variable("target->elements[new_head]")
+      destroy_new_head = f"{self.element.destroy(new_head_slot)};" if self.element.destructible else ""
+      f.code = f"""
+        size_t new_head;
+        assert(target);
+        assert({self._capacity("target")} > 0);
+        new_head = (target->head + {self._capacity("target")} - 1) % {self._capacity("target")};
+        if(target->size == {self._capacity("target")}) {{
+          {destroy_new_head}
+          {self.element.create(new_head_slot, *create_args)};
+        }} else {{
+          {self.element.create(new_head_slot, *create_args)};
           ++target->size;
         }}
         target->head = new_head;

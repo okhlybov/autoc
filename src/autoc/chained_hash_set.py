@@ -1,7 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 import autoc.set
-from autoc.collection import _Range
+from autoc.container import _Range
 from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable, _ceil_power2
 
 
@@ -159,6 +159,34 @@ class Set(_StructRenderer, autoc.set.Set):
         bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
         n = {self.memory.allocate(self.node)};
         {self.element.copy(node_element, f.element)};
+        n->next = target->buckets[bucket];
+        target->buckets[bucket] = n;
+        ++target->size;
+        return 1;
+      """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
+      f.code = lambda f=f: f"""
+        size_t bucket;
+        {self.node}* n;
+        {self.node}* p;
+        assert(target);
+        n = {self.memory.allocate(self.node)};
+        {self.element.create(node_element, *create_args)};
+        if(target->buckets) {{
+          bucket = {self.element.hash_lookup_hash(node_element)} & (target->capacity-1);
+          for(p = target->buckets[bucket]; p; p = p->next) {{
+            if({self.element.hash_lookup_equal(self.element.variable("p->element"), node_element)}) {{
+              {_destroy_node}
+              {self.memory.free("n")};
+              return 0;
+            }}
+          }}
+        }}
+        {self.resize(f.target, "target->size+1")};
+        bucket = {self.element.hash_lookup_hash(node_element)} & (target->capacity-1);
         n->next = target->buckets[bucket];
         target->buckets[bucket] = n;
         ++target->size;

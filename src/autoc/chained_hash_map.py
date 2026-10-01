@@ -76,3 +76,27 @@ class Map(Mapping):
           ++target->set.size;
         }}
       """
+
+    with self.emplace as f:
+      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      f.code = f"""
+        size_t bucket;
+        {n.definition};
+        assert(target);
+        if(target->set.capacity > 0) {{
+          bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+          for(n = (target->set.buckets ? target->set.buckets[bucket] : ({n.type})NULL); n; n = n->next) {{
+            if({self.index.equal(node_index, f.index)}) return 0;
+          }}
+        }}
+        {self._set.resize(_target, "target->set.size+1")};
+        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+        {n} = {self.memory.allocate(set.node)};
+        {entry.emplace_index(node_entry, f.index)};
+        {entry.create_element(node_entry, *create_args)};
+        n->next = target->set.buckets[bucket];
+        target->set.buckets[bucket] = n;
+        ++target->set.size;
+        return 1;
+      """
+
