@@ -183,157 +183,67 @@ function(add_autoc_module module)
   endif()
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
   set(module_state ${key_DIRECTORY}/${module}.state)
-  set(module_target ${module}-generate)
 
-  set(_enable_gen OFF)
+  set(_generate OFF)
+  
   if(AUTOC)
+    if(NOT key_COMMAND)
+      set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
+    endif()
     if(EXISTS ${key_MAIN_DEPENDENCY})
-      set(_enable_gen ON)
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
+
+      if(AUTOC STREQUAL "AUTO")
+        if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_state})
+          set(_generate ON)
+        else()
+          foreach(dep IN LISTS key_DEPENDS)
+            if(dep IS_NEWER_THAN ${module_state})
+              set(_generate ON)
+              break()
+            endif()
+          endforeach()
+        endif()
+      else()
+        set(_generate ON)
+      endif()
     elseif(NOT AUTOC STREQUAL "AUTO")
       message(FATAL_ERROR "AutoC: Generation script '${key_MAIN_DEPENDENCY}' not found for module '${module}'.")
     endif()
   endif()
 
-  if(_enable_gen)
-    if(NOT key_COMMAND)
-      set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
-    endif()
-
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
-
-    if(AUTOC STREQUAL "AUTO")
-      set(_reconfig_gen OFF)
-      if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake} OR ${module_cmake} IS_NEWER_THAN ${module_state} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_cmake})
-        set(_reconfig_gen ON)
-      else()
-        foreach(dep IN LISTS key_DEPENDS)
-          if(dep IS_NEWER_THAN ${module_cmake})
-            set(_reconfig_gen ON)
-            break()
-          endif()
-        endforeach()
-      endif()
-
-      if(_reconfig_gen)
-        message(CHECK_START "Generating AutoC module " ${module})
-        execute_process(
-          WORKING_DIRECTORY ${key_DIRECTORY}
-          COMMAND ${key_COMMAND}
-          RESULT_VARIABLE gen_res
-          OUTPUT_VARIABLE gen_out
-          ERROR_VARIABLE gen_err
-        )
-        if(NOT gen_res EQUAL 0)
-          message(CHECK_FAIL "failed")
-          message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
-        else()
-          message(CHECK_PASS "done")
-        endif()
-      endif()
-
-      include(${module_cmake})
-
-      set(_driver_script "${CMAKE_CURRENT_BINARY_DIR}/${module}_build.cmake")
-      set(_quoted_cmd "")
-      foreach(_arg IN LISTS key_COMMAND)
-        string(REPLACE "\\\\" "\\\\\\\\" _arg "${_arg}")
-        string(REPLACE "\\"" "\\\\\\"" _arg "${_arg}")
-        string(REPLACE ";" "\\\\;" _arg "${_arg}")
-        list(APPEND _quoted_cmd "\\"${_arg}\\"")
-      endforeach()
-      string(JOIN " " _cmd_str ${_quoted_cmd})
-
-      set(_quoted_deps "")
-      foreach(_dep IN LISTS key_DEPENDS)
-        string(REPLACE "\\\\" "\\\\\\\\" _dep "${_dep}")
-        string(REPLACE "\\"" "\\\\\\"" _dep "${_dep}")
-        string(REPLACE ";" "\\\\;" _dep "${_dep}")
-        list(APPEND _quoted_deps "\\"${_dep}\\"")
-      endforeach()
-      string(JOIN " " _deps_str ${_quoted_deps})
-
-      file(WRITE "${_driver_script}" "
-set(_state \\"${module_state}\\")
-set(_main_dep \\"${key_MAIN_DEPENDENCY}\\")
-set(_deps ${_deps_str})
-set(_working_dir \\"${key_DIRECTORY}\\")
-set(_command ${_cmd_str})
-
-set(_needs_run OFF)
-if(NOT EXISTS \\\\"\\\\${_state}\\\\")
-  set(_needs_run ON)
-elseif(\\\\"\\\\${_main_dep}\\\\" IS_NEWER_THAN \\\\"\\\\${_state}\\\\")
-  set(_needs_run ON)
-else()
-  foreach(_dep IN LISTS _deps)
-    if(\\\\"\\\\${_dep}\\\\" IS_NEWER_THAN \\\\"\\\\${_state}\\\\")
-      set(_needs_run ON)
-      break()
-    endif()
-  endforeach()
-endif()
-
-if(_needs_run)
-  execute_process(
-    WORKING_DIRECTORY \\\\"\\\\${_working_dir}\\\\"
-    COMMAND \\\\${CMAKE_COMMAND} -E env AUTOC_CACHED=1 \\\\${_command}
-    RESULT_VARIABLE _res
-  )
-  if(NOT _res EQUAL 0)
-    message(FATAL_ERROR \\\\"AutoC generator failed for \x27${module}\x27\\\\")
-  endif()
-else()
-  file(TOUCH \\\\"\\\\${_state}\\\\")
-endif()
-")
-
-      add_custom_command(
-        OUTPUT ${module_state}
-        MAIN_DEPENDENCY ${key_MAIN_DEPENDENCY}
-        DEPENDS ${key_DEPENDS} "${_driver_script}"
-        WORKING_DIRECTORY ${key_DIRECTORY}
-        COMMAND ${CMAKE_COMMAND} -P "${_driver_script}"
-        VERBATIM
-      )
-      add_custom_target(${module_target} DEPENDS ${module_state})
+  if(_generate)
+    message(CHECK_START "Generating AutoC module " ${module})
+    execute_process(
+      WORKING_DIRECTORY ${key_DIRECTORY}
+      COMMAND ${key_COMMAND}
+      RESULT_VARIABLE gen_res
+      OUTPUT_VARIABLE gen_out
+      ERROR_VARIABLE gen_err
+    )
+    if(NOT gen_res EQUAL 0)
+      message(CHECK_FAIL "failed")
+      message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
     else()
-      if(NOT EXISTS ${module_cmake} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_cmake})
-        message(CHECK_START "Generating AutoC module " ${module})
-        execute_process(
-          WORKING_DIRECTORY ${key_DIRECTORY}
-          COMMAND ${key_COMMAND}
-          RESULT_VARIABLE gen_res
-          OUTPUT_VARIABLE gen_out
-          ERROR_VARIABLE gen_err
-        )
-        if(NOT gen_res EQUAL 0)
-          message(CHECK_FAIL "failed")
-          message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
-        else()
-          message(CHECK_PASS "done")
-        endif()
-      endif()
-
-      include(${module_cmake})
-      add_custom_target(${module_target}
-        COMMAND ${key_COMMAND}
-        WORKING_DIRECTORY ${key_DIRECTORY}
-        BYPRODUCTS ${module_cmake} ${module_state}
-      )
+      message(CHECK_PASS "done")
     endif()
+  endif()
 
+  if(NOT EXISTS ${module_cmake})
+    message(FATAL_ERROR "AutoC: Pre-generated file '${module_cmake}' not found and AUTOC code generation is disabled.")
+  endif()
+  include(${module_cmake})
+
+  if(AUTOC AND NOT AUTOC STREQUAL "AUTO")
+    set(module_target ${module}-generate)
+    add_custom_target(${module_target}
+      COMMAND ${key_COMMAND}
+      WORKING_DIRECTORY ${key_DIRECTORY}
+    )
     if(TARGET ${module}-autoc)
       add_dependencies(${module}-autoc ${module_target})
     elseif(TARGET ${module}-auto)
       add_dependencies(${module}-auto ${module_target})
-    endif()
-  else()
-    if(NOT EXISTS ${module_cmake})
-      message(FATAL_ERROR "AutoC: Pre-generated file '${module_cmake}' not found and AUTOC code generation is disabled.")
-    endif()
-    include(${module_cmake})
-    if(NOT TARGET ${module_target})
-      add_custom_target(${module_target})
     endif()
   endif()
 endfunction()
