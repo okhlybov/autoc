@@ -24,10 +24,9 @@ import autoc.module
 import autoc.list
 import autoc.cmake
 
-with autoc.module.Module("sensors") as m:
-  m.add(autoc.list.List("int_list", "int"))
-
-autoc.cmake.CMake(m)
+with autoc.cmake.CMake():
+  with autoc.module.Module("sensors") as m:
+    m.add(autoc.list.List("int_list", "int"))
 ```
 
 `List("int_list", "int")` asks for one concrete container: a singly linked list whose

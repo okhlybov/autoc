@@ -202,13 +202,13 @@ _autoc_cmake = """cmake_minimum_required(VERSION 3.15)
 
 if(NOT DEFINED AUTOC)
   if(DEFINED AUTOC_MODULE_SOURCE AND EXISTS "${AUTOC_MODULE_SOURCE}")
-    set(_autoc_default ON)
+    set(_autoc_default AUTO)
   elseif(DEFINED PROJECT_NAME AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.py")
-    set(_autoc_default ON)
+    set(_autoc_default AUTO)
   else()
     set(_autoc_default OFF)
   endif()
-  option(AUTOC "Enable AutoC code generation" ${_autoc_default})
+  set(AUTOC ${_autoc_default} CACHE STRING "AutoC code generation mode: ON (unconditional), AUTO (incremental), OFF (disabled)")
 endif()
 
 if(AUTOC)
@@ -222,38 +222,84 @@ function(add_autoc_module module)
   if(NOT key_DIRECTORY)
     set(key_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endif()
+  if(NOT key_MAIN_DEPENDENCY)
+    set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
+  endif()
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
+  set(module_state ${key_DIRECTORY}/${module}.state)
   set(module_target ${module}-generate)
 
+  set(_enable_gen OFF)
   if(AUTOC)
-    if(NOT key_MAIN_DEPENDENCY)
-      set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
+    if(EXISTS ${key_MAIN_DEPENDENCY})
+      set(_enable_gen ON)
+    elseif(NOT AUTOC STREQUAL "AUTO")
+      message(FATAL_ERROR "AutoC: Generation script '${key_MAIN_DEPENDENCY}' not found for module '${module}'.")
     endif()
+  endif()
+
+  if(_enable_gen)
     if(NOT key_COMMAND)
       set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
     endif()
 
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
 
-    message(CHECK_START "Generating AutoC module " ${module})
-    execute_process(
-      WORKING_DIRECTORY ${key_DIRECTORY}
-      COMMAND ${key_COMMAND}
-      RESULT_VARIABLE gen_res
-      OUTPUT_VARIABLE gen_out
-      ERROR_VARIABLE gen_err
-    )
-    if(NOT gen_res EQUAL 0)
-      message(CHECK_FAIL "failed")
-      message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
+    if(AUTOC STREQUAL "AUTO")
+      if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_state})
+        message(CHECK_START "Generating AutoC module " ${module})
+        execute_process(
+          WORKING_DIRECTORY ${key_DIRECTORY}
+          COMMAND ${key_COMMAND}
+          RESULT_VARIABLE gen_res
+          OUTPUT_VARIABLE gen_out
+          ERROR_VARIABLE gen_err
+        )
+        if(NOT gen_res EQUAL 0)
+          message(CHECK_FAIL "failed")
+          message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
+        else()
+          message(CHECK_PASS "done")
+        endif()
+      endif()
+
+      include(${module_cmake})
+      add_custom_command(
+        OUTPUT ${module_state}
+        BYPRODUCTS ${module_cmake}
+        MAIN_DEPENDENCY ${key_MAIN_DEPENDENCY}
+        DEPENDS ${key_DEPENDS}
+        WORKING_DIRECTORY ${key_DIRECTORY}
+        COMMAND ${key_COMMAND}
+        VERBATIM
+      )
+      add_custom_target(${module_target} DEPENDS ${module_state})
     else()
-      message(CHECK_PASS "done")
+      if(NOT EXISTS ${module_cmake} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_cmake})
+        message(CHECK_START "Generating AutoC module " ${module})
+        execute_process(
+          WORKING_DIRECTORY ${key_DIRECTORY}
+          COMMAND ${key_COMMAND}
+          RESULT_VARIABLE gen_res
+          OUTPUT_VARIABLE gen_out
+          ERROR_VARIABLE gen_err
+        )
+        if(NOT gen_res EQUAL 0)
+          message(CHECK_FAIL "failed")
+          message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
+        else()
+          message(CHECK_PASS "done")
+        endif()
+      endif()
+
+      include(${module_cmake})
+      add_custom_target(${module_target}
+        COMMAND ${key_COMMAND}
+        WORKING_DIRECTORY ${key_DIRECTORY}
+        BYPRODUCTS ${module_cmake} ${module_state}
+      )
     endif()
 
-    include(${module_cmake})
-    if(NOT TARGET ${module_target})
-      add_custom_target(${module_target})
-    endif()
     if(TARGET ${module}-autoc)
       add_dependencies(${module}-autoc ${module_target})
     elseif(TARGET ${module}-auto)
