@@ -97,20 +97,86 @@ _cmakepresets_json = """{
   "version": 3,
   "configurePresets": [
     {
-      "name": "Common",
+      "name": "common",
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}"
     },
     {
-      "name": "Debug",
-      "inherits": "Common",
+      "name": "windows",
+      "hidden": true,
+      "inherits": "common",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }      
+    },
+    {
+      "name": "posix",
+      "hidden": true,
+      "inherits": "common",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }      
+    },
+    {
+      "displayName": "Ninja",
+      "name": "ninja",
+      "generator": "Ninja Multi-Config",
+      "inherits": "common"
+    },
+    {
+      "displayName": "Visual Studio 2026",
+      "name": "vs2026",
+      "generator": "Visual Studio 18",
+      "inherits": "windows"
+    },
+    {
+      "displayName": "Visual Studio 2022",
+      "name": "vs2022",
+      "generator": "Visual Studio 17 2022",
+      "inherits": "windows"
+    },
+    {
+      "displayName": "Visual Studio 2019",
+      "name": "vs2019",
+      "generator": "Visual Studio 16 2019",
+      "inherits": "windows"
+    },
+    {
+      "displayName": "Ninja: Debug",
+      "name": "ninja-Debug",
+      "generator": "Ninja",
+      "inherits": "common",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
-      "name": "Release",
-      "inherits": "Common",
+      "displayName": "Ninja: Release",
+      "name": "ninja-Release",
+      "generator": "Ninja",
+      "inherits": "common",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "displayName": "Make: Debug",
+      "name": "make-Debug",
+      "generator": "Unix Makefiles",
+      "inherits": "posix",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "displayName": "Make: Release",
+      "name": "make-Release",
+      "generator": "Unix Makefiles",
+      "inherits": "posix",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -118,12 +184,52 @@ _cmakepresets_json = """{
   ],
   "buildPresets": [
     {
-      "name": "Debug",
-      "configurePreset": "Debug"
+      "displayName": "Debug",
+      "name": "ninja-debug",
+      "configurePreset": "ninja",
+      "configuration": "Debug"
     },
     {
-      "name": "Release",
-      "configurePreset": "Release"
+      "displayName": "Release",
+      "name": "ninja-release",
+      "configurePreset": "ninja",
+      "configuration": "Release"
+    },
+    {
+      "displayName": "Debug",
+      "name": "vs2026-debug",
+      "configurePreset": "vs2026",
+      "configuration": "Debug"
+    },
+    {
+      "displayName": "Release",
+      "name": "vs2026-release",
+      "configurePreset": "vs2026",
+      "configuration": "Release"
+    },
+    {
+      "displayName": "Debug",
+      "name": "vs2022-debug",
+      "configurePreset": "vs2022",
+      "configuration": "Debug"
+    },
+    {
+      "displayName": "Release",
+      "name": "vs2022-release",
+      "configurePreset": "vs2022",
+      "configuration": "Release"
+    },
+    {
+      "displayName": "Debug",
+      "name": "vs2019-debug",
+      "configurePreset": "vs2019",
+      "configuration": "Debug"
+    },
+    {
+      "displayName": "Release",
+      "name": "vs2019-release",
+      "configurePreset": "vs2019",
+      "configuration": "Release"
     }
   ]
 }"""
@@ -194,11 +300,21 @@ function(add_autoc_module module)
       set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
 
       if(AUTOC STREQUAL "AUTO")
-        if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake} OR ${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_state})
+        if(EXISTS ${module_state})
+          set(_stamp ${module_state})
+        elseif(EXISTS ${module_cmake})
+          set(_stamp ${module_cmake})
+        else()
+          set(_stamp "")
+        endif()
+
+        if(NOT _stamp)
+          set(_generate ON)
+        elseif(${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${_stamp})
           set(_generate ON)
         else()
           foreach(dep IN LISTS key_DEPENDS)
-            if(dep IS_NEWER_THAN ${module_state})
+            if(dep IS_NEWER_THAN ${_stamp})
               set(_generate ON)
               break()
             endif()
@@ -226,6 +342,9 @@ function(add_autoc_module module)
       message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
     else()
       message(CHECK_PASS "done")
+      if(NOT EXISTS ${module_state} AND EXISTS ${module_cmake})
+        file(TOUCH ${module_cmake})
+      endif()
     endif()
   endif()
 
