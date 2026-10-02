@@ -88,10 +88,10 @@ pip install .
 
 ```sh
 mkdir readings && cd readings
-python -m autoc.cmake.project readings
+python -m autoc.cmake.project readings  # or: python -m autoc.scons.project readings
 ```
 
-This is the layout you get — a working CMake project with the generator already wired in:
+This is the layout you get with CMake (or equivalent for SCons with `SConstruct` and `site_scons/site_tools/autoc.py`) — a working project with the generator already wired in:
 
 ```
 readings/
