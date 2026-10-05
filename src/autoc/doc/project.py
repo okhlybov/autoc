@@ -74,6 +74,9 @@ def generate(directory=".", project="doc"):
     set({project}_DOC_PAGES "{pages_list}")
     set({project}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve().as_posix()}")
     set({project}_VERSION "{autoc.__version__}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+      ${{{project}_HEADER}}
+    )
 """
     cmake_file = f"{project}.cmake"
     try:
@@ -112,6 +115,9 @@ contents = f\"\"\"
     set({name}_DOC_PAGES "{pages_list}")
     set({name}_DOC_MAINPAGE "{autoc.doc.mainpage.resolve().as_posix()}")
     set({name}_VERSION "{autoc.__version__}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+      ${{{name}_HEADER}}
+    )
 \"\"\"
 cmake_file = f"{name}.cmake"
 try:
@@ -195,7 +201,7 @@ add_custom_target(autoc-generate DEPENDS generate)
 """
 
 
-_autoc_cmake = """cmake_minimum_required(VERSION 3.15)
+_autoc_cmake = r"""cmake_minimum_required(VERSION 3.15)
 
 if(NOT DEFINED AUTOC)
   if(DEFINED AUTOC_MODULE_SOURCE AND EXISTS "${AUTOC_MODULE_SOURCE}")
@@ -226,33 +232,35 @@ function(add_autoc_module module)
   set(module_state ${key_DIRECTORY}/${module}.state)
 
   set(_generate OFF)
+
   if(AUTOC)
     if(NOT key_COMMAND)
       set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
     endif()
     if(EXISTS ${key_MAIN_DEPENDENCY})
-      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS})
-
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS} ${module_cmake} ${module_state})
       if(AUTOC STREQUAL "AUTO")
-        if(EXISTS ${module_state})
-          set(_stamp ${module_state})
-        elseif(EXISTS ${module_cmake})
-          set(_stamp ${module_cmake})
-        else()
-          set(_stamp "")
-        endif()
-
-        if(NOT _stamp)
+        if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake})
           set(_generate ON)
-        elseif(${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${_stamp})
+        elseif(${key_MAIN_DEPENDENCY} IS_NEWER_THAN ${module_state})
           set(_generate ON)
         else()
-          foreach(dep IN LISTS key_DEPENDS)
-            if(dep IS_NEWER_THAN ${_stamp})
+          file(STRINGS ${module_state} _state_lines)
+          foreach(_line IN LISTS _state_lines)
+            string(REGEX MATCH "\\*([^\r\n]+)$" _match "${_line}")
+            if(CMAKE_MATCH_1 AND NOT EXISTS "${key_DIRECTORY}/${CMAKE_MATCH_1}")
               set(_generate ON)
               break()
             endif()
           endforeach()
+          if(NOT _generate)
+            foreach(dep IN LISTS key_DEPENDS)
+              if(dep IS_NEWER_THAN ${module_state})
+                set(_generate ON)
+                break()
+              endif()
+            endforeach()
+          endif()
         endif()
       else()
         set(_generate ON)
@@ -273,7 +281,7 @@ function(add_autoc_module module)
     )
     if(NOT gen_res EQUAL 0)
       message(CHECK_FAIL "failed")
-      message(FATAL_ERROR "AutoC generator failed for '${module}':\\n${gen_err}\\n${gen_out}")
+      message(FATAL_ERROR "AutoC generator failed for '${module}':\n${gen_err}\n${gen_out}")
     else()
       message(CHECK_PASS "done")
       if(NOT EXISTS ${module_state} AND EXISTS ${module_cmake})

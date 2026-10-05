@@ -22,7 +22,11 @@ class CMake:
     """ if sources else str()
     contents = f"""
       set({module.name}_HEADER ${{CMAKE_CURRENT_SOURCE_DIR}}/{module.header.file_name})
-      set({module.name}_SOURCES {sources}){library}
+      set({module.name}_SOURCES {sources})
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        ${{{module.name}_HEADER}}
+        ${{{module.name}_SOURCES}}
+      ){library}
     """
     try:
       with open(cmake, "r") as f:
