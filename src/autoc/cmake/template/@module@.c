@@ -4,7 +4,7 @@
 
 int main(int argc, char** argv) {
   char* s = StringNew("@project@");
-  printf("Hello, %s!\\n", s);
+  printf("Hello, %s!\n", s);
   StringFree(s);
   return 0;
 }

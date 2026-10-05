@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
 
+set(_site_candidates
+  "${CMAKE_CURRENT_SOURCE_DIR}/${AUTOC_MODULE_NAME}.cmake.site"
+  "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.cmake.site"
+)
+foreach(_site IN LISTS _site_candidates)
+  if(EXISTS "${_site}")
+    include("${_site}")
+    break()
+  endif()
+endforeach()
+
 if(NOT DEFINED AUTOC)
   if(DEFINED AUTOC_MODULE_SOURCE AND EXISTS "${AUTOC_MODULE_SOURCE}")
     set(_autoc_default AUTO)
@@ -27,6 +38,7 @@ function(add_autoc_module module)
   endif()
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
   set(module_state ${key_DIRECTORY}/${module}.state)
+  set(module_site ${key_DIRECTORY}/${module}.cmake.site)
 
   set(_generate OFF)
 
@@ -35,7 +47,7 @@ function(add_autoc_module module)
       set(key_COMMAND ${Python_EXECUTABLE} ${key_MAIN_DEPENDENCY} ${module})
     endif()
     if(EXISTS ${key_MAIN_DEPENDENCY})
-      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS} ${module_cmake} ${module_state})
+      set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${key_MAIN_DEPENDENCY} ${key_DEPENDS} ${module_cmake} ${module_state} ${module_site})
       if(AUTOC STREQUAL "AUTO")
         if(NOT EXISTS ${module_state} OR NOT EXISTS ${module_cmake})
           set(_generate ON)
@@ -69,9 +81,13 @@ function(add_autoc_module module)
 
   if(_generate)
     message(CHECK_START "Generating AutoC module " ${module})
+    set(_env_cmd)
+    if(AUTOC_PYTHONPATH)
+      set(_env_cmd ${CMAKE_COMMAND} -E env "PYTHONPATH=${AUTOC_PYTHONPATH}")
+    endif()
     execute_process(
       WORKING_DIRECTORY ${key_DIRECTORY}
-      COMMAND ${key_COMMAND}
+      COMMAND ${_env_cmd} ${key_COMMAND}
       RESULT_VARIABLE gen_res
       OUTPUT_VARIABLE gen_out
       ERROR_VARIABLE gen_err
@@ -94,8 +110,12 @@ function(add_autoc_module module)
 
   if(AUTOC AND NOT AUTOC STREQUAL "AUTO")
     set(module_target ${module}-generate)
+    set(_env_cmd)
+    if(AUTOC_PYTHONPATH)
+      set(_env_cmd ${CMAKE_COMMAND} -E env "PYTHONPATH=${AUTOC_PYTHONPATH}")
+    endif()
     add_custom_target(${module_target}
-      COMMAND ${key_COMMAND}
+      COMMAND ${_env_cmd} ${key_COMMAND}
       WORKING_DIRECTORY ${key_DIRECTORY}
     )
     if(TARGET ${module}-autoc)
