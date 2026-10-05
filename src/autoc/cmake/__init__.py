@@ -61,3 +61,23 @@ class CMake:
 
 # https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-1.html
 # https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-2.html
+
+
+from autoc.scaffolder import *
+
+
+#
+class Scaffolder(Scaffolder):
+  
+  def __init__(self, resources={}, parameters={}):
+    super().__init__(
+      resources={
+        "cmake/AutoC.cmake": template_reader,
+        "CMakeLists.txt": template_reader,
+        "CMakePresets.json": template_reader,
+        "@project@.code-workspace": template_reader,
+        ".vscode/launch.json": template_reader,
+        ".gitignore": template_reader,
+      } | resources,
+      parameters={} | parameters
+    )
