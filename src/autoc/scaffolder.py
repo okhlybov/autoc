@@ -13,12 +13,7 @@ def make_template_reader(package=None, directory="template"):
     finally:
       del caller
 
-  def reader(resource):
-    return (
-      importlib.resources.files(package)
-      .joinpath(directory, resource)
-      .read_text(encoding="utf-8")
-    )
+  def reader(resource): return importlib.resources.files(package).joinpath(directory, resource).read_text(encoding="utf-8")
 
   return reader
 
@@ -37,10 +32,11 @@ class Scaffolder:
     try:
       os.chdir(path)
       for file, reader in self.resources.items():
-        f = self.interpolate(file, self.parameters)
-        pathlib.Path(f).parent.mkdir(parents=True, exist_ok=True)
-        with open(f, "w") as f:
-          f.write(self.interpolate(reader(file), self.parameters))
+        if reader: # Override with None to disable file generation
+          f = self.interpolate(file, self.parameters)
+          pathlib.Path(f).parent.mkdir(parents=True, exist_ok=True)
+          with open(f, "w") as f:
+            f.write(self.interpolate(reader(file), self.parameters))
     finally:
       os.chdir(wd)
       

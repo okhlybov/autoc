@@ -21,14 +21,14 @@
       "hidden": true,
       "inherits": "common",
       "condition": {
-        "type": "equals",
+        "type": "notEquals",
         "lhs": "${hostSystemName}",
-        "rhs": "Linux"
+        "rhs": "Windows"
       }
     },
     {
-      "displayName": "Ninja",
-      "name": "ninja",
+      "displayName": "Ninja (Multi-Config)",
+      "name": "ninjamc",
       "generator": "Ninja Multi-Config",
       "inherits": "common"
     },
@@ -89,51 +89,117 @@
   ],
   "buildPresets": [
     {
-      "displayName": "Debug",
-      "name": "ninja-debug",
-      "configurePreset": "ninja",
+      "displayName": "Ninja Multi-Config Debug",
+      "name": "ninjamc-Debug",
+      "configurePreset": "ninjamc",
       "configuration": "Debug"
     },
     {
-      "displayName": "Release",
-      "name": "ninja-release",
-      "configurePreset": "ninja",
+      "displayName": "Ninja Multi-Config Release",
+      "name": "ninjamc-Release",
+      "configurePreset": "ninjamc",
       "configuration": "Release"
     },
     {
-      "displayName": "Debug",
-      "name": "vs2026-debug",
+      "displayName": "Ninja Debug",
+      "name": "ninja-Debug",
+      "configurePreset": "ninja-Debug"
+    },
+    {
+      "displayName": "Ninja Release",
+      "name": "ninja-Release",
+      "configurePreset": "ninja-Release"
+    },
+    {
+      "displayName": "Make Debug",
+      "name": "make-Debug",
+      "configurePreset": "make-Debug"
+    },
+    {
+      "displayName": "Make Release",
+      "name": "make-Release",
+      "configurePreset": "make-Release"
+    },
+    {
+      "displayName": "Visual Studio 2026 Debug",
+      "name": "vs2026-Debug",
       "configurePreset": "vs2026",
       "configuration": "Debug"
     },
     {
-      "displayName": "Release",
-      "name": "vs2026-release",
+      "displayName": "Visual Studio 2026 Release",
+      "name": "vs2026-Release",
       "configurePreset": "vs2026",
       "configuration": "Release"
     },
     {
-      "displayName": "Debug",
-      "name": "vs2022-debug",
+      "displayName": "Visual Studio 2022 Debug",
+      "name": "vs2022-Debug",
       "configurePreset": "vs2022",
       "configuration": "Debug"
     },
     {
-      "displayName": "Release",
-      "name": "vs2022-release",
+      "displayName": "Visual Studio 2022 Release",
+      "name": "vs2022-Release",
       "configurePreset": "vs2022",
       "configuration": "Release"
     },
     {
-      "displayName": "Debug",
-      "name": "vs2019-debug",
+      "displayName": "Visual Studio 2019 Debug",
+      "name": "vs2019-Debug",
       "configurePreset": "vs2019",
       "configuration": "Debug"
     },
     {
-      "displayName": "Release",
-      "name": "vs2019-release",
+      "displayName": "Visual Studio 2019 Release",
+      "name": "vs2019-Release",
       "configurePreset": "vs2019",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "displayName": "Ninja Multi-Config Debug",
+      "name": "ninjamc-Debug",
+      "configurePreset": "ninjamc",
+      "configuration": "Debug"
+    },
+    {
+      "displayName": "Ninja Multi-Config Release",
+      "name": "ninjamc-Release",
+      "configurePreset": "ninjamc",
+      "configuration": "Release"
+    },
+    {
+      "displayName": "Ninja Debug",
+      "name": "ninja-Debug",
+      "configurePreset": "ninja-Debug"
+    },
+    {
+      "displayName": "Ninja Release",
+      "name": "ninja-Release",
+      "configurePreset": "ninja-Release"
+    },
+    {
+      "displayName": "Make Debug",
+      "name": "make-Debug",
+      "configurePreset": "make-Debug"
+    },
+    {
+      "displayName": "Make Release",
+      "name": "make-Release",
+      "configurePreset": "make-Release"
+    },
+    {
+      "displayName": "Visual Studio 2022 Debug",
+      "name": "vs2022-Debug",
+      "configurePreset": "vs2022",
+      "configuration": "Debug"
+    },
+    {
+      "displayName": "Visual Studio 2022 Release",
+      "name": "vs2022-Release",
+      "configurePreset": "vs2022",
       "configuration": "Release"
     }
   ]

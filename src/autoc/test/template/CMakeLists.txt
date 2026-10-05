@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(@project@)
+project(@module@)
 
 set(AUTOC_MODULE_NAME @module@)
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${AUTOC_MODULE_NAME}.py)
@@ -16,5 +16,5 @@ add_autoc_module(
   COMMAND ${Python_EXECUTABLE} ${AUTOC_MODULE_SOURCE} ${AUTOC_MODULE_NAME}
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.c)
+add_executable(${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} ${AUTOC_MODULE_NAME}-autoc)

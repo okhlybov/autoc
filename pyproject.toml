@@ -16,3 +16,5 @@ Homepage = "https://github.com/okhlybov/autoc"
 
 [tool.setuptools.package-data]
 "autoc.doc" = ["*.md"]
+"autoc.cmake" = ["template/**/*"]
+"autoc.test" = ["template/**/*"]
