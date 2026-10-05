@@ -66,18 +66,21 @@ class CMake:
 from autoc.scaffolder import *
 
 
+reader = make_template_reader(__package__)
+
+
 #
 class Scaffolder(Scaffolder):
   
   def __init__(self, resources={}, parameters={}):
     super().__init__(
       resources={
-        "cmake/AutoC.cmake": template_reader,
-        "CMakeLists.txt": template_reader,
-        "CMakePresets.json": template_reader,
-        "@project@.code-workspace": template_reader,
-        ".vscode/launch.json": template_reader,
-        ".gitignore": template_reader,
+        "cmake/AutoC.cmake": reader,
+        "CMakeLists.txt": reader,
+        "CMakePresets.json": reader,
+        "@project@.code-workspace": reader,
+        ".vscode/launch.json": reader,
+        ".gitignore": reader,
       } | resources,
       parameters={} | parameters
     )

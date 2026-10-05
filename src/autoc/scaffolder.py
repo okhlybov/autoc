@@ -5,14 +5,22 @@ import importlib.resources
 
 
 #
-def template_reader(resource, directory="template"):
-  # Read resource from location relative to this function's caller
-  caller = inspect.currentframe().f_back
-  try:
-      package = caller.f_globals["__package__"]
-      return importlib.resources.files(package).joinpath(directory, resource).read_text(encoding="utf-8")
-  finally:
+def make_template_reader(package=None, directory="template"):
+  if package is None:
+    caller = inspect.currentframe().f_back
+    try:
+      package = caller.f_globals.get("__package__") or caller.f_globals.get("__name__")
+    finally:
       del caller
+
+  def reader(resource):
+    return (
+      importlib.resources.files(package)
+      .joinpath(directory, resource)
+      .read_text(encoding="utf-8")
+    )
+
+  return reader
 
 
 #
