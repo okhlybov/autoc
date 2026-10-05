@@ -1,0 +1,10 @@
+build
+__pycache__
+reference
+html
+latex
+@module@.cmake
+@module@.state
+@module@_auto*
+*_auto.*
+*.cmake.site

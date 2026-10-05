@@ -15,6 +15,6 @@ dependencies = []
 Homepage = "https://github.com/okhlybov/autoc"
 
 [tool.setuptools.package-data]
-"autoc.doc" = ["*.md"]
-"autoc.cmake" = ["template/**/*"]
-"autoc.test" = ["template/**/*"]
+"autoc.doc" = ["*.md", "template/*", "template/.*"]
+"autoc.cmake" = ["template/*", "template/.*", "template/cmake/*", "template/.vscode/*"]
+"autoc.test" = ["template/*", "template/.*"]
