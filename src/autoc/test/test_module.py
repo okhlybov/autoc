@@ -127,12 +127,13 @@ with tempfile.TemporaryDirectory() as tmpdir:
   with Module(prefix, source_count=3, stateful=True) as m:
     for i in range(3):
       m.add(Code(definitions=f"int s_{i} = {i};"))
-  assert sorted(os.listdir(tmpdir)) == ["m.state", "m_auto.h", "m_auto1.c", "m_auto2.c", "m_auto3.c"]
+  assert sorted(os.listdir(tmpdir)) == [".autoc", "m_auto.h", "m_auto1.c", "m_auto2.c", "m_auto3.c"]
+  assert os.path.exists(os.path.join(tmpdir, ".autoc", "m.state"))
 
   with Module(prefix, source_count=1, stateful=True) as m:
     m.add(Code(definitions="int s = 0;"))
-  assert sorted(os.listdir(tmpdir)) == ["m.state", "m_auto.c", "m_auto.h"]
-  with open(os.path.join(tmpdir, "m.state")) as fp:
+  assert sorted(os.listdir(tmpdir)) == [".autoc", "m_auto.c", "m_auto.h"]
+  with open(os.path.join(tmpdir, ".autoc", "m.state")) as fp:
     state_content = fp.read()
   assert "m_auto1.c" not in state_content
   assert "m_auto.c" in state_content
@@ -173,14 +174,14 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
   assert h_mtime1 == h_mtime2, "Header was unnecessarily overwritten in stateless mode!"
   assert c_mtime1 == c_mtime2, "Source was unnecessarily overwritten in stateless mode!"
-  assert not os.path.exists(os.path.join(tmpdir, "m.state"))
+  assert not os.path.exists(os.path.join(tmpdir, ".autoc", "m.state"))
 
 # Test 11: Switch from stateful to stateless removes stray .state file
 with tempfile.TemporaryDirectory() as tmpdir:
   prefix = os.path.join(tmpdir, "m")
   with Module(prefix, stateful=True) as m:
     m.add(Code(definitions="int a = 1;"))
-  state_path = os.path.join(tmpdir, "m.state")
+  state_path = os.path.join(tmpdir, ".autoc", "m.state")
   assert os.path.exists(state_path)
 
   with Module(prefix, stateful=False) as m:

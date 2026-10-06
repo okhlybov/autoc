@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
 set(_site_candidates
-  "${CMAKE_CURRENT_SOURCE_DIR}/${AUTOC_MODULE_NAME}.cmake.site"
-  "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.cmake.site"
+  "${CMAKE_CURRENT_SOURCE_DIR}/.autoc/${AUTOC_MODULE_NAME}.site"
+  "${CMAKE_CURRENT_SOURCE_DIR}/.autoc/${PROJECT_NAME}.site"
 )
 foreach(_site IN LISTS _site_candidates)
   if(EXISTS "${_site}")
@@ -38,10 +38,10 @@ function(add_autoc_module module)
     set(key_MAIN_DEPENDENCY ${key_DIRECTORY}/${module}.py)
   endif()
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
-  set(module_state ${key_DIRECTORY}/${module}.state)
-  set(module_site ${key_DIRECTORY}/${module}.cmake.site)
-  if(NOT EXISTS "${module_site}" AND EXISTS "${key_DIRECTORY}/${PROJECT_NAME}.cmake.site")
-    set(module_site "${key_DIRECTORY}/${PROJECT_NAME}.cmake.site")
+  set(module_state ${key_DIRECTORY}/.autoc/${module}.state)
+  set(module_site ${key_DIRECTORY}/.autoc/${module}.site)
+  if(NOT EXISTS "${module_site}" AND EXISTS "${key_DIRECTORY}/.autoc/${PROJECT_NAME}.site")
+    set(module_site "${key_DIRECTORY}/.autoc/${PROJECT_NAME}.site")
   endif()
 
   set(_generate OFF)

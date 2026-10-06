@@ -280,7 +280,10 @@ class _State(dict):
     self.module = module
 
   @property
-  def file_name(self): return f"{self.module.name}.state"
+  def file_name(self):
+    dirname, basename = os.path.split(self.module.name)
+    state_dir = os.path.join(dirname, ".autoc") if dirname else ".autoc"
+    return os.path.join(state_dir, f"{basename}.state")
 
   def collect(self):
     self[self.module.header.file_name] = self.module.header.digest
@@ -302,11 +305,16 @@ class _State(dict):
             digest, fname = match.groups()
             self[fname] = digest
       else:
-        # Delete stray state file on (porbable) switch from stateful operation to stateless
-        os.unlink(self.file_name)
+        try:
+          os.unlink(self.file_name)
+        except OSError:
+          pass
     return self
 
   def write(self):
+    dirname = os.path.dirname(self.file_name)
+    if dirname:
+      os.makedirs(dirname, exist_ok=True)
     with open(self.file_name, "wt") as io:
       for file_name, digest in sorted(self.items()):
         io.write(f"{digest} *{file_name}\n")

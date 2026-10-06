@@ -65,8 +65,6 @@ class CMake:
 
 import os
 import sys
-import site
-import shutil
 import pathlib
 from autoc.scaffolder import *
 
@@ -74,78 +72,43 @@ from autoc.scaffolder import *
 reader = make_template_reader(__package__)
 
 
-def _detect_site():
-  lines = []
-
-  # Python interpreter: only record if non-default (e.g. virtual environment or not on default PATH)
-  is_venv = (
-    sys.prefix != getattr(sys, "base_prefix", sys.prefix)
-    or hasattr(sys, "real_prefix")
-  )
-  default_python = shutil.which("python3") or shutil.which("python")
-  is_default_python = (
-    not is_venv
-    and default_python is not None
-    and pathlib.Path(default_python).resolve() == pathlib.Path(sys.executable).resolve()
-  )
-  if not is_default_python:
-    python_exe = pathlib.Path(sys.executable).as_posix()
-    lines.append(f'set(Python_EXECUTABLE "{python_exe}" CACHE FILEPATH "Python interpreter for AutoC" FORCE)\n')
-
-  # Python path: only record if custom AutoC checkout or non-standard paths
-  standard_paths = set()
-  try:
-    if hasattr(site, "getsitepackages"):
-      for sp in site.getsitepackages():
-        standard_paths.add(pathlib.Path(sp).resolve())
-    user_sp = site.getusersitepackages() if hasattr(site, "getusersitepackages") else None
-    if user_sp:
-      standard_paths.add(pathlib.Path(user_sp).resolve())
-  except Exception:
-    pass
-
+def _site_config():
+  python_exe = pathlib.Path(sys.executable).as_posix()
   import autoc
-  autoc_dir = pathlib.Path(autoc.__file__).resolve().parent.parent
-  is_custom_autoc = not any(autoc_dir == sp or sp in autoc_dir.parents for sp in standard_paths)
+  autoc_dir = pathlib.Path(autoc.__file__).resolve().parent.parent.as_posix()
 
-  resolved_paths = []
-  if is_custom_autoc:
-    resolved_paths.append(autoc_dir.resolve())
+  paths = [autoc_dir]
+  if os.environ.get("PYTHONPATH"):
+    for p in os.environ["PYTHONPATH"].split(os.pathsep):
+      if p:
+        p_str = pathlib.Path(p).resolve().as_posix()
+        if p_str not in paths:
+          paths.append(p_str)
 
-  env_pythonpath = os.environ.get("PYTHONPATH", "")
-  if env_pythonpath:
-    for p in env_pythonpath.split(os.pathsep):
-      p_path = pathlib.Path(p).resolve() if p else None
-      if p_path and p_path not in resolved_paths:
-        resolved_paths.append(p_path)
+  sep = ";" if sys.platform == "win32" else ":"
+  pythonpath_str = sep.join(paths)
 
-  extra_paths = [p.as_posix() for p in resolved_paths]
-  if extra_paths:
-    pythonpath_str = ";".join(extra_paths) if sys.platform == "win32" else ":".join(extra_paths)
-    lines.append(f'set(AUTOC_PYTHONPATH "{pythonpath_str}" CACHE STRING "Python path for AutoC generator")\n')
-
-  if not lines:
-    return None
-
-  return "# Site-local AutoC configuration - DO NOT COMMIT\n" + "".join(lines)
+  return (
+    "# Site-local AutoC configuration - DO NOT COMMIT\n"
+    f'set(Python_EXECUTABLE "{python_exe}" CACHE FILEPATH "Python interpreter for AutoC" FORCE)\n'
+    f'set(AUTOC_PYTHONPATH "{pythonpath_str}" CACHE STRING "Python path for AutoC generator")\n'
+  )
 
 
 class Scaffolder(Scaffolder):
 
   def __init__(self, resources=None, parameters=None):
 
-    site = _detect_site()
-    site_resources = {"@module@.cmake.site": site} if site is not None else {}
-
     super().__init__(
       resources={
+        ".autoc/@module@.site": _site_config(),
         "cmake/AutoC.cmake": reader,
         "CMakeLists.txt": reader,
         "CMakePresets.json": reader,
         "@project@.code-workspace": reader,
         ".vscode/launch.json": reader,
         ".gitignore": reader,
-      } | site_resources | (resources or {}),
+      } | (resources or {}),
       parameters=dict(parameters or {})
     )
 

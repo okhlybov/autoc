@@ -198,7 +198,7 @@ def add_autoc_module(env, module, directory=".", main_dependency=None, command=N
   autoc_mode = str(autoc_mode).upper()
 
   module_scons = os.path.join(directory, f"{module}.scons")
-  module_state = os.path.join(directory, f"{module}.state")
+  module_state = os.path.join(directory, ".autoc", f"{module}.state")
   py_exec = env.get("PYTHON", sys.executable)
   if not command:
     command = [py_exec, os.path.abspath(main_dependency), module]
