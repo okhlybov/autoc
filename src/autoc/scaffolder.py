@@ -21,9 +21,9 @@ def make_template_reader(package=None, directory="template"):
 #
 class Scaffolder:
   
-  def __init__(self, resources={}, parameters={}):
-    self.resources = resources
-    self.parameters = parameters
+  def __init__(self, resources=None, parameters=None):
+    self.resources = dict(resources or {})
+    self.parameters = dict(parameters or {})
     
   def generate(self, target="."):
     path = pathlib.Path(target).resolve()
@@ -32,16 +32,16 @@ class Scaffolder:
     try:
       os.chdir(path)
       for file, reader in self.resources.items():
-        if reader: # Override with None to disable file generation
+        if not reader is None: # Override entry with value None to disable the respective file generation
           f = self.interpolate(file, self.parameters)
           pathlib.Path(f).parent.mkdir(parents=True, exist_ok=True)
-          with open(f, "w") as f:
-            f.write(self.interpolate(reader(file), self.parameters))
+          with open(f, "w", encoding="utf-8") as out:
+            out.write(self.interpolate(reader(file) if callable(reader) else str(reader), self.parameters))
     finally:
       os.chdir(wd)
       
-  def interpolate(self, template, parameters={}):
-    x = template
-    for placeholder, value in (self.parameters | parameters).items():
-      x = x.replace(f"@{placeholder}@", value, -1)
+  def interpolate(self, template, parameters=None):
+    x = str(template)
+    for placeholder, value in (self.parameters | (parameters or {})).items():
+      x = x.replace(f"@{placeholder}@", str(value), -1)
     return x

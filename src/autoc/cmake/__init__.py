@@ -120,12 +120,12 @@ def _detect_site():
   return "".join(lines)
 
 
-#
 class Scaffolder(Scaffolder):
-  
-  def __init__(self, resources={}, parameters={}):
+
+  def __init__(self, resources=None, parameters=None):
+
     site = _detect_site()
-    site_resources = {"@project@.cmake.site": lambda _: site} if site is not None else {}
+    site_resources = {"@module@.cmake.site": site} if site is not None else {}
 
     super().__init__(
       resources={
@@ -135,6 +135,7 @@ class Scaffolder(Scaffolder):
         "@project@.code-workspace": reader,
         ".vscode/launch.json": reader,
         ".gitignore": reader,
-      } | site_resources | resources,
-      parameters={} | parameters
+      } | site_resources | (resources or {}),
+      parameters=dict(parameters or {})
     )
+

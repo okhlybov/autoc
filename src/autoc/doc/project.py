@@ -11,10 +11,11 @@ reader = make_template_reader(__package__)
 
 
 class Scaffolder(autoc.cmake.Scaffolder):
-  
-  def __init__(self, resources={}, parameters={}):
-    project = parameters.get("project", "doc")
-    module = parameters.get("module", project)
+
+  def __init__(self, resources=None, parameters=None):
+    params = dict(parameters or {})
+    project = params.get("project", "doc")
+    module = params.get("module", project)
 
     doc_pages_str = " ".join(p.resolve().as_posix() for p in autoc.doc.pages)
     doc_mainpage_str = autoc.doc.mainpage.resolve().as_posix()
@@ -38,9 +39,10 @@ class Scaffolder(autoc.cmake.Scaffolder):
         "catalog.py": reader,
         "@module@.c": None,
         ".gitignore": reader,
-      } | resources,
-      parameters=doc_parameters | parameters
+      } | (resources or {}),
+      parameters=doc_parameters | params
     )
+
 
   def generate(self, target="."):
     target_path = pathlib.Path(target).resolve()

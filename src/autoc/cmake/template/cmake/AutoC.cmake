@@ -7,6 +7,7 @@ set(_site_candidates
 foreach(_site IN LISTS _site_candidates)
   if(EXISTS "${_site}")
     include("${_site}")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_site}")
     break()
   endif()
 endforeach()
@@ -39,6 +40,9 @@ function(add_autoc_module module)
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
   set(module_state ${key_DIRECTORY}/${module}.state)
   set(module_site ${key_DIRECTORY}/${module}.cmake.site)
+  if(NOT EXISTS "${module_site}" AND EXISTS "${key_DIRECTORY}/${PROJECT_NAME}.cmake.site")
+    set(module_site "${key_DIRECTORY}/${PROJECT_NAME}.cmake.site")
+  endif()
 
   set(_generate OFF)
 
