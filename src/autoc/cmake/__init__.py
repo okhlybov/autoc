@@ -66,6 +66,7 @@ class CMake:
 import os
 import sys
 import site
+import shutil
 import pathlib
 from autoc.scaffolder import *
 
@@ -74,15 +75,24 @@ reader = make_template_reader(__package__)
 
 
 def _detect_site():
-  python_exe = pathlib.Path(sys.executable).as_posix()
+  lines = []
+
+  # Python interpreter: only record if non-default (e.g. virtual environment or not on default PATH)
   is_venv = (
     sys.prefix != getattr(sys, "base_prefix", sys.prefix)
     or hasattr(sys, "real_prefix")
   )
+  default_python = shutil.which("python3") or shutil.which("python")
+  is_default_python = (
+    not is_venv
+    and default_python is not None
+    and pathlib.Path(default_python).resolve() == pathlib.Path(sys.executable).resolve()
+  )
+  if not is_default_python:
+    python_exe = pathlib.Path(sys.executable).as_posix()
+    lines.append(f'set(Python_EXECUTABLE "{python_exe}" CACHE FILEPATH "Python interpreter for AutoC" FORCE)\n')
 
-  import autoc
-  autoc_dir = pathlib.Path(autoc.__file__).resolve().parent.parent
-
+  # Python path: only record if custom AutoC checkout or non-standard paths
   standard_paths = set()
   try:
     if hasattr(site, "getsitepackages"):
@@ -94,30 +104,30 @@ def _detect_site():
   except Exception:
     pass
 
+  import autoc
+  autoc_dir = pathlib.Path(autoc.__file__).resolve().parent.parent
   is_custom_autoc = not any(autoc_dir == sp or sp in autoc_dir.parents for sp in standard_paths)
 
-  env_pythonpath = os.environ.get("PYTHONPATH", "")
-  extra_paths = []
+  resolved_paths = []
   if is_custom_autoc:
-    extra_paths.append(autoc_dir.as_posix())
+    resolved_paths.append(autoc_dir.resolve())
+
+  env_pythonpath = os.environ.get("PYTHONPATH", "")
   if env_pythonpath:
     for p in env_pythonpath.split(os.pathsep):
-      p_posix = pathlib.Path(p).as_posix()
-      if p_posix and p_posix not in extra_paths:
-        extra_paths.append(p_posix)
+      p_path = pathlib.Path(p).resolve() if p else None
+      if p_path and p_path not in resolved_paths:
+        resolved_paths.append(p_path)
 
-  is_non_standard = is_venv or is_custom_autoc or bool(env_pythonpath)
-  if not is_non_standard:
+  extra_paths = [p.as_posix() for p in resolved_paths]
+  if extra_paths:
+    pythonpath_str = ";".join(extra_paths) if sys.platform == "win32" else ":".join(extra_paths)
+    lines.append(f'set(AUTOC_PYTHONPATH "{pythonpath_str}" CACHE STRING "Python path for AutoC generator")\n')
+
+  if not lines:
     return None
 
-  pythonpath_str = ";".join(extra_paths) if sys.platform == "win32" else ":".join(extra_paths)
-  lines = [
-    "# Site-local AutoC configuration - DO NOT COMMIT\n",
-    f'set(Python_EXECUTABLE "{python_exe}" CACHE FILEPATH "Python interpreter for AutoC" FORCE)\n'
-  ]
-  if pythonpath_str:
-    lines.append(f'set(AUTOC_PYTHONPATH "{pythonpath_str}" CACHE STRING "Python path for AutoC generator")\n')
-  return "".join(lines)
+  return "# Site-local AutoC configuration - DO NOT COMMIT\n" + "".join(lines)
 
 
 class Scaffolder(Scaffolder):
