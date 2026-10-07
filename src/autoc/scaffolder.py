@@ -42,6 +42,7 @@ class Scaffolder:
       
   def interpolate(self, template, parameters=None):
     x = str(template)
-    for placeholder, value in (self.parameters | (parameters or {})).items():
+    params = self.parameters | (parameters or {})
+    for placeholder, value in params.items():
       x = x.replace(f"@{placeholder}@", str(value), -1)
     return x

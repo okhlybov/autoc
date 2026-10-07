@@ -67,6 +67,7 @@ import os
 import sys
 import pathlib
 from autoc.scaffolder import *
+import autoc.sample
 
 
 reader = make_template_reader(__package__)
@@ -110,7 +111,7 @@ def _site_config():
   return "".join(lines)
 
 
-class Scaffolder(Scaffolder):
+class Scaffolder(autoc.sample.Scaffolder):
 
   def __init__(self, resources=None, parameters=None):
 
@@ -127,7 +128,7 @@ class Scaffolder(Scaffolder):
         ".vscode/launch.json": reader,
         ".gitignore": reader,
       } | (resources or {}),
-      parameters=dict(autoc_path=autoc_dir) | dict(parameters or {})
+      parameters=dict(generator="autoc.cmake.CMake", autoc_path=autoc_dir) | dict(parameters or {})
     )
 
   def generate(self, target="."):

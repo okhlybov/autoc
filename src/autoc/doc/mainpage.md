@@ -5,8 +5,8 @@
 
 Describe your C types and containers — vectors, lists, strings, hash sets and maps, records,
 references — in a short Python script, and `autoc` emits plain, dependency-free C source code:
-headers, implementation files and the CMake glue to regenerate them whenever your definitions
-change.
+headers, implementation files and build system glue (CMake, SCons, Meson) to regenerate them
+whenever your definitions change.
 
 ## Why
 

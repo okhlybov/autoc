@@ -14,6 +14,11 @@ pip install .
 
 (During development, `pip install -e .` and `PYTHONPATH=src` both work.)
 
+> **Tip:** You can also scaffold a ready-to-run project automatically for CMake, SCons, or Meson:
+> ```sh
+> python -m autoc.cmake.project sensors   # replace cmake with meson, scons
+> ```
+
 ## 2. Define the module
 
 Create `sensors.py`:
@@ -76,7 +81,8 @@ target_link_libraries(sensors sensors-auto)
 `add_autoc_module()` bootstraps the generation on the first configure and re-runs the
 generator whenever `sensors.py` (or its declared dependencies) change. Execution is
 tracked by a state file, so the code is regenerated only when the definitions actually
-change.
+change. Equivalent integration is provided for SCons (via `env.AutoCModule()`) and Meson
+(via `custom_target()`).
 
 If you prefer to stay with plain `make`/`cc` for now, just compile `sensors.c` together with
 `sensors_auto.c` and add `-I.` to the include path.
