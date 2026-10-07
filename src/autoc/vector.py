@@ -332,14 +332,12 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
       """) as f:
       result = f.result.variable("result")
       last_i = self.element.variable(f"{data}[target->size]")
-      destroy_last = f"{self.element.destroy(last_i)};" if self.element.destructible else ""
       f.code = f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
         --target->size;
         {self.element.move(result, last_i)};
-        {destroy_last}
         return {result};
       """
 

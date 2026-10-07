@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "SCons Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/@project@",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "SCons: Build (Debug)"
+    }
+  ]
+}

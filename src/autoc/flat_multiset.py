@@ -55,21 +55,13 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
     with self.wipe as f:
       f.references.add(self.lower_bound)
       f.references.add(self.upper_bound)
-      decl_tail = "size_t start_tail;" if self.element.destructible else ""
       destroy_wipe_range = f"""
         for(i = low; i < high; ++i) {{
           {self.element.destroy(self.element.variable("target->elements[i]"))};
         }}
       """ if self.element.destructible else ""
-      destroy_wipe_tail = f"""
-        start_tail = target->size - count > high ? target->size - count : high;
-        for(i = start_tail; i < target->size; ++i) {{
-          {self.element.destroy(self.element.variable("target->elements[i]"))};
-        }}
-      """ if self.element.destructible else ""
       f.code = f"""
         size_t low, high, count, i;
-        {decl_tail}
         assert(target);
         low = {self.lower_bound(f.target, f.element)};
         high = {self.upper_bound(f.target, f.element)};
@@ -79,7 +71,6 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
           for(i = high; i < target->size; ++i) {{
             {self.element.move(self.element.variable("target->elements[low + (i - high)]"), self.element.variable("target->elements[i]"))};
           }}
-          {destroy_wipe_tail}
           target->size -= count;
         }}
         return count;

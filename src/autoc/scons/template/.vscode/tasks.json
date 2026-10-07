@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "SCons: Build (Debug)",
+      "type": "shell",
+      "command": "scons BUILD_TYPE=Debug",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "SCons: Build (Release)",
+      "type": "shell",
+      "command": "scons BUILD_TYPE=Release",
+      "group": "build",
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "SCons: Clean",
+      "type": "shell",
+      "command": "scons -c",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -271,7 +271,7 @@ class Vector(_StructRenderer, Indexed, Sequence):
         slot = f"target->variant.value.s{i+1}._{i}"
         slot_var = self.element.variable(slot)
         destroy_stmt = f"{self.element.destroy(slot_var)};" if self.element.destructible else ""
-        cases.append(f"case {i}: {{{self.element.move(result, slot_var)}; {destroy_stmt}}} break;")
+        cases.append(f"case {i}: {{{self.element.move(result, slot_var)};}} break;")
       f.inline_code = f"""
         {result.definition};
         assert(target);

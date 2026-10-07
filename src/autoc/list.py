@@ -224,8 +224,8 @@ class List(_StructRenderer, Sequence):
         return {front_element.bind(f.result)};
       """
     
-    lt = self.node.variable("lt->element")
-    rt = self.node.variable("rt->element")
+    lt = self.element.variable("lt->element")
+    rt = self.element.variable("rt->element")
     
     with self.equal as f:
       f.code = f"""
@@ -252,7 +252,7 @@ class List(_StructRenderer, Sequence):
       typedef struct {self.node} {self.node};
       /** @private */
       struct {self.node} {{
-        {self.element.variable("element").definition};
+        {self.element} element;
         {self.node}* next;
       }};
     """)

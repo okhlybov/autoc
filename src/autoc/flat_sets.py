@@ -27,8 +27,6 @@ class Set(_StructRenderer, Bisectable, Container):
     return self.element.copyable and self.element.comparable
 
   def _insert_at_code(self, pos_code, pos_var, element_arg):
-    destroy_i = f"{self.element.destroy(self.element.variable('target->elements[i]'))};" if self.element.destructible else ""
-    destroy_pos = f"{self.element.destroy(self.element.variable(f'target->elements[{pos_var}]'))};" if self.element.destructible else ""
     return f"""
       {pos_code}
       if(target->size == target->capacity) {{
@@ -36,12 +34,10 @@ class Set(_StructRenderer, Bisectable, Container):
         {Indirection(self.element)} new_elements = {self.memory.allocate(self.element, "new_capacity")};
         for(i = 0; i < {pos_var}; ++i) {{
           {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
-          {destroy_i}
         }}
         {self.element.copy(self.element.variable(f"new_elements[{pos_var}]"), element_arg)};
         for(i = {pos_var}; i < target->size; ++i) {{
           {self.element.move(self.element.variable("new_elements[i + 1]"), self.element.variable("target->elements[i]"))};
-          {destroy_i}
         }}
         if(target->elements) {{
           {self.memory.free("target->elements")};
@@ -52,9 +48,7 @@ class Set(_StructRenderer, Bisectable, Container):
         for(i = target->size; i > {pos_var}; --i) {{
           {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i - 1]"))};
         }}
-        if({pos_var} < target->size) {{
-          {destroy_pos}
-        }}
+
         {self.element.copy(self.element.variable(f"target->elements[{pos_var}]"), element_arg)};
       }}
       ++target->size;
@@ -62,9 +56,6 @@ class Set(_StructRenderer, Bisectable, Container):
     """
 
   def _move_at_code(self, pos_code, pos_var, element_arg):
-    destroy_i = f"{self.element.destroy(self.element.variable('target->elements[i]'))};" if self.element.destructible else ""
-    destroy_pos = f"{self.element.destroy(self.element.variable(f'target->elements[{pos_var}]'))};" if self.element.destructible else ""
-    destroy_arg = f"{self.element.destroy(element_arg)};" if self.element.destructible else ""
     return f"""
       {pos_code}
       if(target->size == target->capacity) {{
@@ -72,12 +63,10 @@ class Set(_StructRenderer, Bisectable, Container):
         {Indirection(self.element)} new_elements = {self.memory.allocate(self.element, "new_capacity")};
         for(i = 0; i < {pos_var}; ++i) {{
           {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
-          {destroy_i}
         }}
         {self.element.move(self.element.variable(f"new_elements[{pos_var}]"), element_arg)};
         for(i = {pos_var}; i < target->size; ++i) {{
           {self.element.move(self.element.variable("new_elements[i + 1]"), self.element.variable("target->elements[i]"))};
-          {destroy_i}
         }}
         if(target->elements) {{
           {self.memory.free("target->elements")};
@@ -88,12 +77,9 @@ class Set(_StructRenderer, Bisectable, Container):
         for(i = target->size; i > {pos_var}; --i) {{
           {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i - 1]"))};
         }}
-        if({pos_var} < target->size) {{
-          {destroy_pos}
-        }}
+
         {self.element.move(self.element.variable(f"target->elements[{pos_var}]"), element_arg)};
       }}
-      {destroy_arg}
       ++target->size;
       return 1;
     """
@@ -103,7 +89,6 @@ class Set(_StructRenderer, Bisectable, Container):
 
     destroy_i = f"{self.element.destroy(self.element.variable('target->elements[i]'))};" if self.element.destructible else ""
     destroy_low = f"{self.element.destroy(self.element.variable('target->elements[low]'))};" if self.element.destructible else ""
-    destroy_last = f"{self.element.destroy(self.element.variable('target->elements[target->size - 1]'))};" if self.element.destructible else ""
     state = self.hasher.state_t.variable("state")
 
     with self.size as f:
@@ -166,7 +151,6 @@ class Set(_StructRenderer, Bisectable, Container):
           new_elements = {self.memory.allocate(self.element, f.capacity)};
           for(i = 0; i < target->size; ++i) {{
             {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
-            {destroy_i}
           }}
           if(target->elements) {{
             {self.memory.free("target->elements")};
@@ -196,7 +180,6 @@ class Set(_StructRenderer, Bisectable, Container):
           new_elements = {self.memory.allocate(self.element, "target->size")};
           for(i = 0; i < target->size; ++i) {{
             {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
-            {destroy_i}
           }}
           {self.memory.free("target->elements")};
           target->elements = new_elements;
@@ -241,9 +224,6 @@ class Set(_StructRenderer, Bisectable, Container):
           {destroy_low}
           for(i = low; i + 1 < target->size; ++i) {{
             {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i + 1]"))};
-          }}
-          if(low + 1 < target->size) {{
-            {destroy_last}
           }}
           --target->size;
           return 1;

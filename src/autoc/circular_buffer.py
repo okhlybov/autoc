@@ -308,13 +308,11 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
       """) as f:
       result = f.result.variable("result")
       head_slot = self.element.variable("target->elements[target->head]")
-      destroy_head = f"{self.element.destroy(head_slot)};" if self.element.destructible else ""
       f.code = f"""
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
         {self.element.move(result, head_slot)};
-        {destroy_head}
         target->head = (target->head + 1) % {self._capacity("target")};
         --target->size;
         if(target->size == 0) target->head = 0;
@@ -345,7 +343,6 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
       """) as f:
       result = f.result.variable("result")
       back_slot = self.element.variable(f"target->elements[back_idx]")
-      destroy_back = f"{self.element.destroy(back_slot)};" if self.element.destructible else ""
       f.code = f"""
         size_t back_idx;
         {result.definition};
@@ -353,7 +350,6 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
         assert(!{self.empty(f.target)});
         back_idx = (target->head + target->size - 1) % {self._capacity("target")};
         {self.element.move(result, back_slot)};
-        {destroy_back}
         --target->size;
         if(target->size == 0) target->head = 0;
         return {result};
