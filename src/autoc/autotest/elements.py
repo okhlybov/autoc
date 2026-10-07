@@ -43,8 +43,10 @@ class _Composite(_StructRenderer, Composite):
     with self.destroy as f:
       f.inline_code = f"""
         assert(target);
-        free(target->value);
-        --at_alive;
+        if(target->value) {{
+          free(target->value);
+          --at_alive;
+        }}
       """
 
     with self.copy as f:
