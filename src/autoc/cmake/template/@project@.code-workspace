@@ -3,5 +3,10 @@
     {
       "path": "."
     }
-  ]
+  ],
+  "settings": {
+    "python.analysis.extraPaths": [
+      "@autoc_path@"
+    ]
+  }
 }

@@ -1,16 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(_site_candidates
-  "${CMAKE_CURRENT_SOURCE_DIR}/.autoc/${AUTOC_MODULE_NAME}.site"
-  "${CMAKE_CURRENT_SOURCE_DIR}/.autoc/${PROJECT_NAME}.site"
-)
-foreach(_site IN LISTS _site_candidates)
-  if(EXISTS "${_site}")
-    include("${_site}")
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_site}")
-    break()
-  endif()
-endforeach()
+set(_site "${CMAKE_CURRENT_SOURCE_DIR}/.autoc/cmake.site")
+if(EXISTS "${_site}")
+  include("${_site}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_site}")
+endif()
 
 if(NOT DEFINED AUTOC)
   if(DEFINED AUTOC_MODULE_SOURCE AND EXISTS "${AUTOC_MODULE_SOURCE}")
@@ -39,10 +33,7 @@ function(add_autoc_module module)
   endif()
   set(module_cmake ${key_DIRECTORY}/${module}.cmake)
   set(module_state ${key_DIRECTORY}/.autoc/${module}.state)
-  set(module_site ${key_DIRECTORY}/.autoc/${module}.site)
-  if(NOT EXISTS "${module_site}" AND EXISTS "${key_DIRECTORY}/.autoc/${PROJECT_NAME}.site")
-    set(module_site "${key_DIRECTORY}/.autoc/${PROJECT_NAME}.site")
-  endif()
+  set(module_site ${key_DIRECTORY}/.autoc/cmake.site)
 
   set(_generate OFF)
 

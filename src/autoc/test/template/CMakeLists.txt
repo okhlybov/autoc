@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(@module@)
 
+set(AUTOC ON) # Regenerate unconditionally
+
 set(AUTOC_MODULE_NAME @module@)
 set(AUTOC_MODULE_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/${AUTOC_MODULE_NAME}.py)
 
