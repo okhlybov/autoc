@@ -17,9 +17,8 @@ Homepage = "https://github.com/okhlybov/autoc"
 [tool.setuptools.package-data]
 "*" = [
   "*.md",
-  "template/*",
-  "template/.*",
-  "template/cmake/*",
-  "template/site_scons/site_tools/*",
+  "template/**/*",
+  "template/**/.*",
   "template/.vscode/*",
+  "template/.vscode/.*"
 ]
