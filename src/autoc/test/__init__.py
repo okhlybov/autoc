@@ -1,6 +1,5 @@
 import autoc.core
 import autoc.module
-import autoc.core
 
 
 codes = set()
@@ -18,11 +17,21 @@ def _import_modules(package):
 
 def configure_module(module):
   _import_modules(autoc.test)
+  total = 0
+  for c in codes:
+    if isinstance(c, Type):
+      total += len(c.codes)
+    else:
+      total += 1
   code = []
   code.append("void run_codes(void) {\n")
+  if total > 0:
+    code.append(f'  printf("1..{total}\\n");\n')
+  else:
+    code.append('  printf("1..0 # Skipped: empty test suite\\n");\n')
   for c in sorted(codes):
     module.add(c)
-    code.append(f"run_code({c.name});\n")
+    code.append(f"  run_code({c.name});\n")
   code.append("}")
   module.add(autoc.module.Code(definitions=str().join(code)))
 
@@ -47,8 +56,12 @@ class Unit(autoc.module.Code):
       stream.append(f"}}\n")
 
   def render_code(self, stream):
-    stream.append("++run;\n")
-    stream.append(self.code)
+    desc = self.name.replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
+    stream.append(f"""
+      test_start();
+      {self.code}
+      test_end("{desc}");
+    """)
 
 
 class Type(Unit):
@@ -63,7 +76,7 @@ class Type(Unit):
     self.codes = []
 
   def render_code(self, stream):
-    stream.append(rf'fprintf(stdout, "\n--- {self.type}\n");')
+    stream.append(rf'fprintf(stdout, "# --- %s\n", "{self.type}");')
     for c in self.codes:
       stream.append(c)
 
@@ -74,62 +87,156 @@ class Type(Unit):
     self._cleanup = code
 
   def unit(self, tag, code):
-    s = rf'fprintf(stdout, "    {str(tag)}\n")'
+    desc = f"{self.type}: {tag}".replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
     self.codes.append(f"""
       {{
-        ++run;
-        {s};
+        test_start();
         {self._setup}
         {code}
         {self._cleanup}
+        test_end("{desc}");
       }}
     """)
+
 
 code = autoc.module.Code(
   interface=r"""
     #include <stdlib.h>
     #include <stdio.h>
-    #define TEST_MESSAGE(s) fprintf(stdout, "*** %s\\n", s); fflush(stdout);
-    #define TEST_ASSERT(x) if(x) {} else condition_failure("evaluated to FALSE", #x, __FILE__, __LINE__)
-    #define TEST_TRUE(x) if(x) {} else condition_failure("expected TRUE but got FALSE", #x, __FILE__, __LINE__)
-    #define TEST_FALSE(x) if(x) condition_failure("expected FALSE but got TRUE", #x, __FILE__, __LINE__)
-    #define TEST_NULL(x) if((x) == NULL) {} else condition_failure("expected NULL", #x, __FILE__, __LINE__)
-    #define TEST_NOT_NULL(x) if((x) == NULL) condition_failure("expected not NULL", #x, __FILE__, __LINE__)
-    #define TEST_EQUAL(x, y) if((x) == (y)) {} else equality_failure("expected equality", #x, #y, __FILE__, __LINE__)
-    #define TEST_NOT_EQUAL(x, y) if((x) == (y)) equality_failure("expected non-equality", #x, #y, __FILE__, __LINE__)
-    #define TEST_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) {} else equality_failure("expected strings equality", #x, #y, __FILE__, __LINE__)
-    #define TEST_NOT_EQUAL_CHARS(x, y) if(strcmp(x, y) == 0) equality_failure("expected strings non-equality", #x, #y, __FILE__, __LINE__)
+    #include <string.h>
+    #define TEST_MESSAGE(s) fprintf(stdout, "# *** %s\\n", s); fflush(stdout);
+    #define TEST_ASSERT(x) do { if(x) {} else condition_failure("evaluated to FALSE", #x, __FILE__, __LINE__); } while(0)
+    #define TEST_TRUE(x) do { if(x) {} else condition_failure("expected TRUE but got FALSE", #x, __FILE__, __LINE__); } while(0)
+    #define TEST_FALSE(x) do { if(x) condition_failure("expected FALSE but got TRUE", #x, __FILE__, __LINE__); } while(0)
+    #define TEST_NULL(x) do { if((x) == NULL) {} else condition_failure("expected NULL", #x, __FILE__, __LINE__); } while(0)
+    #define TEST_NOT_NULL(x) do { if((x) == NULL) condition_failure("expected not NULL", #x, __FILE__, __LINE__); } while(0)
+    #define TEST_EQUAL(x, y) do { if((x) == (y)) {} else equality_failure("expected equality", #x, #y, __FILE__, __LINE__); } while(0)
+    #define TEST_NOT_EQUAL(x, y) do { if((x) == (y)) equality_failure("expected non-equality", #x, #y, __FILE__, __LINE__); } while(0)
+    #define TEST_EQUAL_CHARS(x, y) do { if(strcmp(x, y) == 0) {} else equality_failure("expected strings equality", #x, #y, __FILE__, __LINE__); } while(0)
+    #define TEST_NOT_EQUAL_CHARS(x, y) do { if(strcmp(x, y) == 0) equality_failure("expected strings non-equality", #x, #y, __FILE__, __LINE__); } while(0)
     void condition_failure(const char* message, const char* condition, const char* file, int line);
     void equality_failure(const char* message, const char* x, const char* y, const char* file, int line);
+    void test_start(void);
+    void test_end(const char* description);
     void run_code(void(*code)(void));
-    void run_codes();
+    void run_codes(void);
     extern int run, failed;
   """,
   implementation=r"""
-    int failure;
-    void condition_failure(const char* message, const char* condition, const char* file, int line) {
-      fprintf(stdout, "*** %s : %s (%s:%d)\n", condition, message, file, line);
-      fflush(stdout);
-      failure = 1;
-    }
-    void equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
-      fprintf(stdout, "*** %s == %s : %s (%s:%d)\n", x, y, message, file, line);
-      fflush(stdout);
-      failure = 1;
-    }
     int run = 0, failed = 0;
-    void run_code(void(*code)(void)) {
-      failure = 0;
-      code();
-      if(failure) ++failed;
+    static int current_test_failed = 0;
+    static const char* current_msg = NULL;
+    static const char* current_cond = NULL;
+    static const char* current_file = NULL;
+    static int current_line = 0;
+    static const char* current_x = NULL;
+    static const char* current_y = NULL;
+
+    static void print_yaml_escaped(const char* val) {
+      if (!val) return;
+      putchar('\'');
+      for (const char* p = val; *p; ++p) {
+        if (*p == '\'') {
+          putchar('\'');
+          putchar('\'');
+        } else if (*p == '\n') {
+          putchar(' ');
+        } else if (*p == '\r') {
+          /* ignore */
+        } else {
+          putchar(*p);
+        }
+      }
+      putchar('\'');
     }
+
+    void condition_failure(const char* message, const char* condition, const char* file, int line) {
+      if (!current_test_failed) {
+        current_test_failed = 1;
+        current_msg = message;
+        current_cond = condition;
+        current_file = file;
+        current_line = line;
+        current_x = NULL;
+        current_y = NULL;
+      } else {
+        fprintf(stdout, "# %s : %s (%s:%d)\n", condition, message, file, line);
+        fflush(stdout);
+      }
+    }
+
+    void equality_failure(const char* message, const char* x, const char* y, const char* file, int line) {
+      if (!current_test_failed) {
+        current_test_failed = 1;
+        current_msg = message;
+        current_cond = NULL;
+        current_file = file;
+        current_line = line;
+        current_x = x;
+        current_y = y;
+      } else {
+        fprintf(stdout, "# %s == %s : %s (%s:%d)\n", x, y, message, file, line);
+        fflush(stdout);
+      }
+    }
+
+    void test_start(void) {
+      ++run;
+      current_test_failed = 0;
+      current_msg = NULL;
+      current_cond = NULL;
+      current_file = NULL;
+      current_line = 0;
+      current_x = NULL;
+      current_y = NULL;
+    }
+
+    void test_end(const char* description) {
+      if (!current_test_failed) {
+        printf("ok %d - %s\n", run, description);
+      } else {
+        ++failed;
+        printf("not ok %d - %s\n", run, description);
+        printf("  ---\n");
+        if (current_msg) {
+          printf("  message: ");
+          print_yaml_escaped(current_msg);
+          putchar('\n');
+        }
+        printf("  severity: fail\n");
+        if (current_file) {
+          printf("  file: ");
+          print_yaml_escaped(current_file);
+          printf("\n  line: %d\n", current_line);
+        }
+        if (current_x && current_y) {
+          printf("  data:\n    left: ");
+          print_yaml_escaped(current_x);
+          printf("\n    right: ");
+          print_yaml_escaped(current_y);
+          putchar('\n');
+        } else if (current_cond) {
+          printf("  data:\n    condition: ");
+          print_yaml_escaped(current_cond);
+          putchar('\n');
+        }
+        printf("  ...\n");
+      }
+      fflush(stdout);
+    }
+
+    void run_code(void(*code)(void)) {
+      code();
+    }
+
     int main(int argc, char** argv) {
       setvbuf(stdout, NULL, _IONBF, 0);
+      printf("TAP version 13\n");
       run_codes();
       if(failed) {
-        printf("\n*** %d of %d unit(s) failed\n", failed, run);
+        printf("# %d of %d test(s) failed\n", failed, run);
       } else {
-        printf("\n+++ all %d unit(s) succeeded\n", run);
+        printf("# all %d test(s) passed\n", run);
       }
       exit(failed ? EXIT_FAILURE : EXIT_SUCCESS);
     }
