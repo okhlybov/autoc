@@ -26,9 +26,11 @@ from autoc.rb_set import Set as RbSet
 from autoc.avl_set import Set as AvlSet
 from autoc.treap_set import Set as TreapSet
 from autoc.flat_set import Set as FlatSet
+from autoc.btree_set import Set as BTreeSet
 from autoc.chained_hash_map import Map as ChainedHashMap
 from autoc.flat_map import Map as FlatMap
 from autoc.tree_map import Map as TreeMap
+from autoc.btree_map import Map as BTreeMap
 from autoc.intrusive_hash_map import Map as IntrusiveHashMap
 from autoc.flat_multimap import Map as FlatMultimap
 from autoc.counter import Counter
@@ -102,6 +104,7 @@ ROWS = (
   (_simple(AvlSet), "avl_set", ORDERED),
   (_simple(TreapSet), "treap_set", ORDERED),
   (_simple(FlatSet), "flat_set", ORDERED),
+  (_simple(BTreeSet, order=4), "btree_set", ORDERED),
 )
 
 
@@ -113,6 +116,7 @@ MAP_ROWS = (
   (_map_simple(ChainedHashMap), "chained_hash_map", ("int", "cstring", "comp")),
   (_map_simple(FlatMap), "flat_map", ("int", "cstring")),
   (_map_simple(TreeMap, tree_set=RbSet), "rb_tree_map", ("int", "cstring")),
+  (_map_simple(BTreeMap, order=4), "btree_map", ORDERED),
   (lambda name, value, key: IntrusiveHashMap(name, value, key, dependencies=(std.limits_h,), **_int_entry_sentinels()),
    "intrusive_hash_map", ("int",)),
   (_map_simple(FlatMultimap), "flat_multimap", ("int",)),

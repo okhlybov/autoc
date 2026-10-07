@@ -30,6 +30,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.treap_set` | `Set` | `TreapSet<T>` | `TreapSet<T>::Range` (forward) | ordered; iterates sorted, randomized BST with algebraic set operations |
 | `autoc.rb_set` | `Set` | `RBSet<T>` | `RBSet<T>::Range` (forward) | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
 | `autoc.avl_set` | `Set` | `AVLSet<T>` | `AVLSet<T>::Range` (forward) | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
+| `autoc.btree_set` | `Set` | `BTreeSet<T>` | `BTreeSet<T>::Range` (bidirectional) | ordered; B-Tree with contiguous node blocks, cache locality, and low allocator overhead |
 | `autoc.flat_set` | `Set` | `FlatSet<T>` | `FlatSet<T>::Range` (direct access) | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
 
 ## Maps
@@ -39,6 +40,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | `ChainedHashMap<K, T>::Range` (forward) | bucket chaining over an internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | `IntrusiveHashMap<K, T>::Range` (forward) | flat open addressing; entries carry the sentinels |
 | `autoc.tree_map` | `Map` | `TreeMap<K, T>` | `TreeMap<K, T>::Range` (forward) | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
+| `autoc.btree_map` | `Map` | `BTreeMap<K, T>` | `BTreeMap<K, T>::Range` (forward) | ordered by key over an internal B-Tree set (@ref BTreeSet) |
 | `autoc.flat_map` | `Map` | `FlatMap<K, T>` | `FlatMap<K, T>::Range` (forward) | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
 
 ## Multisets
@@ -80,11 +82,11 @@ import in your module script; the *type* is the class you instantiate with a con
    reserve two sentinel states and the flat layout matters.
 6. **Do you need the elements in sorted order, or ordering-based queries?** Use @ref FlatSet
    for compact contiguous cache-friendly storage and fast binary search lookups (when mutations
-   are infrequent), or @ref AVLSet / @ref RBSet / @ref TreapSet when frequent insertions and
-   deletions require O(log n) tree mutations.
+   are infrequent), or @ref AVLSet / @ref RBSet / @ref TreapSet / @ref BTreeSet when frequent insertions and
+   deletions require O(log n) tree mutations (with @ref BTreeSet providing cache-friendly node fanout).
 7. **Do you map keys to values?** Pick the map in the same family as the set you would have
    picked — @ref FlatMap for cache locality and flat memory, or @ref ChainedHashMap,
-   @ref IntrusiveHashMap, @ref TreeMap (parameterized by your choice of tree set backend).
+   @ref IntrusiveHashMap, @ref TreeMap (parameterized by your choice of tree set backend), or @ref BTreeMap.
 8. **Do you need shared ownership of an element?** Use @ref Counted (or @ref Raw for manual
    lifetime management) — both work as container elements.
 9. **Do you need a compact set of flags, booleans, or small integer universe?** Use

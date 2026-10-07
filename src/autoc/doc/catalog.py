@@ -30,7 +30,9 @@ import autoc.intrusive_hash_map
 import autoc.treap_set
 import autoc.rb_set
 import autoc.avl_set
+import autoc.btree_set
 import autoc.tree_map
+import autoc.btree_map
 import autoc.record
 import autoc.variant
 import autoc.reference
@@ -217,6 +219,12 @@ class AVLSet(autoc.avl_set.Set):
     return f"{self.name}<{self.element}>"
 
 
+class BTreeSet(autoc.btree_set.Set):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.element}>"
+
+
 class FlatSet(autoc.flat_set.Set):
   @property
   def _doxygen_type(self):
@@ -243,6 +251,12 @@ class IntrusiveHashMap(autoc.intrusive_hash_map.Map):
 
 
 class TreeMap(autoc.tree_map.Map):
+  @property
+  def _doxygen_type(self):
+    return f"{self.name}<{self.index}, {self.element}>"
+
+
+class BTreeMap(autoc.btree_map.Map):
   @property
   def _doxygen_type(self):
     return f"{self.name}<{self.index}, {self.element}>"
@@ -315,6 +329,7 @@ _nested_range(autoc.intrusive_hash_set, "IntrusiveHashSetRange")
 _nested_range(autoc.treap_set, "TreapSetRange")
 _nested_range(autoc.rb_set, "RBSetRange")
 _nested_range(autoc.avl_set, "AVLSetRange")
+_nested_range(autoc.btree_set, "BTreeSetRange")
 _nested_range(autoc.flat_set, "FlatSetRange")
 _nested_range(autoc.flat_multiset, "FlatMultisetRange")
 _nested_range(autoc.flat_multimap, "FlatMultimapRange")
@@ -331,6 +346,8 @@ def configure_module(module):
   module.add(AVLSet("AVLSet", T))
   module.add(BitArray("BitArray", 64))
   module.add(BitVector("BitVector"))
+  module.add(BTreeMap("BTreeMap", T, K))
+  module.add(BTreeSet("BTreeSet", T))
   module.add(ChainedHashMap("ChainedHashMap", T, K))
   module.add(ChainedHashSet("ChainedHashSet", T))
   module.add(Counted(T, name="Counted"))
