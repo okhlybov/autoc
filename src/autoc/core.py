@@ -493,12 +493,21 @@ class Primitive(_Named, _Traitful):
 #
 class Composite(_Named, _Traitful):
 
+  # FIXME
+  # should the composite be returned as a bare struct or constant pointer to it?
+  # The latter case allows function call chaining for in parameters
+  
   def __setup__(self):
     super().__setup__()
+    
     self.method_from("create")
     self.method_from("destroy")
     self.method_from("copy")
     self.method_from("move")
+    self.method_from("equal")
+    self.method_from("compare")
+    self.method_from("hash")
+    
     # The swap is hidden into the translation unit - primitives themselves do not expose it publicly
     self.method_from("swap", hidden=True, visibility="internal")
     with self.swap as f:
@@ -523,10 +532,6 @@ class Composite(_Named, _Traitful):
           {self.create(f.target)};
           {self.swap(f.target, f.source)};
         """
-
-    self.method_from("equal")
-    self.method_from("compare")
-    self.method_from("hash")
 
   @property
   def rvalue_type(self):
