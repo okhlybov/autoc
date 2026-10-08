@@ -1,52 +1,22 @@
 import autoc.std as std
 from autoc.core import _type, inout, Callable, _StructRenderer
-from autoc.container import Container
+from autoc.traversable import Traversable
+from autoc.indexable import Indexable
 
 
 # Pure abstract protocol for multimapping containers associating keys with multiple values
-class Multimapping(_StructRenderer, Container):
+class Multimapping(_StructRenderer, Traversable, Indexable):
 
   brief = "Abstract associative container mapping keys (indices) to multiple values (elements)"
 
   def __init__(self, name, element, index, *args, dependencies=(), **kws):
-    self.index = _type(index)
-    super().__init__(name, element, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
+    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
     self.dependencies.add(self.index)
-
-  @property
-  def copyable(self):
-    return self.element.copyable and self.index.copyable
-
-  @property
-  def hashable(self):
-    return self.element.hashable and self.index.hashable
-
-  @property
-  def comparable(self):
-    return self.element.comparable and self.index.comparable
 
   def __setup__(self):
     super().__setup__()
 
     valid_index = lambda: self.index.comparable or self.index.orderable
-
-    self.method(self.element.view_type, "view", {"target": self, "index": self.index}, constraint=valid_index, brief="Get view of first element with key",
-      description="""
-        Returns a constant view of the first element associated with the index, or NULL if absent.
-
-        @param[in] target the multimap to query
-        @param[in] index the key to look for
-        @return constant pointer to element, or NULL if not found
-      """)
-
-    self.method("int", "indexed", {"target": self, "index": self.index}, constraint=valid_index, brief="Check if multimap contains key",
-      description="""
-        Checks whether the multimap contains at least one entry with the specified index.
-
-        @param[in] target the multimap to query
-        @param[in] index the key to look for
-        @return non-zero if the key is present, zero otherwise
-      """)
 
     self.method(self.element, "get", {"target": self, "index": self.index}, constraint=lambda: valid_index() and self.element.copyable, brief="Get copy of first element with key",
       description="""

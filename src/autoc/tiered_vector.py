@@ -1,14 +1,16 @@
 import autoc.std as std
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
 from autoc.sortable import Sortable
 from autoc.range import DirectAccess
-from autoc.sequence import Sequence
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
 from autoc.container import _Range
 from autoc.core import inout, out, Indirection, _StructRenderer, Callable
 
 
 #
-class Vector(_StructRenderer, Indexed, Sortable, Sequence):
+class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
   # The append-optimized direct-access container: the elements are stored in fixed size
   # chunks addressed through the chunk table which makes the growth allocation-only
   # (no element copying, stable element addresses) while keeping the O(1) indexed access
@@ -347,20 +349,6 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         target->size = source->size;
         {self.create(f.source)};
       """
-
-    if self.comparable:
-      with self.equal as f:
-        f.code = f"""
-          size_t index;
-          assert(left);
-          assert(right);
-          if(left->size == right->size) {{
-            for(index = 0; index < left->size; ++index) {{
-              if(!{self.element.equal(self.element.variable(f"left->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"), self.element.variable(f"right->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))}) return 0;
-            }}
-            return 1;
-          }} else return 0;
-        """
 
 
 

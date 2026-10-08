@@ -1,18 +1,21 @@
 import autoc.std as std
-from autoc.indexed import Indexed
-from autoc.sequence import Sequence
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
+from autoc.sortable import Sortable
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
 from autoc.range import DirectAccess
 from autoc.container import _Range
 from autoc.core import out, inout, Callable, Indirection, Macro, _StructRenderer
 
 
 # Common base class for circular ring buffer containers
-class _CircularBuffer(_StructRenderer, Indexed, Sequence):
+class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
   brief = "Ring buffer container with bounded capacity and overwrite semantics"
 
-  def __init__(self, name, element, *args, index=std.size_t, dependencies=(), **kws):
-    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+  def __init__(self, name, element, *args, index=std.size_t, sorting_operations=True, dependencies=(), **kws):
+    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
     self.range = Range(self)
 
   @property
@@ -41,6 +44,14 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
 
   def _capacity(self, target):
     raise NotImplementedError
+
+  # Sortable/Bisectable protocol handlers - the ring maps the logical index onto
+  # the physical slot through the modulo of the head offset
+  def _element(self, target, index):
+    return self.element.variable(f"{target}->elements[({target}->head + ({index})) % {self._capacity(target)}]")
+
+  def _target_size(self, target):
+    return f"{target}->size"
 
   def __setup__(self):
     super().__setup__()
@@ -408,21 +419,6 @@ class _CircularBuffer(_StructRenderer, Indexed, Sequence):
         target->head = 0;
         target->size = 0;
       """
-
-    if self.comparable:
-      with self.equal as f:
-        left_i = self.element.variable(f"left->elements[(left->head + index) % {self._capacity('left')}]")
-        right_i = self.element.variable(f"right->elements[(right->head + index) % {self._capacity('right')}]")
-        f.code = f"""
-          size_t index;
-          assert(left);
-          assert(right);
-          if(left->size != right->size) return 0;
-          for(index = 0; index < left->size; ++index) {{
-            if(!{self.element.equal(left_i, right_i)}) return 0;
-          }}
-          return 1;
-        """
 
 
 # Fixed-capacity stack-allocated circular ring buffer

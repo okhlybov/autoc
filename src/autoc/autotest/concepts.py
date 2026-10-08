@@ -9,7 +9,7 @@
 
 
 from autoc.container import Container
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
 from autoc.set import Set as SetConcept
 from autoc.mapping import Mapping
 from autoc.multiset import Multiset
@@ -604,7 +604,7 @@ def emit_range(ctx):
           f"TEST_EQUAL(n, {ctx.call('size', ctx.t)});"]
   ctx.unit("range: forward traversal covers the container", "\n".join(body), nlocs=3)
 
-  if isinstance(T.range, DirectAccess) and isinstance(T, Indexed) and not isinstance(T, (SetConcept, Mapping)):
+  if isinstance(T.range, DirectAccess) and isinstance(T, Indexable) and not isinstance(T, (SetConcept, Mapping)):
     body = [ctx.fill(0), ctx.fill(1), ctx.fill(2),
             f"{r.definition} = {T.range.new(ctx.t)};",
             ek.assert_call(str(T.range.get(r, "1")), 1, "e1"),
@@ -636,7 +636,7 @@ def emit_sortable(ctx):
             f"TEST_TRUE({ctx.call('sorted', ctx.t)});"]
     ctx.unit("sort(): order elements", "\n".join(body), nlocs=3)
 
-    if isinstance(T, Indexed) and active(T, "get") and not isinstance(T, SetConcept):
+    if isinstance(T, Indexable) and active(T, "get") and not isinstance(T, SetConcept):
       body = [ctx.fill(2), ctx.fill(0), ctx.fill(1),
               f"{T.sort(ctx.t)};",
               ek.assert_call(ctx.call("get", ctx.t, "0"), 0, "e0"),
@@ -648,7 +648,7 @@ def emit_sortable(ctx):
             f"{T.sort(ctx.t)};",
             f"{T.reverse(ctx.t)};",
             f"TEST_FALSE({ctx.call('sorted', ctx.t)});"]
-    if isinstance(T, Indexed) and active(T, "get"):
+    if isinstance(T, Indexable) and active(T, "get"):
       body.append(ek.assert_call(ctx.call("get", ctx.t, "0"), 2, "e2"))
     ctx.unit("reverse(): flip element order", "\n".join(body), nlocs=3)
 
@@ -683,7 +683,7 @@ def emit_all(x, T, ek):
     else:
       if isinstance(T, Container):
         emit_container(ctx)
-      if isinstance(T, Indexed):
+      if isinstance(T, Indexable):
         emit_indexed(ctx)
     emit_sequence(ctx)
     emit_sortable(ctx)

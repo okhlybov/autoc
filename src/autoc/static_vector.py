@@ -1,15 +1,21 @@
 import autoc.std as std
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
 from autoc.record import Record
 from autoc.variant import Variant
-from autoc.sequence import Sequence
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
 from autoc.range import DirectAccess
 from autoc.container import _Range
 from autoc.core import out, inout, Callable, Indirection, _StructRenderer
 
 
 #
-class Vector(_StructRenderer, Indexed, Sequence):
+class Vector(_StructRenderer, Assignable, Sequential, Insertable):
+  # Not Sortable: the tagged-union storage addresses elements through named tuple fields
+  # (s<N>._i), so no addressable expression exists for a runtime index - the bisection
+  # handler protocol (_element(target, index)) cannot be honored without a storage
+  # redesign or a function-returning-pointer accessor extension
 
   brief = "Fixed-capacity stack-allocated direct access sequence container"
 

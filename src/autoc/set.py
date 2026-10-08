@@ -1,9 +1,10 @@
 from autoc.core import inout
-from autoc.container import Container
+from autoc.traversable import Traversable
+from autoc.insertable import Insertable
 
 
 # Abstract base for all set collections
-class Set(Container):
+class Set(Traversable, Insertable):
   
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)

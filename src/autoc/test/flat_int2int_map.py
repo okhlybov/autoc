@@ -119,6 +119,31 @@ x.unit(f"{type.range}(): traverse in sorted key order", f"""
   }}
 """)
 
+x.unit(f"{type.range}(): traverse in descending key order", f"""
+  {type.create(t)};
+  {type.set(t, 30, 300)};
+  {type.set(t, 10, 100)};
+  {type.set(t, 20, 200)};
+  {{
+    int keys[3];
+    int values[3];
+    int count = 0;
+    {r.definition};
+    for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_back(r)}) {{
+      keys[count] = {range.index_back(r)};
+      values[count] = {range.back(r)};
+      ++count;
+    }}
+    TEST_EQUAL( count, 3 );
+    TEST_EQUAL( keys[0], 30 );
+    TEST_EQUAL( values[0], 300 );
+    TEST_EQUAL( keys[1], 20 );
+    TEST_EQUAL( values[1], 200 );
+    TEST_EQUAL( keys[2], 10 );
+    TEST_EQUAL( values[2], 100 );
+  }}
+""")
+
 x.unit(f"{type.copy}/{type.equal}/{type.compare}(): copy, equality, ordering", f"""
   {type.create(t)};
   {type.set(t, 1, 10)};

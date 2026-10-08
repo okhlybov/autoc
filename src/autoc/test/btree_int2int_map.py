@@ -135,6 +135,18 @@ x.unit(f"{range}(): traverse in ascending key order", f"""
   TEST_EQUAL( previous, 31 );
 """)
 
+x.unit(f"{range}(): traverse in descending key order", f"""
+  int previous;
+  for(i = 0; i < 32; ++i) {type.set(t, "(i*7)%32", "i")};
+  TEST_EQUAL( {type.size(t)}, 32 );
+  previous = 32;
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_back(r)}) {{
+    TEST_TRUE( *{range.index_back_view(r)} < previous );
+    previous = *{range.index_back_view(r)};
+  }}
+  TEST_EQUAL( previous, 0 );
+""")
+
 
 t1 = type.variable("t1")
 t2 = type.variable("t2")

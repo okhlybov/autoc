@@ -205,19 +205,6 @@ class Counter(_StructRenderer, Multiset):
         return v ? *v : 0;
       """
 
-    with self.find_view as f:
-      r = self.range.variable("r")
-      f.code = f"""
-        {r.definition};
-        assert(target);
-        for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          if({self.element.equal(self.range.front_view(r), f.element)}) {{
-            return {self.range.front_view(r)};
-          }}
-        }}
-        return ({self.element.view_type})NULL;
-      """
-
     with self.contains as f:
       f.code = f"""
         assert(target);

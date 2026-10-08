@@ -1,19 +1,21 @@
-from autoc.hash import XorRot
 from autoc.container import Container
 
 
-#
-class Sequence(Container):
-  
-  def __init__(self, *args, hasher=XorRot(), **kws):
-    super().__init__(*args, hasher=hasher, **kws)
-    
+# Capability mixin for containers exposing a range over their contents - the
+# container-side counterpart of the range-directionality axis (Forward/Bidirectional/
+# DirectAccess describe the cursor, Traversable describes the container). Provides the
+# traversal-based defaults for the element lookup and hashing: tree-, bucket- and
+# strchr-based descendants override find_view with their faster paths.
+class Traversable(Container):
+
+  brief = "Abstract traversable container providing range-based lookup and hashing defaults"
+
   def __setup__(self):
     super().__setup__()
-    
+
     range = self.range
     r = range.variable("r")
-    
+
     with self.find_view as f:
       f.code = f"""
         {r.definition};
@@ -24,13 +26,13 @@ class Sequence(Container):
         return ({self.element.view_type})NULL;
       """
 
-
     with self.hash as f:
       state = self.hasher.state_t.variable("state")
       f.code = f"""
         size_t result;
         {r.definition};
         {state.definition};
+        assert(target);
         {self.hasher.create(state)};
         for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
           {self.hasher.update(state, self.element.hash(range.front_view(r)))};

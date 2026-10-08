@@ -1,11 +1,13 @@
 from autoc.deque import Deque
 from autoc.range import Forward
-from autoc.container import Container, _Range
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
+from autoc.container import _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
-class Queue(_StructRenderer, Container):
+class Queue(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered FIFO container with back push and front pop"
   

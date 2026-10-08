@@ -1,23 +1,37 @@
 import autoc.std as std
-from autoc.container import Container
+from autoc.insertable import Insertable
 from autoc.core import inout, out, Indirection, _StructRenderer
 
 
 #
-class Queue(_StructRenderer, Container):
+class Queue(_StructRenderer, Insertable):
   # The extraction-ordered container: the elements are consumed in the priority order -
   # top returns the greatest element per the element comparison. The binary heap over the
   # flat array gives the guaranteed O(log n) push/pop with the contiguous cache friendly
   # storage while handling the duplicate priorities naturally. The heap shape is internal:
   # the iteration is not exposed and the equality and the hashing are not defined
   # (two heaps holding the same elements are not required to have the same shape)
-  
+
   brief = "Priority queue of elements ordered by priority"
 
 
   def __init__(self, name, element, **kws):
     super().__init__(name, element, **kws)
     self._element_p = Indirection(self.element)
+
+  # The heap shape is internal: two heaps holding the same elements are not required to
+  # have the same shape, so the value-ordering operations constrain off via the traits
+  @property
+  def comparable(self):
+    return False
+
+  @property
+  def orderable(self):
+    return False
+
+  @property
+  def hashable(self):
+    return False
 
   def __setup__(self):
     super().__setup__()
@@ -30,12 +44,6 @@ class Queue(_StructRenderer, Container):
       Implemented as the binary heap over the flat array.
       The closest C++ equivalent is [std::priority_queue<>](https://cppreference.com/cpp/container/priority_queue).
     """
-
-    # TODO verify
-    # The equality and the hashing are not defined for the heap
-    self.equal = None
-    self.hash = None
-    self.compare = None
 
     slot0 = self.element.variable("target->elements[0]")
     slot_size = self.element.variable("target->elements[target->size]")

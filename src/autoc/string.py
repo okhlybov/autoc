@@ -1,7 +1,9 @@
 import autoc.core
 import autoc.std as std
 import autoc.memory
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
+from autoc.sequential import Sequential
 from autoc.module import Code
 from autoc.range import DirectAccess
 from autoc.container import _Range
@@ -9,10 +11,10 @@ from autoc.core import inout, Indirection, Callable, _AliasRenderer
 
 
 #
-class String(_AliasRenderer, Indirection, Indexed):
-  
+class String(_AliasRenderer, Indirection, Assignable, Sequential):
+
   brief = "Value type wrapper of the C char* string"
-  
+
   def __init__(self, name, *args, formatting_operations=True, **kws):
     self.formatting_operations = bool(formatting_operations)
     super().__init__(std.char, name, std.char, std.size_t, prefix=name, dependencies=(std.string_h, std.stdlib_h, autoc.memory._allocate_code, _static_code), **kws)
@@ -20,13 +22,6 @@ class String(_AliasRenderer, Indirection, Indexed):
 
   def __setup__(self):
     super().__setup__()
-
-    # FIXME: Subtyping principle violation (LSP): String inherits from Container
-    # but does not support generic single-character element addition or removal via
-    # the container protocol (put/remove), so they are disabled via None. The Container
-    # hierarchy should be refined for specialized sequence types like String.
-    self.put = None
-    self.remove = None
 
     self.description = f"""
       Requires no constraints on the element type - the element type is fixed to `char`.

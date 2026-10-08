@@ -1,15 +1,16 @@
 import autoc.std as std
 from autoc.hash import XorRot
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
 from autoc.sortable import Sortable
-from autoc.sequence import Sequence
+from autoc.sequential import Sequential
 from autoc.range import DirectAccess
 from autoc.container import _Range
 from autoc.core import inout, Callable, Indirection, _StructRenderer
 
 
 #
-class Array(_StructRenderer, Indexed, Sortable, Sequence):
+class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 
@@ -76,13 +77,6 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
 
   def __setup__(self):
     super().__setup__()
-
-    # FIXME: Subtyping principle violation (LSP): Array inherits from Container
-    # but has a fixed capacity and cannot support dynamic element addition or removal,
-    # so put and remove are disabled via None. The Container hierarchy should be refined
-    # (e.g. distinguishing fixed-capacity / non-resizable containers from dynamic containers).
-    self.put = None
-    self.remove = None
 
     self.description = f"""
       Fixed-size direct access sequence container holding exactly {self._size} elements.
@@ -187,18 +181,6 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
           {self.element.swap(left_i, right_i)};
         }}
       """
-
-    if self.comparable:
-      with self.equal as f:
-        f.code = f"""
-          size_t index;
-          assert(left);
-          assert(right);
-          for(index = 0; index < {self._size}; ++index) {{
-            if(!{self.element.equal(left_i, right_i)}) return 0;
-          }}
-          return 1;
-        """
 
     with self.get as f:
       result = f.result.variable("result")

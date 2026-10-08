@@ -1,12 +1,13 @@
 import autoc.std as std
-from autoc.sequence import Sequence
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
 from autoc.range import Bidirectional
 from autoc.container import _Range
 from autoc.core import inout, _type, Callable, _StructRenderer
 
 
 #
-class Deque(_StructRenderer, Sequence):
+class Deque(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered sequence with element insertion and removal at both ends"
   
@@ -322,27 +323,6 @@ class Deque(_StructRenderer, Sequence):
         assert(target);
         assert(!{self.empty(f.target)});
         return {back_element.bind(f.result)};
-      """
-
-    lt = self.element.variable("lt->element")
-    rt = self.element.variable("rt->element")
-
-    with self.equal as f:
-      f.code = f"""
-        assert(left);
-        assert(right);
-        if(left->size == right->size) {{
-          {self.node}* lt;
-          {self.node}* rt;
-          lt = left->front;
-          rt = right->front;
-          while(lt && rt) {{
-            if(!{self.element.equal(lt, rt)}) return 0;
-            lt = lt->next;
-            rt = rt->next;
-          }}
-        }} else return 0;
-        return 1;
       """
 
 

@@ -1,11 +1,13 @@
 from autoc.list import List
 from autoc.range import Forward
-from autoc.container import Container, _Range
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
+from autoc.container import _Range
 from autoc.core import _StructRenderer, Callable, Indirection, inout
 
 
 #
-class Stack(_StructRenderer, Container):
+class Stack(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered LIFO container with head push/pop"
   
@@ -13,6 +15,7 @@ class Stack(_StructRenderer, Container):
     super().__init__(*args, **kws)
     self._list = List(self._decorate_component("list"), self.element, visibility="internal")
     self.dependencies.add(self._list)
+    self.range = Range(self)
 
   @property
   def orderable(self):
@@ -148,8 +151,6 @@ class Stack(_StructRenderer, Container):
         assert(target);
         return {self._list.remove(_target, f.element)};
       """
-
-    self.range = Range(self)
 
     self.description = f"""
       Requires the element type (@ref {self.element}) to be *Copyable*.

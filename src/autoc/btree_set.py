@@ -541,22 +541,6 @@ class Set(_StructRenderer, autoc.set.Set):
         return {range.empty(rl)} ? ({range.empty(rr)} ? 0 : -1) : +1;
       """
 
-    state = self.hasher.state_t.variable("state")
-
-    with self.hash as f:
-      f.code = f"""
-        size_t result;
-        {r.definition};
-        {state.definition};
-        assert(target);
-        {self.hasher.create(state)};
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          {self.hasher.update(state, self.element.hash(range.front_view(r)))};
-        }}
-        result = {self.hasher.hash(state)};
-        {self.hasher.destroy(state)};
-        return result;
-      """
 
   def _render_struct(self, stream, header):
     max_keys = 2 * self.order - 1

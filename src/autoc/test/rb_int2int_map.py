@@ -125,6 +125,23 @@ x.unit(f"{range}(): traverse the map in the index order", f"""
   }}
 """)
 
+x.unit(f"{range}(): traverse the map in the descending index order", f"""
+  for(i = 0; i < 32; ++i) {type.set(t, "(i*7%32)", "-(i*7%32)")};
+  {{
+    int previous = 32;
+    int count = 0;
+    for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_back(r)}) {{
+      int index = {range.index_back(r)};
+      TEST_TRUE( index < previous );
+      previous = index;
+      TEST_EQUAL( {range.back(r)}, -index );
+      ++count;
+    }}
+    TEST_EQUAL( count, 32 );
+    TEST_EQUAL( previous, 0 );
+  }}
+""")
+
 x.unit(f"{type.copy}(): copy the map", f"""
   {type.variable("t2").definition};
   {type.create(type.variable("t2"))};

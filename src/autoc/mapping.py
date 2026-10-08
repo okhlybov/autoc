@@ -2,8 +2,10 @@ import autoc.std as std
 from autoc.record import Record
 from autoc.core import inout, Callable, _StructRenderer, Macro
 from autoc.container import _Range
-from autoc.range import Forward
-from autoc.indexed import Indexed
+from autoc.range import Forward, Bidirectional, Backward
+from autoc.traversable import Traversable
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
 
 
 # Common entry implementation for maps backed by an underlying set
@@ -209,8 +211,81 @@ class Range(_Range, Forward):
       """
 
 
+# Bidirectional range over the mapping indices and elements - instantiated for the mappings
+# whose underlying set provides a backward-walkable range (the ordered backends)
+class BidirectionalRange(Range, Bidirectional):
+
+  brief = "Bidirectional range over the mapping indices and elements"
+
+  def __setup__(self):
+    super().__setup__()
+
+    _target_range = self._range.variable("target->range")
+
+    with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get view of back element",
+      description="""
+        Returns a pointer to the last element without copying it.
+        The view is valid while that entry is held by the mapping.
+
+        @param[in] target the non-empty range to inspect
+        @return a constant view of the back element
+      """) as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.element_view(self._range.back_view(_target_range)).bind(self.element.view_type)};
+      """
+
+    with self.back as f:
+      result = f.result.variable("result")
+      f.code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.element.copy(result, self._entry.element_view(self._range.back_view(_target_range)))};
+        return {result};
+      """
+
+    with self.method(self.index.view_type, ("index", "back", "view"), {"target": self}, brief="Get view of back index",
+      description="""
+        Returns a pointer to the index of the last entry.
+        The view is valid while that entry is held by the mapping.
+
+        @param[in] target the non-empty range to inspect
+        @return a constant view of the back index
+      """) as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {self._entry.index_view(self._range.back_view(_target_range)).bind(self.index.view_type)};
+      """
+
+    with self.method(self.index, ("index", "back"), {"target": self}, constraint=lambda: self.index.copyable, brief="Get back index",
+      description="""
+        Returns a copy of the index of the last entry.
+
+        @param[in] target the non-empty range to inspect
+        @return a copy of the back index
+      """) as f:
+      result = f.result.variable("result")
+      f.code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.index.copy(result, self._entry.index_view(self._range.back_view(_target_range)))};
+        return {result};
+      """
+
+    with self.move_back as f:
+      f.code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self._range.move_back(_target_range)};
+      """
+
+
 # Abstract base class for all associative key-value maps backed by an underlying Set
-class Mapping(_StructRenderer, Indexed):
+class Mapping(_StructRenderer, Traversable, Assignable):
 
   brief = "Abstract associative container mapping keys (indices) to values (elements) backed by an underlying set"
 
@@ -218,7 +293,13 @@ class Mapping(_StructRenderer, Indexed):
     super().__init__(name, element, index, *args, **kws)
 
   def _setup_range(self):
-    self.range = Range(self)
+    # The mapping range walks the underlying set's range, so it inherits its walk
+    # directions: the ordered backends yield bidirectional ranges, the hash-based
+    # ones stay forward
+    if isinstance(self._set.range, Backward):
+      self.range = BidirectionalRange(self)
+    else:
+      self.range = Range(self)
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
@@ -230,15 +311,6 @@ class Mapping(_StructRenderer, Indexed):
 
   def __setup__(self):
     super().__setup__()
-
-    # FIXME: the separation of mapping in regard to range directionness might be needed
-    # as unordered maps have only forward ranges while ordered ranges are bidirectional
-    
-    # FIXME: Subtyping principle violation (LSP): Mapping inherits from Container
-    # but does not support 1-argument element insertion (it requires key-value insertion
-    # via put(target, key, value) or set(target, key, value)), so put is disabled via None.
-    # The Container hierarchy should be refined to distinguish key-value mappings from element containers.
-    self.put = None
 
     _target = self._set.variable("target->set")
     _source = self._set.variable("source->set")
@@ -306,19 +378,6 @@ class Mapping(_StructRenderer, Indexed):
 
     set = self._set
     entry = set.element
-
-    with self.find_view as f:
-      r = set.range.variable("r")
-      f.code = f"""
-        {r.definition};
-        assert(target);
-        for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
-          if({self.element.equal(entry.element_view(set.range.front_view(r)), f.element)}) {{
-            return {entry.element_view(set.range.front_view(r))};
-          }}
-        }}
-        return ({self.element.view_type})NULL;
-      """
 
     with self.indexed as f:
       f.code = f"""

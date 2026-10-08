@@ -227,19 +227,6 @@ class Map(Multimapping):
         return {set.size(_target)};
       """
 
-    with self.find_view as f:
-      r = set.range.variable("r")
-      f.code = f"""
-        {r.definition};
-        assert(target);
-        for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
-          if({self.element.equal(entry.element_view(set.range.front_view(r)), f.element)}) {{
-            return {entry.element_view(set.range.front_view(r))};
-          }}
-        }}
-        return ({self.element.view_type})NULL;
-      """
-
     with self.view as f:
       found = Indirection(entry, constant=True).variable("found")
       f.code = f"""

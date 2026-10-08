@@ -1,14 +1,16 @@
 import autoc.std as std
-from autoc.indexed import Indexed
+from autoc.indexable import Indexable
+from autoc.assignable import Assignable
 from autoc.sortable import Sortable
-from autoc.sequence import Sequence
+from autoc.sequential import Sequential
+from autoc.insertable import Insertable
 from autoc.range import DirectAccess
 from autoc.container import _Range
 from autoc.core import out, inout, Macro, Callable, Indirection, _StructRenderer
 
 
 #
-class Vector(_StructRenderer, Indexed, Sortable, Sequence):
+class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
   brief = "Direct access sequence container"
   
@@ -455,21 +457,6 @@ class Vector(_StructRenderer, Indexed, Sortable, Sequence):
         {destroy_loop}
         {self._free_heap("target")}
       """
-
-    # FIXME should come from sequence    
-    if self.comparable:
-      with self.equal as f:
-        f.code = f"""
-          assert(left);
-          assert(right);
-          if(left->size == right->size) {{
-            {self.index} index;
-            for(index = 0; index < left->size; ++index) {{
-              if(!{self.element.equal(left_i, right_i)}) return 0;
-            }}
-            return 1;
-          }} else return 0;
-        """
 
     with self.copy as f:
       f.code = f"""

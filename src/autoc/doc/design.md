@@ -63,6 +63,48 @@ a set algorithm drains the range of its operand.
 
 ## Containers
 
+### Capability protocols
+
+Every container is a value type carrying the operations its element types allow; on top of
+that, containers compose *capability mixins* — each declares one addressing or traversal
+scheme, and a container mixes in exactly the schemes it honors:
+
+| Capability | Operations | Semantics |
+|---|---|---|
+| `Traversable` | provides `find_view`/`hash` over the range | exposes a range — the container-side counterpart of the range-directionality axis (`Forward`/`Bidirectional`/`DirectAccess` describe the cursor, `Traversable` describes the container) |
+| `Sequential` | adds order-sensitive `equal` | an ordered series of elements — iteration order is canonical; requires `Traversable` |
+| `Insertable` | `put`/`remove` | element-addressed insertion and removal — the membership addressing scheme |
+| `Indexable` | `indexed`/`get`/`view` | position- or key-addressed reads |
+| `Assignable` | adds `set` | position-addressed assignment; implies `Indexable` |
+| `Sortable`, `Bisectable` | `sort`/`reverse`/`sorted`, `lower_bound`/`upper_bound`/`binary_search` | user-sortable then bisectable operation groups |
+
+Insertion is not one capability but a family indexed by the addressing scheme — element
+(`Insertable`), position (`Assignable`), key (the `Mapping`/`Multimapping` families declare
+their own keyed `put`/`set`/`emplace`/`remove`). This is why fixed-count containers (`Array`)
+and specialized sequences (`String`) simply do not mix `Insertable` in rather than disabling
+it, and why a map's keyed `put` does not conflict with an insertable collection's
+`put(element)`: they live on disjoint branches.
+
+The capability claims are honest by construction. @ref PriorityQueue exposes no range at
+all — its heap shape is internal — so it is `Insertable` without being `Traversable` and
+defines neither equality nor hashing. Conversely, bounded containers like the circular
+buffers *are* `Insertable` (bounded insertion mutates the count) while @ref Array is not
+(its count is constant).
+
+Two usage regimes of `Bisectable` exist: the flat sets and multisets are born sorted and
+take the bisection operations directly (their insertion itself bisects), while the sortable
+sequences mix `Sortable`, which implies `Bisectable` — the operations become meaningful
+after `sort()`.
+
+Capabilities come in two tiers. *Structural* capabilities (`Traversable`, `Sequential`,
+`Insertable`, `Indexable`, `Assignable`) are claimed by mixin presence and cannot be
+switched off — a container either has a range or does not. *Algorithmic conveniences*
+(`Sortable`/`Bisectable`, the set algebra, string formatting) ride the operation-group
+flags (`sorting_operations`, `algebraic_operations`, `formatting_operations`) so a concrete
+instantiation omits the code it does not need.
+
+### Strategies
+
 The container strategies differ in what they guarantee, not just in performance:
 
 - **Chained hash** (@ref ChainedHashSet, @ref ChainedHashMap) stores each element in a node
@@ -79,7 +121,10 @@ The container strategies differ in what they guarantee, not just in performance:
   comparison.
 - **Sequences** (@ref List, @ref Deque, @ref Vector, @ref TieredVector) trade access pattern
   against allocation behaviour: forward-linked, doubly-linked, contiguous and chunked
-  respectively. @ref PriorityQueue is a binary heap which consumes its elements in priority
+  respectively. @ref Array and @ref String are sequences too — fixed-count and
+  char-specialized respectively — which iterate but do not insert single elements.
+  The bounded @ref CircularBuffer composes the full positional capability set including
+  sorting. @ref PriorityQueue is a binary heap which consumes its elements in priority
   order.
 
 ## Memory, hashing and determinism
