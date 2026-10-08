@@ -159,6 +159,18 @@ x.unit(f"{range}(): traverse in ascending order", f"""
   TEST_EQUAL( previous, 31 );
 """)
 
+x.unit(f"{range}(): backward traversal in descending order", f"""
+  int previous;
+  for(i = 0; i < 32; ++i) {type.put(t, "(i*7)%32")};
+  TEST_EQUAL( {type.size(t)}, 32 );
+  previous = 32;
+  for({r} = {range.new(t)}; !{range.empty(r)}; {range.move_back(r)}) {{
+    TEST_TRUE( *{range.back_view(r)} < previous );
+    previous = *{range.back_view(r)};
+  }}
+  TEST_EQUAL( previous, 0 );
+""")
+
 x.unit(f"{range}(): traversal survives the churn", f"""
   int previous;
   for(i = 0; i < 256; ++i) {{ TEST_TRUE( {type.put(t, "(i*137)%256")} ); }}

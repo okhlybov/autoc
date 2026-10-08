@@ -27,9 +27,9 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|---|
 | `autoc.chained_hash_set` | `Set` | `ChainedHashSet<T>` | `ChainedHashSet<T>::Range` (forward) | bucket chaining; no sentinels, stable element addresses, safe default |
 | `autoc.intrusive_hash_set` | `Set` | `IntrusiveHashSet<T>` | `IntrusiveHashSet<T>::Range` (forward) | flat open addressing; needs sentinel values for the element type |
-| `autoc.treap_set` | `Set` | `TreapSet<T>` | `TreapSet<T>::Range` (forward) | ordered; iterates sorted, randomized BST with algebraic set operations |
-| `autoc.rb_set` | `Set` | `RBSet<T>` | `RBSet<T>::Range` (forward) | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
-| `autoc.avl_set` | `Set` | `AVLSet<T>` | `AVLSet<T>::Range` (forward) | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
+| `autoc.treap_set` | `Set` | `TreapSet<T>` | `TreapSet<T>::Range` (bidirectional) | ordered; iterates sorted, randomized BST with algebraic set operations |
+| `autoc.rb_set` | `Set` | `RBSet<T>` | `RBSet<T>::Range` (bidirectional) | ordered; red-black tree with guaranteed O(log n) height and <= 3 rotations on removal |
+| `autoc.avl_set` | `Set` | `AVLSet<T>` | `AVLSet<T>::Range` (bidirectional) | ordered; strictly balanced AVL tree with height <= 1.44 log2(n), fastest lookups |
 | `autoc.btree_set` | `Set` | `BTreeSet<T>` | `BTreeSet<T>::Range` (bidirectional) | ordered; B-Tree with contiguous node blocks, cache locality, and low allocator overhead |
 | `autoc.flat_set` | `Set` | `FlatSet<T>` | `FlatSet<T>::Range` (direct access) | ordered; contiguous sorted dynamic array with binary search lookup and cache-friendly layout |
 

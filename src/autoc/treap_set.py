@@ -1,6 +1,6 @@
 import autoc.std as std
 import autoc.set
-from autoc.range import Forward
+from autoc.range import Bidirectional
 from autoc.container import _Range
 from autoc.random import Randomizer
 from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable, Expression
@@ -31,7 +31,7 @@ class Set(_StructRenderer, autoc.set.Set):
 
     self.description = f"""
       Requires the element type (@ref {self.element}) to be *Orderable*.
-      Supports one way element traversal via the corresponding @ref {self.range} iterator - the elements are yielded in sorted order.
+      Supports bidirectional element traversal via the corresponding @ref {self.range} iterator - elements are yielded in sorted order.
 
       Implemented as the treap - the randomized binary search tree with the algebraic set operations.
       The closest C++ equivalent is [std::set<>](https://cppreference.com/cpp/container/set).
@@ -652,23 +652,26 @@ class Set(_StructRenderer, autoc.set.Set):
 
 
 #
-class Range(_Range, Forward):
+class Range(_Range, Bidirectional):
 
-  brief = "Forward range over the set elements"
+  brief = "Bidirectional range over the set elements"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
     stream.append(f"""
       struct {self.name} {{
         {Indirection(self.iterable, constant=True)} iterable; /**< @private */
-        {self.iterable.node}* node; /**< @private */
+        {self.iterable.node}* front_node; /**< @private */
+        {self.iterable.node}* back_node; /**< @private */
+        {std.size_t} remaining; /**< @private */
       }};
     """)
 
   def __setup__(self):
     super().__setup__()
 
-    node_element = self.element.variable("target->node->element")
+    front_element = self.element.variable("target->front_node->element")
+    back_element = self.element.variable("target->back_node->element")
 
     with self.method(Callable.Parameter(self), "new", {"iterable": self.iterable}, brief="Create the range spanning the whole set",
       description="""
@@ -684,15 +687,23 @@ class Range(_Range, Forward):
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
-        result.node = iterable->root;
-        while(result.node && result.node->left) result.node = result.node->left;
+        result.remaining = iterable->size;
+        if(iterable->size == 0) {{
+          result.front_node = NULL;
+          result.back_node = NULL;
+        }} else {{
+          result.front_node = iterable->root;
+          while(result.front_node->left) result.front_node = result.front_node->left;
+          result.back_node = iterable->root;
+          while(result.back_node->right) result.back_node = result.back_node->right;
+        }}
         return {result};
       """
 
     with self.empty as f:
       f.inline_code = f"""
         assert(target);
-        return !target->node;
+        return target->remaining == 0;
       """
 
     with self.front as f:
@@ -701,7 +712,7 @@ class Range(_Range, Forward):
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
-        {self.element.copy(result, node_element)};
+        {self.element.copy(result, front_element)};
         return {result};
       """
 
@@ -709,7 +720,7 @@ class Range(_Range, Forward):
       f.inline_code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        return {node_element.bind(self.iterable.element.view_type)};
+        return {front_element.bind(self.iterable.element.view_type)};
       """
 
     with self.move_front as f:
@@ -717,15 +728,56 @@ class Range(_Range, Forward):
         {self.iterable.node}* p;
         assert(target);
         assert(!{self.empty(f.target)});
-        if(target->node->right) {{
-          target->node = target->node->right;
-          while(target->node->left) target->node = target->node->left;
-        }} else {{
-          p = target->node->parent;
-          while(p && target->node == p->right) {{
-            target->node = p;
-            p = p->parent;
+        --target->remaining;
+        if(target->remaining > 0) {{
+          if(target->front_node->right) {{
+            target->front_node = target->front_node->right;
+            while(target->front_node->left) target->front_node = target->front_node->left;
+          }} else {{
+            p = target->front_node->parent;
+            while(p && target->front_node == p->right) {{
+              target->front_node = p;
+              p = p->parent;
+            }}
+            target->front_node = p;
           }}
-          target->node = p;
+        }}
+      """
+
+    with self.back as f:
+      result = f.result.variable("result")
+      f.inline_code = f"""
+        {result.definition};
+        assert(target);
+        assert(!{self.empty(f.target)});
+        {self.element.copy(result, back_element)};
+        return {result};
+      """
+
+    with self.back_view as f:
+      f.inline_code = f"""
+        assert(target);
+        assert(!{self.empty(f.target)});
+        return {back_element.bind(self.iterable.element.view_type)};
+      """
+
+    with self.move_back as f:
+      f.inline_code = f"""
+        {self.iterable.node}* p;
+        assert(target);
+        assert(!{self.empty(f.target)});
+        --target->remaining;
+        if(target->remaining > 0) {{
+          if(target->back_node->left) {{
+            target->back_node = target->back_node->left;
+            while(target->back_node->right) target->back_node = target->back_node->right;
+          }} else {{
+            p = target->back_node->parent;
+            while(p && target->back_node == p->left) {{
+              target->back_node = p;
+              p = p->parent;
+            }}
+            target->back_node = p;
+          }}
         }}
       """

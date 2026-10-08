@@ -264,9 +264,9 @@ consumed 23
 | `autoc.string_buffer` | `Buffer` | append-optimized string buffer with scratch accumulation and lazy joining |
 | `autoc.chained_hash_set` | `Set` | bucket-chaining hash set — no sentinel values, stable element references, safe default |
 | `autoc.intrusive_hash_set` | `Set` | flat, sentinel-based open-addressing hash set |
-| `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order |
-| `autoc.rb_set` | `Set` | red-black tree — ordered set, guaranteed O(log n) height, <= 3 rotations on delete |
-| `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups |
+| `autoc.treap_set` | `Set` | treap — ordered set, O(log n) expected, iterates in sorted order, bidirectional range |
+| `autoc.rb_set` | `Set` | red-black tree — ordered set, guaranteed O(log n) height, <= 3 rotations on delete, bidirectional range |
+| `autoc.avl_set` | `Set` | AVL tree — ordered set, strictly balanced height <= 1.44 log2(n), fastest lookups, bidirectional range |
 | `autoc.flat_set` | `Set` | contiguous sorted dynamic array with binary search lookup, cache-friendly layout |
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map over internal entry set |
