@@ -229,6 +229,27 @@ class Array(_StructRenderer, Indexed, Sortable, Sequence):
         {self.element.copy(slot, f.element)};
       """
 
+    with self.method(None, "emplace", {"target": inout(self), "index": self.index} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable, brief="Construct the element at index in place",
+      description="""
+        Constructs the element in place with the forwarded parameters, associating it with
+        the index - the element previously held at the index is destroyed first.
+
+        @param[in,out] target the array to update
+        @param[in] index the index to construct the element at
+      """) as f:
+      def _emplace_code(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        slot = self.element.variable(f"target->elements[{f.index}]")
+        destroy_slot = self.element.destroy(slot) if self.element.destructible else ""
+        return f"""
+          assert(target);
+          assert({self.indexed(f.target, f.index)});
+          {destroy_slot};
+          {self.element.create(slot, *create_args)};
+        """
+      f.code = _emplace_code
+
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable,
       references=(self.get,),
       brief="Get a copy of the front element",

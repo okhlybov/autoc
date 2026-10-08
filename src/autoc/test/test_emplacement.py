@@ -1,10 +1,19 @@
 from autoc.test import *
 from autoc.test.custom_composite import Type as CustomComposite
+from autoc.test.cstring import cstring, s
 from autoc.vector import Vector
 from autoc.list import List
 from autoc.flat_map import Map as FlatMap
 from autoc.chained_hash_set import Set as ChainedHashSet
 from autoc.priority_queue import Queue as PriorityQueue
+from autoc.flat_multiset import Set as FlatMultiset
+from autoc.counter import Counter
+from autoc.multimap import Map as Multimap
+from autoc.flat_multimap import Map as FlatMultimap
+from autoc.array import Array
+from autoc.avl_set import Set as AVLSet
+from autoc.record import Record
+from autoc.variant import Variant
 
 # 1. Vector of CustomComposite (custom create(target, value))
 custom_elem = CustomComposite("custom_elem")
@@ -119,4 +128,165 @@ x_chs.unit(f"{chs_type.emplace}(): emplace into hash set forwarding params", f""
   TEST_EQUAL(r2, 1);
   TEST_EQUAL(r3, 0);
   TEST_EQUAL({chs_type.size(chst)}, 2);
+""")
+
+
+# 6. FlatMultiset of CustomComposite - emplace always inserts, duplicates preserved
+fms_type = FlatMultiset("custom_elem_flat_multiset", custom_elem)
+x_fms = Type(fms_type, dependencies=[custom_elem])
+
+fmst = fms_type.variable("fmst")
+x_fms.setup(f"""
+  {fmst.definition};
+  {fms_type.create(fmst)};
+""")
+x_fms.cleanup(f"""
+  {fms_type.destroy(fmst)};
+""")
+
+x_fms.unit(f"{fms_type.emplace}(): emplace into flat multiset keeping duplicates", f"""
+  int r1 = {fms_type.emplace(fmst, 7)};
+  int r2 = {fms_type.emplace(fmst, 7)};
+  TEST_EQUAL(r1, 1);
+  TEST_EQUAL(r2, 1);
+  TEST_EQUAL({fms_type.size(fmst)}, 2);
+  {{ custom_elem e7; {custom_elem.create("&e7", 7)};
+     TEST_EQUAL({fms_type.count(fmst, "&e7")}, 2);
+     {custom_elem.destroy("&e7")}; }}
+""")
+
+
+# 7. Counter of CustomComposite - emplace adds the constructed element once
+ct_type = Counter("custom_elem_counter", custom_elem, backend=FlatMap)
+x_ct = Type(ct_type, dependencies=[custom_elem])
+
+ctt = ct_type.variable("ctt")
+x_ct.setup(f"""
+  {ctt.definition};
+  {ct_type.create(ctt)};
+""")
+x_ct.cleanup(f"""
+  {ct_type.destroy(ctt)};
+""")
+
+x_ct.unit(f"{ct_type.emplace}(): emplace into counter", f"""
+  {ct_type.emplace(ctt, 5)};
+  {{ custom_elem e5; {custom_elem.create("&e5", 5)};
+     TEST_EQUAL({ct_type.count(ctt, "&e5")}, 1);
+     {custom_elem.destroy("&e5")}; }}
+  TEST_EQUAL({ct_type.total_size(ctt)}, 1);
+  TEST_EQUAL({ct_type.distinct_size(ctt)}, 1);
+""")
+
+
+# 8. Generic Multimap of CustomComposite values over int keys
+mm_type = Multimap("custom_elem_multimap", custom_elem, "int", AVLSet, Vector)
+x_mm = Type(mm_type, dependencies=[custom_elem])
+
+mmt = mm_type.variable("mmt")
+x_mm.setup(f"""
+  {mmt.definition};
+  {mm_type.create(mmt)};
+""")
+x_mm.cleanup(f"""
+  {mm_type.destroy(mmt)};
+""")
+
+x_mm.unit(f"{mm_type.emplace}(): emplace into multimap forwarding value params", f"""
+  int r1 = {mm_type.emplace(mmt, 1, 111)};
+  int r2 = {mm_type.emplace(mmt, 1, 222)};
+  TEST_EQUAL(r1, 1);
+  TEST_EQUAL(r2, 1);
+  TEST_EQUAL({mm_type.count(mmt, 1)}, 2);
+  TEST_EQUAL(*{mm_type.view(mmt, 1)}->value, 111);
+""")
+
+
+# 9. FlatMultimap of CustomComposite values
+fmm_type = FlatMultimap("custom_elem_flat_multimap", custom_elem, "int")
+x_fmm = Type(fmm_type, dependencies=[custom_elem])
+
+fmmt = fmm_type.variable("fmmt")
+x_fmm.setup(f"""
+  {fmmt.definition};
+  {fmm_type.create(fmmt)};
+""")
+x_fmm.cleanup(f"""
+  {fmm_type.destroy(fmmt)};
+""")
+
+x_fmm.unit(f"{fmm_type.emplace}(): emplace into flat multimap forwarding value params", f"""
+  int r1 = {fmm_type.emplace(fmmt, 1, 111)};
+  TEST_EQUAL(r1, 1);
+  TEST_EQUAL({fmm_type.count(fmmt, 1)}, 1);
+  TEST_EQUAL(*{fmm_type.view(fmmt, 1)}->value, 111);
+""")
+
+
+# 10. Array of cstring - fixed capacity, emplace destroys the previous element in place
+arr_type = Array("emplace_str_array", cstring, 4)
+x_arr = Type(arr_type, dependencies=[cstring])
+
+at = arr_type.variable("at")
+x_arr.setup(f"""
+  {at.definition};
+  {arr_type.create(at)};
+""")
+x_arr.cleanup(f"""
+  {arr_type.destroy(at)};
+""")
+
+x_arr.unit(f"{arr_type.emplace}(): emplace into array destroying the previous element", f"""
+  {arr_type.set(at, 1, s("hello"))};
+  TEST_EQUAL_CHARS({arr_type.view(at, 1)}, "hello");
+  {arr_type.emplace(at, 1)};
+  TEST_EQUAL_CHARS({arr_type.view(at, 1)}, "");
+""")
+
+
+# 11. Record - per-field in-place construction (fields must default-construct for create())
+rec_type = Record("emplace_record", {"tag": "int", "text": cstring})
+x_rec = Type(rec_type, dependencies=[cstring])
+
+rt = rec_type.variable("rt")
+x_rec.setup(f"""
+  {rt.definition};
+  {rec_type.create(rt)};
+""")
+x_rec.cleanup(f"""
+  {rec_type.destroy(rt)};
+""")
+
+x_rec.unit(f"{rec_type.emplace_text}(): construct record field in place", f"""
+  {rec_type.set_tag(rt, 7)};
+  {rec_type.set_text(rt, s("hello"))};
+  TEST_EQUAL(rt.tag, 7);
+  TEST_EQUAL_CHARS(rt.text, "hello");
+  {rec_type.emplace_tag(rt)};
+  {rec_type.emplace_text(rt)};
+  TEST_EQUAL(rt.tag, 0);
+  TEST_EQUAL_CHARS(rt.text, "");
+""")
+
+
+# 12. Variant with a CustomComposite alternative - per-alternative in-place construction
+var_type = Variant("custom_elem_variant", {"num": "int", "box": custom_elem})
+x_var = Type(var_type, dependencies=[custom_elem])
+
+vt = var_type.variable("vt")
+x_var.setup(f"""
+  {vt.definition};
+  {var_type.create(vt)};
+""")
+x_var.cleanup(f"""
+  {var_type.destroy(vt)};
+""")
+
+x_var.unit(f"{var_type.emplace_box}(): construct variant alternative in place", f"""
+  {var_type.emplace_box(vt, 42)};
+  TEST_TRUE({var_type.is_box(vt)});
+  TEST_EQUAL(*{var_type.get_box_view(vt)}->value, 42);
+  {var_type.emplace_num(vt)};
+  TEST_TRUE({var_type.is_num(vt)});
+  TEST_EQUAL({var_type.get_num(vt)}, 0);
 """)

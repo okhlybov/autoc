@@ -98,6 +98,7 @@ class Record(_StructRenderer, Composite):
     if self.setters:
       for field, type in self.fields.items():
         self._add_writer(type, field)
+        self._add_emplace_writer(type, field)
 
   def _add_reader(self, type, field):
     with self.method(type, field, {"target": self}, attribute=("get", field), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {field} field",
@@ -130,6 +131,24 @@ class Record(_StructRenderer, Composite):
         {destroy_field};
         {type.copy(type.variable(f"{target}.{field}"), "value")};
       """
+
+  def _add_emplace_writer(self, type, field):
+    with self.method(None, ("emplace", field), {"target": out(self)} | type.constructor_parameters, visibility=self.visibility, constraint=lambda: type.emplaceable, brief=f"Construct the {field} field in place",
+      description=f"""
+        Constructs the {field} field in place with the forwarded parameters - the previously
+        held field value is destroyed first.
+
+        @param[out] target the record to update
+      """) as f:
+      def _emplace_code(f=f, type=type, field=field):
+        create_args = [getattr(f, name) for name in type.constructor_parameters]
+        target = f"({f.target.bind(self)})"
+        destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else ""
+        return f"""
+          {destroy_field};
+          {type.create(type.variable(f"{target}.{field}"), *create_args)};
+        """
+      f.inline_code = _emplace_code
 
   def _getter_name(self, field):
     return self.decorate(field)

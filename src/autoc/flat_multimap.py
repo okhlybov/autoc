@@ -286,6 +286,21 @@ class Map(Multimapping):
         return 1;
       """
 
+    with self.emplace as f:
+      def _emplace_code(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        return f"""
+          {_entry.definition};
+          assert(target);
+          {entry.emplace_index(_entry, f.index)};
+          {entry.create_element(_entry, *create_args)};
+          {set.put(_target, _entry)};
+          {entry.destroy_element(_entry)};
+          {entry.destroy_index(_entry)};
+          return 1;
+        """
+      f.code = _emplace_code
+
     with self.remove as f:
       f.code = f"""
         {_entry.definition};

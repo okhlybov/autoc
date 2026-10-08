@@ -434,6 +434,22 @@ class Map(Multimapping):
         return 1;
       """
 
+    with self.emplace as f:
+      def _emplace_code(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        _temp = self.element.variable("temp")
+        _destroy_temp = f"{self.element.destroy(_temp)};" if self.element.destructible else ""
+        return f"""
+          {_temp.definition};
+          int result;
+          assert(target);
+          {self.element.create(_temp, *create_args)};
+          result = {self.put(f.target, f.index, _temp)};
+          {_destroy_temp}
+          return result;
+        """
+      f.code = _emplace_code
+
     with self.count as f:
       found = Indirection(entry, constant=True).variable("found")
       f.code = f"""

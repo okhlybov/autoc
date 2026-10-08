@@ -103,6 +103,7 @@ class Variant(_StructRenderer, Composite):
       self._add_reader(type, name, index)
       self._add_view(type, name, index)
       self._add_writer(type, name, index)
+      self._add_emplace_writer(type, name, index)
 
   def _add_predicate(self, name, index):
     with self.method("int", ("is", name), {"target": self}, visibility=self.visibility, brief=f"Check if the variant holds the {name} value",
@@ -166,6 +167,25 @@ class Variant(_StructRenderer, Composite):
         {target}.tag = {index};
         {type.copy(type.variable(f"{target}.value.{name}"), "value")};
       """
+
+  def _add_emplace_writer(self, type, name, index):
+    with self.method(None, ("emplace", name), {"target": out(self)} | type.constructor_parameters, visibility=self.visibility, constraint=lambda: type.emplaceable, brief=f"Construct the {name} value in place",
+      description=f"""
+        Constructs the {name} alternative in place with the forwarded parameters - the
+        alternative the variant held before is destroyed first since a variant holds
+        exactly one value at a time.
+
+        @param[out] target the variant to update
+      """) as f:
+      def _emplace_code(f=f, type=type, name=name, index=index):
+        create_args = [getattr(f, param) for param in type.constructor_parameters]
+        target = f"({f.target.bind(self)})"
+        return f"""
+          {self._destroy_active(target)};
+          {target}.tag = {index};
+          {type.create(type.variable(f"{target}.value.{name}"), *create_args)};
+        """
+      f.inline_code = _emplace_code
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

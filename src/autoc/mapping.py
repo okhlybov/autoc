@@ -231,6 +231,9 @@ class Mapping(_StructRenderer, Indexed):
   def __setup__(self):
     super().__setup__()
 
+    # FIXME: the separation of mapping in regard to range directionness might be needed
+    # as unordered maps have only forward ranges while ordered ranges are bidirectional
+    
     # FIXME: Subtyping principle violation (LSP): Mapping inherits from Container
     # but does not support 1-argument element insertion (it requires key-value insertion
     # via put(target, key, value) or set(target, key, value)), so put is disabled via None.

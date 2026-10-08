@@ -68,6 +68,17 @@ class Multimapping(_StructRenderer, Container):
         @return always non-zero
       """)
 
+    self.method("int", "emplace", {"target": inout(self), "index": self.index} | self.element.constructor_parameters,
+      constraint=lambda: valid_index() and self.element.copyable and self.element.emplaceable, brief="Construct element in-place for key",
+      description="""
+        Constructs the element in-place with the forwarded parameters and inserts a new
+        key-value entry into the multimap, preserving duplicate keys.
+
+        @param[in,out] target the multimap to insert into
+        @param[in] index the key of the new entry
+        @return always non-zero once the entry was inserted
+      """)
+
     self.method("int", "remove", {"target": inout(self), "index": self.index}, constraint=valid_index, brief="Remove one entry with specified key",
       description="""
         Removes one occurrence of an entry with the specified index, if present.

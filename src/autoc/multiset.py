@@ -23,6 +23,19 @@ class Multiset(Container):
         @return always non-zero
       """)
 
+    self.method("int", "emplace", {"target": inout(self)} | self.element.constructor_parameters,
+      constraint=lambda: self.element.emplaceable and self.element.comparable,
+      brief="Construct element in-place",
+      description="""
+        Constructs an element in-place with forwarded parameters and inserts it into the
+        multiset, preserving any existing duplicates.
+        Every multiset implementation inherits this protocol operation.
+        Returns non-zero indicating the element was inserted.
+
+        @param[in,out] target the multiset to insert into
+        @return non-zero once the constructed element was inserted
+      """)
+
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove one occurrence of element",
       description="""
         Removes one occurrence of the element if present, leaving the multiset unchanged otherwise.

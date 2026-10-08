@@ -42,6 +42,29 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
       """
       f.code = self._insert_at_code(pos_code, "pos", f.element)
 
+    with self.emplace as f:
+      f.brief = "Construct element in place in the multiset"
+      f.description = """
+        Constructs the element in place with the forwarded parameters and inserts it into the
+        multiset at the upper bound position, keeping equal elements in FIFO order.
+
+        @param[in,out] target the multiset to insert into
+        @return always returns 1
+      """
+      f.references.add(self.upper_bound)
+      def _emplace_code(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        _temp_elem = self.element.variable("temp_elem")
+        pos_code = f"""
+          size_t pos, i;
+          {_temp_elem.definition};
+          assert(target);
+          {self.element.create(_temp_elem, *create_args)};
+          pos = {self.upper_bound(f.target, _temp_elem)};
+        """
+        return self._move_at_code(pos_code, "pos", _temp_elem)
+      f.code = _emplace_code
+
     with self.remove as f:
       f.brief = "Remove one occurrence of element"
       f.description = """

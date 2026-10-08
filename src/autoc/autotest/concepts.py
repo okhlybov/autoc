@@ -514,6 +514,21 @@ def emit_multiset(ctx):
              "\n".join([f"{ctx.call('put', ctx.t, a0)};", f"{ctx.call('put', ctx.t, a0)};",
                          f"TEST_EQUAL({ctx.call('count', ctx.t, a0)}, 2);"]), nlocs=1)
 
+  if active(T, "emplace") and active(T, "count"):
+    ctor_params = getattr(ek.type, "constructor_parameters", None)
+    if ctor_params:
+      # the ctor args match e0's sample value so count() can observe the insertion
+      ctor_args = [str(ek.values[0]) for _ in ctor_params]
+      ctx.unit("emplace(): construct in place and count",
+               "\n".join([f"TEST_TRUE({ctx.call('emplace', ctx.t, *ctor_args)});",
+                          f"TEST_TRUE({ctx.call('emplace', ctx.t, *ctor_args)});",
+                          f"TEST_EQUAL({ctx.call('count', ctx.t, ctx.earg(0))}, 2);"]), nlocs=1)
+    elif ek.numeric:
+      # parameterless kinds construct the zero value the numeric samples start at
+      ctx.unit("emplace(): default-construct and count",
+               "\n".join([f"TEST_TRUE({ctx.call('emplace', ctx.t)});",
+                          f"TEST_EQUAL({ctx.call('count', ctx.t, ctx.earg(0))}, 1);"]))
+
   if active(T, "remove") and active(T, "count"):
     ctx.unit("remove(): single occurrence",
              "\n".join([f"{ctx.call('put', ctx.t, a0)};", f"{ctx.call('put', ctx.t, a0)};",
@@ -559,6 +574,13 @@ def emit_multimapping(ctx):
     ctx.unit("put()/count(): multiple values per key",
              "\n".join([f"{T.put(ctx.t, k0, '100')};", f"{T.put(ctx.t, k0, '101')};",
                          f"TEST_EQUAL({ctx.call('count', ctx.t, k0)}, 2);"]), nlocs=1)
+
+  if active(T, "emplace") and active(T, "count"):
+    # matrix multimap values are int, so emplace() takes just the key and
+    # default-constructs the zero value
+    ctx.unit("emplace(): construct value in place",
+             "\n".join([f"TEST_TRUE({ctx.call('emplace', ctx.t, k0)});",
+                        f"TEST_EQUAL({ctx.call('count', ctx.t, k0)}, 1);"]))
 
   if active(T, "wipe"):
     ctx.unit("wipe(): all values of a key",

@@ -296,6 +296,21 @@ class Counter(_StructRenderer, Multiset):
         return 1;
       """
 
+    with self.emplace as f:
+      def _emplace_code(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        _temp = self.element.variable("temp")
+        _destroy_temp = f"{self.element.destroy(_temp)};" if self.element.destructible else ""
+        return f"""
+          {_temp.definition};
+          assert(target);
+          {self.element.create(_temp, *create_args)};
+          {self.add(f.target, _temp, 1)};
+          {_destroy_temp}
+          return 1;
+        """
+      f.code = _emplace_code
+
     with self.remove as f:
       f.code = f"""
         const size_t* v;
@@ -341,6 +356,7 @@ class Counter(_StructRenderer, Multiset):
 
     with self.equal_range as f:
       result = f.result.variable("result")
+      single = self.element.variable("result.single_element")
       f.code = lambda f=f: f"""
         {result.definition};
         size_t cnt;
@@ -350,13 +366,14 @@ class Counter(_StructRenderer, Multiset):
         result.is_single = 1;
         result.single_count = cnt;
         if(cnt > 0) {{
-          {self.element.copy("result.single_element", f.element)};
+          {self.element.copy(single, f.element)};
         }}
         return {result};
       """
 
     # --- Algebraic multiset operations ---
     r = self.range.variable("r")
+    elem = self.element.variable("elem")
 
     with self.union as f:
       f.code = lambda f=f: f"""
@@ -366,11 +383,11 @@ class Counter(_StructRenderer, Multiset):
         assert(other);
         if(target == other) return 0;
         for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          size_t t_cnt = {self.count(f.target, "elem")};
+          size_t t_cnt = {self.count(f.target, elem)};
           if(o_cnt > t_cnt) {{
-            {self.add(f.target, "elem", "o_cnt - t_cnt")};
+            {self.add(f.target, elem, "o_cnt - t_cnt")};
             added += o_cnt - t_cnt;
           }}
         }}
@@ -389,9 +406,9 @@ class Counter(_StructRenderer, Multiset):
           return removed;
         }}
         for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          removed += {self.subtract(f.target, "elem", "o_cnt")};
+          removed += {self.subtract(f.target, elem, "o_cnt")};
         }}
         return removed;
       """
@@ -408,13 +425,13 @@ class Counter(_StructRenderer, Multiset):
         {self.create(temp)};
         {self.copy(temp, f.target)};
         for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, "elem")};
+          size_t o_cnt = {self.count(f.other, elem)};
           if(o_cnt == 0) {{
-            removed += {self.wipe(f.target, "elem")};
+            removed += {self.wipe(f.target, elem)};
           }} else if(t_cnt > o_cnt) {{
-            removed += {self.subtract(f.target, "elem", "t_cnt - o_cnt")};
+            removed += {self.subtract(f.target, elem, "t_cnt - o_cnt")};
           }}
         }}
         {self.destroy(temp)};
@@ -436,27 +453,27 @@ class Counter(_StructRenderer, Multiset):
         }}
         {self.create(temp)};
         for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          size_t t_cnt = {self.count(f.target, "elem")};
+          size_t t_cnt = {self.count(f.target, elem)};
           if(o_cnt > t_cnt) {{
-            {self.add(temp, "elem", "o_cnt - t_cnt")};
+            {self.add(temp, elem, "o_cnt - t_cnt")};
           }}
         }}
         for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, "elem")};
+          size_t o_cnt = {self.count(f.other, elem)};
           if(o_cnt > 0) {{
             size_t rem = t_cnt > o_cnt ? o_cnt : t_cnt;
-            {self.subtract(f.target, "elem", "rem")};
+            {self.subtract(f.target, elem, "rem")};
             changed += rem;
           }}
         }}
         for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t cnt = {self.range.count(r)};
-          {self.add(f.target, "elem", "cnt")};
+          {self.add(f.target, elem, "cnt")};
           changed += cnt;
         }}
         {self.destroy(temp)};
@@ -471,9 +488,9 @@ class Counter(_StructRenderer, Multiset):
         if(target == other) return 1;
         if(target->total_size > other->total_size) return 0;
         for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
-          {self.element} elem = {self.range.front(r)};
+          {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, "elem")};
+          size_t o_cnt = {self.count(f.other, elem)};
           if(t_cnt > o_cnt) return 0;
         }}
         return 1;
