@@ -1,7 +1,7 @@
 from autoc.test import *
-from autoc.static_vector import Vector
+from autoc.packet import Packet
 
-x = Type(type := Vector("int_static_vector", "int", 4))
+x = Type(type := Packet("int_packet", "int", 4))
 
 t = type.variable("t")
 t1 = type.variable("t1")
@@ -17,21 +17,21 @@ x.cleanup(f"""
   {type.destroy(t) if type.destructible else str()};
 """)
 
-x.unit(f"{type.empty}(): test empty static vector", f"""
+x.unit(f"{type.empty}(): test empty packet", f"""
   TEST_TRUE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 0 );
   TEST_EQUAL( {type.capacity(t)}, 4 );
 """)
 
-x.unit(f"{type.hash}(): hash empty static vector", f"""
+x.unit(f"{type.hash}(): hash empty packet", f"""
   {type.hash(t)};
 """)
 
-x.unit(f"{type.contains}(): !contained in empty static vector", f"""
+x.unit(f"{type.contains}(): !contained in empty packet", f"""
   TEST_FALSE( {type.contains(t, 42)} );
 """)
 
-x.unit(f"{type.push}(): push to empty static vector", f"""
+x.unit(f"{type.push}(): push to empty packet", f"""
   {type.push(t, 10)};
   TEST_FALSE( {type.empty(t)} );
   TEST_EQUAL( {type.size(t)}, 1 );
@@ -81,7 +81,7 @@ x.unit(f"{type.pop}(): pop elements in LIFO order down to empty", f"""
   TEST_EQUAL( {type.size(t)}, 0 );
 """)
 
-x.unit(f"{type.clear}(): clear static vector", f"""
+x.unit(f"{type.clear}(): clear packet", f"""
   {type.push(t, 1)};
   {type.push(t, 2)};
   {type.push(t, 3)};
@@ -135,7 +135,7 @@ x.cleanup(f"""
   {type.destroy(t2) if type.destructible else str()};
 """)
 
-x.unit(f"{type.equal}(): compare empty and populated static vectors", f"""
+x.unit(f"{type.equal}(): compare empty and populated packets", f"""
   TEST_TRUE( {type.equal(t1, t2)} );
   {type.push(t1, 7)};
   TEST_FALSE( {type.equal(t1, t2)} );
@@ -146,7 +146,7 @@ x.unit(f"{type.equal}(): compare empty and populated static vectors", f"""
   TEST_FALSE( {type.equal(t1, t2)} );
 """)
 
-x.unit(f"{type.hash}(): hash equal static vectors", f"""
+x.unit(f"{type.hash}(): hash equal packets", f"""
   {type.push(t1, 42)};
   {type.push(t1, 99)};
   {type.push(t2, 42)};
@@ -154,7 +154,7 @@ x.unit(f"{type.hash}(): hash equal static vectors", f"""
   TEST_EQUAL( {type.hash(t1)}, {type.hash(t2)} );
 """)
 
-x.unit(f"{type.copy}(): copy static vector", f"""
+x.unit(f"{type.copy}(): copy packet", f"""
   {type.push(t1, 100)};
   {type.push(t1, 200)};
   {type.copy(t2, t1)};
@@ -164,7 +164,7 @@ x.unit(f"{type.copy}(): copy static vector", f"""
   TEST_EQUAL( {type.get(t2, 1)}, 200 );
 """)
 
-x.unit(f"{type.move}(): move static vector", f"""
+x.unit(f"{type.move}(): move packet", f"""
   {type.push(t1, 111)};
   {type.push(t1, 222)};
   {type.move(t2, t1)};
@@ -183,7 +183,7 @@ x.cleanup(f"""
   {type.destroy(t) if type.destructible else str()};
 """)
 
-x.unit(f"{type.create_size}(): create default-initialized static vector", f"""
+x.unit(f"{type.create_size}(): create default-initialized packet", f"""
   TEST_EQUAL( {type.size(t)}, 3 );
   TEST_EQUAL( {type.get(t, 0)}, 0 );
   TEST_EQUAL( {type.get(t, 1)}, 0 );

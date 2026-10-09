@@ -431,3 +431,27 @@ y.unit(f"{dtype.put}()/{dtype.remove}(): dynamic container protocol addition and
   TEST_TRUE( {dtype.empty(dt)} );
   TEST_FALSE( {dtype.remove(dt, 30)} );
 """)
+
+
+# 3. Opt-out instantiation: the sort/bisect family is optional and absent when disabled
+plain_type = Static("int_scb_plain", "int", 4, sorting_operations=False)
+x_plain = Type(plain_type)
+
+pt = plain_type.variable("pt")
+x_plain.setup(f"""
+  {pt.definition};
+  {plain_type.create(pt)};
+""")
+x_plain.cleanup(f"""
+  {plain_type.destroy(pt) if plain_type.destructible else str()};
+""")
+
+x_plain.unit(f"{plain_type.push}(): ring buffer without the sorting operations", f"""
+  {plain_type.push(pt, 3)};
+  {plain_type.push(pt, 1)};
+  {plain_type.push(pt, 2)};
+  TEST_EQUAL( {plain_type.size(pt)}, 3 );
+  TEST_EQUAL( {plain_type.get(pt, 0)}, 3 );
+  TEST_EQUAL( {plain_type.get(pt, 1)}, 1 );
+  TEST_EQUAL( {plain_type.get(pt, 2)}, 2 );
+""")

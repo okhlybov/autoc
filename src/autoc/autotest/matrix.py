@@ -10,7 +10,7 @@
 
 import autoc.std as std
 from autoc.vector import Vector
-from autoc.static_vector import Vector as StaticVector
+from autoc.packet import Packet
 from autoc.array import Array
 from autoc.tiered_vector import Vector as TieredVector
 from autoc.list import List
@@ -84,7 +84,7 @@ def _simple(cls, **kwargs):
 
 ROWS = (
   (_simple(Vector), "vector", ALL),
-  (_simple(StaticVector, capacity=8), "svector", ("int", "cstring")),  # slots default-construct: parametrized-create kinds excluded
+  (_simple(Packet, capacity=8), "packet", ("int", "cstring")),  # slots default-construct: parametrized-create kinds excluded
   (_simple(Array, size=8), "array", ("int", "cstring")),
   (_simple(TieredVector), "tiered", ("int",)),  # growth default-constructs slots: parametrized-create kinds excluded
   # Node-based sequences over arc elements are excluded: their member rendering

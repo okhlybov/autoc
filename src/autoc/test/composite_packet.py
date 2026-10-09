@@ -1,8 +1,8 @@
 from autoc.test import *
-from autoc.static_vector import Vector
+from autoc.packet import Packet
 from autoc.test.primitive_arc import type as arc
 
-x = Type(type := Vector("arc_static_vector", arc, 3))
+x = Type(type := Packet("arc_packet", arc, 3))
 
 t = type.variable("t")
 t1 = type.variable("t1")
@@ -19,7 +19,7 @@ x.cleanup(f"""
   {type.destroy(t)};
 """)
 
-x.unit(f"{type.push}(): push composite references to static vector", f"""
+x.unit(f"{type.push}(): push composite references to packet", f"""
   {p.definition};
   {arc.create(p)};
   *p = 10;
@@ -36,7 +36,7 @@ x.unit(f"{type.push}(): push composite references to static vector", f"""
   TEST_EQUAL( *{type.back_view(t)}, 20 );
 """)
 
-x.unit(f"{type.pop}(): pop composite reference from static vector", f"""
+x.unit(f"{type.pop}(): pop composite reference from packet", f"""
   {p.definition};
   {p_out.definition};
   {arc.create(p)};
@@ -50,7 +50,7 @@ x.unit(f"{type.pop}(): pop composite reference from static vector", f"""
   {arc.destroy(p_out)};
 """)
 
-x.unit(f"{type.clear}(): clear static vector of composite elements", f"""
+x.unit(f"{type.clear}(): clear packet of composite elements", f"""
   {p.definition};
   {arc.create(p)};
   *p = 50;
@@ -80,7 +80,7 @@ x.cleanup(f"""
   {type.destroy(t2)};
 """)
 
-x.unit(f"{type.copy}(): copy static vector with composite elements", f"""
+x.unit(f"{type.copy}(): copy packet with composite elements", f"""
   {p.definition};
   {arc.create(p)};
   *p = 42;
@@ -93,7 +93,7 @@ x.unit(f"{type.copy}(): copy static vector with composite elements", f"""
   TEST_EQUAL( *{type.front_view(t2)}, 42 );
 """)
 
-x.unit(f"{type.move}(): move static vector with composite elements", f"""
+x.unit(f"{type.move}(): move packet with composite elements", f"""
   {p.definition};
   {arc.create(p)};
   *p = 88;

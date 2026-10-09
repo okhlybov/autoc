@@ -252,8 +252,8 @@ consumed 23
 |---|---|---|
 | `autoc.vector` | `Vector` | direct-access sequence, direct-access range |
 | `autoc.array` | `Array` | fixed-size stack-allocated contiguous C array, direct-access range, zero heap allocation |
-| `autoc.static_vector` | `Vector` | fixed-capacity stack-allocated sequence, direct-access range, zero heap allocations |
-| `autoc.circular_buffer` | `Static`, `Dynamic` | fixed-capacity stack or dynamic heap circular ring buffer, direct-access range |
+| `autoc.packet` | `Packet` | fixed-capacity stack-allocated vector-like packet (tuple-record variant storage), direct-access range, zero heap allocations |
+| `autoc.circular_buffer` | `Static`, `Dynamic` | fixed-capacity stack or dynamic heap circular ring buffer, direct-access range, sortable (opt-out) |
 | `autoc.tiered_vector` | `Vector` | chunked append-optimized direct-access buffer — amortized O(1) push, stable addresses, direct-access range |
 | `autoc.list` | `List` | singly-linked sequence, forward range |
 | `autoc.deque` | `Deque` | doubly-linked sequence, bidirectional range |
@@ -270,8 +270,8 @@ consumed 23
 | `autoc.flat_set` | `Set` | contiguous sorted dynamic array with binary search lookup, cache-friendly layout |
 | `autoc.chained_hash_map` | `Map` | bucket-chaining hash map over internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | flat, sentinel-based open-addressing hash map over internal entry set |
-| `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend |
-| `autoc.flat_map` | `Map` | ordered map over a contiguous sorted array of key-value pairs (AoS layout) |
+| `autoc.tree_map` | `Map` | generic binary search tree map parameterized by tree set backend, bidirectional range |
+| `autoc.flat_map` | `Map` | ordered map over a contiguous sorted array of key-value pairs (AoS layout), bidirectional range |
 | `autoc.flat_multiset` | `Set` | contiguous sorted dynamic array multiset with binary search and duplicates preserved |
 | `autoc.counter` | `Counter` | multiset frequency counter tracking element multiplicities over an explicit map backend |
 | `autoc.flat_multimap` | `Map` | ordered multimap over a contiguous sorted array of key-value pairs (AoS layout) with duplicate keys preserved |

@@ -12,7 +12,7 @@ import in your module script; the *type* is the class you instantiate with a con
 | `autoc.deque` | `Deque` | `Deque<T>` | `Deque<T>::Range` (bidirectional) | doubly linked; both ends are `O(1)` |
 | `autoc.vector` | `Vector` | `Vector<T>` | `Vector<T>::Range` (direct access) | contiguous dynamic storage, amortized `O(1)` push/pop, indexed access, sorting and binary search; optional inline capacity for small buffer optimization |
 | `autoc.array` | `Array` | `Array<T, N>` | `Array<T, N>::Range` (direct access) | fixed size, stack-allocated contiguous C array, zero heap allocation |
-| `autoc.static_vector` | `Vector` | `StaticVector<T, N>` | `StaticVector<T, N>::Range` (direct access) | fixed capacity, stack-allocated, zero heap allocation; backed by variant |
+| `autoc.packet` | `Packet` | `Packet<T, N>` | `Packet<T, N>::Range` (direct access) | fixed capacity, stack-allocated, zero heap allocation; vector-like packet backed by a variant of tuple records |
 | `autoc.circular_buffer` | `Static`, `Dynamic` | `StaticCircularBuffer<T>`, `DynamicCircularBuffer<T>` | `StaticCircularBuffer<T>::Range`, `DynamicCircularBuffer<T>::Range` (direct access) | stack or heap-allocated circular ring buffer |
 | `autoc.tiered_vector` | `Vector` | `TieredVector<T>` | `TieredVector<T>::Range` (direct access) | chunked; amortized `O(1)` append with stable addresses |
 | `autoc.stack` | `Stack` | `Stack<T>` | `Stack<T>::Range` (forward) | LIFO adapter over the list |
@@ -39,9 +39,9 @@ import in your module script; the *type* is the class you instantiate with a con
 |---|---|---|---|---|
 | `autoc.chained_hash_map` | `Map` | `ChainedHashMap<K, T>` | `ChainedHashMap<K, T>::Range` (forward) | bucket chaining over an internal entry set |
 | `autoc.intrusive_hash_map` | `Map` | `IntrusiveHashMap<K, T>` | `IntrusiveHashMap<K, T>::Range` (forward) | flat open addressing; entries carry the sentinels |
-| `autoc.tree_map` | `Map` | `TreeMap<K, T>` | `TreeMap<K, T>::Range` (forward) | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
-| `autoc.btree_map` | `Map` | `BTreeMap<K, T>` | `BTreeMap<K, T>::Range` (forward) | ordered by key over an internal B-Tree set (@ref BTreeSet) |
-| `autoc.flat_map` | `Map` | `FlatMap<K, T>` | `FlatMap<K, T>::Range` (forward) | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
+| `autoc.tree_map` | `Map` | `TreeMap<K, T>` | `TreeMap<K, T>::Range` (bidirectional) | ordered by key over a binary search tree set (@ref AVLSet, @ref RBSet, @ref TreapSet) |
+| `autoc.btree_map` | `Map` | `BTreeMap<K, T>` | `BTreeMap<K, T>::Range` (bidirectional) | ordered by key over an internal B-Tree set (@ref BTreeSet) |
+| `autoc.flat_map` | `Map` | `FlatMap<K, T>` | `FlatMap<K, T>::Range` (bidirectional) | ordered by key over a contiguous sorted array of key-value pairs (AoS) |
 
 ## Multisets
 
@@ -71,7 +71,7 @@ import in your module script; the *type* is the class you instantiate with a con
 
 1. **Do you need indexed access?** Use @ref Array when size is fixed, or @ref Vector
    for dynamic resizing (with optional small buffer optimization via inline capacity),
-   or @ref StaticVector when capacity is bounded and zero heap allocation is required,
+   or @ref Packet when capacity is bounded and zero heap allocation is required,
    or @ref TieredVector when the buffer grows large or grows often and you need stable element addresses.
 2. **Do you need to insert or remove at both ends?** Use @ref Deque; the adapters
    @ref Stack and @ref Queue are the LIFO/FIFO specializations of that pattern.

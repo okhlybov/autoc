@@ -11,7 +11,7 @@ from autoc.core import out, inout, Callable, Indirection, _StructRenderer
 
 
 #
-class Vector(_StructRenderer, Assignable, Sequential, Insertable):
+class Packet(_StructRenderer, Assignable, Sequential, Insertable):
   # Not Sortable: the tagged-union storage addresses elements through named tuple fields
   # (s<N>._i), so no addressable expression exists for a runtime index - the bisection
   # handler protocol (_element(target, index)) cannot be honored without a storage
