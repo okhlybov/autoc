@@ -14,9 +14,13 @@ class Map(Mapping, Ordered):
   def _diagnostic_context(self):
     return f"{self._diagnostics} '{self.name}'"
 
-  def __init__(self, name, element, index, set, *args, **kws):
+  def __init__(self, name, element, index, set=None, *args, tree_set=None, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self._set = set.require_ordered(self)(
+    set = set if set is not None else tree_set
+    if set is None:
+      from autoc.core import TraitError
+      raise TraitError(f"{self._diagnostic_context} requires a set backend")
+    self._set = set.require_set(self).require_ordered(self, "set backend")(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",

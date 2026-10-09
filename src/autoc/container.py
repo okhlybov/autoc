@@ -65,14 +65,44 @@ class Container(Composite):
     return Mapping.require(obj, inquirer, role=role)
 
   @_binder
+  def require_multimapping(obj, inquirer, role="multimapping backend"):
+    from autoc.multimapping import Multimapping
+    return Multimapping.require(obj, inquirer, role=role)
+
+  @_binder
   def require_set(obj, inquirer, role="set backend"):
     from autoc.set import Set
     return Set.require(obj, inquirer, role=role)
 
   @_binder
+  def require_multiset(obj, inquirer, role="multiset backend"):
+    from autoc.multiset import Multiset
+    return Multiset.require(obj, inquirer, role=role)
+
+  @_binder
   def require_insertable(obj, inquirer, role="collection backend"):
     from autoc.insertable import Insertable
     return Insertable.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_traversable(obj, inquirer, role="collection backend"):
+    from autoc.traversable import Traversable
+    return Traversable.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_sequential(obj, inquirer, role="sequential collection"):
+    from autoc.sequential import Sequential
+    return Sequential.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_indexable(obj, inquirer, role="indexable collection"):
+    from autoc.indexable import Indexable
+    return Indexable.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_assignable(obj, inquirer, role="assignable collection"):
+    from autoc.assignable import Assignable
+    return Assignable.require(obj, inquirer, role=role)
   
   def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)

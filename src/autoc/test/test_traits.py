@@ -210,7 +210,12 @@ class TestTraits(unittest.TestCase):
     # Receiver-oriented require methods on container classes
     self.assertIs(AVLSet.require_set(inq), AVLSet)
     self.assertIs(Vector.require_insertable(inq), Vector)
+    self.assertIs(Vector.require_traversable(inq), Vector)
     self.assertIs(FlatMap.require_mapping(inq), FlatMap)
+
+    # Batch require_all with trait strings and types
+    self.assertIs(AVLSet.require_all(("set", "ordered"), inq, "set backend"), AVLSet)
+    self.assertIs(AVLSet.require_all((Set, Ordered), inq, "set backend"), AVLSet)
 
     with self.assertRaises(TraitError) as ctx:
       Vector.require_set(inq)
@@ -223,6 +228,10 @@ class TestTraits(unittest.TestCase):
     with self.assertRaises(TraitError) as ctx:
       AVLSet.require_mapping(inq)
     self.assertIn("requires a mapping backend - one claiming Mapping", str(ctx.exception))
+
+    with self.assertRaises(TraitError) as ctx:
+      PriorityQueue.require_traversable(inq)
+    self.assertIn("requires a collection backend - one claiming Traversable", str(ctx.exception))
 
     # Receiver-oriented require methods on container instances
     vec_inst = Vector("test_vec_inst", "int")
@@ -283,7 +292,12 @@ class TestTraits(unittest.TestCase):
 
     with self.assertRaises(TraitError) as ctx:
       TreeMap("neg_tm_backend", "int", "int", ChainedHashSet)
-    self.assertIn("requires an ordered component", str(ctx.exception))
+    self.assertIn("requires an ordered set backend", str(ctx.exception))
+
+    # Tree map rejects an ordered collection that is NOT a Set (e.g. FlatMap)
+    with self.assertRaises(TraitError) as ctx:
+      TreeMap("neg_tm_not_set", "int", "int", FlatMap)
+    self.assertIn("requires a set backend - one claiming Set; got Map", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
       FlatMap("neg_fm", "int", comp_only)
@@ -298,7 +312,7 @@ class TestTraits(unittest.TestCase):
       Counter("neg_cnt", "int", Vector)
     self.assertIn("requires a mapping backend - one claiming Mapping", str(ctx.exception))
 
-    # Multimap demands set and insertable collection backends
+    # Multimap demands set and insertable+traversable collection backends
     with self.assertRaises(TraitError) as ctx:
       Multimap("neg_mm_set", "int", "int", set=Vector, collection=Vector)
     self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
@@ -306,6 +320,11 @@ class TestTraits(unittest.TestCase):
     with self.assertRaises(TraitError) as ctx:
       Multimap("neg_mm_col", "int", "int", set=AVLSet, collection=ChainedHashMap)
     self.assertIn("requires a collection backend - one claiming Insertable", str(ctx.exception))
+
+    # Multimap rejects an Insertable collection that is NOT Traversable (e.g. PriorityQueue)
+    with self.assertRaises(TraitError) as ctx:
+      Multimap("neg_mm_pq", "int", "int", set=AVLSet, collection=PriorityQueue)
+    self.assertIn("requires a collection backend - one claiming Traversable; got Queue", str(ctx.exception))
 
   def test_map_payload_freedom(self):
     opaque = OpaqueType("payload_opaque_t")

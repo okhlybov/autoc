@@ -69,6 +69,17 @@ class _MultiphaseConstructible(type):
     return obj
 
 
+# Descriptor binding to the class when accessed on the class and to the instance when accessed on an instance
+class _binder:
+
+  def __init__(self, fn):
+    self.fn = fn
+
+  def __get__(self, instance, owner=None):
+    target = owner if instance is None else instance
+    return functools.partial(self.fn, target)
+
+
 # Mixin for types which support all operations
 class _Traitful:
 
@@ -165,10 +176,16 @@ class _Traitful:
   # (which stay total so the late-bound constraints can probe them and simply omit the
   # operation when the trait is absent) the enforcers run in the demanding container's
   # constructor where the absence of a demanded trait is an error, not an omission
-  def require_all(self, traits, inquirer, role="type"):
+  @_binder
+  def require_all(self_or_cls, traits, inquirer, role="type"):
     for trait in traits:
-      getattr(self, f"require_{trait}")(inquirer, role)
-    return self
+      if isinstance(trait, str):
+        getattr(self_or_cls, f"require_{trait}")(inquirer, role)
+      elif isinstance(trait, type):
+        trait.require(self_or_cls, inquirer, role=role)
+      else:
+        raise TypeError(f"Expected trait name or type, got {trait}")
+    return self_or_cls
 
   def require_any(self, traits, inquirer, role="type"):
     for trait in traits:
@@ -198,17 +215,6 @@ def _make_trait_requirement(trait, phrase):
 for _trait, _phrase in _Traitful._trait_phrases:
   setattr(_Traitful, f"require_{_trait}", _make_trait_requirement(_trait, _phrase))
 del _trait, _phrase
-
-
-# Descriptor binding to the class when accessed on the class and to the instance when accessed on an instance
-class _binder:
-
-  def __init__(self, fn):
-    self.fn = fn
-
-  def __get__(self, instance, owner=None):
-    target = owner if instance is None else instance
-    return functools.partial(self.fn, target)
 
 
 class _VisibilityManager:
@@ -319,7 +325,8 @@ class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstru
     target = component if isinstance(component, type) else type(component)
     if not issubclass(target, cls):
       r = f" {role}" if role else f" {cls.__name__.lower()}"
-      raise TraitError(f"{inquirer._diagnostic_context} requires a{r} - one claiming {cls.__name__}; got {getattr(target, '__name__', str(target))}")
+      article = "an" if r.strip()[:1].lower() in "aeiou" else "a"
+      raise TraitError(f"{inquirer._diagnostic_context} requires {article}{r} - one claiming {cls.__name__}; got {getattr(target, '__name__', str(target))}")
     return component
 
   def __setup__(self):

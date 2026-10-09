@@ -246,7 +246,7 @@ class Map(Multimapping):
 
   def __init__(self, name, element, index, set, collection, *args, dependencies=(), **kws):
     super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
-    self._collection = collection.require_insertable(self)(
+    self._collection = collection.require_insertable(self).require_traversable(self, "collection backend")(
       self._decorate_component("collection", abbreviate=True),
       self.element,
       visibility="internal",

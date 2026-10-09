@@ -118,7 +118,7 @@ def _map_simple(cls, **kwargs):
 MAP_ROWS = (
   (_map_simple(ChainedHashMap), "chained_hash_map", ("int", "cstring", "comp")),
   (_map_simple(FlatMap), "flat_map", ("int", "cstring")),
-  (_map_simple(TreeMap, tree_set=RbSet), "rb_tree_map", ("int", "cstring")),
+  (_map_simple(TreeMap, set=RbSet), "rb_tree_map", ("int", "cstring")),
   (_map_simple(BTreeMap, order=4), "btree_map", ORDERED),
   (lambda name, value, key: IntrusiveHashMap(name, value, key, dependencies=(std.limits_h,), **_int_entry_sentinels()),
    "intrusive_hash_map", ("int",)),
