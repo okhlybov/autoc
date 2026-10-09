@@ -2,7 +2,7 @@ from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.ordered import Ordered
 from autoc.set import Set
 from autoc.avl_set import Set as AVLSet
-from autoc.core import Indirection, require, enforced, Type, Orderable
+from autoc.core import Indirection, enforced, Type, Orderable
 
 
 #
@@ -17,10 +17,8 @@ class Map(Mapping, Ordered):
     return f"{self._diagnostics} '{self.name}'"
 
   @enforced
-  def __init__(self, name: str, element: Type, index: Orderable, set: Set & Ordered = AVLSet, *args, tree_set=None, **kws):
+  def __init__(self, name: str, element: Type, index: Orderable, set: Set & Ordered = AVLSet, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    if tree_set is not None:
-      set = require(tree_set, Set & Ordered, inquirer=self, role="set backend")
     self._set = set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
