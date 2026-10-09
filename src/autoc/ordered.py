@@ -19,11 +19,11 @@ class Ordered(Property):
   _diagnostics = "Ordered"
 
   @classmethod
-  def require(cls, component, context):
+  def require(cls, component, inquirer):
     # The requirement application of the property: a composite demanding an ordered
     # component checks the class here, at its own construction time
     if not issubclass(component, cls):
-      raise TraitError(f"{context} requires an ordered component - one claiming the Ordered property (ascending iteration); got {component.__name__}")
+      raise TraitError(f"{inquirer._diagnostic_context} requires an ordered component - one claiming the Ordered property (ascending iteration); got {component.__name__}")
     return component
 
   def __init__(self, *args, **kws):

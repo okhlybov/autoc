@@ -9,12 +9,11 @@ class Set(Traversable, Insertable):
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)
     super().__init__(name, element, *args, **kws)
-    self.element.require_comparable(f"Set '{name}'", "element type")
+    self.element.require_comparable(self, "element type")
 
   def __setup__(self):
     super().__setup__()
 
-    
     self.method("int", "put", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable and self.element.comparable, brief="Insert element if not present",
       description="""
         Inserts the element when the set holds no equal element yet. Every set implementation
@@ -25,6 +24,7 @@ class Set(Traversable, Insertable):
         @param[in] element the element to insert - ignored when the set already holds an equal element
         @return non-zero if the element was inserted and zero if an equal element was already present
       """)
+
     self.method("int", "emplace", {"target": inout(self)} | self.element.constructor_parameters,
       constraint=lambda: self.element.emplaceable and self.element.comparable,
       brief="Construct element in-place if not present",
@@ -36,6 +36,7 @@ class Set(Traversable, Insertable):
         @param[in,out] target the set to insert into
         @return non-zero if the element was inserted and zero if an equal element was already present
       """)
+
     self.method("int", "remove", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.comparable, brief="Remove element if present",
       description="""
         Removes the element when the set holds an equal one, leaving the set unchanged

@@ -164,16 +164,16 @@ class _Traitful:
   # (which stay total so the late-bound constraints can probe them and simply omit the
   # operation when the trait is absent) the enforcers run in the demanding container's
   # constructor where the absence of a demanded trait is an error, not an omission
-  def require_all(self, traits, context, role="type"):
+  def require_all(self, traits, inquirer, role="type"):
     for trait in traits:
-      getattr(self, f"require_{trait}")(context, role)
+      getattr(self, f"require_{trait}")(inquirer, role)
     return True
 
-  def require_any(self, traits, context, role="type"):
+  def require_any(self, traits, inquirer, role="type"):
     for trait in traits:
       if getattr(self, trait, False):
         return True
-    raise TraitError(f"{context} requires the {role} to be " +
+    raise TraitError(f"{inquirer._diagnostic_context} requires the {role} to be " +
       " or ".join(self._trait_phrase(trait) for trait in traits))
 
 
@@ -184,9 +184,9 @@ class TraitError(ValueError):
 
 
 def _make_trait_requirement(trait, phrase):
-  def require(self, context, role="type"):
+  def require(self, inquirer, role="type"):
     if not getattr(self, trait, False):
-      raise TraitError(f"{context} requires the {role} to be {phrase}")
+      raise TraitError(f"{inquirer._diagnostic_context} requires the {role} to be {phrase}")
     return True
   require.__name__ = f"require_{trait}"
   require.__qualname__ = f"require_{trait}"
@@ -436,6 +436,12 @@ class _Named(Type):
     self.prefix = prefix if prefix else self.name
     self.decorator = decorator if decorator else sys.modules[__name__].decorator
     self.__attributes = set()
+
+  # Context presentation in requirement diagnostics
+  @property
+  def _diagnostic_context(self):
+    diag = getattr(self, "_diagnostics", None) or type(self).__name__
+    return f"{diag} '{self.name}'"
 
   #
   def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, type=None, **kws):

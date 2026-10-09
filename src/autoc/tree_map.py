@@ -8,9 +8,15 @@ class Map(Mapping, Ordered):
 
   brief = "Ordered map from index to element backed by a binary search tree - iterates in index order"
   
+  _diagnostics = "Tree map"
+
+  @property
+  def _diagnostic_context(self):
+    return f"{self._diagnostics} '{self.name}'"
+
   def __init__(self, name, element, index, tree_set, *args, **kws):
-    Ordered.require(tree_set, f"Tree map '{name}'")
     super().__init__(name, element, index, *args, **kws)
+    Ordered.require(tree_set, self)
     self._set = tree_set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),

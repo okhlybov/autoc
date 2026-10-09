@@ -12,5 +12,9 @@ class Property(Container):
   # The naming of the property in the requirement diagnostics
   _diagnostics = "property"
 
+  @property
+  def _diagnostic_context(self):
+    return f"{self._diagnostics} container '{self.name}'"
+
   def _enforce(self, subject, enforcer, role):
-    getattr(subject, enforcer)(f"{self._diagnostics} container '{self.name}'", role)
+    getattr(subject, enforcer)(self, role)

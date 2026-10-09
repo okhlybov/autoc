@@ -313,7 +313,7 @@ class Mapping(_StructRenderer, Traversable, Assignable):
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index.require_any(("comparable", "orderable"), f"Mapping '{name}'", "index type")
+    self.index.require_any(("comparable", "orderable"), self, "index type")
 
   def _ordering(self):
     # The keyed containers order their indices, not their payload elements

@@ -15,11 +15,11 @@ class Hashed(Property):
   _diagnostics = "Hashed"
 
   @classmethod
-  def require(cls, component, context):
+  def require(cls, component, inquirer):
     # The requirement application of the property: a composite demanding a hashed
     # component checks the class here, at its own construction time
     if not issubclass(component, cls):
-      raise TraitError(f"{context} requires a hashed component - one claiming the Hashed property (hash-addressed); got {component.__name__}")
+      raise TraitError(f"{inquirer._diagnostic_context} requires a hashed component - one claiming the Hashed property (hash-addressed); got {component.__name__}")
     return component
 
   def __init__(self, *args, **kws):

@@ -85,8 +85,8 @@ are claimed in its bases; **properties** (the `-ed` family, `Ordered` and `Hashe
 container or component *is* — and a property becomes a *requirement* the moment a composite demands
 it of a component, which is expressed and enforced at the demanding container's construction time.
 The demand has two levels, both owned by the demanded side: a class-level demand routes through the
-property (`Ordered.require(backend, ...)`, `Hashed.require(backend, ...)`), a trait-level demand through the type's generated
-enforcers (`element.require_orderable(...)`, `require_hashable(...)`, `require_all`, `require_any`) — one phrase table per
+property (`Ordered.require(backend, self)`, `Hashed.require(backend, self)`), a trait-level demand through the type's generated
+enforcers (`element.require_orderable(self, ...)`, `require_hashable(self, ...)`, `require_all`, `require_any`) — accepting the inquiring instance (`self`) directly to resolve diagnostic context centrally without per-call-site string formatting — one phrase table per
 trait keeps the bool query face and the raising demand face permanently paired. The enforcers raise
 `TraitError`; the bool queries stay total so the late-bound constraints can probe them and omit the
 operation rather than fail. The `Ordered` and `Hashed` properties own their invariants centrally: every claiming
