@@ -1,16 +1,18 @@
 import autoc.std as std
-from autoc.mapping import Mapping, _Entry
+from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.flat_set import Set as FlatSet
+from autoc.ordered import Ordered
 from autoc.core import inout
 
 
 #
-class Map(Mapping):
+class Map(Mapping, Ordered):
 
   brief = "Flat map from index to element backed by a contiguous sorted array of key-value pairs"
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
+    self.index.require("orderable", f"Map '{name}'", "index type")
     self._set = FlatSet(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
@@ -19,6 +21,11 @@ class Map(Mapping):
     )
     self.dependencies.add(self._set)
     self._setup_range()
+
+  def _setup_range(self):
+    # The backend iterates in ascending index order - the bidirectional wrapper is
+    # selected statically, never probed from the built component
+    self.range = BidirectionalRange(self)
 
   @property
   def orderable(self):

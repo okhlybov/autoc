@@ -136,6 +136,27 @@ class _Traitful:
   def zero_initializable(self):
     return False
 
+  # The traits the requirement checks may demand - the guard against typoed trait names
+  _trait_names = frozenset((
+    "constructible", "default_constructible", "emplaceable", "destructible",
+    "copyable", "moveable", "swappable", "comparable", "orderable", "hashable",
+    "zero_initializable",
+  ))
+
+  # The requirement application of a trait: a composite demanding a trait of a component
+  # type - its element, index or backend key - checks the demand here, at its own
+  # construction time. The trait predicates live on the type so does their requirement;
+  # the demanding container contributes its name and the role the type plays
+  def require(self, trait, context, role="type"):
+    if trait not in self._trait_names:
+      raise ValueError(f"{context}: unknown trait '{trait}' demanded")
+    if not getattr(self, trait):
+      raise ValueError(f"{context} requires the {role} to be {trait}")
+
+  def require_any(self, traits, context, role="type"):
+    if not any(getattr(self, trait, False) for trait in traits):
+      raise ValueError(f"{context} requires the {role} to be {' or '.join(traits)}")
+
 
 class _VisibilityManager:
 

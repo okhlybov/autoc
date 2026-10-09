@@ -17,6 +17,7 @@ class Queue(_StructRenderer, Insertable):
 
   def __init__(self, name, element, **kws):
     super().__init__(name, element, **kws)
+    self.element.require("orderable", f"Priority queue '{name}'", "element type")
     self._element_p = Indirection(self.element)
 
   # The heap shape is internal: two heaps holding the same elements are not required to

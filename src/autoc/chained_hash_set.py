@@ -12,6 +12,7 @@ class Set(_StructRenderer, autoc.set.Set):
 
   def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
+    self.element.require("hashable", f"Set '{self.name}'", "element type")
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self._bucket_p = Indirection(self._node_p)

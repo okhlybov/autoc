@@ -2,14 +2,16 @@ import autoc.std as std
 from autoc.container import Container, _Range
 from autoc.range import DirectAccess
 from autoc.bisectable import Bisectable
+from autoc.ordered import Ordered
 from autoc.core import inout, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, Bisectable, Container):
+class Set(_StructRenderer, Bisectable, Ordered, Container):
 
   def __init__(self, name, element, *args, dependencies=(), **kws):
     super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)
+    self.element.require("orderable", f"Set '{name}'", "element type")
     self.range = Range(self)
 
   def _element(self, target, index):

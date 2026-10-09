@@ -1,15 +1,17 @@
-from autoc.mapping import Mapping, _Entry
+from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.btree_set import Set as BTreeSet
+from autoc.ordered import Ordered
 from autoc.core import Indirection
 
 
 #
-class Map(Mapping):
+class Map(Mapping, Ordered):
 
   brief = "Ordered map from index to element backed by a B-Tree - iterates in index order"
 
   def __init__(self, name, element, index, *args, order=4, node_capacity=None, **kws):
     super().__init__(name, element, index, *args, **kws)
+    self.index.require("orderable", f"Map '{name}'", "index type")
     set_kws = {}
     if node_capacity is not None:
       set_kws["node_capacity"] = node_capacity
@@ -24,6 +26,11 @@ class Map(Mapping):
     )
     self.dependencies.add(self._set)
     self._setup_range()
+
+  def _setup_range(self):
+    # The backend iterates in ascending index order - the bidirectional wrapper is
+    # selected statically, never probed from the built component
+    self.range = BidirectionalRange(self)
 
   @property
   def orderable(self):

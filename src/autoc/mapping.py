@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.record import Record
 from autoc.core import inout, Callable, _StructRenderer, Macro
 from autoc.container import _Range
-from autoc.range import Forward, Bidirectional, Backward
+from autoc.range import Forward, Bidirectional
 from autoc.traversable import Traversable
 from autoc.indexable import Indexable
 from autoc.assignable import Assignable
@@ -88,17 +88,21 @@ class _Entry(Record):
     self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.index.variable(f"(({left}).index)"), self.index.variable(f"(({right}).index)") )))
 
     # The entries are identified by their indices alone so the ordered containers holding them
-    # must compare them by the index as well
-    with self.compare as f:
-      f.code = f"""
-        assert(left);
-        assert(right);
-        return {self.index.compare(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
-      """
+    # must compare them by the index as well - the hash-based backends need no ordering and
+    # stay usable over non-orderable indices
+    if self.index.orderable:
+      with self.compare as f:
+        f.code = f"""
+          assert(left);
+          assert(right);
+          return {self.index.compare(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
+        """
   
   @property
   def orderable(self):
-    return True # the entries are ordered by their indices alone - the element is the payload
+    # The entries are ordered by their indices alone - the element is the payload - and
+    # only when the index itself is orderable
+    return self.index.orderable
 
   @property
   def constructible(self):
@@ -291,15 +295,13 @@ class Mapping(_StructRenderer, Traversable, Assignable):
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
+    self.index.require_any(("comparable", "orderable"), f"Mapping '{name}'", "index type")
 
   def _setup_range(self):
-    # The mapping range walks the underlying set's range, so it inherits its walk
-    # directions: the ordered backends yield bidirectional ranges, the hash-based
-    # ones stay forward
-    if isinstance(self._set.range, Backward):
-      self.range = BidirectionalRange(self)
-    else:
-      self.range = Range(self)
+    # The abstract mapping range walks forward only; the ordered map subclasses override
+    # this hook with the bidirectional wrapper since their backends iterate in ascending
+    # order - the knowledge is static per concrete module, never probed from the instance
+    self.range = Range(self)
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

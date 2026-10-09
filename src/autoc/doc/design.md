@@ -69,14 +69,29 @@ Every container is a value type carrying the operations its element types allow;
 that, containers compose *capability mixins* — each declares one addressing or traversal
 scheme, and a container mixes in exactly the schemes it honors:
 
-| Capability | Operations | Semantics |
-|---|---|---|
-| `Traversable` | provides `find_view`/`hash` over the range | exposes a range — the container-side counterpart of the range-directionality axis (`Forward`/`Bidirectional`/`DirectAccess` describe the cursor, `Traversable` describes the container) |
-| `Sequential` | adds order-sensitive `equal` | an ordered series of elements — iteration order is canonical; requires `Traversable` |
-| `Insertable` | `put`/`remove` | element-addressed insertion and removal — the membership addressing scheme |
-| `Indexable` | `indexed`/`get`/`view` | position- or key-addressed reads |
-| `Assignable` | adds `set` | position-addressed assignment; implies `Indexable` |
-| `Sortable`, `Bisectable` | `sort`/`reverse`/`sorted`, `lower_bound`/`upper_bound`/`binary_search` | user-sortable then bisectable operation groups |
+| Concept | Kind | Operations | Semantics |
+|---|---|---|---|
+| `Traversable` | ability | provides `find_view`/`hash` over the range | exposes a range — the container-side counterpart of the range-directionality axis (`Forward`/`Bidirectional`/`DirectAccess` describe the cursor, `Traversable` describes the container) |
+| `Sequential` | ability | adds order-sensitive `equal` | an ordered series of elements — iteration order is canonical; requires `Traversable` |
+| `Insertable` | ability | `put`/`remove` | element-addressed insertion and removal — the membership addressing scheme |
+| `Indexable` | ability | `indexed`/`get`/`view` | position- or key-addressed reads |
+| `Assignable` | ability | adds `set` | position-addressed assignment; implies `Indexable` |
+| `Sortable`, `Bisectable` | ability | `sort`/`reverse`/`sorted`, `lower_bound`/`upper_bound`/`binary_search` | user-sortable then bisectable operation groups |
+| `Ordered` | property | — | born-sorted iteration: the ascending element or index order is a structural invariant, so backward traversal is available unconditionally; claimed by the tree and flat sets and the map families keyed over them, never by the hash-based families |
+
+The word class carries the role: **abilities** (the `-able` family) state what a container can do and
+are claimed in its bases; **properties** (the `-ed` family, `Ordered` being the first) state what a
+container or component *is* — and a property becomes a *requirement* the moment a composite demands
+it of a component, which is expressed and enforced at the demanding container's construction time —
+as a class-level demand through the property (`Ordered.require(backend, ...)`) and as a trait-level
+demand through the type (`element.require("orderable", ...)`), the trait predicates living on the
+type so their requirement does too. Hard element, index and backend requirements are likewise checked
+in the constructors — a set demands equality-comparable elements, the hash families demand hashable
+ones, the ordered trees and flat containers demand orderable ones, the adapters demand the backend
+classes — so a misfit fails with a named diagnostic at composition, not as a broken render or a
+missing operation minutes later. Trait-conditional operations stay constraint-gated as ever: the
+constructor checks the requirements without which the container is meaningless, never the mere
+absence of an optional operation.
 
 Insertion is not one capability but a family indexed by the addressing scheme — element
 (`Insertable`), position (`Assignable`), key (the `Mapping`/`Multimapping` families declare
@@ -84,6 +99,12 @@ their own keyed `put`/`set`/`emplace`/`remove`). This is why fixed-count contain
 and specialized sequences (`String`) simply do not mix `Insertable` in rather than disabling
 it, and why a map's keyed `put` does not conflict with an insertable collection's
 `put(element)`: they live on disjoint branches.
+
+Capabilities compose across containment boundaries by *static derivation*: when a container adapts
+another (a map over an internal set), the adapter's capabilities follow from the component's class,
+selected per concrete module — never recovered by probing the built component's instances at setup
+time. A runtime type-test necessity is the taxonomy admitting a concept is missing; `Ordered` exists
+precisely so that the ordered-map range kind needs no selector.
 
 The capability claims are honest by construction. @ref PriorityQueue exposes no range at
 all — its heap shape is internal — so it is `Insertable` without being `Traversable` and
@@ -96,12 +117,14 @@ take the bisection operations directly (their insertion itself bisects), while t
 sequences mix `Sortable`, which implies `Bisectable` — the operations become meaningful
 after `sort()`.
 
-Capabilities come in two tiers. *Structural* capabilities (`Traversable`, `Sequential`,
-`Insertable`, `Indexable`, `Assignable`) are claimed by mixin presence and cannot be
-switched off — a container either has a range or does not. *Algorithmic conveniences*
-(`Sortable`/`Bisectable`, the set algebra, string formatting) ride the operation-group
-flags (`sorting_operations`, `algebraic_operations`, `formatting_operations`) so a concrete
-instantiation omits the code it does not need.
+Capabilities come in two tiers. *Structural* abilities (`Traversable`, `Sequential`,
+`Insertable`, `Indexable`, `Assignable`) and properties (`Ordered`) are claimed by mixin
+presence and cannot be switched off — a container either has a range or is born sorted or
+does not. *Algorithmic conveniences* (`Sortable`/`Bisectable`, the set algebra, string
+formatting) ride the operation-group flags (`sorting_operations`, `algebraic_operations`,
+`formatting_operations`) so a concrete instantiation omits the code it does not need. The
+third tier is not about generating code but about refusing it: *requirements* are checked
+eagerly in the constructors, as described above.
 
 ### Strategies
 

@@ -19,6 +19,7 @@ class Set(_StructRenderer, autoc.set.Set):
   
   def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
+    self.element.require("hashable", f"Set '{self.name}'", "element type")
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
     self.is_empty = _Macro("int", {"entry": self.element}, is_empty)

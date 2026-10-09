@@ -245,6 +245,12 @@ class Map(Multimapping):
   brief = "Generic associative multimap container parameterized by a set and a collection container"
 
   def __init__(self, name, element, index, set, collection, *args, dependencies=(), **kws):
+    import autoc.set
+    from autoc.insertable import Insertable
+    if not isinstance(set, type) or not issubclass(set, autoc.set.Set):
+      raise ValueError(f"Multimap '{name}' requires the set backend to be a Set")
+    if not isinstance(collection, type) or not issubclass(collection, Insertable):
+      raise ValueError(f"Multimap '{name}' requires the collection backend to be an insertable collection")
     super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
     self._collection = collection(
       self._decorate_component("collection", abbreviate=True),

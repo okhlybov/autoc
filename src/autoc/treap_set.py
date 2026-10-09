@@ -1,5 +1,6 @@
 import autoc.std as std
 import autoc.set
+from autoc.ordered import Ordered
 from autoc.range import Bidirectional
 from autoc.container import _Range
 from autoc.random import Randomizer
@@ -7,12 +8,13 @@ from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable
 
 
 #
-class Set(_StructRenderer, autoc.set.Set):
+class Set(_StructRenderer, autoc.set.Set, Ordered):
 
   brief = "Ordered set of distinct values implemented as a treap - iterates in sorted order"
   
   def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, randomizer), **kws)
+    self.element.require("orderable", f"Set '{self.name}'", "element type")
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.randomizer = randomizer

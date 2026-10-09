@@ -10,6 +10,7 @@ class Map(Mapping):
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
+    self.index.require("hashable", f"Map '{name}'", "index type")
     self._set = Set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
