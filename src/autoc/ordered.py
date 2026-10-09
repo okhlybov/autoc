@@ -1,4 +1,4 @@
-from autoc.core import TraitError
+from autoc.core import _binder, enforced, Orderable
 from autoc.properties import Property
 
 
@@ -16,21 +16,22 @@ class Ordered(Property):
 
   brief = "Abstract ordered container - iterates in ascending element or index order"
 
-  _diagnostics = "Ordered"
+  @_binder
+  def require(self_or_cls, other, *args, **kwargs):
+    from autoc.core import require
+    if self_or_cls is Ordered:
+      return require(other, self_or_cls)
+    return require(self_or_cls, other)
 
-  @classmethod
-  def require(cls, other, inquirer=None, role="component"):
-    # The requirement application of the property: a composite demanding an ordered
-    # component checks the class here, at its own construction time
-    from autoc.core import dispatch_require
-    return dispatch_require(cls, other, inquirer=inquirer, role=role)
+  @enforced
+  def _enforce_ordering(self, subject: Orderable):
+    return subject
 
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    subject, role = self._ordering()
-    self._enforce(subject, "require_orderable", role)
+    self._enforce_ordering(self._ordering())
 
   def _ordering(self):
     # The ordering subject - the type whose orderability backs the ascending iteration
     # promise. Element-ordered containers take the element; the keyed containers override to their index
-    return self.element, "element type"
+    return self.element

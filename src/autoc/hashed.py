@@ -1,4 +1,4 @@
-from autoc.core import TraitError
+from autoc.core import _binder, enforced, Hashable
 from autoc.properties import Property
 
 
@@ -12,21 +12,22 @@ class Hashed(Property):
 
   brief = "Abstract hashed container - resolves its elements or indices through their hash"
 
-  _diagnostics = "Hashed"
+  @_binder
+  def require(self_or_cls, other, *args, **kwargs):
+    from autoc.core import require
+    if self_or_cls is Hashed:
+      return require(other, self_or_cls)
+    return require(self_or_cls, other)
 
-  @classmethod
-  def require(cls, other, inquirer=None, role="component"):
-    # The requirement application of the property: a composite demanding a hashed
-    # component checks the class here, at its own construction time
-    from autoc.core import dispatch_require
-    return dispatch_require(cls, other, inquirer=inquirer, role=role)
+  @enforced
+  def _enforce_hashing(self, subject: Hashable):
+    return subject
 
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    subject, role = self._hashing()
-    self._enforce(subject, "require_hashable", role)
+    self._enforce_hashing(self._hashing())
 
   def _hashing(self):
     # The hashing subject - the type whose hashability the hash-addressed lookup rests on.
     # Element-keyed containers take the element; the keyed containers override to their index
-    return self.element, "element type"
+    return self.element

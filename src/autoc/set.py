@@ -1,4 +1,4 @@
-from autoc.core import inout, enforced, Comparable
+from autoc.core import inout, enforced, Comparable, Coerce
 from autoc.traversable import Traversable
 from autoc.insertable import Insertable
 
@@ -7,10 +7,9 @@ from autoc.insertable import Insertable
 class Set(Traversable, Insertable):
 
   @enforced
-  def __init__(self, name: str, element: Comparable, *args, algebraic_operations=True, **kws):
+  def __init__(self, name: str, element: Coerce[Comparable], *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)
     super().__init__(name, element, *args, **kws)
-    self.element = self.element.require(Comparable, self, "element type")
 
   def __setup__(self):
     super().__setup__()

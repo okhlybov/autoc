@@ -1,6 +1,7 @@
 from autoc.container import Container
 
 
+# FIXME to be removed
 # Base of the property mixins (the -ed family): a property claims a structural invariant
 # of the container and, as the requirement application of that claim, enforces the trait
 # it demands of its subject at the claiming container's construction time.
@@ -8,13 +9,3 @@ from autoc.container import Container
 class Property(Container):
 
   brief = "Abstract property mixin - claims a structural invariant and enforces the trait it demands of its subject"
-
-  # The naming of the property in the requirement diagnostics
-  _diagnostics = "property"
-
-  @property
-  def _diagnostic_context(self):
-    return f"{self._diagnostics} container '{self.name}'"
-
-  def _enforce(self, subject, enforcer, role):
-    getattr(subject, enforcer)(self, role)

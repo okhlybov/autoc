@@ -2,7 +2,7 @@ from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.ordered import Ordered
 from autoc.set import Set
 from autoc.avl_set import Set as AVLSet
-from autoc.core import Indirection, enforced, Type, Orderable
+from autoc.core import Indirection, enforced, Type, Orderable, Coerce
 
 
 #
@@ -10,14 +10,9 @@ class Map(Mapping, Ordered):
 
   brief = "Ordered map from index to element backed by a binary search tree - iterates in index order"
   
-  _diagnostics = "Tree map"
-
-  @property
-  def _diagnostic_context(self):
-    return f"{self._diagnostics} '{self.name}'"
 
   @enforced
-  def __init__(self, name: str, element: Type, index: Orderable, set: Set & Ordered = AVLSet, *args, **kws):
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Orderable], set: Set & Ordered = AVLSet, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
     self._set = set(
       self._decorate_component("set", abbreviate=True),

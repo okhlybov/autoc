@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.record import Record
-from autoc.core import inout, Callable, _StructRenderer, Macro, enforced, Type, Comparable, Orderable
+from autoc.core import inout, Callable, _StructRenderer, Macro, enforced, Type, Comparable, Orderable, Coerce
 from autoc.container import _Range
 from autoc.range import Forward, Bidirectional
 from autoc.traversable import Traversable
@@ -311,17 +311,16 @@ class Mapping(_StructRenderer, Traversable, Assignable):
   brief = "Abstract associative container mapping keys (indices) to values (elements) backed by an underlying set"
 
   @enforced
-  def __init__(self, name: str, element: Type, index: Comparable | Orderable, *args, **kws):
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index = self.index.require(Comparable | Orderable, self, "index type")
 
   def _ordering(self):
     # The keyed containers order their indices, not their payload elements
-    return self.index, "index type"
+    return self.index
 
   def _hashing(self):
     # The keyed containers hash their indices, not their payload elements
-    return self.index, "index type"
+    return self.index
 
   def _setup_range(self):
     # The abstract mapping range walks forward only; the ordered map subclasses override

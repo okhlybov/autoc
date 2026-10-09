@@ -1,5 +1,5 @@
 import unittest
-from autoc.core import _Traitful, Composite, Primitive, TraitError, _Named, IntersectionType, Comparable, Orderable, Hashable, Copyable, satisfies, require, enforced
+from autoc.core import _Traitful, Composite, Primitive, TraitError, IntersectionType, Comparable, Orderable, Hashable, Copyable, satisfies, require, enforced, Type, Coerce
 from autoc.ordered import Ordered
 from autoc.hashed import Hashed
 from autoc.set import Set
@@ -118,215 +118,207 @@ class MockTraitful(_Traitful):
     return self._traits.get("emplaceable", False)
 
 
-class MockInquirer(_Named):
-
-  def __init__(self, name, diagnostics=None):
-    super().__init__(name)
-    if diagnostics is not None:
-      self._diagnostics = diagnostics
-
-
 class TestTraits(unittest.TestCase):
 
   def test_traitful_enforcers_success(self):
-    inq = MockInquirer("ctx", "Context")
     t = MockTraitful(comparable=True, orderable=True, hashable=True, copyable=True)
-    self.assertIs(t.require_comparable(inq, "element type"), t)
-    self.assertIs(t.require_orderable(inq, "element type"), t)
-    self.assertIs(t.require_hashable(inq, "element type"), t)
-    self.assertIs(t.require_copyable(inq, "element type"), t)
-    self.assertIs(t.require_all(("comparable", "hashable"), inq, "element type"), t)
-    self.assertIs(t.require_any(("comparable", "orderable"), inq, "element type"), t)
+    self.assertIs(t.require(Comparable), t)
+    self.assertIs(t.require(Orderable), t)
+    self.assertIs(t.require(Hashable), t)
+    self.assertIs(t.require(Copyable), t)
+    self.assertIs(t.require(Comparable & Hashable), t)
+    self.assertIs(t.require(Comparable | Orderable), t)
+    # Also via TraitProtocol.require(t)
+    self.assertIs(Comparable.require(t), t)
+    self.assertIs(Orderable.require(t), t)
+    self.assertIs(Hashable.require(t), t)
+    self.assertIs(Copyable.require(t), t)
 
   def test_traitful_enforcers_failure(self):
     t = MockTraitful()
     with self.assertRaises(TraitError) as ctx:
-      t.require_comparable(MockInquirer("s", "Set"), "element type")
-    self.assertEqual(str(ctx.exception), "Set 's' requires the element type to be equality comparable")
+      t.require(Comparable)
+    self.assertIn("expected Comparable", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      t.require_orderable(MockInquirer("m", "Map"), "index type")
-    self.assertEqual(str(ctx.exception), "Map 'm' requires the index type to be orderable")
+      Comparable.require(t)
+    self.assertIn("expected Comparable", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      t.require_hashable(MockInquirer("m", "Map"), "index type")
-    self.assertEqual(str(ctx.exception), "Map 'm' requires the index type to be hashable")
+      t.require(Orderable)
+    self.assertIn("expected Orderable", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      t.require_copyable(MockInquirer("v", "Vector"), "element type")
-    self.assertEqual(str(ctx.exception), "Vector 'v' requires the element type to be copyable")
+      t.require(Hashable)
+    self.assertIn("expected Hashable", str(ctx.exception))
+
+    with self.assertRaises(TraitError) as ctx:
+      t.require(Copyable)
+    self.assertIn("expected Copyable", str(ctx.exception))
 
     t_partial = MockTraitful(comparable=True, orderable=False)
     with self.assertRaises(TraitError) as ctx:
-      t_partial.require_all(("comparable", "orderable"), MockInquirer("ms", "Multiset"), "element type")
-    self.assertEqual(str(ctx.exception), "Multiset 'ms' requires the element type to be orderable")
+      t_partial.require(Comparable & Orderable)
+    self.assertIn("expected Orderable", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      t.require_any(("comparable", "hashable"), MockInquirer("c", "Container"), "element type")
-    self.assertEqual(str(ctx.exception), "Container 'c' requires the element type to be equality comparable or hashable")
+      t.require(Comparable | Hashable)
+    self.assertIn("expected", str(ctx.exception))
 
   def test_ordered_require(self):
-    inq = MockInquirer("adapter", "Adapter")
-    self.assertIs(FlatMap.require_ordered(inq), FlatMap)
-    self.assertIs(TreeMap.require_ordered(inq), TreeMap)
-    self.assertIs(BTreeMap.require_ordered(inq), BTreeMap)
-    self.assertIs(FlatMultimap.require_ordered(inq), FlatMultimap)
+    self.assertIs(FlatMap.require(Ordered), FlatMap)
+    self.assertIs(TreeMap.require(Ordered), TreeMap)
+    self.assertIs(BTreeMap.require(Ordered), BTreeMap)
+    self.assertIs(FlatMultimap.require(Ordered), FlatMultimap)
     # Also via Ordered.require
-    self.assertIs(Ordered.require(FlatMap, inq), FlatMap)
+    self.assertIs(Ordered.require(FlatMap), FlatMap)
+    self.assertIs(Ordered.require(TreeMap), TreeMap)
 
     with self.assertRaises(TraitError) as ctx:
-      ChainedHashMap.require_ordered(inq)
-    self.assertIn("requires an ordered component", str(ctx.exception))
+      ChainedHashMap.require(Ordered)
+    self.assertIn("expected Ordered", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      Ordered.require(ChainedHashMap, inq)
-    self.assertIn("requires an ordered component", str(ctx.exception))
+      Ordered.require(ChainedHashMap)
+    self.assertIn("expected Ordered", str(ctx.exception))
 
   def test_hashed_require(self):
-    inq = MockInquirer("adapter", "Adapter")
-    self.assertIs(ChainedHashMap.require_hashed(inq), ChainedHashMap)
-    self.assertIs(IntrusiveHashMap.require_hashed(inq), IntrusiveHashMap)
-    self.assertIs(ChainedHashSet.require_hashed(inq), ChainedHashSet)
-    self.assertIs(IntrusiveHashSet.require_hashed(inq), IntrusiveHashSet)
+    self.assertIs(ChainedHashMap.require(Hashed), ChainedHashMap)
+    self.assertIs(IntrusiveHashMap.require(Hashed), IntrusiveHashMap)
+    self.assertIs(ChainedHashSet.require(Hashed), ChainedHashSet)
+    self.assertIs(IntrusiveHashSet.require(Hashed), IntrusiveHashSet)
     # Also via Hashed.require
-    self.assertIs(Hashed.require(ChainedHashMap, inq), ChainedHashMap)
+    self.assertIs(Hashed.require(ChainedHashMap), ChainedHashMap)
+    self.assertIs(Hashed.require(IntrusiveHashMap), IntrusiveHashMap)
 
     with self.assertRaises(TraitError) as ctx:
-      TreeMap.require_hashed(inq)
-    self.assertIn("requires a hashed component", str(ctx.exception))
+      TreeMap.require(Hashed)
+    self.assertIn("expected Hashed", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      Hashed.require(TreeMap, inq)
-    self.assertIn("requires a hashed component", str(ctx.exception))
+      Hashed.require(TreeMap)
+    self.assertIn("expected Hashed", str(ctx.exception))
 
   def test_type_require(self):
-    inq = MockInquirer("mm", "Multimap")
-    self.assertIs(Set.require(AVLSet, inq), AVLSet)
-    self.assertIs(Insertable.require(Vector, inq), Vector)
-    self.assertIs(Mapping.require(FlatMap, inq), FlatMap)
+    # Canonical require(target, contract)
+    self.assertIs(require(AVLSet, Set), AVLSet)
+    self.assertIs(require(Vector, Insertable), Vector)
+    self.assertIs(require(FlatMap, Mapping), FlatMap)
 
     with self.assertRaises(TraitError) as ctx:
-      Set.require(Vector, inq, "set backend")
-    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+      require(Vector, Set)
+    self.assertIn("expected Set", str(ctx.exception))
 
-    # Receiver-oriented require methods on container classes
-    self.assertIs(AVLSet.require_set(inq), AVLSet)
-    self.assertIs(Vector.require_insertable(inq), Vector)
-    self.assertIs(Vector.require_traversable(inq), Vector)
-    self.assertIs(FlatMap.require_mapping(inq), FlatMap)
-
-    # Batch require_all with trait strings and types
-    self.assertIs(AVLSet.require_all(("set", "ordered"), inq, "set backend"), AVLSet)
-    self.assertIs(AVLSet.require_all((Set, Ordered), inq, "set backend"), AVLSet)
+    # Fluent target.require(contract) on container classes
+    self.assertIs(AVLSet.require(Set), AVLSet)
+    self.assertIs(Vector.require(Insertable), Vector)
+    self.assertIs(FlatMap.require(Mapping), FlatMap)
+    self.assertIs(AVLSet.require(Set & Ordered), AVLSet)
 
     with self.assertRaises(TraitError) as ctx:
-      Vector.require_set(inq)
-    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+      Vector.require(Set)
+    self.assertIn("expected Set", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      Vector.require_mapping(inq)
-    self.assertIn("requires a mapping backend - one claiming Mapping", str(ctx.exception))
+      Vector.require(Mapping)
+    self.assertIn("expected Mapping", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      AVLSet.require_mapping(inq)
-    self.assertIn("requires a mapping backend - one claiming Mapping", str(ctx.exception))
+      AVLSet.require(Mapping)
+    self.assertIn("expected Mapping", str(ctx.exception))
 
-    with self.assertRaises(TraitError) as ctx:
-      PriorityQueue.require_traversable(inq)
-    self.assertIn("requires a collection backend - one claiming Traversable", str(ctx.exception))
-
-    # Receiver-oriented require methods on container instances
+    # Fluent target.require(contract) on container instances
     vec_inst = Vector("test_vec_inst", "int")
-    self.assertIs(vec_inst.require_insertable(inq), vec_inst)
+    self.assertIs(vec_inst.require(Insertable), vec_inst)
 
     set_inst = AVLSet("test_set_inst", "int")
-    self.assertIs(set_inst.require_set(inq), set_inst)
-    self.assertIs(set_inst.require_ordered(inq), set_inst)
+    self.assertIs(set_inst.require(Set), set_inst)
+    self.assertIs(set_inst.require(Ordered), set_inst)
 
     map_inst = FlatMap("test_map_inst", "int", "int")
-    self.assertIs(map_inst.require_mapping(inq), map_inst)
-    self.assertIs(map_inst.require_ordered(inq), map_inst)
+    self.assertIs(map_inst.require(Mapping), map_inst)
+    self.assertIs(map_inst.require(Ordered), map_inst)
 
   def test_negative_container_instantiations(self):
     opaque = OpaqueType("neg_opaque_t")
     # Priority queue demands orderable
     with self.assertRaises(TraitError) as ctx:
       PriorityQueue("neg_pq", opaque)
-    self.assertEqual(str(ctx.exception), "Priority queue 'neg_pq' requires the element type to be orderable")
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     # Set demands comparable
     with self.assertRaises(TraitError) as ctx:
       Set("neg_set", opaque)
-    self.assertIn("requires the element type to be equality comparable", str(ctx.exception))
+    self.assertIn("comparable", str(ctx.exception).lower())
 
     # Multiset demands comparable
     with self.assertRaises(TraitError) as ctx:
       Multiset("neg_multiset", opaque)
-    self.assertIn("requires the element type to be equality comparable", str(ctx.exception))
+    self.assertIn("comparable", str(ctx.exception).lower())
 
     comp_only = ComparableOnlyType("neg_comp_only_t")
     # Hash sets demand hashable
     with self.assertRaises(TraitError) as ctx:
       ChainedHashSet("neg_chs", comp_only)
-    self.assertIn("requires the element type to be hashable", str(ctx.exception))
+    self.assertIn("hashable", str(ctx.exception).lower())
 
     # Tree and flat sets demand orderable
     with self.assertRaises(TraitError) as ctx:
       AVLSet("neg_avl", comp_only)
-    self.assertIn("requires the element type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     with self.assertRaises(TraitError) as ctx:
       FlatSet("neg_flat_set", comp_only)
-    self.assertIn("requires the element type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     with self.assertRaises(TraitError) as ctx:
       FlatMultiset("neg_flat_multiset", comp_only)
-    self.assertIn("requires the element type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     # Maps demand index traits
     with self.assertRaises(TraitError) as ctx:
       ChainedHashMap("neg_chm", "int", comp_only)
-    self.assertIn("requires the index type to be hashable", str(ctx.exception))
+    self.assertIn("hashable", str(ctx.exception).lower())
 
     with self.assertRaises(TraitError) as ctx:
       TreeMap("neg_tm_key", "int", comp_only, AVLSet)
-    self.assertIn("requires the index type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     with self.assertRaises(TraitError) as ctx:
       TreeMap("neg_tm_backend", "int", "int", ChainedHashSet)
-    self.assertIn("requires an ordered set backend", str(ctx.exception))
+    self.assertIn("expected Ordered", str(ctx.exception))
 
     # Tree map rejects an ordered collection that is NOT a Set (e.g. FlatMap)
     with self.assertRaises(TraitError) as ctx:
       TreeMap("neg_tm_not_set", "int", "int", FlatMap)
-    self.assertIn("requires a set backend - one claiming Set; got Map", str(ctx.exception))
+    self.assertIn("expected Set", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
       FlatMap("neg_fm", "int", comp_only)
-    self.assertIn("requires the index type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     with self.assertRaises(TraitError) as ctx:
       FlatMultimap("neg_fmm", "int", comp_only)
-    self.assertIn("requires the index type to be orderable", str(ctx.exception))
+    self.assertIn("orderable", str(ctx.exception).lower())
 
     # Counter demands mapping backend
     with self.assertRaises(TraitError) as ctx:
       Counter("neg_cnt", "int", Vector)
-    self.assertIn("requires a mapping backend - one claiming Mapping", str(ctx.exception))
+    self.assertIn("expected Mapping", str(ctx.exception))
 
     # Multimap demands set and insertable+traversable collection backends
     with self.assertRaises(TraitError) as ctx:
       Multimap("neg_mm_set", "int", "int", set=Vector, collection=Vector)
-    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+    self.assertIn("expected Set", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
       Multimap("neg_mm_col", "int", "int", set=AVLSet, collection=ChainedHashMap)
-    self.assertIn("requires a collection backend - one claiming Insertable", str(ctx.exception))
+    self.assertIn("expected Insertable", str(ctx.exception))
 
     # Multimap rejects an Insertable collection that is NOT Traversable (e.g. PriorityQueue)
     with self.assertRaises(TraitError) as ctx:
       Multimap("neg_mm_pq", "int", "int", set=AVLSet, collection=PriorityQueue)
-    self.assertIn("requires a collection backend - one claiming Traversable; got Queue", str(ctx.exception))
+    self.assertIn("expected Traversable", str(ctx.exception))
 
   def test_map_payload_freedom(self):
     opaque = OpaqueType("payload_opaque_t")
@@ -411,26 +403,24 @@ class TestTraits(unittest.TestCase):
     self.assertTrue(satisfies(FlatMap, Mapping & Ordered))
 
   def test_fluent_require(self):
-    inq = MockInquirer("fluent_test", "Tester")
-
     # Target-oriented require on classes
-    self.assertIs(AVLSet.require(Set & Ordered, inq), AVLSet)
-    self.assertIs(FlatMap.require(Mapping & Ordered, inq), FlatMap)
-    self.assertIs(ChainedHashMap.require(Mapping & Hashed, inq), ChainedHashMap)
+    self.assertIs(AVLSet.require(Set & Ordered), AVLSet)
+    self.assertIs(FlatMap.require(Mapping & Ordered), FlatMap)
+    self.assertIs(ChainedHashMap.require(Mapping & Hashed), ChainedHashMap)
 
     with self.assertRaises(TraitError) as ctx:
-      ChainedHashMap.require(Ordered, inq)
-    self.assertIn("requires an ordered component", str(ctx.exception))
+      ChainedHashMap.require(Ordered)
+    self.assertIn("expected Ordered", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
-      Vector.require(Set & Ordered, inq, "set backend")
-    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+      Vector.require(Set & Ordered)
+    self.assertIn("expected Set", str(ctx.exception))
 
     # Target-oriented require on instances
     vec = Vector("fluent_vec", "int")
-    self.assertIs(vec.require(Insertable, inq), vec)
-    self.assertIs(vec.element.require(Comparable, inq), vec.element)
-    self.assertIs(vec.element.require(Orderable, inq), vec.element)
+    self.assertIs(vec.require(Insertable), vec)
+    self.assertIs(vec.element.require(Comparable), vec.element)
+    self.assertIs(vec.element.require(Orderable), vec.element)
 
   def test_paradigm_b_factories(self):
     # FlatMap Paradigm B factory
@@ -442,11 +432,11 @@ class TestTraits(unittest.TestCase):
 
     with self.assertRaises(TraitError) as ctx:
       fm._make_set(backend=ChainedHashSet)
-    self.assertIn("requires an ordered set backend", str(ctx.exception))
+    self.assertIn("expected Ordered", str(ctx.exception))
 
     with self.assertRaises(TraitError) as ctx:
       fm._make_set(backend=Vector)
-    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+    self.assertIn("expected Set", str(ctx.exception))
 
     # Queue Paradigm B factory
     q = Queue("q_b", "int")
@@ -455,7 +445,7 @@ class TestTraits(unittest.TestCase):
 
     with self.assertRaises(TraitError) as ctx:
       q._make_deque(backend=AVLSet)
-    self.assertIn("requires a backend - one claiming Sequential", str(ctx.exception))
+    self.assertIn("expected Sequential", str(ctx.exception))
 
     # Stack Paradigm B factory
     stk = Stack("stk_b", "int")
@@ -464,7 +454,44 @@ class TestTraits(unittest.TestCase):
 
     with self.assertRaises(TraitError) as ctx:
       stk._make_list(backend=AVLSet)
-    self.assertIn("requires a backend - one claiming Sequential", str(ctx.exception))
+    self.assertIn("expected Sequential", str(ctx.exception))
+
+  def test_coercion_type(self):
+    c1 = Coerce[Comparable | Orderable]
+    self.assertEqual(repr(c1), "(str | Type) -> (Comparable | Orderable)")
+
+    c2 = Coerce[str | Type, Comparable | Orderable]
+    self.assertEqual(repr(c2), "(str | Type) -> (Comparable | Orderable)")
+
+    c3 = Coerce[str | Type] >> (Comparable | Orderable)
+    self.assertEqual(repr(c3), "(str | Type) -> (Comparable | Orderable)")
+
+    c4 = Type[Comparable | Orderable]
+    self.assertEqual(repr(c4), "(str | Type) -> (Comparable | Orderable)")
+
+    # Coercion satisfaction checks
+    self.assertTrue(satisfies("int", c1))
+    self.assertTrue(satisfies(Primitive("int"), c1))
+    self.assertFalse(satisfies(123, c1))
+    self.assertFalse(satisfies(OpaqueType(), c1))
+
+    # Argument coercion via @enforced
+    @enforced
+    def dummy_func(param: Coerce[Comparable | Orderable]):
+      return param
+
+    res = dummy_func("int")
+    self.assertIsInstance(res, Type)
+    self.assertEqual(res.name, "int")
+
+    # Rejection of un-coercible or trait-failing values with formatted diagnostics
+    with self.assertRaises(TraitError) as ctx:
+      dummy_func(OpaqueType("bad_opaque"))
+    self.assertIn("expected (str | Type) -> (Comparable | Orderable), got OpaqueType", str(ctx.exception))
+
+    with self.assertRaises(TraitError) as ctx:
+      dummy_func(999)
+    self.assertIn("expected (str | Type) -> (Comparable | Orderable), got int", str(ctx.exception))
 
 
 # Run tests when imported or executed directly

@@ -1,6 +1,6 @@
 import autoc.std as std
 from autoc.insertable import Insertable
-from autoc.core import inout, out, Indirection, _StructRenderer, enforced, Orderable
+from autoc.core import inout, out, Indirection, _StructRenderer, enforced, Orderable, Coerce
 
 
 #
@@ -14,12 +14,10 @@ class Queue(_StructRenderer, Insertable):
 
   brief = "Priority queue of elements ordered by priority"
 
-  _diagnostics = "Priority queue"
-
   @enforced
-  def __init__(self, name: str, element: Orderable, **kws):
+  def __init__(self, name: str, element: Coerce[Orderable], **kws):
     super().__init__(name, element, **kws)
-    self._element_p = Indirection(self.element.require(Orderable, self, "element type"))
+    self._element_p = Indirection(self.element)
 
   # The heap shape is internal: two heaps holding the same elements are not required to
   # have the same shape, so the value-ordering operations constrain off via the traits
