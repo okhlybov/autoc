@@ -3,7 +3,7 @@ from autoc.range import Forward
 from autoc.sequential import Sequential
 from autoc.insertable import Insertable
 from autoc.container import _Range
-from autoc.core import _StructRenderer, Callable, Indirection, inout
+from autoc.core import _StructRenderer, Callable, Indirection, inout, enforced
 
 
 #
@@ -11,9 +11,13 @@ class Stack(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered LIFO container with head push/pop"
   
+  @enforced
+  def _make_list(self, backend: Sequential & Insertable = List):
+    return backend(self._decorate_component("list"), self.element, visibility="internal")
+
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._list = List(self._decorate_component("list"), self.element, visibility="internal")
+    self._list = self._make_list()
     self.dependencies.add(self._list)
     self.range = Range(self)
 

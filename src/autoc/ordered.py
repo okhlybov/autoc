@@ -19,13 +19,11 @@ class Ordered(Property):
   _diagnostics = "Ordered"
 
   @classmethod
-  def require(cls, component, inquirer, role="component"):
+  def require(cls, other, inquirer=None, role="component"):
     # The requirement application of the property: a composite demanding an ordered
     # component checks the class here, at its own construction time
-    target = component if isinstance(component, type) else type(component)
-    if not issubclass(target, cls):
-      raise TraitError(f"{inquirer._diagnostic_context} requires an ordered {role} - one claiming the Ordered property (ascending iteration); got {target.__name__}")
-    return component
+    from autoc.core import dispatch_require
+    return dispatch_require(cls, other, inquirer=inquirer, role=role)
 
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)

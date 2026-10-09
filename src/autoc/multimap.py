@@ -1,9 +1,14 @@
 import autoc.std as std
-from autoc.core import inout, Callable, Indirection, Macro
+from autoc.core import inout, Callable, Indirection, Macro, enforced, Type, Comparable, Orderable
 from autoc.container import _Range
 from autoc.range import Forward
 from autoc.record import Record
 from autoc.multimapping import Multimapping
+from autoc.set import Set
+from autoc.insertable import Insertable
+from autoc.traversable import Traversable
+from autoc.avl_set import Set as AVLSet
+from autoc.vector import Vector
 import autoc.core
 
 
@@ -244,9 +249,10 @@ class Map(Multimapping):
 
   brief = "Generic associative multimap container parameterized by a set and a collection container"
 
-  def __init__(self, name, element, index, set, collection, *args, dependencies=(), **kws):
+  @enforced
+  def __init__(self, name: str, element: Type, index: Comparable | Orderable, set: Set = AVLSet, collection: Insertable & Traversable = Vector, *args, dependencies=(), **kws):
     super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
-    self._collection = collection.require_insertable(self).require_traversable(self, "collection backend")(
+    self._collection = collection(
       self._decorate_component("collection", abbreviate=True),
       self.element,
       visibility="internal",
@@ -257,7 +263,7 @@ class Map(Multimapping):
       self.index,
       visibility="internal",
     )
-    self._set = set.require_set(self)(
+    self._set = set(
       self._decorate_component("set", abbreviate=True),
       self._entry,
       visibility="internal",

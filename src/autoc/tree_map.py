@@ -1,6 +1,8 @@
 from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.ordered import Ordered
-from autoc.core import Indirection
+from autoc.set import Set
+from autoc.avl_set import Set as AVLSet
+from autoc.core import Indirection, require, enforced, Type, Orderable
 
 
 #
@@ -14,13 +16,12 @@ class Map(Mapping, Ordered):
   def _diagnostic_context(self):
     return f"{self._diagnostics} '{self.name}'"
 
-  def __init__(self, name, element, index, set=None, *args, tree_set=None, **kws):
+  @enforced
+  def __init__(self, name: str, element: Type, index: Orderable, set: Set & Ordered = AVLSet, *args, tree_set=None, **kws):
     super().__init__(name, element, index, *args, **kws)
-    set = set if set is not None else tree_set
-    if set is None:
-      from autoc.core import TraitError
-      raise TraitError(f"{self._diagnostic_context} requires a set backend")
-    self._set = set.require_set(self).require_ordered(self, "set backend")(
+    if tree_set is not None:
+      set = require(tree_set, Set & Ordered, inquirer=self, role="set backend")
+    self._set = set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",

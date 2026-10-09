@@ -1,8 +1,9 @@
 import autoc.std as std
 from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.flat_set import Set as FlatSet
+from autoc.set import Set
 from autoc.ordered import Ordered
-from autoc.core import inout
+from autoc.core import inout, enforced
 
 
 #
@@ -10,14 +11,18 @@ class Map(Mapping, Ordered):
 
   brief = "Flat map from index to element backed by a contiguous sorted array of key-value pairs"
 
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
-    self._set = FlatSet(
+  @enforced
+  def _make_set(self, backend: Set & Ordered = FlatSet):
+    return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
     )
+
+  def __init__(self, name, element, index, *args, **kws):
+    super().__init__(name, element, index, *args, **kws)
+    self._set = self._make_set()
     self.dependencies.add(self._set)
     self._setup_range()
 

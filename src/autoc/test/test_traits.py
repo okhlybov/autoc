@@ -1,5 +1,5 @@
 import unittest
-from autoc.core import _Traitful, Composite, Primitive, TraitError, _Named
+from autoc.core import _Traitful, Composite, Primitive, TraitError, _Named, IntersectionType, Comparable, Orderable, Hashable, Copyable, satisfies, require, enforced
 from autoc.ordered import Ordered
 from autoc.hashed import Hashed
 from autoc.set import Set
@@ -29,6 +29,8 @@ from autoc.circular_buffer import Static as StaticCircularBuffer, Dynamic as Dyn
 from autoc.priority_queue import Queue as PriorityQueue
 from autoc.counter import Counter
 from autoc.multimap import Map as Multimap
+from autoc.queue import Queue
+from autoc.stack import Stack
 
 
 # Custom non-comparable, non-hashable, non-orderable composite type
@@ -368,6 +370,101 @@ class TestTraits(unittest.TestCase):
       c.render_definitions(stream, False)
       rendered = "".join(stream)
       self.assertTrue(len(rendered) > 0)
+
+  def test_type_algebra(self):
+    # IntersectionType creation and composition
+    contract = Set & Ordered
+    self.assertIsInstance(contract, IntersectionType)
+    self.assertEqual(contract.__args__, (Set, Ordered))
+
+    # Chaining intersections
+    chained = Set & Ordered & Insertable
+    self.assertEqual(chained.__args__, (Set, Ordered, Insertable))
+
+    # Union with intersection
+    union_contract = (Set & Ordered) | Mapping
+    self.assertTrue(satisfies(AVLSet, union_contract))
+    self.assertTrue(satisfies(FlatMap, union_contract))
+    self.assertFalse(satisfies(Vector, union_contract))
+
+    # Trait protocols
+    self.assertTrue(satisfies("int", Comparable | Orderable))
+    self.assertTrue(satisfies("int", Comparable & Orderable))
+    self.assertTrue(satisfies("int", Hashable))
+
+    co = ComparableOnlyType()
+    self.assertTrue(satisfies(co, Comparable))
+    self.assertFalse(satisfies(co, Orderable))
+    self.assertTrue(satisfies(co, Comparable | Orderable))
+    self.assertFalse(satisfies(co, Comparable & Orderable))
+
+    op = OpaqueType()
+    self.assertFalse(satisfies(op, Comparable))
+    self.assertFalse(satisfies(op, Orderable))
+    self.assertFalse(satisfies(op, Hashable))
+
+    # Container satisfying IntersectionType
+    self.assertTrue(satisfies(AVLSet, Set & Ordered))
+    self.assertFalse(satisfies(ChainedHashSet, Set & Ordered))
+    self.assertTrue(satisfies(ChainedHashSet, Set & Hashed))
+    self.assertFalse(satisfies(FlatMap, Set & Ordered))
+    self.assertTrue(satisfies(FlatMap, Mapping & Ordered))
+
+  def test_fluent_require(self):
+    inq = MockInquirer("fluent_test", "Tester")
+
+    # Target-oriented require on classes
+    self.assertIs(AVLSet.require(Set & Ordered, inq), AVLSet)
+    self.assertIs(FlatMap.require(Mapping & Ordered, inq), FlatMap)
+    self.assertIs(ChainedHashMap.require(Mapping & Hashed, inq), ChainedHashMap)
+
+    with self.assertRaises(TraitError) as ctx:
+      ChainedHashMap.require(Ordered, inq)
+    self.assertIn("requires an ordered component", str(ctx.exception))
+
+    with self.assertRaises(TraitError) as ctx:
+      Vector.require(Set & Ordered, inq, "set backend")
+    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+
+    # Target-oriented require on instances
+    vec = Vector("fluent_vec", "int")
+    self.assertIs(vec.require(Insertable, inq), vec)
+    self.assertIs(vec.element.require(Comparable, inq), vec.element)
+    self.assertIs(vec.element.require(Orderable, inq), vec.element)
+
+  def test_paradigm_b_factories(self):
+    # FlatMap Paradigm B factory
+    fm = FlatMap("fm_b", "int", "int")
+    s_default = fm._make_set()
+    self.assertIsInstance(s_default, FlatSet)
+    s_avl = fm._make_set(backend=AVLSet)
+    self.assertIsInstance(s_avl, AVLSet)
+
+    with self.assertRaises(TraitError) as ctx:
+      fm._make_set(backend=ChainedHashSet)
+    self.assertIn("requires an ordered set backend", str(ctx.exception))
+
+    with self.assertRaises(TraitError) as ctx:
+      fm._make_set(backend=Vector)
+    self.assertIn("requires a set backend - one claiming Set", str(ctx.exception))
+
+    # Queue Paradigm B factory
+    q = Queue("q_b", "int")
+    d_default = q._make_deque()
+    self.assertIsInstance(d_default, Deque)
+
+    with self.assertRaises(TraitError) as ctx:
+      q._make_deque(backend=AVLSet)
+    self.assertIn("requires a backend - one claiming Sequential", str(ctx.exception))
+
+    # Stack Paradigm B factory
+    stk = Stack("stk_b", "int")
+    l_default = stk._make_list()
+    self.assertIsInstance(l_default, List)
+
+    with self.assertRaises(TraitError) as ctx:
+      stk._make_list(backend=AVLSet)
+    self.assertIn("requires a backend - one claiming Sequential", str(ctx.exception))
 
 
 # Run tests when imported or executed directly

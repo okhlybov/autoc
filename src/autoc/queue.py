@@ -3,7 +3,7 @@ from autoc.range import Forward
 from autoc.sequential import Sequential
 from autoc.insertable import Insertable
 from autoc.container import _Range
-from autoc.core import _StructRenderer, Callable, Indirection, inout
+from autoc.core import _StructRenderer, Callable, Indirection, inout, enforced
 
 
 #
@@ -11,9 +11,13 @@ class Queue(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered FIFO container with back push and front pop"
   
+  @enforced
+  def _make_deque(self, backend: Sequential & Insertable = Deque):
+    return backend(self._decorate_component("deque"), self.element, visibility="internal")
+
   def __init__(self, *args, **kws):
     super().__init__(*args, **kws)
-    self._deque = Deque(self._decorate_component("deque"), self.element, visibility="internal")
+    self._deque = self._make_deque()
     self.dependencies.add(self._deque)
     self.range = Range(self)
 

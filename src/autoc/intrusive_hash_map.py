@@ -1,6 +1,8 @@
 from autoc.mapping import Mapping, _Entry
 from autoc.intrusive_hash_set import Set
+import autoc.set
 from autoc.hashed import Hashed
+from autoc.core import enforced
 
 
 #
@@ -8,13 +10,19 @@ class Map(Mapping, Hashed):
   
   brief = "Map from index to element over open addressing with sentinel values"
 
-  def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
-    super().__init__(name, element, index, *args, **kws)
-    self._set = Set(
+  @enforced
+  def _make_set(self, backend: autoc.set.Set & Hashed = Set, **kws):
+    return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
+      **kws,
+    )
+
+  def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
+    super().__init__(name, element, index, *args, **kws)
+    self._set = self._make_set(
       is_empty=is_empty,
       mark_empty=mark_empty,
       is_deleted=is_deleted,

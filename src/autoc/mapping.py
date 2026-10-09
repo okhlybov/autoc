@@ -1,10 +1,9 @@
 import autoc.std as std
 from autoc.record import Record
-from autoc.core import inout, Callable, _StructRenderer, Macro
+from autoc.core import inout, Callable, _StructRenderer, Macro, enforced, Type, Comparable, Orderable
 from autoc.container import _Range
 from autoc.range import Forward, Bidirectional
 from autoc.traversable import Traversable
-from autoc.indexable import Indexable
 from autoc.assignable import Assignable
 
 
@@ -311,9 +310,10 @@ class Mapping(_StructRenderer, Traversable, Assignable):
 
   brief = "Abstract associative container mapping keys (indices) to values (elements) backed by an underlying set"
 
-  def __init__(self, name, element, index, *args, **kws):
+  @enforced
+  def __init__(self, name: str, element: Type, index: Comparable | Orderable, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index = self.index.require_any(("comparable", "orderable"), self, "index type")
+    self.index = self.index.require(Comparable | Orderable, self, "index type")
 
   def _ordering(self):
     # The keyed containers order their indices, not their payload elements

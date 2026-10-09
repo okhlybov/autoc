@@ -1,9 +1,10 @@
 import autoc.std as std
-from autoc.core import inout, Callable, Indirection
+from autoc.core import inout, Callable, Indirection, enforced
 from autoc.container import _Range
 from autoc.range import Forward
 from autoc.mapping import _Entry
 from autoc.multimapping import Multimapping
+from autoc.multiset import Multiset
 from autoc.ordered import Ordered
 import autoc.flat_multiset
 
@@ -132,14 +133,18 @@ class Map(Multimapping, Ordered):
 
   brief = "Flat multimap from index to multiple elements backed by a contiguous sorted array of key-value pairs"
 
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
-    self._set = autoc.flat_multiset.Set(
+  @enforced
+  def _make_set(self, backend: Multiset & Ordered = autoc.flat_multiset.Set):
+    return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
     )
+
+  def __init__(self, name, element, index, *args, **kws):
+    super().__init__(name, element, index, *args, **kws)
+    self._set = self._make_set()
     self.dependencies.add(self._set)
     self.range = Range(self)
 

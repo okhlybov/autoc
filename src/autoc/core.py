@@ -2,6 +2,9 @@ import re
 import sys
 import textwrap
 import functools
+import types
+import typing
+import inspect
 from autoc.module import Entity, Code, SystemHeader
 from collections.abc import Iterable # substitute for missing iterable()
 
@@ -60,7 +63,132 @@ def _result(obj):
 
 
 #
-class _MultiphaseConstructible(type):
+class IntersectionType:
+  """Represents a type intersection (T1 & T2 & ...)."""
+
+  def __init__(self, *args):
+    flat = []
+    for a in args:
+      if isinstance(a, IntersectionType):
+        flat.extend(a.__args__)
+      else:
+        flat.append(a)
+    seen = set()
+    dedup = []
+    for a in flat:
+      if a not in seen:
+        seen.add(a)
+        dedup.append(a)
+    self.__args__ = tuple(dedup)
+
+  def __and__(self, other):
+    return IntersectionType(*self.__args__, other)
+
+  def __rand__(self, other):
+    return IntersectionType(other, *self.__args__)
+
+  def __or__(self, other):
+    return typing.Union[self, other]
+
+  def __ror__(self, other):
+    return typing.Union[other, self]
+
+  def __eq__(self, other):
+    if isinstance(other, IntersectionType):
+      return set(self.__args__) == set(other.__args__)
+    return False
+
+  def __hash__(self):
+    return hash(frozenset(self.__args__))
+
+  def __repr__(self):
+    return " & ".join(getattr(a, "__name__", str(a)) for a in self.__args__)
+
+
+class _ContractMeta(type):
+  """Metaclass adding type intersection (&) and contract validation to types."""
+
+  def __and__(cls, other):
+    return IntersectionType(cls, other)
+
+  def __rand__(cls, other):
+    return IntersectionType(other, cls)
+
+  def require(cls, other, inquirer=None, role=None):
+    return dispatch_require(cls, other, inquirer=inquirer, role=role)
+
+
+class _TraitProtocolMeta(_ContractMeta):
+  """Metaclass for trait protocols (Comparable, Orderable, Hashable, etc.)."""
+
+  def __instancecheck__(cls, instance):
+    if isinstance(instance, type):
+      return cls.__subclasscheck__(instance)
+    val = getattr(instance, cls._trait_name, False)
+    if isinstance(val, property):
+      return False
+    return bool(val)
+
+  def __subclasscheck__(cls, subclass):
+    val = getattr(subclass, cls._trait_name, False)
+    if isinstance(val, property):
+      return False
+    return bool(val)
+
+  def __repr__(cls):
+    return cls.__name__
+
+
+class TraitProtocol(metaclass=_TraitProtocolMeta):
+  _trait_name = ""
+
+
+class Constructible(TraitProtocol):
+  _trait_name = "constructible"
+
+
+class DefaultConstructible(TraitProtocol):
+  _trait_name = "default_constructible"
+
+
+class Emplaceable(TraitProtocol):
+  _trait_name = "emplaceable"
+
+
+class Destructible(TraitProtocol):
+  _trait_name = "destructible"
+
+
+class Copyable(TraitProtocol):
+  _trait_name = "copyable"
+
+
+class Moveable(TraitProtocol):
+  _trait_name = "moveable"
+
+
+class Swappable(TraitProtocol):
+  _trait_name = "swappable"
+
+
+class Comparable(TraitProtocol):
+  _trait_name = "comparable"
+
+
+class Orderable(TraitProtocol):
+  _trait_name = "orderable"
+
+
+class Hashable(TraitProtocol):
+  _trait_name = "hashable"
+
+
+class ZeroInitializable(TraitProtocol):
+  _trait_name = "zero_initializable"
+
+
+#
+class _MultiphaseConstructible(_ContractMeta):
 
   def __call__(cls, *args, **kws):
     obj = super().__call__(*args, **kws)
@@ -181,24 +309,206 @@ class _Traitful:
     for trait in traits:
       if isinstance(trait, str):
         getattr(self_or_cls, f"require_{trait}")(inquirer, role)
-      elif isinstance(trait, type):
-        trait.require(self_or_cls, inquirer, role=role)
+      elif isinstance(trait, (type, IntersectionType)) or typing.get_origin(trait) is typing.Union or isinstance(trait, types.UnionType):
+        require(self_or_cls, trait, inquirer, role=role)
       else:
         raise TypeError(f"Expected trait name or type, got {trait}")
     return self_or_cls
 
   def require_any(self, traits, inquirer, role="type"):
     for trait in traits:
-      if getattr(self, trait, False):
-        return self
-    raise TraitError(f"{inquirer._diagnostic_context} requires the {role} to be " +
-      " or ".join(self._trait_phrase(trait) for trait in traits))
+      if isinstance(trait, str):
+        if getattr(self, trait, False):
+          return self
+      else:
+        if satisfies(self, trait):
+          return self
+    phrase = " or ".join(self._trait_phrase(t) if isinstance(t, str) else getattr(t, "__name__", str(t)) for t in traits)
+    ctx = inquirer._diagnostic_context if hasattr(inquirer, "_diagnostic_context") else (str(inquirer) if inquirer else "Operation")
+    raise TraitError(f"{ctx} requires the {role} to be {phrase}")
+
+  @_binder
+  def require(self_or_cls, contract, inquirer=None, role=None):
+    return dispatch_require(self_or_cls, contract, inquirer=inquirer, role=role)
 
 
 # A demanded trait is absent - raised by the requirement enforcers at the demanding
 # container's construction time
 class TraitError(ValueError):
   pass
+
+
+_ABSTRACT_MODULES = {
+  "autoc.set", "autoc.mapping", "autoc.multiset", "autoc.multimapping",
+  "autoc.ordered", "autoc.hashed", "autoc.container", "autoc.properties",
+  "autoc.insertable", "autoc.traversable", "autoc.sequential",
+  "autoc.indexable", "autoc.assignable", "autoc.core"
+}
+
+_ABSTRACT_NAMES = {
+  "Type", "Container", "Property", "Ordered", "Hashed",
+  "Set", "Multiset", "Mapping", "Multimapping",
+  "Insertable", "Traversable", "Sequential", "Indexable", "Assignable"
+}
+
+
+def _is_abstract_contract(obj):
+  if isinstance(obj, (IntersectionType, types.UnionType)) or typing.get_origin(obj) is typing.Union:
+    return True
+  if isinstance(obj, tuple):
+    return True
+  if isinstance(obj, type):
+    if hasattr(obj, "_trait_name"):
+      return True
+    if getattr(obj, "__module__", None) in _ABSTRACT_MODULES and obj.__name__ in _ABSTRACT_NAMES:
+      return True
+  return False
+
+
+def _contract_name(contract):
+  if isinstance(contract, IntersectionType):
+    return " & ".join(_contract_name(a) for a in contract.__args__)
+  origin = typing.get_origin(contract)
+  if origin is typing.Union or isinstance(contract, types.UnionType):
+    args = typing.get_args(contract) if origin is typing.Union else contract.__args__
+    return " | ".join(_contract_name(a) for a in args)
+  if isinstance(contract, tuple):
+    return " | ".join(_contract_name(a) for a in contract)
+  return getattr(contract, "__name__", str(contract))
+
+
+def satisfies(target, contract):
+  if isinstance(contract, IntersectionType):
+    return all(satisfies(target, t) for t in contract.__args__)
+
+  origin = typing.get_origin(contract)
+  if origin is typing.Union or isinstance(contract, types.UnionType):
+    args = typing.get_args(contract) if origin is typing.Union else contract.__args__
+    return any(satisfies(target, t) for t in args)
+
+  if isinstance(contract, tuple):
+    return any(satisfies(target, t) for t in contract)
+
+  if isinstance(contract, _TraitProtocolMeta):
+    if isinstance(target, type):
+      if contract.__subclasscheck__(target):
+        return True
+    elif contract.__instancecheck__(target):
+      return True
+    if isinstance(target, str):
+      try:
+        r = _type(target)
+        if contract.__instancecheck__(r):
+          return True
+      except Exception:
+        pass
+    return False
+
+  if isinstance(target, type) and isinstance(contract, type):
+    return issubclass(target, contract)
+
+  if isinstance(contract, type):
+    if isinstance(target, contract):
+      return True
+    if isinstance(target, str):
+      try:
+        r = _type(target)
+        if isinstance(r, contract):
+          return True
+      except Exception:
+        pass
+    return False
+
+  return False
+
+
+def require(target, contract, inquirer=None, role=None):
+  # Check IntersectionType conjuncts in order
+  if isinstance(contract, IntersectionType):
+    for t in contract.__args__:
+      require(target, t, inquirer=inquirer, role=role)
+    return target
+
+  if not satisfies(target, contract):
+    ctx = inquirer._diagnostic_context if hasattr(inquirer, "_diagnostic_context") else (str(inquirer) if inquirer else "Operation")
+    target_name = getattr(target, "__name__", getattr(type(target), "__name__", str(target)))
+
+    if isinstance(contract, _TraitProtocolMeta):
+      phrase = _Traitful._trait_phrase(contract._trait_name) if hasattr(_Traitful, "_trait_phrase") else contract._trait_name
+      r = role if role else "type"
+      raise TraitError(f"{ctx} requires the {r} to be {phrase}")
+
+    if getattr(contract, "__name__", None) == "Ordered":
+      r = f" {role}" if role else " component"
+      raise TraitError(f"{ctx} requires an ordered{r} - one claiming the Ordered property (ascending iteration); got {target_name}")
+
+    if getattr(contract, "__name__", None) == "Hashed":
+      r = f" {role}" if role else " component"
+      raise TraitError(f"{ctx} requires a hashed{r} - one claiming the Hashed property (hash-addressed); got {target_name}")
+
+    cname = _contract_name(contract)
+    r = f" {role}" if role else f" {cname.lower()}"
+    article = "an" if r.strip()[:1].lower() in "aeiou" else "a"
+    raise TraitError(f"{ctx} requires {article}{r} - one claiming {cname}; got {target_name}")
+
+  return target
+
+
+def dispatch_require(caller, other, inquirer=None, role=None):
+  if not isinstance(caller, type):
+    return require(caller, other, inquirer=inquirer, role=role)
+  if _is_abstract_contract(caller) and not _is_abstract_contract(other):
+    return require(other, caller, inquirer=inquirer, role=role)
+  if _is_abstract_contract(other) and not _is_abstract_contract(caller):
+    return require(caller, other, inquirer=inquirer, role=role)
+  if _is_abstract_contract(caller) and _is_abstract_contract(other):
+    if isinstance(caller, type) and isinstance(other, type):
+      if issubclass(other, caller):
+        return require(other, caller, inquirer=inquirer, role=role)
+    return require(caller, other, inquirer=inquirer, role=role)
+  return require(caller, other, inquirer=inquirer, role=role)
+
+
+def enforced(fn):
+  sig = inspect.signature(fn)
+  @functools.wraps(fn)
+  def wrapper(*args, **kwargs):
+    bound = sig.bind(*args, **kwargs)
+    bound.apply_defaults()
+    self = bound.arguments.get("self")
+    if self is not None and "name" in bound.arguments and not hasattr(self, "name"):
+      try:
+        self.name = bound.arguments["name"]
+      except Exception:
+        pass
+    for name, val in bound.arguments.items():
+      if name == "self":
+        continue
+      param = sig.parameters[name]
+      if param.annotation is not inspect.Parameter.empty:
+        contract = param.annotation
+        if val is None and param.default is None:
+          continue
+        role = name
+        if name == "element":
+          role = "element type"
+        elif name == "index":
+          role = "index type"
+        elif name == "set":
+          role = "set backend"
+        elif name == "collection":
+          role = "collection backend"
+        elif name == "backend":
+          cname = _contract_name(contract)
+          if "Mapping" in cname:
+            role = "mapping backend"
+          elif "Set" in cname:
+            role = "set backend"
+          else:
+            role = "backend"
+        require(val, contract, inquirer=self, role=role)
+    return fn(*args, **kwargs)
+  return wrapper
 
 
 def _make_trait_requirement(trait, phrase):
@@ -320,14 +630,9 @@ class _AliasRenderer(_GroupRenderer):
 #
 class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
 
-  @classmethod
-  def require(cls, component, inquirer, role=None):
-    target = component if isinstance(component, type) else type(component)
-    if not issubclass(target, cls):
-      r = f" {role}" if role else f" {cls.__name__.lower()}"
-      article = "an" if r.strip()[:1].lower() in "aeiou" else "a"
-      raise TraitError(f"{inquirer._diagnostic_context} requires {article}{r} - one claiming {cls.__name__}; got {getattr(target, '__name__', str(target))}")
-    return component
+  @_binder
+  def require(self_or_cls, other, inquirer=None, role=None):
+    return dispatch_require(self_or_cls, other, inquirer=inquirer, role=role)
 
   def __setup__(self):
     # Basic methods

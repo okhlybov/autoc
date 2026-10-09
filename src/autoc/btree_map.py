@@ -1,13 +1,24 @@
 from autoc.mapping import Mapping, BidirectionalRange, _Entry
 from autoc.btree_set import Set as BTreeSet
+from autoc.set import Set
 from autoc.ordered import Ordered
-from autoc.core import Indirection
+from autoc.core import Indirection, enforced
 
 
 #
 class Map(Mapping, Ordered):
 
   brief = "Ordered map from index to element backed by a B-Tree - iterates in index order"
+
+  @enforced
+  def _make_set(self, backend: Set & Ordered = BTreeSet, **kws):
+    return backend(
+      self._decorate_component("set", abbreviate=True),
+      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
+      visibility="internal",
+      algebraic_operations=False,
+      **kws,
+    )
 
   def __init__(self, name, element, index, *args, order=4, node_capacity=None, **kws):
     super().__init__(name, element, index, *args, **kws)
@@ -16,13 +27,7 @@ class Map(Mapping, Ordered):
       set_kws["node_capacity"] = node_capacity
     else:
       set_kws["order"] = order
-    self._set = BTreeSet(
-      self._decorate_component("set", abbreviate=True),
-      _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
-      visibility="internal",
-      algebraic_operations=False,
-      **set_kws,
-    )
+    self._set = self._make_set(**set_kws)
     self.dependencies.add(self._set)
     self._setup_range()
 

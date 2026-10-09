@@ -1,7 +1,9 @@
 import autoc.std as std
-from autoc.core import _StructRenderer, Callable, inout
+from autoc.core import _StructRenderer, Callable, inout, enforced, Comparable
 from autoc.container import _Range
 from autoc.multiset import Multiset
+from autoc.mapping import Mapping
+from autoc.flat_map import Map as FlatMap
 from autoc.range import Forward
 
 
@@ -10,9 +12,10 @@ class Counter(_StructRenderer, Multiset):
 
   brief = "Multiset container tracking element frequencies"
 
-  def __init__(self, name, element, backend, *args, algebraic_operations=True, dependencies=(), **kws):
+  @enforced
+  def __init__(self, name: str, element: Comparable, backend: Mapping = FlatMap, *args, algebraic_operations=True, dependencies=(), **kws):
     super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.string_h), **kws)
-    self._map = backend.require_mapping(self)(
+    self._map = backend(
       self._decorate_component("map", abbreviate=True),
       std.size_t,
       self.element,

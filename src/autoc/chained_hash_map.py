@@ -1,7 +1,8 @@
 from autoc.mapping import Mapping, _Entry
 from autoc.chained_hash_set import Set
+import autoc.set
 from autoc.hashed import Hashed
-from autoc.core import Indirection
+from autoc.core import Indirection, enforced
 
 
 #
@@ -9,14 +10,18 @@ class Map(Mapping, Hashed):
 
   brief = "Hash map from index to element using bucket chaining - stable entry addresses, no sentinel values"
 
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
-    self._set = Set(
+  @enforced
+  def _make_set(self, backend: autoc.set.Set & Hashed = Set):
+    return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
     )
+
+  def __init__(self, name, element, index, *args, **kws):
+    super().__init__(name, element, index, *args, **kws)
+    self._set = self._make_set()
     self.dependencies.add(self._set)
     self._setup_range()
 
