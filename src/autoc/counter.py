@@ -1,6 +1,8 @@
 import autoc.std as std
 from autoc.core import _StructRenderer, Callable, inout
 from autoc.container import _Range
+from autoc.core import TraitError
+from autoc.mapping import Mapping
 from autoc.multiset import Multiset
 from autoc.range import Forward
 
@@ -11,9 +13,9 @@ class Counter(_StructRenderer, Multiset):
   brief = "Multiset container tracking element frequencies"
 
   def __init__(self, name, element, backend, *args, algebraic_operations=True, dependencies=(), **kws):
-    from autoc.mapping import Mapping
+    # FIXME selectors
     if backend is None or not issubclass(backend, Mapping):
-      raise ValueError(f"Counter '{name}' requires an explicit mapping backend class (e.g. autoc.flat_map.Map, autoc.chained_hash_map.Map)")
+      raise TraitError(f"Counter '{name}' requires an explicit mapping backend class (e.g. autoc.flat_map.Map, autoc.chained_hash_map.Map)")
     self.backend = backend
     super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.string_h), **kws)
     self._map = backend(

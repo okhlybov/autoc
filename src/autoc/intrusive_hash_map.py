@@ -1,15 +1,15 @@
 from autoc.mapping import Mapping, _Entry
 from autoc.intrusive_hash_set import Set
+from autoc.hashed import Hashed
 
 
 #
-class Map(Mapping):
+class Map(Mapping, Hashed):
   
   brief = "Map from index to element over open addressing with sentinel values"
 
   def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index.require("hashable", f"Map '{name}'", "index type")
     self._set = Set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),

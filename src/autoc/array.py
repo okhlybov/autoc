@@ -133,7 +133,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         @param[in] element the value to assign to every position
       """) as f:
       destroy_i = self.element.destroy(target_i) if self.element.destructible else ""
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         for(index = 0; index < {self._size}; ++index) {{
@@ -153,7 +153,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         """
 
     with self.copy as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         assert(source);
@@ -185,7 +185,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
     with self.get as f:
       result = f.result.variable("result")
       slot = self.element.variable(f"target->elements[{f.index}]")
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
@@ -204,7 +204,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
     with self.set as f:
       slot = self.element.variable(f"target->elements[{f.index}]")
       destroy_slot = self.element.destroy(slot) if self.element.destructible else ""
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {destroy_slot};
@@ -241,7 +241,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         @param[in] target the array to read from
         @return a copy of the first element
       """) as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         return {self.get(f.target, 0)};
       """
@@ -269,7 +269,7 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         @param[in] target the array to read from
         @return a copy of the last element
       """) as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         return {self.get(f.target, self._size - 1)};
       """

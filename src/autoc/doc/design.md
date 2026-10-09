@@ -78,14 +78,20 @@ scheme, and a container mixes in exactly the schemes it honors:
 | `Assignable` | ability | adds `set` | position-addressed assignment; implies `Indexable` |
 | `Sortable`, `Bisectable` | ability | `sort`/`reverse`/`sorted`, `lower_bound`/`upper_bound`/`binary_search` | user-sortable then bisectable operation groups |
 | `Ordered` | property | — | born-sorted iteration: the ascending element or index order is a structural invariant, so backward traversal is available unconditionally; claimed by the tree and flat sets and the map families keyed over them, never by the hash-based families |
+| `Hashed` | property | — | hash-addressed storage: elements or keys are addressed via hash digest; enforces hashability of the element or index centrally; claimed by the chained and intrusive hash sets and hash maps |
 
 The word class carries the role: **abilities** (the `-able` family) state what a container can do and
-are claimed in its bases; **properties** (the `-ed` family, `Ordered` being the first) state what a
+are claimed in its bases; **properties** (the `-ed` family, `Ordered` and `Hashed` being the first) state what a
 container or component *is* — and a property becomes a *requirement* the moment a composite demands
-it of a component, which is expressed and enforced at the demanding container's construction time —
-as a class-level demand through the property (`Ordered.require(backend, ...)`) and as a trait-level
-demand through the type (`element.require("orderable", ...)`), the trait predicates living on the
-type so their requirement does too. Hard element, index and backend requirements are likewise checked
+it of a component, which is expressed and enforced at the demanding container's construction time.
+The demand has two levels, both owned by the demanded side: a class-level demand routes through the
+property (`Ordered.require(backend, ...)`, `Hashed.require(backend, ...)`), a trait-level demand through the type's generated
+enforcers (`element.require_orderable(...)`, `require_hashable(...)`, `require_all`, `require_any`) — one phrase table per
+trait keeps the bool query face and the raising demand face permanently paired. The enforcers raise
+`TraitError`; the bool queries stay total so the late-bound constraints can probe them and omit the
+operation rather than fail. The `Ordered` and `Hashed` properties own their invariants centrally: every claiming
+container has the orderability or hashability of its subject (the element, or the index for the keyed
+containers via `_ordering()` / `_hashing()`) enforced in the property's own setup, not re-stated per concrete class. Hard element, index and backend requirements are likewise checked
 in the constructors — a set demands equality-comparable elements, the hash families demand hashable
 ones, the ordered trees and flat containers demand orderable ones, the adapters demand the backend
 classes — so a misfit fails with a named diagnostic at composition, not as a broken render or a
@@ -118,7 +124,7 @@ sequences mix `Sortable`, which implies `Bisectable` — the operations become m
 after `sort()`.
 
 Capabilities come in two tiers. *Structural* abilities (`Traversable`, `Sequential`,
-`Insertable`, `Indexable`, `Assignable`) and properties (`Ordered`) are claimed by mixin
+`Insertable`, `Indexable`, `Assignable`) and properties (`Ordered`, `Hashed`) are claimed by mixin
 presence and cannot be switched off — a container either has a range or is born sorted or
 does not. *Algorithmic conveniences* (`Sortable`/`Bisectable`, the set algebra, string
 formatting) ride the operation-group flags (`sorting_operations`, `algebraic_operations`,

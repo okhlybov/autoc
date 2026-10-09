@@ -134,7 +134,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         @param[in,out] target the vector to add to
         @param[in] element the element to add to the back
       """) as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         {self.extend(f.target)};
         {self.element.copy(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), f.element)};
@@ -188,29 +188,31 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
     curr_var = self._element("target", "index")
     next_var = self._element("target", "index + 1")
-    dest_curr = f"{self.element.destroy(curr_var)};" if self.element.destructible else ""
-    dest_next = f"{self.element.destroy(next_var)};" if self.element.destructible else ""
     with self.remove as f:
-      move_shift = (
-        f"{self.element.move(curr_var, next_var)};"
-        if self.element.moveable else
-        f"{self.element.copy(curr_var, next_var)}; {dest_next}"
-      )
-      f.code = lambda f=f: f"""
-        size_t index;
-        assert(target);
-        for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(curr_var, f.element)}) {{
-            {dest_curr}
-            for(; index + 1 < target->size; ++index) {{
-              {move_shift}
+      def _remove(f=f):
+        dest_curr = f"{self.element.destroy(curr_var)};" if self.element.destructible else ""
+        dest_next = f"{self.element.destroy(next_var)};" if self.element.destructible else ""
+        move_shift = (
+          f"{self.element.move(curr_var, next_var)};"
+          if self.element.moveable else
+          f"{self.element.copy(curr_var, next_var)}; {dest_next}"
+        )
+        return f"""
+          size_t index;
+          assert(target);
+          for(index = 0; index < target->size; ++index) {{
+            if({self.element.equal(curr_var, f.element)}) {{
+              {dest_curr}
+              for(; index + 1 < target->size; ++index) {{
+                {move_shift}
+              }}
+              --target->size;
+              return 1;
             }}
-            --target->size;
-            return 1;
           }}
-        }}
-        return 0;
-      """
+          return 0;
+        """
+      f.code = _remove
 
     # Resize grows the vector by extending the chunk table and default-initializing the
     # new elements in place - no element migration is ever needed since the chunks are
@@ -260,7 +262,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
     with self.get as f:
       result = f.result.variable("result")
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
@@ -280,7 +282,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
     destroy_i = str(self.element.destroy(self.element.variable(f"target->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))) + ";" if self.element.destructible else str()
 
     with self.set as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {destroy_i}
@@ -327,7 +329,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         """
 
     with self.copy as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         assert(source);

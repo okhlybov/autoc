@@ -22,7 +22,7 @@ class Sequential(Traversable):
 
     # The canonical iteration order makes the pairwise walk a valid equality
     with self.equal as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(left);
         assert(right);
         if({self.size(f.left)} != {self.size(f.right)}) return 0;

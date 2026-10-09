@@ -11,7 +11,6 @@ class Map(Mapping, Ordered):
 
   def __init__(self, name, element, index, *args, order=4, node_capacity=None, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index.require("orderable", f"Map '{name}'", "index type")
     set_kws = {}
     if node_capacity is not None:
       set_kws["node_capacity"] = node_capacity

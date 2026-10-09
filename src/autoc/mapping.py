@@ -12,7 +12,7 @@ from autoc.assignable import Assignable
 class _Entry(Record):
   
   def __init__(self, name, element, index, visibility, *args, **kws):
-    super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, **kws)
+    super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, getters=False, setters=False, **kws)
     self.index = self.fields["index"]
     self.element = self.fields["element"]
     self.element_p = self.element.view_type
@@ -54,17 +54,19 @@ class _Entry(Record):
         """
       
     with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Emplace element (internal)") as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         {self.element.copy(_element, f.element)};
       """
 
     with self.method(None, ("create", "element"), {"target": inout(self)} | self.element.constructor_parameters, hidden=True, visibility="internal", constraint=lambda: self.element.emplaceable, brief="Create element in-place (internal)") as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
-        assert(target);
-        {self.element.create(_element, *create_args)};
-      """
+      def _create_element(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        return f"""
+          assert(target);
+          {self.element.create(_element, *create_args)};
+        """
+      f.code = _create_element
 
     with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy element (internal)") as f:
       if self.element.destructible:
@@ -77,8 +79,8 @@ class _Entry(Record):
           assert(target);
         """
 
-    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable and self.element.comparable, brief="Replace element in-place (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Replace element in-place (internal)") as f:
+      f.code = lambda f=f: f"""
         assert(target);
         {self.destroy_element(f.target)};
         {self.element.copy(_element, f.element)};
@@ -90,6 +92,14 @@ class _Entry(Record):
     # The entries are identified by their indices alone so the ordered containers holding them
     # must compare them by the index as well - the hash-based backends need no ordering and
     # stay usable over non-orderable indices
+    if self.index.comparable:
+      with self.equal as f:
+        f.code = f"""
+          assert(left);
+          assert(right);
+          return {self.index.equal(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
+        """
+
     if self.index.orderable:
       with self.compare as f:
         f.code = f"""
@@ -103,6 +113,14 @@ class _Entry(Record):
     # The entries are ordered by their indices alone - the element is the payload - and
     # only when the index itself is orderable
     return self.index.orderable
+
+  @property
+  def hashable(self):
+    return self.index.hashable
+
+  @property
+  def comparable(self):
+    return self.index.comparable
 
   @property
   def constructible(self):
@@ -297,6 +315,14 @@ class Mapping(_StructRenderer, Traversable, Assignable):
     super().__init__(name, element, index, *args, **kws)
     self.index.require_any(("comparable", "orderable"), f"Mapping '{name}'", "index type")
 
+  def _ordering(self):
+    # The keyed containers order their indices, not their payload elements
+    return self.index, "index type"
+
+  def _hashing(self):
+    # The keyed containers hash their indices, not their payload elements
+    return self.index, "index type"
+
   def _setup_range(self):
     # The abstract mapping range walks forward only; the ordered map subclasses override
     # this hook with the bidirectional wrapper since their backends iterate in ascending
@@ -346,7 +372,7 @@ class Mapping(_StructRenderer, Traversable, Assignable):
       """
 
     with self.equal as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(left);
         assert(right);
         return {self._set.equal(_left, _right)};
@@ -354,14 +380,14 @@ class Mapping(_StructRenderer, Traversable, Assignable):
 
     if self.orderable:
       with self.compare as f:
-        f.code = f"""
+        f.code = lambda f=f: f"""
           assert(left);
           assert(right);
           return {self._set.compare(_left, _right)};
         """
 
     with self.hash as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         return {self._set.hash(_target)};
       """

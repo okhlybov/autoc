@@ -16,7 +16,6 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
       order = max(2, (node_capacity + 1) // 2)
     self.order = order
     super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)
-    self.element.require("orderable", f"Set '{self.name}'", "element type")
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.range = Range(self)

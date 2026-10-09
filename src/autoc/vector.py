@@ -173,7 +173,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
     with self.get as f:
       result = f.result.variable("result")
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
@@ -194,7 +194,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
     with self.set as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {destroy_i};
@@ -217,7 +217,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
       """) as f:
       if self.element.zero_initializable:
-        f.code = f"""
+        f.code = lambda f=f: f"""
           {self.index} index;
           assert(target);
           if({f.size} > target->size) {{
@@ -241,7 +241,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           target->size = {f.size};
         """
       elif self.element.default_constructible:
-        f.code = f"""
+        f.code = lambda f=f: f"""
           {self.index} index;
           assert(target);
           if({f.size} > target->size) {{
@@ -274,7 +274,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         @param[in,out] target the vector to add to
         @param[in] element the element to add to the back
       """) as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         if(target->size == target->capacity) {{
           {self.index} index, new_capacity;
@@ -300,28 +300,30 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to add to
       """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      move_or_copy = (
-        f"{self.element.move(self.element.variable('elements[index]'), target_i)};"
-        if self.element.moveable else
-        f"{self.element.copy(self.element.variable('elements[index]'), target_i)}; {destroy_i};"
-      )
-      f.code = f"""
-        assert(target);
-        if(target->size == target->capacity) {{
-          {self.index} index, new_capacity;
-          {Indirection(self.element)} elements;
-          new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
-          elements = {self.memory.allocate(self.element, "new_capacity")};
-          for(index = 0; index < target->size; ++index) {{
-            {move_or_copy}
+      def _emplace_back(f=f):
+        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+        move_or_copy = (
+          f"{self.element.move(self.element.variable('elements[index]'), target_i)};"
+          if self.element.moveable else
+          f"{self.element.copy(self.element.variable('elements[index]'), target_i)}; {destroy_i};"
+        )
+        return f"""
+          assert(target);
+          if(target->size == target->capacity) {{
+            {self.index} index, new_capacity;
+            {Indirection(self.element)} elements;
+            new_capacity = target->capacity == 0 ? 8 : target->capacity * 2;
+            elements = {self.memory.allocate(self.element, "new_capacity")};
+            for(index = 0; index < target->size; ++index) {{
+              {move_or_copy}
+            }}
+            {self._free_heap("target")}
+            {self._set_heap("target", "elements", "new_capacity")}
           }}
-          {self._free_heap("target")}
-          {self._set_heap("target", "elements", "new_capacity")}
-        }}
-        {self.element.create(self.element.variable(f"{data}[target->size]"), *create_args)};
-        ++target->size;
-      """
+          {self.element.create(self.element.variable(f"{data}[target->size]"), *create_args)};
+          ++target->size;
+        """
+      f.code = _emplace_back
     self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
       constraint=lambda: self.element.emplaceable and (self.element.copyable or self.element.moveable), brief="Construct element in-place at back (synonym for emplace_back)")
 
@@ -351,28 +353,30 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
       """
 
     target_next_i = self.element.variable(f"{data}[index + 1]")
-    destroy_next = f"{self.element.destroy(target_next_i)};" if self.element.destructible else ""
     with self.remove as f:
-      move_shift = (
-        f"{self.element.move(target_i, target_next_i)};"
-        if self.element.moveable else
-        f"{self.element.copy(target_i, target_next_i)}; {destroy_next}"
-      )
-      f.code = lambda f=f: f"""
-        {self.index} index;
-        assert(target);
-        for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(target_i, f.element)}) {{
-            {destroy_i};
-            for(; index + 1 < target->size; ++index) {{
-              {move_shift};
+      def _remove(f=f):
+        destroy_next = f"{self.element.destroy(target_next_i)};" if self.element.destructible else ""
+        move_shift = (
+          f"{self.element.move(target_i, target_next_i)};"
+          if self.element.moveable else
+          f"{self.element.copy(target_i, target_next_i)}; {destroy_next}"
+        )
+        return f"""
+          {self.index} index;
+          assert(target);
+          for(index = 0; index < target->size; ++index) {{
+            if({self.element.equal(target_i, f.element)}) {{
+              {destroy_i};
+              for(; index + 1 < target->size; ++index) {{
+                {move_shift};
+              }}
+              --target->size;
+              return 1;
             }}
-            --target->size;
-            return 1;
           }}
-        }}
-        return 0;
-      """
+          return 0;
+        """
+      f.code = _remove
 
     with self.method(None, "compact", {"target": inout(self)}, constraint=lambda: self.element.copyable, brief="Compact buffer capacity to fit element count",
       description="""
@@ -384,7 +388,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
       """) as f:
       destroy_heap_i = str(self.element.destroy(self.element.variable("heap[index]"))) + ";" if self.element.destructible else str()
       if self.inline_capacity > 0:
-        f.code = f"""
+        f.code = lambda f=f: f"""
           {self.index} index;
           assert(target);
           if(target->capacity > {self.inline_capacity}) {{
@@ -409,7 +413,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
         """
       else:
-        f.code = f"""
+        f.code = lambda f=f: f"""
           {self.index} index;
           assert(target);
           if(target->size == 0) {{
@@ -459,7 +463,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
       """
 
     with self.copy as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         {self.index} index;
         assert(target);
         assert(source);

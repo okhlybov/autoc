@@ -10,6 +10,7 @@ class Multiset(Traversable, Insertable):
   def __init__(self, name, element, *args, algebraic_operations=True, **kws):
     self.algebraic_operations = bool(algebraic_operations)
     super().__init__(name, element, *args, **kws)
+    self.element.require_comparable(f"Multiset '{name}'", "element type")
 
   def __setup__(self):
     super().__setup__()

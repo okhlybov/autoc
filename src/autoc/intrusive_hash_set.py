@@ -1,6 +1,7 @@
 import autoc.std as std
 from autoc.range import Forward
 import autoc.set
+from autoc.hashed import Hashed
 from autoc.container import _Range
 from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer, _ceil_power2
 
@@ -13,13 +14,12 @@ class _Macro(Macro):
 
 
 #
-class Set(_StructRenderer, autoc.set.Set):
+class Set(_StructRenderer, autoc.set.Set, Hashed):
 
   brief = "Set of distinct elements over open addressing with sentinel values"
   
   def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
-    self.element.require("hashable", f"Set '{self.name}'", "element type")
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
     self.is_empty = _Macro("int", {"entry": self.element}, is_empty)

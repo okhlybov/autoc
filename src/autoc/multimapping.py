@@ -14,6 +14,14 @@ class Multimapping(_StructRenderer, Traversable, Indexable):
     self.index.require_any(("comparable", "orderable"), f"Multimapping '{name}'", "index type")
     self.dependencies.add(self.index)
 
+  def _ordering(self):
+    # The keyed containers order their indices, not their payload elements
+    return self.index, "index type"
+
+  def _hashing(self):
+    # The keyed containers hash their indices, not their payload elements
+    return self.index, "index type"
+
   def __setup__(self):
     super().__setup__()
 

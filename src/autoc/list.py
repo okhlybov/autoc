@@ -71,7 +71,7 @@ class List(_StructRenderer, Sequential, Insertable):
       """
     
     with self.copy as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t size;
         {self.node}* target_node;
         {self.node}* source_node;

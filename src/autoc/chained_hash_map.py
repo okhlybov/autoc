@@ -1,16 +1,16 @@
 from autoc.mapping import Mapping, _Entry
 from autoc.chained_hash_set import Set
+from autoc.hashed import Hashed
 from autoc.core import Indirection
 
 
 #
-class Map(Mapping):
+class Map(Mapping, Hashed):
 
   brief = "Hash map from index to element using bucket chaining - stable entry addresses, no sentinel values"
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index.require("hashable", f"Map '{name}'", "index type")
     self._set = Set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),

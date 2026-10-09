@@ -17,7 +17,7 @@ class Traversable(Container):
     r = range.variable("r")
 
     with self.find_view as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         {r.definition};
         assert(target);
         for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
@@ -28,7 +28,7 @@ class Traversable(Container):
 
     with self.hash as f:
       state = self.hasher.state_t.variable("state")
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t result;
         {r.definition};
         {state.definition};

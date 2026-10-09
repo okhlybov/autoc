@@ -12,7 +12,6 @@ class Map(Mapping, Ordered):
 
   def __init__(self, name, element, index, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    self.index.require("orderable", f"Map '{name}'", "index type")
     self._set = FlatSet(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),

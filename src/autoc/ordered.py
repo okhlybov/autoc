@@ -1,4 +1,5 @@
-from autoc.traversable import Traversable
+from autoc.core import TraitError
+from autoc.properties import Property
 
 
 # Property mixin for containers whose iteration order is born sorted - the ascending
@@ -8,17 +9,29 @@ from autoc.traversable import Traversable
 # containers (the hash-based families) do not claim it; their iteration order is layout-
 # incidental. Unlike the ability mixins (the -able family) a property is also the shape
 # of a requirement: a composite keyed over such a component demands the property of it
-# and validates the demand at its own construction time via require().
-class Ordered(Traversable):
+# and validates the demand at its own construction time via require(). The property owns
+# its invariant: every claiming container has the orderability of its ordering subject
+# enforced here, in one place.
+class Ordered(Property):
 
   brief = "Abstract ordered container - iterates in ascending element or index order"
+
+  _diagnostics = "Ordered"
 
   @classmethod
   def require(cls, component, context):
     # The requirement application of the property: a composite demanding an ordered
     # component checks the class here, at its own construction time
     if not issubclass(component, cls):
-      raise ValueError(f"{context} requires an ordered component - one claiming the Ordered property (ascending iteration); got {component.__name__}")
+      raise TraitError(f"{context} requires an ordered component - one claiming the Ordered property (ascending iteration); got {component.__name__}")
+    return component
 
-  def __setup__(self):
-    super().__setup__()
+  def __init__(self, *args, **kws):
+    super().__init__(*args, **kws)
+    subject, role = self._ordering()
+    self._enforce(subject, "require_orderable", role)
+
+  def _ordering(self):
+    # The ordering subject - the type whose orderability backs the ascending iteration
+    # promise. Element-ordered containers take the element; the keyed containers override to their index
+    return self.element, "element type"

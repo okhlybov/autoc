@@ -101,7 +101,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
     with self.get as f:
       result = f.result.variable("result")
       slot = self.element.variable(f"target->elements[(target->head + ({f.index})) % {self._capacity('target')}]")
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         {result.definition};
         assert(target);
         assert({self.indexed(f.target, f.index)});
@@ -120,7 +120,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
     with self.set as f:
       slot = self.element.variable(f"target->elements[(target->head + ({f.index})) % {self._capacity('target')}]")
       destroy_slot = f"{self.element.destroy(slot)};" if self.element.destructible else ""
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert({self.indexed(f.target, f.index)});
         {destroy_slot}
@@ -137,7 +137,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
         @param[in] target the circular buffer to read from - must not be empty
         @return copy of the front element
       """) as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.get(f.target, 0)};
@@ -169,7 +169,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
         @param[in] target the circular buffer to read from - must not be empty
         @return copy of the back element
       """) as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         assert(!{self.empty(f.target)});
         return {self.get(f.target, "target->size - 1")};
@@ -203,7 +203,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
       head_slot = self.element.variable("target->elements[target->head]")
       destroy_head = f"{self.element.destroy(head_slot)};" if self.element.destructible else ""
       new_slot = self.element.variable(f"target->elements[(target->head + target->size) % {self._capacity('target')}]")
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         assert({self._capacity("target")} > 0);
         if(target->size == {self._capacity("target")}) {{
@@ -241,7 +241,7 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
       """) as f:
       new_head_slot = self.element.variable("target->elements[new_head]")
       destroy_new_head = f"{self.element.destroy(new_head_slot)};" if self.element.destructible else ""
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t new_head;
         assert(target);
         assert({self._capacity("target")} > 0);
@@ -376,30 +376,32 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
     target_idx = lambda idx: f"target->elements[(target->head + {idx}) % {self._capacity('target')}]"
     curr_slot = self.element.variable(target_idx("index"))
     next_slot = self.element.variable(target_idx("index + 1"))
-    dest_curr = f"{self.element.destroy(curr_slot)};" if self.element.destructible else ""
-    dest_next = f"{self.element.destroy(next_slot)};" if self.element.destructible else ""
     with self.remove as f:
-      move_shift = (
-        f"{self.element.move(curr_slot, next_slot)};"
-        if self.element.moveable else
-        f"{self.element.copy(curr_slot, next_slot)}; {dest_next}"
-      )
-      f.code = lambda f=f: f"""
-        size_t index;
-        assert(target);
-        for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(curr_slot, f.element)}) {{
-            {dest_curr}
-            for(; index + 1 < target->size; ++index) {{
-              {move_shift}
+      def _remove(f=f):
+        dest_curr = f"{self.element.destroy(curr_slot)};" if self.element.destructible else ""
+        dest_next = f"{self.element.destroy(next_slot)};" if self.element.destructible else ""
+        move_shift = (
+          f"{self.element.move(curr_slot, next_slot)};"
+          if self.element.moveable else
+          f"{self.element.copy(curr_slot, next_slot)}; {dest_next}"
+        )
+        return f"""
+          size_t index;
+          assert(target);
+          for(index = 0; index < target->size; ++index) {{
+            if({self.element.equal(curr_slot, f.element)}) {{
+              {dest_curr}
+              for(; index + 1 < target->size; ++index) {{
+                {move_shift}
+              }}
+              --target->size;
+              if(target->size == 0) target->head = 0;
+              return 1;
             }}
-            --target->size;
-            if(target->size == 0) target->head = 0;
-            return 1;
           }}
-        }}
-        return 0;
-      """
+          return 0;
+        """
+      f.code = _remove
 
     with self.method(None, "clear", {"target": inout(self)}, brief="Clear all elements from the circular buffer",
       description="""
@@ -491,7 +493,7 @@ class Static(_CircularBuffer):
     with self.copy as f:
       target_i = self.element.variable("target->elements[index]")
       source_i = self.element.variable(f"source->elements[(source->head + index) % {self._fixed_capacity}]")
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         assert(source);
@@ -506,7 +508,7 @@ class Static(_CircularBuffer):
       target_i = self.element.variable("target->elements[index]")
       source_i = self.element.variable(f"source->elements[(source->head + index) % {self._fixed_capacity}]")
       destroy_src = f"{self.element.destroy(source_i)};" if self.element.destructible else ""
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         assert(source);
@@ -610,7 +612,7 @@ class Dynamic(_CircularBuffer):
       """
 
     with self.copy as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         size_t index;
         assert(target);
         assert(source);
@@ -659,7 +661,7 @@ class Dynamic(_CircularBuffer):
         right->capacity = tmp_capacity;
       """
 
-    with self.method(None, ("set", "capacity"), {"target": inout(self), "new_capacity": std.size_t}, brief="Change buffer capacity",
+    with self.method(None, ("set", "capacity"), {"target": inout(self), "new_capacity": std.size_t}, constraint=lambda: self.element.copyable, brief="Change buffer capacity",
       description="""
         Reallocates the buffer to the new capacity. If the new capacity is smaller than the current size,
         the oldest elements are discarded so that at most new_capacity elements remain.
@@ -667,7 +669,7 @@ class Dynamic(_CircularBuffer):
         @param[in,out] target the circular buffer to resize
         @param[in] new_capacity the new maximum capacity - must be greater than zero
       """) as f:
-      f.code = f"""
+      f.code = lambda f=f: f"""
         assert(target);
         assert(new_capacity > 0);
         if(new_capacity != target->capacity) {{

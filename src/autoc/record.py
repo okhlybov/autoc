@@ -108,13 +108,15 @@ class Record(_StructRenderer, Composite):
         @param[in] target the record to read
         @return a copy of the {field} field
       """) as f:
-      result = f.result.variable("result")
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"""
-        {result.definition};
-        {type.copy(result, type.variable(f"{target}.{field}"))};
-        return {result};
-      """
+      def _reader_code(f=f, type=type, field=field):
+        result = f.result.variable("result")
+        target = f"({f.target.bind(self)})"
+        return f"""
+          {result.definition};
+          {type.copy(result, type.variable(f"{target}.{field}"))};
+          return {result};
+        """
+      f.inline_code = _reader_code
 
   def _add_writer(self, type, field):
     with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {field} field",
@@ -125,12 +127,14 @@ class Record(_StructRenderer, Composite):
         @param[out] target the record to update
         @param[in] value the value to store into the {field} field - the previous field value is destroyed
       """) as f:
-      target = f"({f.target.bind(self)})"
-      destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
-      f.inline_code = f"""
-        {destroy_field};
-        {type.copy(type.variable(f"{target}.{field}"), "value")};
-      """
+      def _writer_code(f=f, type=type, field=field):
+        target = f"({f.target.bind(self)})"
+        destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
+        return f"""
+          {destroy_field};
+          {type.copy(type.variable(f"{target}.{field}"), "value")};
+        """
+      f.inline_code = _writer_code
 
   def _add_emplace_writer(self, type, field):
     with self.method(None, ("emplace", field), {"target": out(self)} | type.constructor_parameters, visibility=self.visibility, constraint=lambda: type.emplaceable, brief=f"Construct the {field} field in place",

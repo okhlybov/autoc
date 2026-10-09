@@ -4,6 +4,7 @@ from autoc.container import _Range
 from autoc.range import Forward
 from autoc.mapping import _Entry
 from autoc.multimapping import Multimapping
+from autoc.ordered import Ordered
 import autoc.flat_multiset
 
 
@@ -127,7 +128,7 @@ class Range(_Range, Forward):
 
 
 #
-class Map(Multimapping):
+class Map(Multimapping, Ordered):
 
   brief = "Flat multimap from index to multiple elements backed by a contiguous sorted array of key-value pairs"
 

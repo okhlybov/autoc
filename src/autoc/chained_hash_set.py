@@ -1,18 +1,18 @@
 import autoc.std as std
 from autoc.range import Forward
 import autoc.set
+from autoc.hashed import Hashed
 from autoc.container import _Range
 from autoc.core import inout, out, _type, _StructRenderer, Indirection, Callable, _ceil_power2
 
 
 #
-class Set(_StructRenderer, autoc.set.Set):
+class Set(_StructRenderer, autoc.set.Set, Hashed):
 
   brief = "Hash set of distinct elements using bucket chaining - stable element addresses, no sentinel values"
 
   def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
     super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
-    self.element.require("hashable", f"Set '{self.name}'", "element type")
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self._bucket_p = Indirection(self._node_p)

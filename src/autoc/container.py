@@ -100,7 +100,7 @@ class Container(Composite):
         @param[in] element the element to look for
         @return non-zero if the container holds an element equal to the given one
       """) as f:
-      f.inline_code = f"""
+      f.inline_code = lambda f=f: f"""
         assert(target);
         return {self.find_view(f.target, f.element)} != NULL;
       """

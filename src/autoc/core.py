@@ -71,6 +71,30 @@ class _MultiphaseConstructible(type):
 # Mixin for types which support all operations
 class _Traitful:
 
+  # The trait phrases used in the requirement diagnostics - the single source of truth
+  # from which the per-trait requirement enforcers are generated, keeping the query face
+  # (the bool property) and the demand face (require_<trait>) permanently paired
+  _trait_phrases = (
+    ("constructible", "constructible"),
+    ("default_constructible", "default constructible"),
+    ("emplaceable", "emplaceable"),
+    ("destructible", "destructible"),
+    ("copyable", "copyable"),
+    ("moveable", "moveable"),
+    ("swappable", "swappable"),
+    ("comparable", "equality comparable"),
+    ("orderable", "orderable"),
+    ("hashable", "hashable"),
+    ("zero_initializable", "zero initializable"),
+  )
+
+  @classmethod
+  def _trait_phrase(cls, trait):
+    for name, phrase in cls._trait_phrases:
+      if name == trait:
+        return phrase
+    raise ValueError(f"Unknown trait '{trait}'")
+
   @property
   def constructible(self):
     return True
@@ -136,26 +160,43 @@ class _Traitful:
   def zero_initializable(self):
     return False
 
-  # The traits the requirement checks may demand - the guard against typoed trait names
-  _trait_names = frozenset((
-    "constructible", "default_constructible", "emplaceable", "destructible",
-    "copyable", "moveable", "swappable", "comparable", "orderable", "hashable",
-    "zero_initializable",
-  ))
-
-  # The requirement application of a trait: a composite demanding a trait of a component
-  # type - its element, index or backend key - checks the demand here, at its own
-  # construction time. The trait predicates live on the type so does their requirement;
-  # the demanding container contributes its name and the role the type plays
-  def require(self, trait, context, role="type"):
-    if trait not in self._trait_names:
-      raise ValueError(f"{context}: unknown trait '{trait}' demanded")
-    if not getattr(self, trait):
-      raise ValueError(f"{context} requires the {role} to be {trait}")
+  # The requirement enforcers - the demand face of the traits. Unlike the bool queries
+  # (which stay total so the late-bound constraints can probe them and simply omit the
+  # operation when the trait is absent) the enforcers run in the demanding container's
+  # constructor where the absence of a demanded trait is an error, not an omission
+  def require_all(self, traits, context, role="type"):
+    for trait in traits:
+      getattr(self, f"require_{trait}")(context, role)
+    return True
 
   def require_any(self, traits, context, role="type"):
-    if not any(getattr(self, trait, False) for trait in traits):
-      raise ValueError(f"{context} requires the {role} to be {' or '.join(traits)}")
+    for trait in traits:
+      if getattr(self, trait, False):
+        return True
+    raise TraitError(f"{context} requires the {role} to be " +
+      " or ".join(self._trait_phrase(trait) for trait in traits))
+
+
+# A demanded trait is absent - raised by the requirement enforcers at the demanding
+# container's construction time
+class TraitError(ValueError):
+  pass
+
+
+def _make_trait_requirement(trait, phrase):
+  def require(self, context, role="type"):
+    if not getattr(self, trait, False):
+      raise TraitError(f"{context} requires the {role} to be {phrase}")
+    return True
+  require.__name__ = f"require_{trait}"
+  require.__qualname__ = f"require_{trait}"
+  require.__doc__ = f"Demand the '{trait}' trait - raises TraitError when absent, returns True when held"
+  return require
+
+
+for _trait, _phrase in _Traitful._trait_phrases:
+  setattr(_Traitful, f"require_{_trait}", _make_trait_requirement(_trait, _phrase))
+del _trait, _phrase
 
 
 class _VisibilityManager:
@@ -962,8 +1003,7 @@ class Macro(_Parametrized):
 
 
 def _defined(operation):
-  # An operation is defined when it carries its implementation - either the macro emitter
-  # or the function body
+  # An operation is defined when it carries its implementation - either the macro emitter or the function body
   return isinstance(operation, Macro) or (isinstance(operation, Function) and hasattr(operation, "code"))
 
 
