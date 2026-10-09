@@ -14,10 +14,9 @@ class Map(Mapping, Ordered):
   def _diagnostic_context(self):
     return f"{self._diagnostics} '{self.name}'"
 
-  def __init__(self, name, element, index, tree_set, *args, **kws):
+  def __init__(self, name, element, index, set, *args, **kws):
     super().__init__(name, element, index, *args, **kws)
-    Ordered.require(tree_set, self)
-    self._set = tree_set(
+    self._set = set.require_ordered(self)(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",

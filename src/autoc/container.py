@@ -2,7 +2,7 @@ import autoc.std as std
 from autoc.hash import Xor
 from autoc.range import Range
 from autoc.memory import Manager
-from autoc.core import Composite, _StructRenderer, _type
+from autoc.core import Composite, _StructRenderer, _type, _binder
 
 
 #
@@ -48,6 +48,31 @@ class _Range(_StructRenderer, Range):
 class Container(Composite):
 
   brief = "Abstract container for entities of the same type"
+
+  @_binder
+  def require_ordered(obj, inquirer, role="component"):
+    from autoc.ordered import Ordered
+    return Ordered.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_hashed(obj, inquirer, role="component"):
+    from autoc.hashed import Hashed
+    return Hashed.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_mapping(obj, inquirer, role="mapping backend"):
+    from autoc.mapping import Mapping
+    return Mapping.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_set(obj, inquirer, role="set backend"):
+    from autoc.set import Set
+    return Set.require(obj, inquirer, role=role)
+
+  @_binder
+  def require_insertable(obj, inquirer, role="collection backend"):
+    from autoc.insertable import Insertable
+    return Insertable.require(obj, inquirer, role=role)
   
   def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
     super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)

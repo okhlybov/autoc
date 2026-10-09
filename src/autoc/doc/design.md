@@ -84,9 +84,7 @@ The word class carries the role: **abilities** (the `-able` family) state what a
 are claimed in its bases; **properties** (the `-ed` family, `Ordered` and `Hashed` being the first) state what a
 container or component *is* — and a property becomes a *requirement* the moment a composite demands
 it of a component, which is expressed and enforced at the demanding container's construction time.
-The demand has two levels, both owned by the demanded side: a class-level demand routes through the
-property (`Ordered.require(backend, self)`, `Hashed.require(backend, self)`), a trait-level demand through the type's generated
-enforcers (`element.require_orderable(self, ...)`, `require_hashable(self, ...)`, `require_all`, `require_any`) — accepting the inquiring instance (`self`) directly to resolve diagnostic context centrally without per-call-site string formatting — one phrase table per
+The demand has two levels, both owned by the demanded side and exposed symmetrically via receiver-oriented methods: a component-level demand routes through the container or property (`backend.require_ordered(self)`, `backend.require_hashed(self)`, `backend.require_mapping(self)`, `set.require_set(self)`, `collection.require_insertable(self)`), a trait-level demand through the type's generated enforcers (`element.require_orderable(self, ...)`, `require_hashable(self, ...)`, `require_all`, `require_any`) — accepting the inquiring instance (`self`) directly to resolve diagnostic context centrally without per-call-site string formatting and returning `self` for fluent checked-assignment chaining — one phrase table per
 trait keeps the bool query face and the raising demand face permanently paired. The enforcers raise
 `TraitError`; the bool queries stay total so the late-bound constraints can probe them and omit the
 operation rather than fail. The `Ordered` and `Hashed` properties own their invariants centrally: every claiming

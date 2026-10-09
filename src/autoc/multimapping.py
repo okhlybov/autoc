@@ -11,8 +11,7 @@ class Multimapping(_StructRenderer, Traversable, Indexable):
 
   def __init__(self, name, element, index, *args, dependencies=(), **kws):
     super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
-    self.index.require_any(("comparable", "orderable"), self, "index type")
-    self.dependencies.add(self.index)
+    self.dependencies.add(self.index.require_any(("comparable", "orderable"), self, "index type"))
 
   def _ordering(self):
     # The keyed containers order their indices, not their payload elements

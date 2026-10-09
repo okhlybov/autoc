@@ -245,16 +245,8 @@ class Map(Multimapping):
   brief = "Generic associative multimap container parameterized by a set and a collection container"
 
   def __init__(self, name, element, index, set, collection, *args, dependencies=(), **kws):
-    import autoc.set
-    from autoc.core import TraitError
-    from autoc.insertable import Insertable
-    # FIXME make checks convenience method calls
-    if not isinstance(set, type) or not issubclass(set, autoc.set.Set):
-      raise TraitError(f"Multimap '{name}' requires the set backend to be a Set")
-    if not isinstance(collection, type) or not issubclass(collection, Insertable):
-      raise TraitError(f"Multimap '{name}' requires the collection backend to be an insertable collection")
     super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
-    self._collection = collection(
+    self._collection = collection.require_insertable(self)(
       self._decorate_component("collection", abbreviate=True),
       self.element,
       visibility="internal",
@@ -265,7 +257,7 @@ class Map(Multimapping):
       self.index,
       visibility="internal",
     )
-    self._set = set(
+    self._set = set.require_set(self)(
       self._decorate_component("set", abbreviate=True),
       self._entry,
       visibility="internal",

@@ -1,6 +1,7 @@
 import re
 import sys
 import textwrap
+import functools
 from autoc.module import Entity, Code, SystemHeader
 from collections.abc import Iterable # substitute for missing iterable()
 
@@ -167,12 +168,12 @@ class _Traitful:
   def require_all(self, traits, inquirer, role="type"):
     for trait in traits:
       getattr(self, f"require_{trait}")(inquirer, role)
-    return True
+    return self
 
   def require_any(self, traits, inquirer, role="type"):
     for trait in traits:
       if getattr(self, trait, False):
-        return True
+        return self
     raise TraitError(f"{inquirer._diagnostic_context} requires the {role} to be " +
       " or ".join(self._trait_phrase(trait) for trait in traits))
 
@@ -187,16 +188,27 @@ def _make_trait_requirement(trait, phrase):
   def require(self, inquirer, role="type"):
     if not getattr(self, trait, False):
       raise TraitError(f"{inquirer._diagnostic_context} requires the {role} to be {phrase}")
-    return True
+    return self
   require.__name__ = f"require_{trait}"
   require.__qualname__ = f"require_{trait}"
-  require.__doc__ = f"Demand the '{trait}' trait - raises TraitError when absent, returns True when held"
+  require.__doc__ = f"Demand the '{trait}' trait - raises TraitError when absent, returns self when held"
   return require
 
 
 for _trait, _phrase in _Traitful._trait_phrases:
   setattr(_Traitful, f"require_{_trait}", _make_trait_requirement(_trait, _phrase))
 del _trait, _phrase
+
+
+# Descriptor binding to the class when accessed on the class and to the instance when accessed on an instance
+class _binder:
+
+  def __init__(self, fn):
+    self.fn = fn
+
+  def __get__(self, instance, owner=None):
+    target = owner if instance is None else instance
+    return functools.partial(self.fn, target)
 
 
 class _VisibilityManager:
@@ -301,6 +313,14 @@ class _AliasRenderer(_GroupRenderer):
 
 #
 class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
+
+  @classmethod
+  def require(cls, component, inquirer, role=None):
+    target = component if isinstance(component, type) else type(component)
+    if not issubclass(target, cls):
+      r = f" {role}" if role else f" {cls.__name__.lower()}"
+      raise TraitError(f"{inquirer._diagnostic_context} requires a{r} - one claiming {cls.__name__}; got {getattr(target, '__name__', str(target))}")
+    return component
 
   def __setup__(self):
     # Basic methods
