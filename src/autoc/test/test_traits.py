@@ -31,6 +31,7 @@ from autoc.counter import Counter
 from autoc.multimap import Map as Multimap
 from autoc.queue import Queue
 from autoc.stack import Stack
+from autoc.packet import Packet
 
 
 # Custom non-comparable, non-hashable, non-orderable composite type
@@ -526,6 +527,19 @@ class TestTraits(unittest.TestCase):
 
     cnt = Counter("test_cnt_str", "int")
     self.assertIsInstance(cnt.element, Type)
+
+    # Component decoration: internal subcomponents are hidden/private by default
+    vec = Vector("my_vec", "int")
+    self.assertEqual(vec._decorate_component("node"), "_my_vecn")
+    self.assertEqual(vec._decorate_component("variant", abbreviate=False, hidden=True), "_my_vec_variant")
+    self.assertEqual(vec._decorate_component("range", abbreviate=False, hidden=False), "my_vec_range")
+    self.assertEqual(vec._decorate_component("range", abbreviate=True, hidden=False), "my_vecr")
+
+    # Packet subcomponents are private with leading underscore while range is public
+    pkt = Packet("test_pkt", "int", 3)
+    self.assertEqual(pkt.range.name, "test_pkt_range")
+    self.assertEqual(pkt._variant.name, "_test_pkt_variant")
+    self.assertEqual([t.name for t in pkt.tuples], ["_test_pkt_tuple_1", "_test_pkt_tuple_2", "_test_pkt_tuple_3"])
 
 
 # Run tests when imported or executed directly

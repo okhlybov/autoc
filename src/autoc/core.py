@@ -718,15 +718,15 @@ class _Named(Type):
     identifier = args if len(args) > 1 else args[0]
     return self.decorator(self, identifier, **kwargs)
 
-  def _decorate_component(self, suffix, abbreviate=True):
+  def _decorate_component(self, suffix, abbreviate=True, hidden=True):
     if abbreviate:
       if isinstance(suffix, str):
         x = suffix[0]
       else:
         x = "".join([x[0] for x in suffix])
-      return f"{self.decorate(None, hidden=True)}{x}"
+      return f"{self.decorate(None, hidden=hidden)}{x}"
     else:
-      return self.decorate(suffix)
+      return self.decorate(suffix, hidden=hidden)
   
   def _decorate_attribute(self, identifier):
     match identifier:
