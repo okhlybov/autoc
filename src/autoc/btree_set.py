@@ -649,7 +649,7 @@ class Range(_Range, Bidirectional):
       """
 
     with self.move_front as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         --target->remaining;
@@ -700,7 +700,7 @@ class Range(_Range, Bidirectional):
       """
 
     with self.move_back as f:
-      f.inline_code = f"""
+      f.code = f"""
         assert(target);
         assert(!{self.empty(f.target)});
         --target->remaining;

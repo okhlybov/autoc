@@ -644,7 +644,7 @@ class Range(_Range, Bidirectional):
       """
 
     with self.move_front as f:
-      f.inline_code = f"""
+      f.code = f"""
         {self.iterable.node}* p;
         assert(target);
         assert(!{self.empty(f.target)});
@@ -682,7 +682,7 @@ class Range(_Range, Bidirectional):
       """
 
     with self.move_back as f:
-      f.inline_code = f"""
+      f.code = f"""
         {self.iterable.node}* p;
         assert(target);
         assert(!{self.empty(f.target)});
