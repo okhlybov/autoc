@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.indexable import Indexable
 from autoc.assignable import Assignable
 from autoc.sortable import Sortable
 from autoc.sequential import Sequential
@@ -14,11 +13,11 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
   brief = "Direct access sequence container"
   
-  def __init__(self, name, element, inline_capacity=0, *args, index=std.size_t, sorting_operations=True, dependencies=(), **kws):
+  def __init__(self, name, element, inline_capacity=0, *args, index=std.size_t, sorting_operations=True, dependencies=(), **kwargs):
     self.inline_capacity = int(inline_capacity)
     if self.inline_capacity < 0:
       raise ValueError(f"Vector inline_capacity must be non-negative, got {self.inline_capacity}")
-    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.string_h), **kws)
+    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.string_h), **kwargs)
     self.range = Range(self)
 
   def _data(self, target):
@@ -538,8 +537,8 @@ class Range(_Range, DirectAccess):
       }};
     """)
 
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def _copy(self, result, parameters, **kwargs):
+    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kwargs)
 
   def __setup__(self):
     super().__setup__()

@@ -9,8 +9,8 @@ from autoc.core import inout, _StructRenderer, Indirection, Callable
 #
 class Set(_StructRenderer, Bisectable, Ordered, Container):
 
-  def __init__(self, name, element, *args, dependencies=(), **kws):
-    super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)
+  def __init__(self, name, element, *args, dependencies=(), **kwargs):
+    super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kwargs)
     self.range = Range(self)
 
   def _element(self, target, index):

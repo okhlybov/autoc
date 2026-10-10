@@ -11,8 +11,8 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
   brief = "Ordered sequence with element insertion and removal at both ends"
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
 

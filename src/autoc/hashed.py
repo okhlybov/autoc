@@ -1,4 +1,4 @@
-from autoc.core import _binder, enforced, Hashable
+from autoc.core import binder, enforced, Hashable
 from autoc.properties import Property
 
 
@@ -12,19 +12,19 @@ class Hashed(Property):
 
   brief = "Abstract hashed container - resolves its elements or indices through their hash"
 
-  @_binder
-  def require(self_or_cls, other, *args, **kwargs):
+  @binder
+  def require(obj, other, *args, **kwargs):
     from autoc.core import require
-    if self_or_cls is Hashed:
-      return require(other, self_or_cls)
-    return require(self_or_cls, other)
+    if obj is Hashed:
+      return require(other, obj)
+    return require(obj, other)
 
   @enforced
   def _enforce_hashing(self, subject: Hashable):
     return subject
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self._enforce_hashing(self._hashing())
 
   def _hashing(self):

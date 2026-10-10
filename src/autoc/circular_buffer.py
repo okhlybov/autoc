@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.indexable import Indexable
 from autoc.assignable import Assignable
 from autoc.sortable import Sortable
 from autoc.sequential import Sequential
@@ -14,8 +13,8 @@ class _CircularBuffer(_StructRenderer, Assignable, Sortable, Sequential, Inserta
 
   brief = "Ring buffer container with bounded capacity and overwrite semantics"
 
-  def __init__(self, name, element, *args, index=std.size_t, sorting_operations=True, dependencies=(), **kws):
-    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+  def __init__(self, name, element, *args, index=std.size_t, sorting_operations=True, dependencies=(), **kwargs):
+    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, dependencies=(*dependencies, std.assert_h, std.string_h), **kwargs)
     self.range = Range(self)
 
   @property
@@ -428,11 +427,11 @@ class Static(_CircularBuffer):
 
   brief = "Fixed-capacity stack-allocated circular ring buffer"
 
-  def __init__(self, name, element, capacity, *args, **kws):
+  def __init__(self, name, element, capacity, *args, **kwargs):
     self._fixed_capacity = int(capacity)
     if self._fixed_capacity < 1:
       raise ValueError(f"Static capacity must be at least 1, got {self._fixed_capacity}")
-    super().__init__(name, element, *args, **kws)
+    super().__init__(name, element, *args, **kwargs)
 
   @property
   def fixed_capacity(self):
@@ -542,8 +541,8 @@ class Dynamic(_CircularBuffer):
 
   brief = "Bounded heap-allocated circular ring buffer with runtime capacity and resizing"
 
-  def __init__(self, name, element, *args, **kws):
-    super().__init__(name, element, *args, **kws)
+  def __init__(self, name, element, *args, **kwargs):
+    super().__init__(name, element, *args, **kwargs)
 
   @property
   def constructible(self):
@@ -711,8 +710,8 @@ class Range(_Range, DirectAccess):
       }};
     """)
 
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def _copy(self, result, parameters, **kwargs):
+    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kwargs)
 
   def __setup__(self):
     super().__setup__()

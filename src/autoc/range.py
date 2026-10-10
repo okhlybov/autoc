@@ -5,8 +5,8 @@ from autoc.core import Composite, _type, inout
 #
 class Range(Composite):
   
-  def __init__(self, element, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, element, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.element = _type(element)
 
   @property
@@ -73,8 +73,8 @@ class Forward(Input):
 
   brief = "Forward copyable iterator"
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     
   def __setup__(self):
     super().__setup__()

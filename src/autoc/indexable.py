@@ -1,4 +1,3 @@
-import autoc.std as std
 from autoc.core import _type
 from autoc.container import Container
 
@@ -9,9 +8,9 @@ from autoc.container import Container
 # duplicate keys).
 class Indexable(Container):
 
-  def __init__(self, name, element, index, *args, **kws):
+  def __init__(self, name, element, index, *args, **kwargs):
     self.index = _type(index)
-    super().__init__(name, element, *args, **kws)
+    super().__init__(name, element, *args, **kwargs)
     self.dependencies.add(self.index)
 
   def __setup__(self):

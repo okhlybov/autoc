@@ -7,9 +7,9 @@ from autoc.insertable import Insertable
 class Set(Traversable, Insertable):
 
   @enforced
-  def __init__(self, name: str, element: Coerce[Comparable], *args, algebraic_operations=True, **kws):
+  def __init__(self, name: str, element: Coerce[Comparable], *args, algebraic_operations=True, **kwargs):
     self.algebraic_operations = bool(algebraic_operations)
-    super().__init__(name, element, *args, **kws)
+    super().__init__(name, element, *args, **kwargs)
 
   def __setup__(self):
     super().__setup__()

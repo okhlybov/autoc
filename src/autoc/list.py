@@ -11,8 +11,8 @@ class List(_StructRenderer, Sequential, Insertable):
   
   brief = "Ordered sequential container with element insertion and removal at the front end"
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.node = _type(self._decorate_component("node"))
     self.range = Range(self)
 

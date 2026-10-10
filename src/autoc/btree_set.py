@@ -11,11 +11,11 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
 
   brief = "Ordered set of distinct values implemented as a B-Tree - iterates in sorted order"
 
-  def __init__(self, name, element, *args, order=4, node_capacity=None, dependencies=(), **kws):
+  def __init__(self, name, element, *args, order=4, node_capacity=None, dependencies=(), **kwargs):
     if node_capacity is not None:
       order = max(2, (node_capacity + 1) // 2)
     self.order = order
-    super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kws)
+    super().__init__(name, element, *args, dependencies=(*dependencies, std.size_t), **kwargs)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.range = Range(self)

@@ -10,8 +10,8 @@ from autoc.assignable import Assignable
 # Common entry implementation for maps backed by an underlying set
 class _Entry(Record):
   
-  def __init__(self, name, element, index, visibility, *args, **kws):
-    super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, getters=False, setters=False, **kws)
+  def __init__(self, name, element, index, visibility, *args, **kwargs):
+    super().__init__(name, {"element": element, "index": index}, *args, visibility=visibility, getters=False, setters=False, **kwargs)
     self.index = self.fields["index"]
     self.element = self.fields["element"]
     self.element_p = self.element.view_type
@@ -131,8 +131,8 @@ class Range(_Range, Forward):
 
   brief = "Forward range over the mapping indices and elements"
 
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable, *args, **kws)
+  def __init__(self, iterable, *args, **kwargs):
+    super().__init__(iterable, *args, **kwargs)
     self._range = iterable._set.range
     self._entry = iterable._set.element
     self.index = iterable.index
@@ -311,8 +311,8 @@ class Mapping(_StructRenderer, Traversable, Assignable):
   brief = "Abstract associative container mapping keys (indices) to values (elements) backed by an underlying set"
 
   @enforced
-  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], *args, **kwargs):
+    super().__init__(name, element, index, *args, **kwargs)
 
   def _ordering(self):
     # The keyed containers order their indices, not their payload elements

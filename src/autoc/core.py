@@ -66,7 +66,7 @@ def _result(obj):
 _intersection_cache = {}
 
 
-class _IntersectionMeta(type):
+class _IntersectionMetaclass(type):
 
   def __call__(cls, *args):
     flat = []
@@ -89,7 +89,7 @@ class _IntersectionMeta(type):
     return inst
 
 
-class IntersectionType(type, metaclass=_IntersectionMeta):
+class IntersectionType(type, metaclass=_IntersectionMetaclass):
   """Represents a type intersection (T1 & T2 & ...) using Python type protocol."""
 
   def __instancecheck__(cls, instance):
@@ -97,6 +97,9 @@ class IntersectionType(type, metaclass=_IntersectionMeta):
 
   def __subclasscheck__(cls, subclass):
     return all(issubclass(subclass, t) for t in cls.__args__)
+
+  def require(cls, other, *args, **kwargs):
+    return require(other, cls)
 
   def __and__(cls, other):
     return IntersectionType(*cls.__args__, other)
@@ -116,7 +119,7 @@ class IntersectionType(type, metaclass=_IntersectionMeta):
     return hash(frozenset(cls.__args__))
 
 
-class _ContractMeta(type):
+class _Contract(type):
   """Metaclass adding type intersection (&) to types."""
 
   def __and__(cls, other):
@@ -127,7 +130,7 @@ class _ContractMeta(type):
 
 
 def _contract_name(contract):
-  if isinstance(contract, CoercionMeta):
+  if isinstance(contract, _Coercion):
     return repr(contract)
   if isinstance(contract, IntersectionType):
     return " & ".join(_contract_name(a) for a in contract.__args__)
@@ -138,8 +141,8 @@ def _contract_name(contract):
   return getattr(contract, "__name__", str(contract))
 
 
-class CoercionMeta(type):
-  """Metaclass for explicit custom type coercions: (source) -> (target)."""
+class _Coercion(type):
+  """Metaclass for explicit custom type _Coercions: (source) -> (target)."""
 
   def __instancecheck__(cls, instance):
     if not satisfies(instance, cls.source):
@@ -159,46 +162,49 @@ class CoercionMeta(type):
     return False
 
   def __rshift__(cls, other):
-    return CoercionMeta("Coercion", (), {"source": cls.target, "target": other})
+    return _Coercion("_Coercion", (), {"source": cls.target, "target": other})
+
+  def require(cls, other, *args, **kwargs):
+    return require(other, cls)
 
   def __repr__(cls):
     return f"({_contract_name(cls.source)}) -> ({_contract_name(cls.target)})"
 
 
-def _make_coercion(source, target):
-  return CoercionMeta("Coercion", (), {"source": source, "target": target})
+def _corce(source, target):
+  return _Coercion("_Coercion", (), {"source": source, "target": target})
 
 
-class CoerceMeta(type):
+class _CoerceMetaclass(type):
 
   def __getitem__(cls, item):
     if isinstance(item, tuple):
       if len(item) == 2:
-        return _make_coercion(item[0], item[1])
+        return _corce(item[0], item[1])
       raise ValueError("Coerce[...] takes 1 or 2 arguments")
     T = globals().get("Type")
     source = (str | T) if T is not None else str
-    return _make_coercion(source, item)
+    return _corce(source, item)
 
 
-class Coerce(metaclass=CoerceMeta):
-  """Explicit custom type coercion: Coerce[Target] or Coerce[Source, Target]."""
+class Coerce(metaclass=_CoerceMetaclass):
+  """Explicit custom type _Coercion: Coerce[Target] or Coerce[Source, Target]."""
   pass
 
 
-class _TraitProtocolMeta(_ContractMeta):
+class _TraitMetaclass(_Contract):
   """Metaclass for trait protocols (Comparable, Orderable, Hashable, etc.)."""
 
   def __instancecheck__(cls, instance):
     if isinstance(instance, type):
       return cls.__subclasscheck__(instance)
-    val = getattr(instance, cls._trait_name, False)
+    val = getattr(instance, cls._instance_trait, False)
     if isinstance(val, property):
       return False
     return bool(val)
 
   def __subclasscheck__(cls, subclass):
-    val = getattr(subclass, cls._trait_name, False)
+    val = getattr(subclass, cls._instance_trait, False)
     if isinstance(val, property):
       return False
     return bool(val)
@@ -210,66 +216,65 @@ class _TraitProtocolMeta(_ContractMeta):
     return cls.__name__
 
 
-class TraitProtocol(metaclass=_TraitProtocolMeta):
-  _trait_name = ""
+class _Trait(metaclass=_TraitMetaclass):
+  pass
 
 
-class Constructible(TraitProtocol):
-  _trait_name = "constructible"
+class Constructible(_Trait):
+  _instance_trait = "constructible"
 
 
-class DefaultConstructible(TraitProtocol):
-  _trait_name = "default_constructible"
+class DefaultConstructible(_Trait):
+  _instance_trait = "default_constructible"
 
 
-class Emplaceable(TraitProtocol):
-  _trait_name = "emplaceable"
+class Emplaceable(_Trait):
+  _instance_trait = "emplaceable"
 
 
-class Destructible(TraitProtocol):
-  _trait_name = "destructible"
+class Destructible(_Trait):
+  _instance_trait = "destructible"
 
 
-class Copyable(TraitProtocol):
-  _trait_name = "copyable"
+class Copyable(_Trait):
+  _instance_trait = "copyable"
 
 
-class Moveable(TraitProtocol):
-  _trait_name = "moveable"
+class Moveable(_Trait):
+  _instance_trait = "moveable"
 
 
-class Swappable(TraitProtocol):
-  _trait_name = "swappable"
+class Swappable(_Trait):
+  _instance_trait = "swappable"
 
 
-class Comparable(TraitProtocol):
-  _trait_name = "comparable"
+class Comparable(_Trait):
+  _instance_trait = "comparable"
 
 
-class Orderable(TraitProtocol):
-  _trait_name = "orderable"
+class Orderable(_Trait):
+  _instance_trait = "orderable"
 
 
-class Hashable(TraitProtocol):
-  _trait_name = "hashable"
+class Hashable(_Trait):
+  _instance_trait = "hashable"
 
 
-class ZeroInitializable(TraitProtocol):
-  _trait_name = "zero_initializable"
+class ZeroInitializable(_Trait):
+  _instance_trait = "zero_initializable"
 
 
-#
-class _MultiphaseConstructible(_ContractMeta):
+class _StageConstructorMetaclass(_Contract):
 
-  def __call__(cls, *args, **kws):
-    obj = super().__call__(*args, **kws)
+  def __call__(cls, *args, **kwargs):
+    obj = super().__call__(*args, **kwargs)
     obj.__setup__()
     obj.__register__()
     return obj
 
 
 # Descriptor binding to the class when accessed on the class and to the instance when accessed on an instance
-class _binder:
+class binder:
 
   def __init__(self, fn):
     self.fn = fn
@@ -281,8 +286,6 @@ class _binder:
 
 # Mixin for types which support all operations
 class _Traitful:
-
-
 
   @property
   def constructible(self):
@@ -350,9 +353,9 @@ class _Traitful:
     return False
 
   # Fluent requirement check on the target type or instance
-  @_binder
-  def require(self_or_cls, contract, *args, **kwargs):
-    return require(self_or_cls, contract)
+  @binder
+  def require(obj, contract, *args, **kwargs):
+    return require(obj, contract)
 
 
 class TraitError(TypeError, ValueError):
@@ -394,6 +397,18 @@ def require(target, contract, *args, param=None, **kwargs):
   return target
 
 
+def _extract_coercion(contract):
+  if isinstance(contract, _Coercion):
+    return contract
+  origin = typing.get_origin(contract)
+  if origin is typing.Union or isinstance(contract, types.UnionType):
+    args = typing.get_args(contract) if origin is typing.Union else contract.__args__
+    for a in args:
+      if isinstance(a, _Coercion):
+        return a
+  return None
+
+
 def enforced(fn):
   sig = inspect.signature(fn)
   @functools.wraps(fn)
@@ -409,7 +424,8 @@ def enforced(fn):
         if val is None and param.default is None:
           continue
         require(val, contract, param=name)
-        if isinstance(contract, CoercionMeta) and isinstance(val, str):
+        coercion = _extract_coercion(contract)
+        if coercion is not None and isinstance(val, str) and satisfies(val, coercion):
           bound.arguments[name] = _type(val)
     return fn(*bound.args, **bound.kwargs)
   return wrapper
@@ -419,8 +435,8 @@ def enforced(fn):
 
 class _VisibilityManager:
 
-  def __init__(self, *args, visibility="public", **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, visibility="public", **kwargs):
+    super().__init__(*args, **kwargs)
     self.visibility = visibility
 
   @property
@@ -450,8 +466,8 @@ def _optional_group_note(group):
 
 class _Documented(Entity, _VisibilityManager):
   
-  def __init__(self, *args, brief=None, description=None, optional_group=None, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, brief=None, description=None, optional_group=None, **kwargs):
+    super().__init__(*args, **kwargs)
     self.__manage_attr("brief", brief)
     self.__manage_attr("description", description)
     self.__manage_attr("optional_group", optional_group)
@@ -518,15 +534,15 @@ class _AliasRenderer(_GroupRenderer):
 
 
 #
-class Type(_Documented, Entity, _VisibilityManager, metaclass=_MultiphaseConstructible):
+class Type(_Documented, Entity, _VisibilityManager, metaclass=_StageConstructorMetaclass):
 
   @classmethod
   def __class_getitem__(cls, target):
     return Coerce[str | Type, target]
 
-  @_binder
-  def require(self_or_cls, contract, *args, **kwargs):
-    return require(self_or_cls, contract)
+  @binder
+  def require(obj, contract, *args, **kwargs):
+    return require(obj, contract)
 
   def __setup__(self):
     # Basic methods
@@ -656,8 +672,8 @@ decorator = camel_decorator
 # Mixin for named types which can have methods/components/attributes etc.
 class _Named(Type):
   
-  def __init__(self, name, *args, prefix=None, decorator=None, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, name, *args, prefix=None, decorator=None, **kwargs):
+    super().__init__(*args, **kwargs)
     self.name = str(name)
     self.prefix = prefix if prefix else self.name
     self.decorator = decorator if decorator else sys.modules[__name__].decorator
@@ -665,7 +681,7 @@ class _Named(Type):
 
 
   #
-  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, type=None, **kws):
+  def method(self, result, identifier, parameters, *args, hidden=False, attribute=None, abstract=None, type=None, **kwargs):
     x = Function(
       result,
       self.decorate(identifier, hidden=hidden),
@@ -673,7 +689,7 @@ class _Named(Type):
       *args,
       abstract=abstract if abstract else False,
       type=self if type is None else type,
-      **kws
+      **kwargs
     )
     # Method by itself does not depend on its owning type - only though explicit parameters
     attribute = self._decorate_attribute(attribute if attribute else identifier)
@@ -682,25 +698,25 @@ class _Named(Type):
     return x
 
   #
-  def macro(self, attribute, *args, **kws):
+  def macro(self, attribute, *args, **kwargs):
     self.__attributes.add(attribute) # Record attribute name which holds the method object
-    setattr(self, attribute, x := Macro(*args, **kws))
+    setattr(self, attribute, x := Macro(*args, **kwargs))
     return x
   
   #
-  def macro_from(self, attribute, *args, **kws):
+  def macro_from(self, attribute, *args, **kwargs):
     m = getattr(self, attribute)
-    return self.macro(attribute, m._result, m._parameters, *args, **{**m._forward_kws, **kws})
+    return self.macro(attribute, m._result, m._parameters, *args, **{**m._forward_kwargs, **kwargs})
     
   #
-  def method_from(self, identifier, *args, attribute=None, **kws):
+  def method_from(self, identifier, *args, attribute=None, **kwargs):
     m = getattr(self, attribute := self._decorate_attribute(attribute if attribute else identifier))
-    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, type=self, **{**m._forward_kws, **kws})
+    return self.method(m._result, identifier, m._parameters, *args, constraint=m.constraint, attribute=attribute, type=self, **{**m._forward_kwargs, **kwargs})
   
   #
-  def decorate(self, *args, **kws):
+  def decorate(self, *args, **kwargs):
     identifier = args if len(args) > 1 else args[0]
-    return self.decorator(self, identifier, **kws)
+    return self.decorator(self, identifier, **kwargs)
 
   def _decorate_component(self, suffix, abbreviate=True):
     if abbreviate:
@@ -728,8 +744,8 @@ class _Named(Type):
 #
 class Primitive(_Named, _Traitful):
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     if not self.name in _type_cache:
       _type_cache[self.name] = self
 
@@ -879,8 +895,8 @@ class _StructRenderer(_GroupRenderer):
 # Abstract class for renderable contents, basically a str-like type
 class Statement:
 
-  def __init__(self, contents, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, contents, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.contents = str(contents)
 
   def __str__(self):
@@ -898,8 +914,8 @@ def _indifference(lt, rt):
 # Abstract class representing a typed value of unspecified contents which can be passed to callable
 class Value:
   
-  def __init__(self, type, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, type, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.type = _type(type)
 
   def bind(self, type):
@@ -930,7 +946,7 @@ def string(value):
 #
 class StringLiteral(Literal):
 
-  def __init__(self, value, *args, **kws):
+  def __init__(self, value, *args, **kwargs):
     super().__init__(Indirection("char", constant=True), f"\"{value}\"")
 
 
@@ -942,15 +958,15 @@ def char(obj):
 #
 class CharacterLiteral(Literal):
 
-  def __init__(self, value, *args, **kws):
+  def __init__(self, value, *args, **kwargs):
     super().__init__("char", f"'{str(value)[0]}'")
 
 
 # Class for representing the C variable
 class Variable(Value):
   
-  def __init__(self, type, name, **kws):
-    super().__init__(type, **kws)
+  def __init__(self, type, name, **kwargs):
+    super().__init__(type, **kwargs)
     self.name = str(name)
 
   def bind(self, type):
@@ -970,8 +986,8 @@ class Variable(Value):
 #
 class Indirection(Type):
 
-  def __init__(self, type, *args, indirection=1, constant=None, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, type, *args, indirection=1, constant=None, **kwargs):
+    super().__init__(*args, **kwargs)
     if isinstance(t := _type(type), Indirection):
       self.type = t.type
       self.indirection = indirection + t.indirection
@@ -1047,8 +1063,8 @@ def inout(obj):
 # Basic callable descriptor
 class Callable(_Documented):
   
-  def __init__(self, result, parameters, *args, constraint=lambda: True, variadic=False, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, result, parameters, *args, constraint=lambda: True, variadic=False, **kwargs):
+    super().__init__(*args, **kwargs)
     # Capture raw parameter description to be used in modeling of the descendant types
     self._result = result
     self._parameters = parameters
@@ -1078,7 +1094,7 @@ class Callable(_Documented):
 
   # Callable optional parameters needed to be forwarded on the callable descendant creation
   @property
-  def _forward_kws(self):
+  def _forward_kwargs(self):
     return {
       "brief": self.brief,
       "description": self.description,
@@ -1117,8 +1133,8 @@ class Callable(_Documented):
 #
 class _Parametrized(Callable, Entity):
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self.result = None if self._result is None or self._result == "void" else _result(self._result).resolve(self)
     self.parameters = {str(n): _parameter(t).resolve(self) for n, t in self._parameters.items()}
     self.dependencies.update(self.parameters.values())
@@ -1163,11 +1179,11 @@ class _Functional:
 class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
 
   @classmethod
-  def of(self, name, callable, *args, **kws):
-    return self(callable._result, name, callable._parameters, *args, **{**callable._forward_kws, **kws})
+  def of(self, name, callable, *args, **kwargs):
+    return self(callable._result, name, callable._parameters, *args, **{**callable._forward_kwargs, **kwargs})
 
-  def __init__(self, result, name, parameters, *args, **kws):
-    super().__init__(name, result, parameters, *args, **kws)
+  def __init__(self, result, name, parameters, *args, **kwargs):
+    super().__init__(name, result, parameters, *args, **kwargs)
 
   def __setup__(self):
     super().__setup__()
@@ -1202,11 +1218,11 @@ class Functional(Primitive, _Functional, _Parametrized, _VisibilityManager):
 class Macro(_Parametrized):
   
   @classmethod
-  def of(self, callable, emitter, constraint=None, **kws):
-    return self(callable._result, callable._parameters, emitter, constraint=constraint or callable.constraint, **{**callable._forward_kws, **kws})
+  def of(self, callable, emitter, constraint=None, **kwargs):
+    return self(callable._result, callable._parameters, emitter, constraint=constraint or callable.constraint, **{**callable._forward_kwargs, **kwargs})
   
-  def __init__(self, result, parameters, emitter, **kws):
-    super().__init__(result, parameters, **kws)
+  def __init__(self, result, parameters, emitter, **kwargs):
+    super().__init__(result, parameters, **kwargs)
     self.emitter = emitter
 
  
@@ -1238,11 +1254,11 @@ def _defined(operation):
 class Function(_Functional, _Parametrized, _VisibilityManager):
   
   @classmethod
-  def of(self, callable, name, constraint=None, **kws):
-    return self(callable._result, name, callable._parameters, constraint=constraint or callable.constraint, **{**callable._forward_kws, **kws})
+  def of(self, callable, name, constraint=None, **kwargs):
+    return self(callable._result, name, callable._parameters, constraint=constraint or callable.constraint, **{**callable._forward_kwargs, **kwargs})
 
-  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), references=(), type=None, **kws):
-    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), references=references, **kws)
+  def __init__(self, result, name, parameters, linkage="external", abstract=None, dependencies=(), references=(), type=None, **kwargs):
+    super().__init__(result, parameters, dependencies=(*dependencies, _linkage_code), references=references, **kwargs)
     self.name = str(name)
     self.linkage = linkage
     self.__abstract = abstract

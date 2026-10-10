@@ -19,8 +19,8 @@ class Map(Mapping, Hashed):
       algebraic_operations=False,
     )
 
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
+  def __init__(self, name, element, index, *args, **kwargs):
+    super().__init__(name, element, index, *args, **kwargs)
     self._set = self._make_set()
     self.dependencies.add(self._set)
     self._setup_range()

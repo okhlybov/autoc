@@ -12,8 +12,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
 
   brief = "Ordered set of distinct values implemented as a treap - iterates in sorted order"
   
-  def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kws):
-    super().__init__(*args, dependencies=(*dependencies, randomizer), **kws)
+  def __init__(self, *args, randomizer=Randomizer(), dependencies=(), **kwargs):
+    super().__init__(*args, dependencies=(*dependencies, randomizer), **kwargs)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.randomizer = randomizer

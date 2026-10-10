@@ -14,8 +14,8 @@ class Range(_Range, Forward):
 
   brief = "Forward range over the multimap indices and elements"
 
-  def __init__(self, iterable, *args, dependencies=(), **kws):
-    super().__init__(iterable, *args, dependencies=(*dependencies, std.assert_h), **kws)
+  def __init__(self, iterable, *args, dependencies=(), **kwargs):
+    super().__init__(iterable, *args, dependencies=(*dependencies, std.assert_h), **kwargs)
     self._range = iterable._set.range
     self._entry = iterable._set.element
     self.index = iterable.index
@@ -142,8 +142,8 @@ class Map(Multimapping, Ordered):
       algebraic_operations=False,
     )
 
-  def __init__(self, name, element, index, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
+  def __init__(self, name, element, index, *args, **kwargs):
+    super().__init__(name, element, index, *args, **kwargs)
     self._set = self._make_set()
     self.dependencies.add(self._set)
     self.range = Range(self)

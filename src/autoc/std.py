@@ -28,8 +28,8 @@ stdlib_h = Code(interface="""
 """)
 
 
-def _primitive(name, matcher=None, cls=autoc.core.Primitive, **kws):
-  obj = cls(name, **kws)
+def _primitive(name, matcher=None, cls=autoc.core.Primitive, **kwargs):
+  obj = cls(name, **kwargs)
   if matcher is None:
     matcher = f"^{name}$"
   _type_rxcache.append((re.compile(matcher), obj))
@@ -72,8 +72,8 @@ double_t = _primitive("double_t", dependencies=(math_h,))
 #
 class _Complex(autoc.core.Primitive):
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, dependencies=(_complex_code,), **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, dependencies=(_complex_code,), **kwargs)
 
   def __setup__(self):
     super().__setup__()

@@ -11,8 +11,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
   brief = "Hash set of distinct elements using bucket chaining - stable element addresses, no sentinel values"
 
-  def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kws):
-    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
+  def __init__(self, *args, capacity_threshold=1.0, dependencies=(), **kwargs):
+    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kwargs)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self._bucket_p = Indirection(self._node_p)

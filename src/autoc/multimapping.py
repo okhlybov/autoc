@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.core import _type, inout, Callable, _StructRenderer, enforced, Type, Comparable, Orderable, Coerce
+from autoc.core import inout, Callable, _StructRenderer, enforced, Type, Comparable, Orderable, Coerce
 from autoc.traversable import Traversable
 from autoc.indexable import Indexable
 
@@ -10,8 +10,8 @@ class Multimapping(_StructRenderer, Traversable, Indexable):
   brief = "Abstract associative container mapping keys (indices) to multiple values (elements)"
 
   @enforced
-  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], *args, dependencies=(), **kws):
-    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], *args, dependencies=(), **kwargs):
+    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kwargs)
     self.dependencies.add(self.index)
 
   def _ordering(self):

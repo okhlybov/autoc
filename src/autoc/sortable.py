@@ -7,9 +7,9 @@ from autoc.bisectable import Bisectable
 # for direct-access sequence containers.
 class Sortable(Bisectable):
 
-  def __init__(self, *args, sorting_operations=True, **kws):
+  def __init__(self, *args, sorting_operations=True, **kwargs):
     self.sorting_operations = bool(sorting_operations)
-    super().__init__(*args, bisection_operations=sorting_operations, bisection_optional_group="sorting_operations", **kws)
+    super().__init__(*args, bisection_operations=sorting_operations, bisection_optional_group="sorting_operations", **kwargs)
 
   def __setup__(self):
     super().__setup__()

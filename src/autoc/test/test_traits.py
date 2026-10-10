@@ -493,6 +493,40 @@ class TestTraits(unittest.TestCase):
       dummy_func(999)
     self.assertIn("expected (str | Type) -> (Comparable | Orderable), got int", str(ctx.exception))
 
+    # Coercion in Union contracts
+    @enforced
+    def dummy_union_func(param: Coerce[Comparable] | None = None):
+      return param
+
+    res_union = dummy_union_func("int")
+    self.assertIsInstance(res_union, Type)
+    self.assertEqual(res_union.name, "int")
+    self.assertIsNone(dummy_union_func(None))
+
+    # Compound and Coercion require methods
+    self.assertIs((Set & Ordered).require(AVLSet), AVLSet)
+    with self.assertRaises(TraitError) as ctx:
+      (Set & Ordered).require(Vector)
+    self.assertIn("expected Set", str(ctx.exception))
+
+    self.assertEqual(Coerce[Comparable].require("int"), "int")
+    with self.assertRaises(TraitError) as ctx:
+      Coerce[Comparable].require(OpaqueType())
+    self.assertIn("expected (str | Type) -> (Comparable), got OpaqueType", str(ctx.exception))
+
+    # Container-level element validation via Container.__init__
+    with self.assertRaises(TraitError) as ctx:
+      Vector("bad_vec", 12345)
+    self.assertIn("expected (str | Type) -> (Type), got int", str(ctx.exception))
+
+    # Multimap and Counter coerce string types correctly
+    mm = Multimap("test_mm_str", "int", "int")
+    self.assertIsInstance(mm.element, Type)
+    self.assertIsInstance(mm.index, Type)
+
+    cnt = Counter("test_cnt_str", "int")
+    self.assertIsInstance(cnt.element, Type)
+
 
 # Run tests when imported or executed directly
 suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestTraits)

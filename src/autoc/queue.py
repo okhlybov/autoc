@@ -15,8 +15,8 @@ class Queue(_StructRenderer, Sequential, Insertable):
   def _make_deque(self, backend: Sequential & Insertable = Deque):
     return backend(self._decorate_component("deque"), self.element, visibility="internal")
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self._deque = self._make_deque()
     self.dependencies.add(self._deque)
     self.range = Range(self)

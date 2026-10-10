@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.core import _StructRenderer, Callable, inout, enforced, Comparable
+from autoc.core import _StructRenderer, Callable, inout, enforced, Comparable, Coerce
 from autoc.container import _Range
 from autoc.multiset import Multiset
 from autoc.mapping import Mapping
@@ -13,8 +13,8 @@ class Counter(_StructRenderer, Multiset):
   brief = "Multiset container tracking element frequencies"
 
   @enforced
-  def __init__(self, name: str, element: Comparable, backend: Mapping = FlatMap, *args, algebraic_operations=True, dependencies=(), **kws):
-    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.string_h), **kws)
+  def __init__(self, name: str, element: Coerce[Comparable], backend: Mapping = FlatMap, *args, algebraic_operations=True, dependencies=(), **kwargs):
+    super().__init__(name, element, *args, algebraic_operations=algebraic_operations, dependencies=(*dependencies, std.string_h), **kwargs)
     self._map = backend(
       self._decorate_component("map", abbreviate=True),
       std.size_t,
@@ -541,8 +541,8 @@ class Range(_Range, Forward):
 
   brief = "Forward range over unique elements and their counts in Counter"
 
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable, *args, **kws)
+  def __init__(self, iterable, *args, **kwargs):
+    super().__init__(iterable, *args, **kwargs)
     self._map_range = iterable._map.range
     self.element = iterable.element
     self.dependencies.add(self._map_range)

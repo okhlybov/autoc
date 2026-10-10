@@ -38,8 +38,8 @@ _allocate_code = Code(
 @functools.cache
 class Manager(Code):
   
-  def __init__(self, *args, **kws):
-    super().__init__(*args, dependencies=(std.stdlib_h, _allocate_code), **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, dependencies=(std.stdlib_h, _allocate_code), **kwargs)
     
   def allocate(self, element, count=1, zero=False, cast=None):
     if isinstance(element, Type):

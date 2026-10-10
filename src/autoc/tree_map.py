@@ -12,8 +12,8 @@ class Map(Mapping, Ordered):
   
 
   @enforced
-  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Orderable], set: Set & Ordered = AVLSet, *args, **kws):
-    super().__init__(name, element, index, *args, **kws)
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Orderable], set: Set & Ordered = AVLSet, *args, **kwargs):
+    super().__init__(name, element, index, *args, **kwargs)
     self._set = set(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),

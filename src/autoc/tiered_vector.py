@@ -1,5 +1,4 @@
 import autoc.std as std
-from autoc.indexable import Indexable
 from autoc.assignable import Assignable
 from autoc.sortable import Sortable
 from autoc.range import DirectAccess
@@ -22,10 +21,10 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
   brief = "Append-optimized direct access sequence container"
   
-  def __init__(self, name, element, chunk_shift=16, *args, index=std.size_t, sorting_operations=True, **kws):
+  def __init__(self, name, element, chunk_shift=16, *args, index=std.size_t, sorting_operations=True, **kwargs):
     # memset is needed to zero-initialize the elements of the types which are
     # zero initializable but not default constructible
-    super().__init__(name, element, index, *args, dependencies=(std.string_h,), sorting_operations=sorting_operations, **kws)
+    super().__init__(name, element, index, *args, dependencies=(std.string_h,), sorting_operations=sorting_operations, **kwargs)
     self.chunk_shift = int(chunk_shift)
     self.chunk_mask = (1 << self.chunk_shift) - 1
     self._chunk_p = Indirection(self.element)

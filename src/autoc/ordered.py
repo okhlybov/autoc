@@ -1,4 +1,4 @@
-from autoc.core import _binder, enforced, Orderable
+from autoc.core import binder, enforced, Orderable
 from autoc.properties import Property
 
 
@@ -16,19 +16,19 @@ class Ordered(Property):
 
   brief = "Abstract ordered container - iterates in ascending element or index order"
 
-  @_binder
-  def require(self_or_cls, other, *args, **kwargs):
+  @binder
+  def require(obj, other, *args, **kwargs):
     from autoc.core import require
-    if self_or_cls is Ordered:
-      return require(other, self_or_cls)
-    return require(self_or_cls, other)
+    if obj is Ordered:
+      return require(other, obj)
+    return require(obj, other)
 
   @enforced
   def _enforce_ordering(self, subject: Orderable):
     return subject
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self._enforce_ordering(self._ordering())
 
   def _ordering(self):

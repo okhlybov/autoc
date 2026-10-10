@@ -4,10 +4,10 @@ import autoc.std as std
 # Mixin class providing binary search and bisection algorithms for direct-access containers.
 class Bisectable:
 
-  def __init__(self, *args, bisection_operations=True, bisection_optional_group=None, search_optional_group=None, **kws):
+  def __init__(self, *args, bisection_operations=True, bisection_optional_group=None, search_optional_group=None, **kwargs):
     self.bisection_operations = bool(bisection_operations)
     self.bisection_optional_group = bisection_optional_group
-    super().__init__(*args, **kws)
+    super().__init__(*args, **kwargs)
 
   # Protocol handlers
   

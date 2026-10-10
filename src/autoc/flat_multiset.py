@@ -1,6 +1,5 @@
 import autoc.multiset
 import autoc.flat_sets
-from autoc.flat_sets import Range
 
 
 #
@@ -8,8 +7,8 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
 
   brief = "Contiguous sorted array multiset with binary search lookup and cache-friendly layout"
 
-  def __init__(self, name, element, *args, **kws):
-    super().__init__(name, element, *args, **kws)
+  def __init__(self, name, element, *args, **kwargs):
+    super().__init__(name, element, *args, **kwargs)
 
   def __setup__(self):
     super().__setup__()

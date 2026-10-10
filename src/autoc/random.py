@@ -156,7 +156,7 @@ class RandomSeeder(Code):
 @functools.cache
 class Randomizer(Code):
 
-  def __init__(self, dependencies=(), **kws):
+  def __init__(self, dependencies=(), **kwargs):
     self._entity_t = autoc.core.Indirection("void", constant=True)
     super().__init__(interface=f"""
       /** @private */

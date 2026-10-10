@@ -11,8 +11,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
 
   brief = "Ordered set of distinct values implemented as a red-black tree - iterates in sorted order"
 
-  def __init__(self, *args, dependencies=(), **kws):
-    super().__init__(*args, dependencies=(*dependencies, std.size_t), **kws)
+  def __init__(self, *args, dependencies=(), **kwargs):
+    super().__init__(*args, dependencies=(*dependencies, std.size_t), **kwargs)
     self.node = _type(self._decorate_component("node"))
     self._node_p = Indirection(self.node)
     self.range = Range(self)

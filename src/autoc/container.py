@@ -2,14 +2,14 @@ import autoc.std as std
 from autoc.hash import Xor
 from autoc.range import Range
 from autoc.memory import Manager
-from autoc.core import Composite, _StructRenderer, _type
+from autoc.core import Composite, _StructRenderer, _type, enforced, Coerce, Type
 
 
 #
 class _Range(_StructRenderer, Range):
 
-  def __init__(self, iterable, *args, **kws):
-    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kws)
+  def __init__(self, iterable, *args, **kwargs):
+    super().__init__(iterable.element, iterable._decorate_component("range", abbreviate=not iterable.public), visibility=iterable.visibility, **kwargs)
     self.iterable = iterable
     iterable.references.add(self)
     self.dependencies.add(iterable)
@@ -49,8 +49,9 @@ class Container(Composite):
 
   brief = "Abstract container for entities of the same type"
 
-  def __init__(self, name, element, *args, memory=Manager(), hasher=Xor(), dependencies=(), **kws):
-    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kws)
+  @enforced
+  def __init__(self, name: str, element: Coerce[Type], *args, memory=Manager(), hasher=Xor(), dependencies=(), **kwargs):
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, memory, hasher), **kwargs)
     self.element = _type(element)
     self.memory = memory
     self.hasher = hasher

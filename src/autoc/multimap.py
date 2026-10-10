@@ -1,5 +1,5 @@
 import autoc.std as std
-from autoc.core import inout, Callable, Indirection, Macro, enforced, Type, Comparable, Orderable
+from autoc.core import inout, Callable, Indirection, Macro, enforced, Type, Comparable, Orderable, Coerce
 from autoc.container import _Range
 from autoc.range import Forward
 from autoc.record import Record
@@ -15,8 +15,8 @@ import autoc.core
 # Common entry implementation for multimap backed by a set of (index -> collection)
 class _Entry(Record):
 
-  def __init__(self, name, collection, index, visibility, *args, **kws):
-    super().__init__(name, {"index": index, "values": collection}, *args, visibility=visibility, **kws)
+  def __init__(self, name, collection, index, visibility, *args, **kwargs):
+    super().__init__(name, {"index": index, "values": collection}, *args, visibility=visibility, **kwargs)
     self.index = self.fields["index"]
     self.values = self.fields["values"]
     self.element_p = self.values.view_type
@@ -103,8 +103,8 @@ class Range(_Range, Forward):
 
   brief = "Forward range over the multimap indices and elements"
 
-  def __init__(self, iterable, *args, dependencies=(), **kws):
-    super().__init__(iterable, *args, dependencies=(*dependencies, std.assert_h), **kws)
+  def __init__(self, iterable, *args, dependencies=(), **kwargs):
+    super().__init__(iterable, *args, dependencies=(*dependencies, std.assert_h), **kwargs)
     self._set_range = iterable._set.range
     self._col_range = iterable._collection.range
     self._entry = iterable._set.element
@@ -250,8 +250,8 @@ class Map(Multimapping):
   brief = "Generic associative multimap container parameterized by a set and a collection container"
 
   @enforced
-  def __init__(self, name: str, element: Type, index: Comparable | Orderable, set: Set = AVLSet, collection: Insertable & Traversable = Vector, *args, dependencies=(), **kws):
-    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kws)
+  def __init__(self, name: str, element: Coerce[Type], index: Coerce[Comparable | Orderable], set: Set = AVLSet, collection: Insertable & Traversable = Vector, *args, dependencies=(), **kwargs):
+    super().__init__(name, element, index, *args, dependencies=(*dependencies, std.assert_h, std.stdlib_h), **kwargs)
     self._collection = collection(
       self._decorate_component("collection", abbreviate=True),
       self.element,

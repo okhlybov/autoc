@@ -9,8 +9,8 @@ class Record(_StructRenderer, Composite):
   
   brief = "Structure container holding a number of typed values"
   
-  def __init__(self, name, fields, *args, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), **kws):
-    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
+  def __init__(self, name, fields, *args, hasher=XorRot(), getters=True, setters=True, opaque=True, dependencies=(), **kwargs):
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kwargs)
     self.fields = {str(name): _type(type) for name, type in fields.items()}
     self.hasher = hasher
     self.getters = getters

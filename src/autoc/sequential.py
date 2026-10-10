@@ -10,8 +10,8 @@ class Sequential(Traversable):
 
   brief = "Abstract sequential container - an ordered series of elements"
 
-  def __init__(self, *args, hasher=XorRot(), **kws):
-    super().__init__(*args, hasher=hasher, **kws)
+  def __init__(self, *args, hasher=XorRot(), **kwargs):
+    super().__init__(*args, hasher=hasher, **kwargs)
 
   def __setup__(self):
     super().__setup__()

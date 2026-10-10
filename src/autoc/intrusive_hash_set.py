@@ -8,9 +8,9 @@ from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer
 
 class _Macro(Macro):
 
-  def __init__(self, result, parameters, emitter, **kws):
+  def __init__(self, result, parameters, emitter, **kwargs):
     # Wrap the passthough arguments in () to circumvent operation proirity issues for user-supplied code
-    super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kws)
+    super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kwargs)
 
 
 #
@@ -18,8 +18,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
   brief = "Set of distinct elements over open addressing with sentinel values"
   
-  def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kws):
-    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kws)
+  def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kwargs):
+    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kwargs)
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
     self.is_empty = _Macro("int", {"entry": self.element}, is_empty)
@@ -343,8 +343,8 @@ class Range(_Range, Forward):
       }};
     """)
 
-  def _copy(self, result, parameters, **kws):
-    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kws)
+  def _copy(self, result, parameters, **kwargs):
+    return Macro(result, parameters, lambda target, source: f"{target} = {source}", **kwargs)
 
   def __setup__(self):
     super().__setup__()

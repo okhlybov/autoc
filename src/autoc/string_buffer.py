@@ -11,7 +11,7 @@ class Buffer(_StructRenderer, Composite):
 
   brief = "Append-optimized string buffer with scratch accumulation and lazy joining"
   
-  def __init__(self, name, scratch_capacity=128, chunk_shift=4, formatting_operations=True, **kws):
+  def __init__(self, name, scratch_capacity=128, chunk_shift=4, formatting_operations=True, **kwargs):
     self.formatting_operations = bool(formatting_operations)
     self.element = std.char
     self.scratch_capacity = int(scratch_capacity)
@@ -19,7 +19,7 @@ class Buffer(_StructRenderer, Composite):
       raise ValueError(f"Scratch capacity must be at least 1, got {self.scratch_capacity}")
     self.chunk_shift = int(chunk_shift)
     
-    super().__init__(name, dependencies=(std.stdlib_h, std.string_h, std.assert_h, autoc.memory._allocate_code), **kws)
+    super().__init__(name, dependencies=(std.stdlib_h, std.string_h, std.assert_h, autoc.memory._allocate_code), **kwargs)
     
     self._string = String(self._decorate_component("string"), visibility="internal", formatting_operations=False)
     self._chunks = TieredVector(self._decorate_component("chunks"), self._string, chunk_shift=self.chunk_shift, visibility="internal", sorting_operations=False)

@@ -7,8 +7,8 @@ from autoc.core import Composite, _StructRenderer, _AliasRenderer, Indirection, 
 #  
 class _Reference(Indirection, Composite):
   
-  def __init__(self, type, *args, name=None, **kws):
-    super().__init__(type, type.name if name is None else name, *args, **kws)
+  def __init__(self, type, *args, name=None, **kwargs):
+    super().__init__(type, type.name if name is None else name, *args, **kwargs)
     
   def __setup__(self):
     super().__setup__()
@@ -90,8 +90,8 @@ class Raw(_AliasRenderer, _Reference):
 
   brief = "Unmanaged reference to an instance"
   
-  def __init__(self, *args, memory=Manager(), **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, memory=Manager(), **kwargs):
+    super().__init__(*args, **kwargs)
     self.memory = memory
     self.dependencies.update((self.memory, std.assert_h))
     
@@ -129,8 +129,8 @@ class Counted(_StructRenderer, _Reference):
   
   brief = "Reference counted shared instance proxy type"
   
-  def __init__(self, *args, memory=Manager(), **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, memory=Manager(), **kwargs):
+    super().__init__(*args, **kwargs)
     self.memory = memory
     self.dependencies.update((self.memory, std.assert_h))
     self._layout = self._decorate_component("layout")

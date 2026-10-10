@@ -15,8 +15,8 @@ class Stack(_StructRenderer, Sequential, Insertable):
   def _make_list(self, backend: Sequential & Insertable = List):
     return backend(self._decorate_component("list"), self.element, visibility="internal")
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
     self._list = self._make_list()
     self.dependencies.add(self._list)
     self.range = Range(self)

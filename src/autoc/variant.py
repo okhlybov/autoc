@@ -9,8 +9,8 @@ class Variant(_StructRenderer, Composite):
 
   brief = "Union container holding a single typed value from a predefined type set"
   
-  def __init__(self, name, alternatives, *args, hasher=XorRot(), dependencies=(), **kws):
-    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kws)
+  def __init__(self, name, alternatives, *args, hasher=XorRot(), dependencies=(), **kwargs):
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, hasher), **kwargs)
     self.alternatives = {str(name): _type(type) for name, type in alternatives.items()}
     self.hasher = hasher
     self.dependencies.update(self.alternatives.values())

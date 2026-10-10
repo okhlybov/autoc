@@ -1,6 +1,5 @@
 import autoc.std as std
 from autoc.hash import XorRot
-from autoc.indexable import Indexable
 from autoc.assignable import Assignable
 from autoc.sortable import Sortable
 from autoc.sequential import Sequential
@@ -14,11 +13,11 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
   brief = "Fixed-size stack-allocated contiguous sequence container"
 
-  def __init__(self, name, element, size, *args, index=std.size_t, sorting_operations=True, hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, element, size, *args, index=std.size_t, sorting_operations=True, hasher=XorRot(), dependencies=(), **kwargs):
     self._size = int(size)
     if self._size < 1:
       raise ValueError(f"Array size must be at least 1, got {self._size}")
-    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kws)
+    super().__init__(name, element, index, *args, sorting_operations=sorting_operations, hasher=hasher, dependencies=(*dependencies, std.assert_h, std.string_h), **kwargs)
     self.range = Range(self)
 
   @property

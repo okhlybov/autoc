@@ -26,8 +26,8 @@ _alive_counter = Code(
 # semantics and alive-instance accounting in create/copy/destroy
 class _Composite(_StructRenderer, Composite):
 
-  def __init__(self, *args, **kws):
-    super().__init__(*args, dependencies=(_alive_counter,), **kws)
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, dependencies=(_alive_counter,), **kwargs)
 
   def __setup__(self):
     super().__setup__()

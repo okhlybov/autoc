@@ -8,7 +8,7 @@ class Array(_StructRenderer, Composite):
 
   brief = "Fixed-size bit array with set algebra operations"
 
-  def __init__(self, name, capacity, *args, algebraic_operations=True, hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, capacity, *args, algebraic_operations=True, hasher=XorRot(), dependencies=(), **kwargs):
     self.algebraic_operations = bool(algebraic_operations)
     self._capacity = int(capacity)
     if self._capacity < 1:
@@ -16,7 +16,7 @@ class Array(_StructRenderer, Composite):
     self._word_count = (self._capacity + 7) // 8
     self._tail_bits = self._capacity % 8
     self._tail_mask = (1 << self._tail_bits) - 1 if self._tail_bits else 0xFF
-    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, std.string_h, hasher), **kws)
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, std.string_h, hasher), **kwargs)
     self.hasher = hasher
 
   @property

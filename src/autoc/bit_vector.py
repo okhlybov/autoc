@@ -9,11 +9,11 @@ class Vector(_StructRenderer, Composite):
 
   brief = "Dynamically resizable packed bit vector container"
 
-  def __init__(self, name, *args, algebraic_operations=True, memory=Manager(), hasher=XorRot(), dependencies=(), **kws):
+  def __init__(self, name, *args, algebraic_operations=True, memory=Manager(), hasher=XorRot(), dependencies=(), **kwargs):
     self.algebraic_operations = bool(algebraic_operations)
     self.memory = memory
     self.hasher = hasher
-    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, std.string_h, std.stdlib_h, memory, hasher), **kws)
+    super().__init__(name, *args, dependencies=(*dependencies, std.assert_h, std.string_h, std.stdlib_h, memory, hasher), **kwargs)
 
   @property
   def constructible(self):

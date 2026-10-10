@@ -11,17 +11,17 @@ class Map(Mapping, Ordered):
   brief = "Ordered map from index to element backed by a B-Tree - iterates in index order"
 
   @enforced
-  def _make_set(self, backend: Set & Ordered = BTreeSet, **kws):
+  def _make_set(self, backend: Set & Ordered = BTreeSet, **kwargs):
     return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
       visibility="internal",
       algebraic_operations=False,
-      **kws,
+      **kwargs,
     )
 
-  def __init__(self, name, element, index, *args, order=4, node_capacity=None, **kws):
-    super().__init__(name, element, index, *args, **kws)
+  def __init__(self, name, element, index, *args, order=4, node_capacity=None, **kwargs):
+    super().__init__(name, element, index, *args, **kwargs)
     set_kws = {}
     if node_capacity is not None:
       set_kws["node_capacity"] = node_capacity
