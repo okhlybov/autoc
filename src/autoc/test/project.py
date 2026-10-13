@@ -10,6 +10,6 @@ if __name__ == "__main__":
   parser.add_argument("directory", nargs="?", default=".", help="Target directory (default: .)")
   args = parser.parse_args()
   Scaffolder(
-    {"@module@.py": reader, "CMakeLists.txt": reader, "@module@.c": None},
+    {"@project@.code-workspace": reader,"@module@.py": reader, "CMakeLists.txt": reader, "@module@.c": None},
     dict(project="autoc-test", module="test")
   ).generate(args.directory)
