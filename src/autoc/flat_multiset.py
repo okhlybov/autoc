@@ -1,5 +1,6 @@
 import autoc.multiset
 import autoc.flat_sets
+from autoc.flat_sets import Range
 
 
 #

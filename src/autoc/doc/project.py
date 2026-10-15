@@ -1,19 +1,22 @@
 import os
 import sys
 import pathlib
+import argparse
 import autoc
 import autoc.doc
-import autoc.cmake
-from autoc.scaffolder import make_template_reader
+from autoc.scaffolder import make_template_reader, get_backend_scaffolder, BACKENDS
 
 
 reader = make_template_reader(__package__)
 
 
-class Scaffolder(autoc.cmake.Scaffolder):
+class Scaffolder:
 
-  def __init__(self, resources=None, parameters=None):
+  def __new__(cls, resources=None, parameters=None, backend="cmake"):
     params = dict(parameters or {})
+    backend = params.get("backend") or backend
+    base_cls = get_backend_scaffolder(backend)
+
     project = params.get("project", "doc")
     module = params.get("module", project)
 
@@ -31,39 +34,48 @@ class Scaffolder(autoc.cmake.Scaffolder):
       src_path=autoc_source.as_posix(),
     )
 
-    super().__init__(
-      resources={
-        "CMakeLists.txt": reader,
-        "Doxyfile": reader,
-        "@module@.py": reader,
-        "catalog.py": reader,
-        "@module@.c": None,
-        ".gitignore": reader,
-      } | (resources or {}),
-      parameters=doc_parameters | params
-    )
+    build_file = {
+      "cmake": "CMakeLists.txt",
+      "meson": "meson.build",
+      "scons": "SConstruct",
+    }[backend.lower()]
+
+    custom_resources = {
+      build_file: reader,
+      "Doxyfile": reader,
+      "@module@.py": reader,
+      "catalog.py": reader,
+      "@module@.c": None,
+      ".gitignore": reader,
+    } | dict(resources or {})
+
+    class DocScaffolder(base_cls):
+
+      def generate(self, target="."):
+        target_path = pathlib.Path(target).resolve()
+        autoc_source = pathlib.Path(autoc.__file__).resolve().parent.parent
+        try:
+          rel_path = os.path.relpath(autoc_source, target_path)
+          common = os.path.commonpath([str(autoc_source), str(target_path)])
+          if common in ("/", "\\", ""):
+            self.parameters["src_path"] = autoc_source.as_posix()
+          else:
+            self.parameters["src_path"] = pathlib.Path(rel_path).as_posix()
+        except ValueError:
+          self.parameters["src_path"] = autoc_source.as_posix()
+
+        super().generate(target)
+
+    return DocScaffolder(resources=custom_resources, parameters=doc_parameters | params)
 
 
-  def generate(self, target="."):
-    target_path = pathlib.Path(target).resolve()
-    autoc_source = pathlib.Path(autoc.__file__).resolve().parent.parent
-    try:
-      rel_path = os.path.relpath(autoc_source, target_path)
-      common = os.path.commonpath([str(autoc_source), str(target_path)])
-      if common in ("/", "\\", ""):
-        self.parameters["src_path"] = autoc_source.as_posix()
-      else:
-        self.parameters["src_path"] = pathlib.Path(rel_path).as_posix()
-    except ValueError:
-      self.parameters["src_path"] = autoc_source.as_posix()
-
-    super().generate(target)
-
-
-def generate(directory=".", project="doc"):
-  Scaffolder(parameters=dict(project=project, module=project)).generate(directory)
+def generate(directory=".", project="doc", backend="cmake"):
+  Scaffolder(parameters=dict(project=project, module=project), backend=backend).generate(directory)
 
 
 if __name__ == "__main__":
-  target = sys.argv[1] if len(sys.argv) > 1 else "."
-  generate(target)
+  parser = argparse.ArgumentParser(description="Generate documentation project for AutoC")
+  parser.add_argument("directory", nargs="?", default=".", help="Target directory (default: .)")
+  parser.add_argument("--backend", "-b", choices=BACKENDS, default="cmake", help="Build backend (default: cmake)")
+  args = parser.parse_args()
+  generate(directory=args.directory, backend=args.backend)

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Meson Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:mesonbuild.buildDir}/@project@",
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

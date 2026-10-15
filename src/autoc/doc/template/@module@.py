@@ -7,13 +7,14 @@ if src_path.is_dir():
 
 import autoc
 import autoc.doc
-import autoc.cmake
+import @generator_module@
 import autoc.module
 
 name = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "@module@"
 
-with autoc.module.Module(name, source_count=0) as m:
-  autoc.doc.configure_module(m)
+with @generator@():
+  with autoc.module.Module(name, source_count=0) as m:
+    autoc.doc.configure_module(m)
 
 pages_list = ";".join(p.resolve().as_posix() for p in autoc.doc.pages)
 contents = f"""

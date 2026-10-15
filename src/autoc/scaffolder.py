@@ -46,3 +46,21 @@ class Scaffolder:
     for placeholder, value in params.items():
       x = x.replace(f"@{placeholder}@", str(value), -1)
     return x
+
+
+BACKENDS = ("cmake", "meson", "scons")
+
+
+def get_backend_scaffolder(backend="cmake"):
+  name = (backend or "cmake").lower()
+  if name == "cmake":
+    import autoc.cmake
+    return autoc.cmake.Scaffolder
+  elif name == "meson":
+    import autoc.meson
+    return autoc.meson.Scaffolder
+  elif name == "scons":
+    import autoc.scons
+    return autoc.scons.Scaffolder
+  else:
+    raise ValueError(f"Unknown backend: '{backend}'. Available backends: {', '.join(BACKENDS)}")
