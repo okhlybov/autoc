@@ -44,28 +44,28 @@ class Array(_StructRenderer, Composite):
 
     # --- value protocol ---
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         memset(target->words, 0, {self._word_count});
       """
 
-    with self.copy as f:
-      f.inline_code = f"""
+    with self.copy as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         memcpy(target->words, source->words, {self._word_count});
       """
 
-    with self.equal as f:
-      f.inline_code = f"""
+    with self.equal as m:
+      m.inline_code = f"""
         assert(left);
         assert(right);
         return memcmp(left->words, right->words, {self._word_count}) == 0;
       """
 
-    with self.hash as f:
-      def _hash(f=f):
+    with self.hash as m:
+      def _hash(m):
         state = self.hasher.state_t.variable("state")
         return f"""
           size_t result, index;
@@ -79,7 +79,7 @@ class Array(_StructRenderer, Composite):
           {self.hasher.destroy(state)};
           return result;
         """
-      f.code = _hash
+      m.code = _hash
 
     # --- queries ---
 
@@ -90,8 +90,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in] target the bit array
         @return the total number of bits
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         (void)target;
         return {self._capacity};
@@ -104,8 +104,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in] target the bit array
         @return the number of set bits
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index, count = 0;
         unsigned char b;
         assert(target);
@@ -123,8 +123,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in] target the bit array
         @return non-zero if any bit is set, zero otherwise
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         for(index = 0; index < {self._word_count}; ++index) {{
@@ -140,9 +140,9 @@ class Array(_StructRenderer, Composite):
 
         @param[in] target the bit array
         @return non-zero if all bits are zero, zero otherwise
-      """) as f:
-      any_call = self.any(f.target)
-      f.inline_code = f"""
+      """) as m:
+      any_call = self.any(m.target)
+      m.inline_code = f"""
         assert(target);
         return !{any_call};
       """
@@ -155,8 +155,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in] target the bit array
         @return index of the first set bit, or the capacity if none
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         unsigned char b;
         size_t bit;
@@ -181,8 +181,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array
         @param[in] index the position to set
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < {self._capacity});
         target->words[index >> 3] |= (unsigned char)(1 << (index & 7));
@@ -195,8 +195,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array
         @param[in] index the position to clear
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < {self._capacity});
         target->words[index >> 3] &= (unsigned char)~(1 << (index & 7));
@@ -209,8 +209,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array
         @param[in] index the position to flip
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < {self._capacity});
         target->words[index >> 3] ^= (unsigned char)(1 << (index & 7));
@@ -224,8 +224,8 @@ class Array(_StructRenderer, Composite):
         @param[in] target the bit array
         @param[in] index the position to test
         @return 1 if the bit is set, 0 otherwise
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < {self._capacity});
         return (target->words[index >> 3] >> (index & 7)) & 1;
@@ -239,8 +239,8 @@ class Array(_StructRenderer, Composite):
         Sets every valid bit in the array to 1.
 
         @param[in,out] target the bit array
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         memset(target->words, 0xFF, {self._word_count});
         target->words[{self._word_count - 1}] &= 0x{self._tail_mask:02x};
@@ -252,8 +252,8 @@ class Array(_StructRenderer, Composite):
         Flips every valid bit in the array.
 
         @param[in,out] target the bit array
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         for(index = 0; index < {self._word_count}; ++index) target->words[index] = (unsigned char)~target->words[index];
@@ -271,8 +271,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array to update
         @param[in] source the bit array to merge in
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -288,8 +288,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array to update
         @param[in] source the bit array to intersect with
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -305,8 +305,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array to update
         @param[in] source the bit array to subtract
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -322,8 +322,8 @@ class Array(_StructRenderer, Composite):
 
         @param[in,out] target the bit array to update
         @param[in] source the bit array to XOR with
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -342,8 +342,8 @@ class Array(_StructRenderer, Composite):
         @param[in] left the candidate subset
         @param[in] right the candidate superset
         @return non-zero if left is a subset of right, zero otherwise
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         assert(left);
         assert(right);

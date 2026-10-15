@@ -32,15 +32,15 @@ class Bisectable:
         @param[in] target the sorted container to search
         @param[in] element the element to insert
         @return the position of the first element not less than the given one
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t low, high, mid;
         assert(target);
         low = 0;
-        high = {self._target_size(f.target)};
+        high = {self._target_size(m.target)};
         while(low < high) {{
           mid = low + (high - low)/2;
-          if({self.element.compare(self._element(f.target, "mid"), f.element)} < 0) low = mid + 1;
+          if({self.element.compare(self._element(m.target, "mid"), m.element)} < 0) low = mid + 1;
           else high = mid;
         }}
         return low;
@@ -55,15 +55,15 @@ class Bisectable:
         @param[in] target the sorted container to search
         @param[in] element the element to compare with
         @return the position of the first element greater than the given one
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t low, high, mid;
         assert(target);
         low = 0;
-        high = {self._target_size(f.target)};
+        high = {self._target_size(m.target)};
         while(low < high) {{
           mid = low + (high - low)/2;
-          if({self.element.compare(self._element(f.target, "mid"), f.element)} <= 0) low = mid + 1;
+          if({self.element.compare(self._element(m.target, "mid"), m.element)} <= 0) low = mid + 1;
           else high = mid;
         }}
         return low;
@@ -77,10 +77,10 @@ class Bisectable:
         @param[in] target the sorted container to search
         @param[in] element the element to look for
         @return non-zero if the element is present in the container
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t low;
         assert(target);
-        low = {self.lower_bound(f.target, f.element)};
-        return low < {self._target_size(f.target)} && !{self.element.compare(self._element(f.target, "low"), f.element)};
+        low = {self.lower_bound(m.target, m.element)};
+        return low < {self._target_size(m.target)} && !{self.element.compare(self._element(m.target, "low"), m.element)};
       """

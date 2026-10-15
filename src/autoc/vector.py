@@ -59,20 +59,20 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
     source_i = self.element.variable(f"{self._data('source')}[index]")
     target_i = self.element.variable(f"{data}[index]")
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
     
-    with self.indexed as f:
-      f.inline_code = f"""
+    with self.indexed as m:
+      m.inline_code = f"""
         assert(target);
         return index < target->size;
       """
     
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
@@ -83,8 +83,8 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in] target the vector to query
         @return the current capacity
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return target->capacity;
       """
@@ -96,35 +96,35 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to query
         @return pointer to the first element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {data};
       """
     
-    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private", brief="Allocate the element storage with given capacity (private)") as f:
+    with self.method(None, "allocate", {"target": out(self), "capacity": self.index}, visibility="private", brief="Allocate the element storage with given capacity (private)") as m:
       if self.inline_capacity > 0:
-        f.code = f"""
+        m.code = f"""
           assert(target);
-          if({f.capacity} > {self.inline_capacity}) {{
-            target->storage.heap_elements = {self.memory.allocate(self.element, f.capacity)};
-            target->capacity = {f.capacity};
+          if({m.capacity} > {self.inline_capacity}) {{
+            target->storage.heap_elements = {self.memory.allocate(self.element, m.capacity)};
+            target->capacity = {m.capacity};
           }} else {{
             target->capacity = {self.inline_capacity};
           }}
-          target->size = {f.capacity};
+          target->size = {m.capacity};
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
-          if({f.capacity} > 0) {{
-            target->elements = {self.memory.allocate(self.element, f.capacity)};
-            target->capacity = {f.capacity};
+          if({m.capacity} > 0) {{
+            target->elements = {self.memory.allocate(self.element, m.capacity)};
+            target->capacity = {m.capacity};
           }} else {{
             target->elements = NULL;
             target->capacity = 0;
           }}
-          target->size = {f.capacity};
+          target->size = {m.capacity};
         """
     
     # The zero initializable elements are default initialized by the zeroed allocation alone
@@ -136,46 +136,46 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[out] target the vector to construct
         @param[in] size the number of default-initialized elements to create
-      """) as f:
+      """) as m:
       if self.element.zero_initializable:
         if self.inline_capacity > 0:
-          f.code = f"""
+          m.code = f"""
             assert(target);
-            if({f.size} > {self.inline_capacity}) {{
-              target->storage.heap_elements = {self.memory.allocate(self.element, f.size, zero=True)};
-              target->capacity = {f.size};
+            if({m.size} > {self.inline_capacity}) {{
+              target->storage.heap_elements = {self.memory.allocate(self.element, m.size, zero=True)};
+              target->capacity = {m.size};
             }} else {{
-              memset(target->storage.inline_elements, 0, {f.size} * sizeof({self.element}));
+              memset(target->storage.inline_elements, 0, {m.size} * sizeof({self.element}));
               target->capacity = {self.inline_capacity};
             }}
-            target->size = {f.size};
+            target->size = {m.size};
           """
         else:
-          f.code = f"""
+          m.code = f"""
             assert(target);
-            if({f.size} > 0) {{
-              target->elements = {self.memory.allocate(self.element, f.size, zero=True)};
-              target->capacity = {f.size};
+            if({m.size} > 0) {{
+              target->elements = {self.memory.allocate(self.element, m.size, zero=True)};
+              target->capacity = {m.size};
             }} else {{
               target->elements = NULL;
               target->capacity = 0;
             }}
-            target->size = {f.size};
+            target->size = {m.size};
           """
       elif self.element.default_constructible:
-        f.code = f"""
+        m.code = f"""
           {self.index} index;
           assert(target);
-          {self.allocate(*f.arguments)};
-          for(index = 0; index < {f.size}; ++index) {self.element.create(target_i)};
+          {self.allocate(*m.arguments)};
+          for(index = 0; index < {m.size}; ++index) {self.element.create(target_i)};
         """
 
-    with self.get as f:
-      result = f.result.variable("result")
-      f.inline_code = lambda f=f: f"""
+    with self.get as m:
+      result = m.result.variable("result")
+      m.inline_code = lambda m: f"""
         {result.definition};
         assert(target);
-        assert({self.indexed(f.target, f.index)});
+        assert({self.indexed(m.target, m.index)});
         {self.element.copy(result, target_i)};
         return {result};
       """
@@ -183,21 +183,21 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
     # FIXME explicit casting here and ithere in the respective Range type is a kind of hack to deal with double pointer types
     # Normally Pointer type should be responsible for handling the per-indirection constness flags
     
-    with self.view as f:
-      f.inline_code = f"""
+    with self.view as m:
+      m.inline_code = f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        return {target_i.bind(f.result)};
+        assert({self.indexed(m.target, m.index)});
+        return {target_i.bind(m.result)};
       """
 
     destroy_i = self.element.destroy(target_i) if self.element.destructible else str()
     
-    with self.set as f:
-      f.inline_code = lambda f=f: f"""
+    with self.set as m:
+      m.inline_code = lambda m: f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
+        assert({self.indexed(m.target, m.index)});
         {destroy_i};
-        {self.element.copy(target_i, f.element)};
+        {self.element.copy(target_i, m.element)};
       """
 
     # Resize follows the std::vector::resize semantics: growing default-initializes the
@@ -214,55 +214,55 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to resize
         @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
-      """) as f:
+      """) as m:
       if self.element.zero_initializable:
-        f.code = lambda f=f: f"""
+        m.code = lambda m: f"""
           {self.index} index;
           assert(target);
-          if({f.size} > target->size) {{
-            if({f.size} > target->capacity) {{
+          if({m.size} > target->size) {{
+            if({m.size} > target->capacity) {{
               {Indirection(self.element)} elements;
-              elements = {self.memory.allocate(self.element, f.size, zero=True)};
+              elements = {self.memory.allocate(self.element, m.size, zero=True)};
               for(index = 0; index < target->size; ++index) {{
                 {self.element.copy(self.element.variable("elements[index]"), target_i)};
                 {destroy_i};
               }}
               {self._free_heap("target")}
-              {self._set_heap("target", "elements", f.size)}
+              {self._set_heap("target", "elements", m.size)}
             }} else {{
-              memset(&({data}[target->size]), 0, ({f.size} - target->size) * sizeof({self.element}));
+              memset(&({data}[target->size]), 0, ({m.size} - target->size) * sizeof({self.element}));
             }}
           }} else {{
-            for(index = {f.size}; index < target->size; ++index) {{
+            for(index = {m.size}; index < target->size; ++index) {{
               {destroy_i};
             }}
           }}
-          target->size = {f.size};
+          target->size = {m.size};
         """
       elif self.element.default_constructible:
-        f.code = lambda f=f: f"""
+        m.code = lambda m: f"""
           {self.index} index;
           assert(target);
-          if({f.size} > target->size) {{
-            if({f.size} > target->capacity) {{
+          if({m.size} > target->size) {{
+            if({m.size} > target->capacity) {{
               {Indirection(self.element)} elements;
-              elements = {self.memory.allocate(self.element, f.size)};
+              elements = {self.memory.allocate(self.element, m.size)};
               for(index = 0; index < target->size; ++index) {{
                 {self.element.copy(self.element.variable("elements[index]"), target_i)};
                 {destroy_i};
               }}
               {self._free_heap("target")}
-              {self._set_heap("target", "elements", f.size)}
+              {self._set_heap("target", "elements", m.size)}
             }}
-            for(index = target->size; index < {f.size}; ++index) {{
+            for(index = target->size; index < {m.size}; ++index) {{
               {self.element.create(target_i)};
             }}
           }} else {{
-            for(index = {f.size}; index < target->size; ++index) {{
+            for(index = {m.size}; index < target->size; ++index) {{
               {destroy_i};
             }}
           }}
-          target->size = {f.size};
+          target->size = {m.size};
         """
 
     with self.method(None, "push", {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to back",
@@ -272,8 +272,8 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to add to
         @param[in] element the element to add to the back
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         assert(target);
         if(target->size == target->capacity) {{
           {self.index} index, new_capacity;
@@ -287,7 +287,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           {self._free_heap("target")}
           {self._set_heap("target", "elements", "new_capacity")}
         }}
-        {self.element.copy(self.element.variable(f"{data}[target->size]"), f.element)};
+        {self.element.copy(self.element.variable(f"{data}[target->size]"), m.element)};
         ++target->size;
       """
 
@@ -298,9 +298,9 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         in amortized O(1), reallocating the buffer with geometric doubling when exhausted.
 
         @param[in,out] target the vector to add to
-      """) as f:
-      def _emplace_back(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      """) as m:
+      def _emplace_back(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         move_or_copy = (
           f"{self.element.move(self.element.variable('elements[index]'), target_i)};"
           if self.element.moveable else
@@ -322,7 +322,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           {self.element.create(self.element.variable(f"{data}[target->size]"), *create_args)};
           ++target->size;
         """
-      f.code = _emplace_back
+      m.code = _emplace_back
     self.macro("emplace", None, {"target": inout(self)} | self.element.constructor_parameters, lambda target, *args: self.emplace_back(target, *args),
       constraint=lambda: self.element.emplaceable and (self.element.copyable or self.element.moveable), brief="Construct element in-place at back (synonym for emplace_back)")
 
@@ -332,28 +332,28 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to remove from - must not be empty
         @return the removed back element
-      """) as f:
-      result = f.result.variable("result")
+      """) as m:
+      result = m.result.variable("result")
       last_i = self.element.variable(f"{data}[target->size]")
-      f.code = f"""
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->size;
         {self.element.move(result, last_i)};
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push(f.target, f.element)};
+        {self.push(m.target, m.element)};
         return 1;
       """
 
     target_next_i = self.element.variable(f"{data}[index + 1]")
-    with self.remove as f:
-      def _remove(f=f):
+    with self.remove as m:
+      def _remove(m):
         destroy_next = f"{self.element.destroy(target_next_i)};" if self.element.destructible else ""
         move_shift = (
           f"{self.element.move(target_i, target_next_i)};"
@@ -364,7 +364,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           {self.index} index;
           assert(target);
           for(index = 0; index < target->size; ++index) {{
-            if({self.element.equal(target_i, f.element)}) {{
+            if({self.element.equal(target_i, m.element)}) {{
               {destroy_i};
               for(; index + 1 < target->size; ++index) {{
                 {move_shift};
@@ -375,7 +375,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
           return 0;
         """
-      f.code = _remove
+      m.code = _remove
 
     with self.method(None, "compact", {"target": inout(self)}, constraint=lambda: self.element.copyable, brief="Compact buffer capacity to fit element count",
       description="""
@@ -384,10 +384,10 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         revert to the inlined buffer.
 
         @param[in,out] target the vector to compact
-      """) as f:
+      """) as m:
       destroy_heap_i = str(self.element.destroy(self.element.variable("heap[index]"))) + ";" if self.element.destructible else str()
       if self.inline_capacity > 0:
-        f.code = lambda f=f: f"""
+        m.code = lambda m: f"""
           {self.index} index;
           assert(target);
           if(target->capacity > {self.inline_capacity}) {{
@@ -412,7 +412,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
         """
       else:
-        f.code = lambda f=f: f"""
+        m.code = lambda m: f"""
           {self.index} index;
           assert(target);
           if(target->size == 0) {{
@@ -433,46 +433,46 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
         """
 
-    with self.create as f:
+    with self.create as m:
       if self.inline_capacity > 0:
-        f.inline_code = f"""
+        m.inline_code = f"""
           assert(target);
           target->size = 0;
           target->capacity = {self.inline_capacity};
         """
       else:
-        f.inline_code = """
+        m.inline_code = """
           assert(target);
           target->elements = NULL;
           target->size = 0;
           target->capacity = 0;
         """
     
-    with self.destroy as f:
+    with self.destroy as m:
       destroy_loop = f"""
         {self.index} index;
         if(target->size > 0) {{
           for(index = 0; index < target->size; ++index) {self.element.destroy(target_i)};
         }}
       """ if self.element.destructible else ""
-      f.code = f"""
+      m.code = f"""
         assert(target);
         {destroy_loop}
         {self._free_heap("target")}
       """
 
-    with self.copy as f:
-      f.code = lambda f=f: f"""
+    with self.copy as m:
+      m.code = lambda m: f"""
         {self.index} index;
         assert(target);
         assert(source);
-        {self.allocate(f.target, "source->size")};
+        {self.allocate(m.target, "source->size")};
         for(index = 0; index < target->size; ++index) {self.element.copy(target_i, source_i)};
       """
 
-    with self.move as f:
+    with self.move as m:
       if self.inline_capacity > 0:
-        f.code = f"""
+        m.code = f"""
           {self.index} index;
           assert(target);
           assert(source);
@@ -480,24 +480,24 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
             target->storage.heap_elements = source->storage.heap_elements;
             target->size = source->size;
             target->capacity = source->capacity;
-            {self.create(f.source)};
+            {self.create(m.source)};
           }} else {{
             target->size = source->size;
             target->capacity = {self.inline_capacity};
             for(index = 0; index < source->size; ++index) {{
               {self.element.move(target_i, source_i)};
             }}
-            {self.create(f.source)};
+            {self.create(m.source)};
           }}
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           assert(source);
           target->elements = source->elements;
           target->size = source->size;
           target->capacity = source->capacity;
-          {self.create(f.source)};
+          {self.create(m.source)};
         """
 
 
@@ -550,9 +550,9 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the vector to span
         @return the range covering the whole vector
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -561,68 +561,68 @@ class Range(_Range, DirectAccess):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      f.inline_code = lambda: f"""
+    with self.front as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
-    with self.front_view as f:
-      f.inline_code = lambda: f"""
+    with self.front_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      f.inline_code = lambda: f"""
+    with self.back as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
-    with self.back_view as f:
-      f.inline_code = lambda: f"""
+    with self.back_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      f.inline_code = lambda: f"""
+    with self.get as m:
+      m.inline_code = lambda: f"""
       assert(target);
       return {self.iterable.get("target->iterable", "target->front + index")};
     """
 
-    with self.view as f:
-      f.inline_code = lambda: f"""
+    with self.view as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

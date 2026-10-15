@@ -93,17 +93,17 @@ class Multiset(Traversable, Insertable):
         @param[in,out] target the multiset to update
         @param[in] other the multiset to union with - target itself is allowed and keeps it unchanged
         @return the number of elements added
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t added;
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 0;
+        assert({m.other});
+        if(target == {m.other}) return 0;
         added = 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.count(f.target, range.front_view(r))} < {self.count(f.other, range.front_view(r))}) {{
-            added += {self.put(f.target, range.front_view(r))};
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if({self.count(m.target, range.front_view(r))} < {self.count(m.other, range.front_view(r))}) {{
+            added += {self.put(m.target, range.front_view(r))};
           }}
         }}
         return added;
@@ -117,21 +117,21 @@ class Multiset(Traversable, Insertable):
         @param[in,out] target the multiset to subtract from
         @param[in] other the multiset whose occurrences are subtracted - target itself is allowed and empties it in place
         @return the number of elements removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t removed;
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) {{
-          removed = {self.size(f.target)};
-          {self.destroy(f.target)};
-          {self.create(f.target)};
+        assert({m.other});
+        if(target == {m.other}) {{
+          removed = {self.size(m.target)};
+          {self.destroy(m.target)};
+          {self.create(m.target)};
           return removed;
         }}
         removed = 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          removed += {self.remove(f.target, range.front_view(r))};
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          removed += {self.remove(m.target, range.front_view(r))};
         }}
         return removed;
       """
@@ -145,20 +145,20 @@ class Multiset(Traversable, Insertable):
         @param[in,out] target the multiset to intersect
         @param[in] other the multiset to intersect with - target itself is allowed and keeps it unchanged
         @return the number of elements removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t removed;
         {r.definition};
         {temp.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 0;
+        assert({m.other});
+        if(target == {m.other}) return 0;
         {self.create(temp)};
-        {self.copy(temp, f.target)};
+        {self.copy(temp, m.target)};
         removed = 0;
         for({r} = {range.new(temp)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.count(f.target, range.front_view(r))} > {self.count(f.other, range.front_view(r))}) {{
-            removed += {self.remove(f.target, range.front_view(r))};
+          if({self.count(m.target, range.front_view(r))} > {self.count(m.other, range.front_view(r))}) {{
+            removed += {self.remove(m.target, range.front_view(r))};
           }}
         }}
         {self.destroy(temp)};
@@ -173,29 +173,29 @@ class Multiset(Traversable, Insertable):
         @param[in,out] target the multiset to update
         @param[in] other the multiset to compare against
         @return the number of elements added or removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t changed;
         {r.definition};
         {temp.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) {{
-          changed = {self.size(f.target)};
-          {self.destroy(f.target)};
-          {self.create(f.target)};
+        assert({m.other});
+        if(target == {m.other}) {{
+          changed = {self.size(m.target)};
+          {self.destroy(m.target)};
+          {self.create(m.target)};
           return changed;
         }}
         {self.create(temp)};
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
           {self.put(temp, range.front_view(r))};
         }}
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+        for({r} = {range.new(m.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
           {self.remove(temp, range.front_view(r))};
         }}
-        changed = {self.difference(f.target, f.other)};
+        changed = {self.difference(m.target, m.other)};
         for({r} = {range.new(temp)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          changed += {self.put(f.target, range.front_view(r))};
+          changed += {self.put(m.target, range.front_view(r))};
         }}
         {self.destroy(temp)};
         return changed;
@@ -209,15 +209,15 @@ class Multiset(Traversable, Insertable):
         @param[in] target the candidate sub-multiset
         @param[in] other the candidate super-multiset
         @return non-zero if target is a sub-multiset of other, zero otherwise
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 1;
-        if({self.size(f.target)} > {self.size(f.other)}) return 0;
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.count(f.target, range.front_view(r))} > {self.count(f.other, range.front_view(r))}) return 0;
+        assert({m.other});
+        if(target == {m.other}) return 1;
+        if({self.size(m.target)} > {self.size(m.other)}) return 0;
+        for({r} = {range.new(m.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if({self.count(m.target, range.front_view(r))} > {self.count(m.other, range.front_view(r))}) return 0;
         }}
         return 1;
       """
@@ -230,15 +230,15 @@ class Multiset(Traversable, Insertable):
         @param[in] target the candidate super-multiset
         @param[in] other the candidate sub-multiset
         @return non-zero if target is a super-multiset of other, zero otherwise
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 1;
-        if({self.size(f.other)} > {self.size(f.target)}) return 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.count(f.other, range.front_view(r))} > {self.count(f.target, range.front_view(r))}) return 0;
+        assert({m.other});
+        if(target == {m.other}) return 1;
+        if({self.size(m.other)} > {self.size(m.target)}) return 0;
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if({self.count(m.other, range.front_view(r))} > {self.count(m.target, range.front_view(r))}) return 0;
         }}
         return 1;
       """

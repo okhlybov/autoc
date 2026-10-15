@@ -60,8 +60,8 @@ class Map(Mapping, Ordered):
 
         @param[in] target the map to query
         @return the current capacity
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {self._set.capacity(_target)};
       """
@@ -72,10 +72,10 @@ class Map(Mapping, Ordered):
 
         @param[in,out] target the map to expand
         @param[in] capacity the minimum capacity to reserve
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        {self._set.reserve(_target, f.capacity)};
+        {self._set.reserve(_target, m.capacity)};
       """
 
     with self.method(None, "compact", {"target": inout(self)}, brief="Compact storage to fit current size",
@@ -83,14 +83,14 @@ class Map(Mapping, Ordered):
         Reduces the allocated capacity to match the current number of entries.
 
         @param[in,out] target the map to compact
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         {self._set.compact(_target)};
       """
 
-    with self.view as f:
-      f.code = f"""
+    with self.view as m:
+      m.code = f"""
         size_t low, high, mid;
         int order;
         assert(target);
@@ -98,7 +98,7 @@ class Map(Mapping, Ordered):
         high = target->set.size;
         while(low < high) {{
           mid = low + (high - low) / 2;
-          order = {self.index.compare(index_mid, f.index)};
+          order = {self.index.compare(index_mid, m.index)};
           if(order == 0) return {entry.element_view(entry_mid).bind(self.element.view_type)};
           if(order < 0) low = mid + 1;
           else high = mid;
@@ -106,8 +106,8 @@ class Map(Mapping, Ordered):
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
-      f.code = f"""
+    with self.set as m:
+      m.code = f"""
         size_t low, high, mid;
         int order;
         {_entry.definition};
@@ -116,24 +116,24 @@ class Map(Mapping, Ordered):
         high = target->set.size;
         while(low < high) {{
           mid = low + (high - low) / 2;
-          order = {self.index.compare(index_mid, f.index)};
+          order = {self.index.compare(index_mid, m.index)};
           if(order == 0) {{
-            {entry.replace_element(entry_mid, f.element)};
+            {entry.replace_element(entry_mid, m.element)};
             return;
           }}
           if(order < 0) low = mid + 1;
           else high = mid;
         }}
-        {entry.emplace_index(_entry, f.index)};
-        {entry.emplace_element(_entry, f.element)};
+        {entry.emplace_index(_entry, m.index)};
+        {entry.emplace_element(_entry, m.element)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         size_t low, high, mid;
         int order;
         {_entry.definition};
@@ -142,12 +142,12 @@ class Map(Mapping, Ordered):
         high = target->set.size;
         while(low < high) {{
           mid = low + (high - low) / 2;
-          order = {self.index.compare(index_mid, f.index)};
+          order = {self.index.compare(index_mid, m.index)};
           if(order == 0) return 0;
           if(order < 0) low = mid + 1;
           else high = mid;
         }}
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         {entry.create_element(_entry, *create_args)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};

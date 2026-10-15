@@ -67,24 +67,24 @@ class Vector(_StructRenderer, Composite):
 
     # --- value protocol ---
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->words = NULL;
         target->size = 0;
         target->capacity = 0;
       """
 
-    with self.destroy as f:
-      f.inline_code = f"""
+    with self.destroy as m:
+      m.inline_code = f"""
         assert(target);
         if(target->words) {{
           {self.memory.free("target->words")};
         }}
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         size_t word_count;
         assert(target);
         assert(source);
@@ -105,8 +105,8 @@ class Vector(_StructRenderer, Composite):
         }}
       """
 
-    with self.move as f:
-      f.inline_code = f"""
+    with self.move as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         target->words = source->words;
@@ -117,8 +117,8 @@ class Vector(_StructRenderer, Composite):
         source->capacity = 0;
       """
 
-    with self.swap as f:
-      f.inline_code = f"""
+    with self.swap as m:
+      m.inline_code = f"""
         size_t* temp_words;
         size_t temp_val;
         assert(left);
@@ -128,8 +128,8 @@ class Vector(_StructRenderer, Composite):
         temp_val = left->capacity; left->capacity = right->capacity; right->capacity = temp_val;
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         size_t full_words, remainder, word_bits;
         assert(left);
         assert(right);
@@ -146,8 +146,8 @@ class Vector(_StructRenderer, Composite):
         return 1;
       """
 
-    with self.hash as f:
-      def _hash(f=f):
+    with self.hash as m:
+      def _hash(m):
         state = self.hasher.state_t.variable("state")
         return f"""
           size_t result, index, full_words, remainder, word_bits;
@@ -169,7 +169,7 @@ class Vector(_StructRenderer, Composite):
           {self.hasher.destroy(state)};
           return result;
         """
-      f.code = _hash
+      m.code = _hash
 
     # --- construction with size ---
 
@@ -180,8 +180,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[out] target the bit vector to construct
         @param[in] size the initial number of bits
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_count;
         assert(target);
         target->size = size;
@@ -201,8 +201,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return the number of bits
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
@@ -214,8 +214,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return the capacity in bits
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return target->capacity * sizeof(size_t) * 8;
       """
@@ -227,8 +227,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return non-zero if empty, zero otherwise
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
@@ -240,8 +240,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @param[in] capacity the minimum bit capacity to reserve
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t needed_words;
         assert(target);
         needed_words = (capacity + sizeof(size_t) * 8 - 1) / (sizeof(size_t) * 8);
@@ -264,8 +264,8 @@ class Vector(_StructRenderer, Composite):
         Releases unused capacity, reducing memory allocation to the minimum needed for `size` bits.
 
         @param[in,out] target the bit vector
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t needed_words;
         assert(target);
         needed_words = (target->size + sizeof(size_t) * 8 - 1) / (sizeof(size_t) * 8);
@@ -291,8 +291,8 @@ class Vector(_StructRenderer, Composite):
         Resets the bit count to zero while preserving the allocated memory buffer.
 
         @param[in,out] target the bit vector
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(target->size > 0 && target->words) {{
           size_t active_words = (target->size + sizeof(size_t) * 8 - 1) / (sizeof(size_t) * 8);
@@ -308,8 +308,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @param[in] new_size the new number of bits
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t needed_words;
         assert(target);
@@ -318,7 +318,7 @@ class Vector(_StructRenderer, Composite):
           if(needed_words > target->capacity) {{
             size_t new_cap = target->capacity > 0 ? target->capacity * 2 : 2;
             if(new_cap < needed_words) new_cap = needed_words;
-            {self.reserve(f.target, "new_cap * word_bits")};
+            {self.reserve(m.target, "new_cap * word_bits")};
           }}
         }} else if(new_size < target->size) {{
           size_t rem = new_size % word_bits;
@@ -346,8 +346,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @param[in] bit the bit value to append (0 or non-zero)
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t needed_words;
         assert(target);
@@ -355,7 +355,7 @@ class Vector(_StructRenderer, Composite):
         if(needed_words > target->capacity) {{
           size_t new_cap = target->capacity > 0 ? target->capacity * 2 : 2;
           if(new_cap < needed_words) new_cap = needed_words;
-          {self.reserve(f.target, "new_cap * word_bits")};
+          {self.reserve(m.target, "new_cap * word_bits")};
         }}
         if(bit) {{
           target->words[target->size / word_bits] |= (((size_t)1) << (target->size % word_bits));
@@ -372,8 +372,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @return the removed bit value (0 or 1)
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         int bit;
         assert(target);
@@ -392,8 +392,8 @@ class Vector(_StructRenderer, Composite):
         @param[in] target the bit vector
         @param[in] index the bit index (must be < size)
         @return 1 if set, 0 otherwise
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < target->size);
         return (int)((target->words[index / (sizeof(size_t) * 8)] >> (index % (sizeof(size_t) * 8))) & 1);
@@ -407,9 +407,9 @@ class Vector(_StructRenderer, Composite):
         @param[in] target the bit vector
         @param[in] index the bit index (must be < size)
         @return 1 if set, 0 otherwise
-      """) as f:
-      get_call = self.get(f.target, f.index)
-      f.inline_code = f"""
+      """) as m:
+      get_call = self.get(m.target, m.index)
+      m.inline_code = f"""
         return {get_call};
       """
 
@@ -421,8 +421,8 @@ class Vector(_StructRenderer, Composite):
         @param[in,out] target the bit vector
         @param[in] index the bit index (must be < size)
         @param[in] bit the bit value (0 or non-zero)
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         assert(target);
         assert(index < target->size);
@@ -440,8 +440,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @param[in] index the bit index (must be < size)
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < target->size);
         target->words[index / (sizeof(size_t) * 8)] &= ~(((size_t)1) << (index % (sizeof(size_t) * 8)));
@@ -454,8 +454,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector
         @param[in] index the bit index (must be < size)
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(index < target->size);
         target->words[index / (sizeof(size_t) * 8)] ^= (((size_t)1) << (index % (sizeof(size_t) * 8)));
@@ -467,8 +467,8 @@ class Vector(_StructRenderer, Composite):
         Sets every bit in the vector to 1.
 
         @param[in,out] target the bit vector
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem;
         assert(target);
@@ -489,8 +489,8 @@ class Vector(_StructRenderer, Composite):
         Sets every bit in the vector to 0.
 
         @param[in,out] target the bit vector
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t active_words;
         assert(target);
         if(target->size == 0) return;
@@ -504,8 +504,8 @@ class Vector(_StructRenderer, Composite):
         Toggles every bit in the vector (0 becomes 1, 1 becomes 0).
 
         @param[in,out] target the bit vector
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem, index;
         assert(target);
@@ -530,8 +530,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return the number of set bits
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem, index, total = 0;
         size_t w;
@@ -557,8 +557,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return non-zero if any bit is set, zero otherwise
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem, index;
         assert(target);
@@ -581,8 +581,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return non-zero if all bits are set, zero otherwise
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem, index;
         assert(target);
@@ -606,9 +606,9 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return non-zero if all bits are zero, zero otherwise
-      """) as f:
-      any_call = self.any(f.target)
-      f.inline_code = f"""
+      """) as m:
+      any_call = self.any(m.target)
+      m.inline_code = f"""
         assert(target);
         return !{any_call};
       """
@@ -620,8 +620,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in] target the bit vector
         @return index of the first set bit, or size if none
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t full_words, rem, index, bit;
         size_t w;
@@ -660,14 +660,14 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector to update
         @param[in] source the bit vector to merge in
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t common_words, index;
         assert(target);
         assert(source);
         if(source->size > target->size) {{
-          {self.resize(f.target, "source->size")};
+          {self.resize(m.target, "source->size")};
         }}
         common_words = (source->size + word_bits - 1) / word_bits;
         for(index = 0; index < common_words; ++index) {{
@@ -688,8 +688,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector to update
         @param[in] source the bit vector to intersect with
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t common_words, target_words, index;
         assert(target);
@@ -717,8 +717,8 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector to update
         @param[in] source the bit vector to subtract
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t common_words, target_words, index;
         assert(target);
@@ -743,14 +743,14 @@ class Vector(_StructRenderer, Composite):
 
         @param[in,out] target the bit vector to update
         @param[in] source the bit vector to XOR with
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t common_words, index;
         assert(target);
         assert(source);
         if(source->size > target->size) {{
-          {self.resize(f.target, "source->size")};
+          {self.resize(m.target, "source->size")};
         }}
         common_words = (source->size + word_bits - 1) / word_bits;
         for(index = 0; index < common_words; ++index) {{
@@ -773,8 +773,8 @@ class Vector(_StructRenderer, Composite):
         @param[in] left the candidate subset
         @param[in] right the candidate superset
         @return non-zero if left is a subset of right, zero otherwise
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t word_bits = sizeof(size_t) * 8;
         size_t common_words, left_words, right_words, index;
         assert(left);

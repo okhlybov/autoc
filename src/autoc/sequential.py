@@ -21,14 +21,14 @@ class Sequential(Traversable):
     r2 = range.variable("r2")
 
     # The canonical iteration order makes the pairwise walk a valid equality
-    with self.equal as f:
-      f.code = lambda f=f: f"""
+    with self.equal as m:
+      m.code = lambda m: f"""
         assert(left);
         assert(right);
-        if({self.size(f.left)} != {self.size(f.right)}) return 0;
+        if({self.size(m.left)} != {self.size(m.right)}) return 0;
         {r.definition};
         {r2.definition};
-        for({r} = {range.new(f.left)}, {r2} = {range.new(f.right)}; !{range.empty(r)} && !{range.empty(r2)}; {range.move_front(r)}, {range.move_front(r2)}) {{
+        for({r} = {range.new(m.left)}, {r2} = {range.new(m.right)}; !{range.empty(r)} && !{range.empty(r2)}; {range.move_front(r)}, {range.move_front(r2)}) {{
           if(!{self.element.equal(range.front_view(r), range.front_view(r2))}) return 0;
         }}
         return 1;

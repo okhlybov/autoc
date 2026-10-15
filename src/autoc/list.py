@@ -36,28 +36,28 @@ class List(_StructRenderer, Sequential, Insertable):
     target_element = self.element.variable("target_node->element")
     source_element = self.element.variable("source_node->element")
     
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
     
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         assert((target->size == 0) == (target->front == NULL));
         return target->size == 0;
       """
     
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->front = NULL;
         target->size = 0;
       """
     
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = target->front;
@@ -70,8 +70,8 @@ class List(_StructRenderer, Sequential, Insertable):
         }}
       """
     
-    with self.copy as f:
-      f.code = lambda f=f: f"""
+    with self.copy as m:
+      m.code = lambda m: f"""
         size_t size;
         {self.node}* target_node;
         {self.node}* source_node;
@@ -94,13 +94,13 @@ class List(_StructRenderer, Sequential, Insertable):
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->front = source->front;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front",
@@ -110,12 +110,12 @@ class List(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the list to add to
         @param[in] element the element to add to the front
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
-        {self.element.copy(node_element, f.element)};
+        {self.element.copy(node_element, m.element)};
         node->next = target->front;
         target->front = node;
         ++target->size;
@@ -128,9 +128,9 @@ class List(_StructRenderer, Sequential, Insertable):
         by allocating a new node and linking it before the current front. Other elements are untouched.
 
         @param[in,out] target the list to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
@@ -149,13 +149,13 @@ class List(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the list to remove from - must not be empty
         @return the removed front element
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {self.node}* node;
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         node = target->front;
         {self.element.move(result, node_element)};
         target->front = node->next;
@@ -164,24 +164,24 @@ class List(_StructRenderer, Sequential, Insertable):
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push_front(f.target, f.element)};
+        {self.push_front(m.target, m.element)};
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       curr_elem = self.element.variable("curr->element")
       destroy_curr = f"{self.element.destroy(curr_elem)};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         {self.node}* curr;
         {self.node}* prev;
         assert(target);
         prev = NULL;
         curr = target->front;
         while(curr) {{
-          if({self.element.equal(curr_elem, f.element)}) {{
+          if({self.element.equal(curr_elem, m.element)}) {{
             if(prev) prev->next = curr->next;
             else target->front = curr->next;
             {destroy_curr}
@@ -201,12 +201,12 @@ class List(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the list to read - must not be empty
         @return the element at the front
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
@@ -218,11 +218,11 @@ class List(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the list to read - must not be empty
         @return a constant view of the element at the front, valid while the element is held by the list
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {front_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {front_element.bind(m.result)};
       """
 
 
@@ -266,44 +266,44 @@ class Range(_Range, Forward):
 
         @param[in] iterable the list to span
         @return the range covering the whole list
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.front = iterable->front;
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return !target->front;
       """
 
     front_element = self.element.variable("target->front->element")
     
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
 
-    with self.front_view as f:
+    with self.front_view as m:
       front_element = self.iterable.element.variable("target->front->element")
-      f.inline_code = f"""
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {front_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {front_element.bind(m.result)};
       """
     
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         target->front = target->front->next;
       """

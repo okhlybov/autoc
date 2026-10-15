@@ -58,8 +58,8 @@ class Map(Mapping, Ordered):
     n = Indirection(set.node).variable("n")
     _target = self._set.variable("target->set")
 
-    with self.view as f:
-      f.code = f"""
+    with self.view as m:
+      m.code = f"""
         {n.definition};
         int order;
         size_t low, high, mid;
@@ -70,7 +70,7 @@ class Map(Mapping, Ordered):
           high = n->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order = {self.index.compare(self.index.variable("n->elements[mid].index"), f.index)};
+            order = {self.index.compare(self.index.variable("n->elements[mid].index"), m.index)};
             if(order == 0) return {entry.element_view(entry.variable("n->elements[mid]")).bind(self.element.view_type)};
             if(order < 0) low = mid + 1;
             else high = mid;
@@ -81,8 +81,8 @@ class Map(Mapping, Ordered):
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
-      f.code = f"""
+    with self.set as m:
+      m.code = f"""
         {n.definition};
         {_entry.definition};
         int order;
@@ -96,7 +96,7 @@ class Map(Mapping, Ordered):
           high = n->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order = {self.index.compare(self.index.variable("n->elements[mid].index"), f.index)};
+            order = {self.index.compare(self.index.variable("n->elements[mid].index"), m.index)};
             if(order == 0) {{
               found_node = n;
               found_idx = mid;
@@ -110,19 +110,19 @@ class Map(Mapping, Ordered):
           n = n->children[low];
         }}
         if(found_node) {{
-          {entry.replace_element(entry.variable("found_node->elements[found_idx]"), f.element)};
+          {entry.replace_element(entry.variable("found_node->elements[found_idx]"), m.element)};
         }} else {{
-          {entry.emplace_index(_entry, f.index)};
-          {entry.emplace_element(_entry, f.element)};
+          {entry.emplace_index(_entry, m.index)};
+          {entry.emplace_element(_entry, m.element)};
           {set.put(_target, _entry)};
           {entry.destroy_element(_entry)};
           {entry.destroy_index(_entry)};
         }}
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         {n.definition};
         {_entry.definition};
         int order;
@@ -134,7 +134,7 @@ class Map(Mapping, Ordered):
           high = n->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order = {self.index.compare(self.index.variable("n->elements[mid].index"), f.index)};
+            order = {self.index.compare(self.index.variable("n->elements[mid].index"), m.index)};
             if(order == 0) return 0;
             if(order < 0) low = mid + 1;
             else high = mid;
@@ -142,7 +142,7 @@ class Map(Mapping, Ordered):
           if(n->is_leaf) break;
           n = n->children[low];
         }}
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         {entry.create_element(_entry, *create_args)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};

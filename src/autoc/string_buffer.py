@@ -79,8 +79,8 @@ class Buffer(_StructRenderer, Composite):
       and lazy coalescing into a single contiguous null-terminated string on view.
     """
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         target->length = 0;
         target->scratch_size = 0;
@@ -89,8 +89,8 @@ class Buffer(_StructRenderer, Composite):
         target->variant.value.string = (char*)_autoc_empty_string;
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         if(target->variant.tag == 0) {{
           if(target->variant.value.string && target->variant.value.string != _autoc_empty_string) {{
@@ -101,8 +101,8 @@ class Buffer(_StructRenderer, Composite):
         }}
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->length = source->length;
@@ -125,8 +125,8 @@ class Buffer(_StructRenderer, Composite):
         }}
       """
 
-    with self.move as f:
-      f.inline_code = f"""
+    with self.move as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         *target = *source;
@@ -139,8 +139,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in] target the string buffer to measure
         @return number of characters in the buffer
-      """) as f:
-      f.inline_code = """
+      """) as m:
+      m.inline_code = """
         assert(target);
         return target->length;
       """
@@ -151,8 +151,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in] target the string buffer to check
         @return non-zero if the buffer is empty
-      """) as f:
-      f.inline_code = """
+      """) as m:
+      m.inline_code = """
         assert(target);
         return target->length == 0;
       """
@@ -162,8 +162,8 @@ class Buffer(_StructRenderer, Composite):
         Releases any allocated memory and resets the buffer to an empty state in O(chunks) time.
 
         @param[in,out] target the string buffer to clear
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(target->variant.tag == 0) {{
           if(target->variant.value.string && target->variant.value.string != _autoc_empty_string) {{
@@ -180,8 +180,8 @@ class Buffer(_StructRenderer, Composite):
       """
 
     self._ensure_chunks = self.method(None, ("ensure", "chunks"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Ensure variant is in chunks mode (internal)")
-    with self._ensure_chunks as f:
-      f.code = f"""
+    with self._ensure_chunks as m:
+      m.code = f"""
         char* old;
         assert(target);
         if(target->variant.tag == 1) return;
@@ -201,8 +201,8 @@ class Buffer(_StructRenderer, Composite):
       """
 
     self._flush_scratch = self.method(None, ("flush", "scratch"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Flush scratch buffer to chunks (internal)")
-    with self._flush_scratch as f:
-      f.code = f"""
+    with self._flush_scratch as m:
+      m.code = f"""
         assert(target);
         if(target->scratch_size == 0) return;
         {self._ensure_chunks("target")};
@@ -220,8 +220,8 @@ class Buffer(_StructRenderer, Composite):
         @param[in,out] target the string buffer
         @param[in] str pointer to character sequence
         @param[in] size number of characters to push
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         char* chunk;
         assert(target);
         if(size == 0 || !str) return;
@@ -254,8 +254,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] str null-terminated string to append
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(str) {{
           {self.push_slice("target", "str", "strlen(str)")};
@@ -268,8 +268,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] c character to append
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(target->scratch_size == {self.scratch_capacity}) {{
           {self._flush_scratch("target")};
@@ -292,8 +292,8 @@ class Buffer(_StructRenderer, Composite):
         @return number of characters written, or negative on encoding error
 
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         #if defined(AUTOC_HAS_VSNPRINTF) || defined(AUTOC_HAS_VSCPRINTF)
           int size;
           char stack_buf[128];
@@ -352,8 +352,8 @@ class Buffer(_StructRenderer, Composite):
         @return number of characters written, or negative on encoding error
 
         @note This function relies on the C library `vsnprintf()` function and unconditionally returns -1 when it is missing.
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         int size;
         va_list args;
         assert(target);
@@ -372,8 +372,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value unsigned long integer value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         char buf[sizeof(unsigned long) * 3 + 1];
         char* p;
         unsigned long u;
@@ -395,8 +395,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value long integer value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         char buf[sizeof(unsigned long) * 3 + 2];
         char* p;
         unsigned long u;
@@ -425,8 +425,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value unsigned integer value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         assert(target);
         {self.push_ulong("target", "value")};
       """
@@ -439,8 +439,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value integer value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         assert(target);
         {self.push_long("target", "value")};
       """
@@ -455,8 +455,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value double value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         assert(target);
         {self.push_format("target", '"%g"', "value")};
       """
@@ -471,8 +471,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @param[in] value long double value to append
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         assert(target);
         {self.push_format("target", '"%Lg"', "value")};
       """
@@ -485,8 +485,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @return pointer to the null-terminated contiguous string
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t i, count, chunk_len;
         char* buf;
         char* p;
@@ -548,8 +548,8 @@ class Buffer(_StructRenderer, Composite):
 
         @param[in,out] target the string buffer
         @return the owned null-terminated string
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         char* result;
         assert(target);
         {self.view("target")};

@@ -33,59 +33,59 @@ class Stack(_StructRenderer, Sequential, Insertable):
     _left = self._list.variable("left->list")
     _right = self._list.variable("right->list")
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return {self._list.empty(_target)};
       """
 
-    with self.size as f:
-      f.code = f"""
+    with self.size as m:
+      m.code = f"""
         assert(target);
         return {self._list.size(_target)};
       """
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         {self._list.create(_target)};
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         {self._list.destroy(_target)};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._list.copy(_target, _source)};
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._list.move(_target, _source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         assert(left);
         assert(right);
         return {self._list.equal(_left, _right)};
       """
 
-    with self.find_view as f:
-      f.code = f"""
+    with self.find_view as m:
+      m.code = f"""
         assert(target);
-        return {self._list.find_view(_target, f.element)};
+        return {self._list.find_view(_target, m.element)};
       """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         assert(target);
         return {self._list.hash(_target)};
       """
@@ -97,10 +97,10 @@ class Stack(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the stack to add to
         @param[in] element the element to push onto the top
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        {self._list.push_front(_target, f.element)};
+        {self._list.push_front(_target, m.element)};
       """
 
     with self.method(None, "emplace", {"target": inout(self)} | self.element.constructor_parameters,
@@ -110,9 +110,9 @@ class Stack(_StructRenderer, Sequential, Insertable):
         by delegating to the internal list.
 
         @param[in,out] target the stack to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         assert(target);
         {self._list.emplace_front(_target, *create_args)};
       """
@@ -124,8 +124,8 @@ class Stack(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the stack to remove from - must not be empty
         @return the removed top element
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         return {self._list.pop_front(_target)};
       """
@@ -137,23 +137,23 @@ class Stack(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the stack to read - must not be empty
         @return the element at the top without removing it
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         return {self._list.front(_target)};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push(f.target, f.element)};
+        {self.push(m.target, m.element)};
         return 1;
       """
 
-    with self.remove as f:
-      f.code = lambda f=f: f"""
+    with self.remove as m:
+      m.code = lambda m: f"""
         assert(target);
-        return {self._list.remove(_target, f.element)};
+        return {self._list.remove(_target, m.element)};
       """
 
     self.description = f"""
@@ -198,43 +198,43 @@ class Range(_Range, Forward):
 
         @param[in] iterable the stack to span
         @return the range covering the whole stack
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.node = iterable->list.front;
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return !target->node;
       """
 
     node_element = self.iterable.element.variable("target->node->element")
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, node_element)};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {node_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {node_element.bind(m.result)};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         target->node = target->node->next;
       """

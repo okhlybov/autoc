@@ -26,53 +26,53 @@ class Sortable(Bisectable):
     element_prev = lambda target="target": self._element(target, "j-1")
     pivot = self.element.variable("pivot")
 
-    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": std.size_t, "hi": std.size_t}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("sort", "insertion"), {"target": inout(self), "lo": std.size_t, "hi": std.size_t}, hidden=True, visibility="internal", constraint=sort_constraint, brief="Sort range using insertion sort (internal)") as m:
+      m.code = lambda m: f"""
         size_t i, j;
         assert(target);
-        for(i = {f.lo} + 1; i <= {f.hi}; ++i) {{
-          for(j = i; j > {f.lo} && {self.element.compare(element_prev(f.target), element_j(f.target))} > 0; --j) {{
-            {self.element.swap(element_prev(f.target), element_j(f.target))};
+        for(i = {m.lo} + 1; i <= {m.hi}; ++i) {{
+          for(j = i; j > {m.lo} && {self.element.compare(element_prev(m.target), element_j(m.target))} > 0; --j) {{
+            {self.element.swap(element_prev(m.target), element_j(m.target))};
           }}
         }}
       """
 
-    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": std.size_t, "hi": std.size_t}, hidden=True, visibility="internal", constraint=sort_constraint, references=(self.sort_insertion,), brief="Sort range using quicksort (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("sort", "range"), {"target": inout(self), "lo": std.size_t, "hi": std.size_t}, hidden=True, visibility="internal", constraint=sort_constraint, references=(self.sort_insertion,), brief="Sort range using quicksort (internal)") as m:
+      m.code = lambda m: f"""
         size_t i, j, mid;
         {pivot.definition};
         assert(target);
-        while({f.lo} < {f.hi}) {{
-          if({f.hi} - {f.lo} < 16) {{ /* small ranges are insertion sorted */
-            {self.sort_insertion(f.target, f.lo, f.hi)};
+        while({m.lo} < {m.hi}) {{
+          if({m.hi} - {m.lo} < 16) {{ /* small ranges are insertion sorted */
+            {self.sort_insertion(m.target, m.lo, m.hi)};
             return;
           }}
-          mid = {f.lo} + ({f.hi} - {f.lo})/2;
+          mid = {m.lo} + ({m.hi} - {m.lo})/2;
           /* median of three orders the lo, mid and hi elements protecting against the sorted inputs */
-          if({self.element.compare(element_mid(f.target), element_lo(f.target))} < 0) {self.element.swap(element_mid(f.target), element_lo(f.target))};
-          if({self.element.compare(element_hi(f.target), element_mid(f.target))} < 0) {{
-            {self.element.swap(element_hi(f.target), element_mid(f.target))};
-            if({self.element.compare(element_mid(f.target), element_lo(f.target))} < 0) {self.element.swap(element_mid(f.target), element_lo(f.target))};
+          if({self.element.compare(element_mid(m.target), element_lo(m.target))} < 0) {self.element.swap(element_mid(m.target), element_lo(m.target))};
+          if({self.element.compare(element_hi(m.target), element_mid(m.target))} < 0) {{
+            {self.element.swap(element_hi(m.target), element_mid(m.target))};
+            if({self.element.compare(element_mid(m.target), element_lo(m.target))} < 0) {self.element.swap(element_mid(m.target), element_lo(m.target))};
           }}
-          {self.element.copy(pivot, element_mid(f.target))};
-          i = {f.lo};
-          j = {f.hi};
+          {self.element.copy(pivot, element_mid(m.target))};
+          i = {m.lo};
+          j = {m.hi};
           while(i <= j) {{
-            while({self.element.compare(element_i(f.target), pivot)} < 0) ++i;
-            while({self.element.compare(element_j(f.target), pivot)} > 0) --j;
+            while({self.element.compare(element_i(m.target), pivot)} < 0) ++i;
+            while({self.element.compare(element_j(m.target), pivot)} > 0) --j;
             if(i >= j) break;
-            {self.element.swap(element_i(f.target), element_j(f.target))};
+            {self.element.swap(element_i(m.target), element_j(m.target))};
             ++i;
             --j;
           }}
           {str(self.element.destroy(pivot)) + ";" if self.element.destructible else str()}
           /* recursing into the smaller part and iterating over the larger one bounds the recursion depth */
-          if(j - {f.lo} < {f.hi} - i) {{
-            {self.sort_range(f.target, f.lo, "j")};
-            {f.lo} = i;
+          if(j - {m.lo} < {m.hi} - i) {{
+            {self.sort_range(m.target, m.lo, "j")};
+            {m.lo} = i;
           }} else {{
-            {self.sort_range(f.target, "i", f.hi)};
-            {f.hi} = j;
+            {self.sort_range(m.target, "i", m.hi)};
+            {m.hi} = j;
           }}
         }}
       """
@@ -86,10 +86,10 @@ class Sortable(Bisectable):
         the element to be Orderable, Copyable and Swappable.
 
         @param[in,out] target the container to sort
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         assert(target);
-        if({self._target_size(f.target)} > 1) {self.sort_range(f.target, 0, f"{self._target_size(f.target)}-1")};
+        if({self._target_size(m.target)} > 1) {self.sort_range(m.target, 0, f"{self._target_size(m.target)}-1")};
       """
 
     # Reversal is a pure exchange loop so it requires nothing but the element swappability
@@ -100,12 +100,12 @@ class Sortable(Bisectable):
         take place.
 
         @param[in,out] target the container to reverse
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t i;
         assert(target);
-        for(i = 0; i < {self._target_size(f.target)}/2; ++i) {{
-          {self.element.swap(self._element(f.target, "i"), self._element(f.target, f"{self._target_size(f.target)}-1-i"))};
+        for(i = 0; i < {self._target_size(m.target)}/2; ++i) {{
+          {self.element.swap(self._element(m.target, "i"), self._element(m.target, f"{self._target_size(m.target)}-1-i"))};
         }}
       """
 
@@ -116,12 +116,12 @@ class Sortable(Bisectable):
 
         @param[in] target the container to check
         @return non-zero if the elements are sorted in ascending order
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
-        for(index = 1; index < {self._target_size(f.target)}; ++index) {{
-          if({self.element.compare(self._element(f.target, "index"), self._element(f.target, "index-1"))} < 0) return 0;
+        for(index = 1; index < {self._target_size(m.target)}; ++index) {{
+          if({self.element.compare(self._element(m.target, "index"), self._element(m.target, "index-1"))} < 0) return 0;
         }}
         return 1;
       """

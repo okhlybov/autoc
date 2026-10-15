@@ -51,57 +51,57 @@ class Map(Mapping, Ordered):
     node_index = entry.index.variable("n->element.index")
     _target = self._set.variable("target->set")
 
-    with self.view as f:
-      f.code = f"""
+    with self.view as m:
+      m.code = f"""
         int order;
         {n.definition};
         assert(target);
         n = target->set.root;
         while(n) {{
-          order = {self.index.compare(node_index, f.index)};
+          order = {self.index.compare(node_index, m.index)};
           if(order == 0) return {entry.element_view(node_entry).bind(self.element.view_type)};
           n = order > 0 ? n->left : n->right;
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
-      f.code = f"""
+    with self.set as m:
+      m.code = f"""
         int order;
         {n.definition};
         {_entry.definition};
         assert(target);
         n = target->set.root;
         while(n) {{
-          order = {self.index.compare(node_index, f.index)};
+          order = {self.index.compare(node_index, m.index)};
           if(order == 0) break;
           n = order > 0 ? n->left : n->right;
         }}
         if(n) {{
-          {entry.replace_element(node_entry, f.element)}; /* an entry with the specified index already exists - replace its element's contents in-place */
+          {entry.replace_element(node_entry, m.element)}; /* an entry with the specified index already exists - replace its element's contents in-place */
         }} else {{
-          {entry.emplace_index(_entry, f.index)};
-          {entry.emplace_element(_entry, f.element)};
+          {entry.emplace_index(_entry, m.index)};
+          {entry.emplace_element(_entry, m.element)};
           {set.put(_target, _entry)}; /* put the brand new entry into the tree */
           {entry.destroy_element(_entry)};
           {entry.destroy_index(_entry)};
         }}
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         int order;
         {n.definition};
         {_entry.definition};
         assert(target);
         n = target->set.root;
         while(n) {{
-          order = {self.index.compare(node_index, f.index)};
+          order = {self.index.compare(node_index, m.index)};
           if(order == 0) return 0;
           n = order > 0 ? n->left : n->right;
         }}
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         {entry.create_element(_entry, *create_args)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};

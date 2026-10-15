@@ -43,20 +43,20 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
       Nodes store elements contiguously in array blocks for superior cache locality and significantly reduced allocator overhead compared to binary search trees.
     """
 
-    with self.size as f:
-      f.inline_code = """
+    with self.size as m:
+      m.inline_code = """
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = """
+    with self.empty as m:
+      m.inline_code = """
         assert(target);
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = """
+    with self.create as m:
+      m.inline_code = """
         assert(target);
         target->root = NULL;
         target->size = 0;
@@ -64,8 +64,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
 
     destroy_elem = f"{self.element.destroy(self.element.variable('n->elements[i]'))};" if self.element.destructible else ""
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         {self.node}* n;
         {self.node}* p;
         size_t i;
@@ -95,8 +95,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         }}
       """
 
-    with self.method(None, ("split", "child"), {"target": inout(self), "parent": Callable.Parameter(self._node_p), "i": std.size_t}, hidden=True, visibility="internal", brief="Split full child of parent (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("split", "child"), {"target": inout(self), "parent": Callable.Parameter(self._node_p), "i": std.size_t}, hidden=True, visibility="internal", brief="Split full child of parent (internal)") as m:
+      m.code = f"""
         {self.node}* y;
         {self.node}* z;
         size_t j;
@@ -137,8 +137,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
 
     mid_element = self.element.variable("node->elements[mid]")
 
-    with self.find_view as f:
-      f.code = f"""
+    with self.find_view as m:
+      m.code = f"""
         {self.node}* node;
         size_t low, high, mid;
         int order_cmp;
@@ -149,8 +149,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           high = node->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order_cmp = {self.element.compare(mid_element, f.element)};
-            if(order_cmp == 0) return {mid_element.bind(f.result)};
+            order_cmp = {self.element.compare(mid_element, m.element)};
+            if(order_cmp == 0) return {mid_element.bind(m.result)};
             if(order_cmp < 0) low = mid + 1;
             else high = mid;
           }}
@@ -160,15 +160,15 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         return ({self.element.view_type})NULL;
       """
 
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         {self.node}* s;
         {self.node}* curr;
         size_t low, high, mid, i, j;
         int order_cmp;
         assert(target);
 
-        if({self.find_view(f.target, f.element)} != NULL) return 0;
+        if({self.find_view(m.target, m.element)} != NULL) return 0;
 
         if(!target->root) {{
           curr = {self.memory.allocate(self.node)};
@@ -176,7 +176,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           curr->count = 1;
           curr->parent = NULL;
           for(j = 0; j < {max_children}; ++j) curr->children[j] = NULL;
-          {self.element.copy(self.element.variable("curr->elements[0]"), f.element)};
+          {self.element.copy(self.element.variable("curr->elements[0]"), m.element)};
           target->root = curr;
           target->size = 1;
           return 1;
@@ -191,7 +191,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           s->children[0] = target->root;
           target->root->parent = s;
           target->root = s;
-          {self.split_child(f.target, "s", "0")};
+          {self.split_child(m.target, "s", "0")};
         }}
 
         curr = target->root;
@@ -200,14 +200,14 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           high = curr->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order_cmp = {self.element.compare(self.element.variable("curr->elements[mid]"), f.element)};
+            order_cmp = {self.element.compare(self.element.variable("curr->elements[mid]"), m.element)};
             if(order_cmp < 0) low = mid + 1;
             else high = mid;
           }}
           i = low;
           if(curr->children[i]->count == {max_keys}) {{
-            {self.split_child(f.target, "curr", "i")};
-            order_cmp = {self.element.compare(self.element.variable("curr->elements[i]"), f.element)};
+            {self.split_child(m.target, "curr", "i")};
+            order_cmp = {self.element.compare(self.element.variable("curr->elements[i]"), m.element)};
             if(order_cmp < 0) ++i;
           }}
           curr = curr->children[i];
@@ -217,7 +217,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         high = curr->count;
         while(low < high) {{
           mid = low + (high - low) / 2;
-          order_cmp = {self.element.compare(self.element.variable("curr->elements[mid]"), f.element)};
+          order_cmp = {self.element.compare(self.element.variable("curr->elements[mid]"), m.element)};
           if(order_cmp < 0) low = mid + 1;
           else high = mid;
         }}
@@ -226,17 +226,17 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         for(j = curr->count; j > i; --j) {{
           {self.element.move(self.element.variable("curr->elements[j]"), self.element.variable("curr->elements[j - 1]"))};
         }}
-        {self.element.copy(self.element.variable("curr->elements[i]"), f.element)};
+        {self.element.copy(self.element.variable("curr->elements[i]"), m.element)};
         ++curr->count;
         ++target->size;
         return 1;
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
       _temp_elem = self.element.variable("temp_elem")
       _destroy_temp = f"{self.element.destroy(_temp_elem)};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         {_temp_elem.definition};
         {self.node}* s;
         {self.node}* curr;
@@ -245,7 +245,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         assert(target);
 
         {self.element.create(_temp_elem, *create_args)};
-        if({self.find_view(f.target, _temp_elem)} != NULL) {{
+        if({self.find_view(m.target, _temp_elem)} != NULL) {{
           {_destroy_temp}
           return 0;
         }}
@@ -271,7 +271,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           s->children[0] = target->root;
           target->root->parent = s;
           target->root = s;
-          {self.split_child(f.target, "s", "0")};
+          {self.split_child(m.target, "s", "0")};
         }}
 
         curr = target->root;
@@ -286,7 +286,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           }}
           i = low;
           if(curr->children[i]->count == {max_keys}) {{
-            {self.split_child(f.target, "curr", "i")};
+            {self.split_child(m.target, "curr", "i")};
             order_cmp = {self.element.compare(self.element.variable("curr->elements[i]"), _temp_elem)};
             if(order_cmp < 0) ++i;
           }}
@@ -312,9 +312,9 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       destroy_found = f"{self.element.destroy(self.element.variable('node_found->elements[idx_found]'))};" if self.element.destructible else ""
-      f.code = f"""
+      m.code = f"""
         {self.node}* node;
         {self.node}* node_found = NULL;
         size_t idx_found = 0;
@@ -335,7 +335,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
           high = node->count;
           while(low < high) {{
             mid = low + (high - low) / 2;
-            order_cmp = {self.element.compare(self.element.variable("node->elements[mid]"), f.element)};
+            order_cmp = {self.element.compare(self.element.variable("node->elements[mid]"), m.element)};
             if(order_cmp == 0) {{
               node_found = node;
               idx_found = mid;
@@ -492,34 +492,34 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
     range = self.range
     r = range.variable("r")
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         {r.definition};
         assert(target);
         assert(source);
-        {self.create(f.target)};
-        for({r} = {range.new(f.source)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          {self.put(f.target, range.front_view(r))};
+        {self.create(m.target)};
+        for({r} = {range.new(m.source)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          {self.put(m.target, range.front_view(r))};
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->root = source->root;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         {r.definition};
         assert(left);
         assert(right);
-        if({self.size(f.left)} == {self.size(f.right)}) {{
-          for({r} = {range.new(f.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
-            if(!{self.contains(f.right, range.front_view(r))}) return 0;
+        if({self.size(m.left)} == {self.size(m.right)}) {{
+          for({r} = {range.new(m.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
+            if(!{self.contains(m.right, range.front_view(r))}) return 0;
           }}
           return 1;
         }} else return 0;
@@ -528,14 +528,14 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
     rl = range.variable("left_r")
     rr = range.variable("right_r")
 
-    with self.compare as f:
-      f.code = f"""
+    with self.compare as m:
+      m.code = f"""
         {rl.definition};
         {rr.definition};
         int order;
         assert(left);
         assert(right);
-        for({rl} = {range.new(f.left)}, {rr} = {range.new(f.right)}; !{range.empty(rl)} && !{range.empty(rr)}; {range.move_front(rl)}, {range.move_front(rr)}) {{
+        for({rl} = {range.new(m.left)}, {rr} = {range.new(m.right)}; !{range.empty(rl)} && !{range.empty(rr)}; {range.move_front(rl)}, {range.move_front(rr)}) {{
           order = {self.element.compare(range.front_view(rl), range.front_view(rr))};
           if(order) return order;
         }}
@@ -598,9 +598,9 @@ class Range(_Range, Bidirectional):
 
         @param[in] iterable the set to span
         @return the range covering the whole set
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -625,33 +625,33 @@ class Range(_Range, Bidirectional):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = """
+    with self.empty as m:
+      m.inline_code = """
         assert(target);
         return target->remaining == 0;
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {front_element.bind(self.iterable.element.view_type)};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->remaining;
         if(target->remaining > 0) {{
           if(!target->front_node->is_leaf) {{
@@ -682,27 +682,27 @@ class Range(_Range, Bidirectional):
         }}
       """
 
-    with self.back as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.back as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, back_element)};
         return {result};
       """
 
-    with self.back_view as f:
-      f.inline_code = f"""
+    with self.back_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {back_element.bind(self.iterable.element.view_type)};
       """
 
-    with self.move_back as f:
-      f.code = f"""
+    with self.move_back as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->remaining;
         if(target->remaining > 0) {{
           if(!target->back_node->is_leaf) {{

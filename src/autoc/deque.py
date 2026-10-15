@@ -37,28 +37,28 @@ class Deque(_StructRenderer, Sequential, Insertable):
     target_element = self.element.variable("target_node->element")
     source_element = self.element.variable("source_node->element")
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         assert((target->size == 0) == (target->front == NULL && target->back == NULL));
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->front = target->back = NULL;
         target->size = 0;
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = target->front;
@@ -71,8 +71,8 @@ class Deque(_StructRenderer, Sequential, Insertable):
         }}
       """
 
-    with self.copy as f:
-      f.code = lambda f=f: f"""
+    with self.copy as m:
+      m.code = lambda m: f"""
         size_t size;
         {self.node}* target_node;
         {self.node}* source_node;
@@ -97,14 +97,14 @@ class Deque(_StructRenderer, Sequential, Insertable):
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->front = source->front;
         target->back = source->back;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
     with self.method(None, ("push", "front"), {"target": inout(self), "element": self.element}, constraint=lambda: self.element.copyable, brief="Add element to front",
@@ -114,12 +114,12 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the deque to add to
         @param[in] element the element to add to the front
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
-        {self.element.copy(node_element, f.element)};
+        {self.element.copy(node_element, m.element)};
         node->prev = NULL;
         node->next = target->front;
         if(target->front) target->front->prev = node; else target->back = node;
@@ -134,9 +134,9 @@ class Deque(_StructRenderer, Sequential, Insertable):
         Other elements are untouched so their addresses stay valid.
 
         @param[in,out] target the deque to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
@@ -155,13 +155,13 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the deque to remove from - must not be empty
         @return the removed front element
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {self.node}* node;
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         node = target->front;
         {self.element.move(result, node_element)};
         target->front = node->next;
@@ -178,12 +178,12 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the deque to add to
         @param[in] element the element to add to the back
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
-        {self.element.copy(node_element, f.element)};
+        {self.element.copy(node_element, m.element)};
         node->next = NULL;
         node->prev = target->back;
         if(target->back) target->back->next = node; else target->front = node;
@@ -198,9 +198,9 @@ class Deque(_StructRenderer, Sequential, Insertable):
         Other elements are untouched so their addresses stay valid.
 
         @param[in,out] target the deque to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         {self.node}* node;
         assert(target);
         node = {self.memory.allocate(self.node)};
@@ -221,13 +221,13 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in,out] target the deque to remove from - must not be empty
         @return the removed back element
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {self.node}* node;
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         node = target->back;
         {self.element.move(result, node_element)};
         target->back = node->prev;
@@ -237,22 +237,22 @@ class Deque(_StructRenderer, Sequential, Insertable):
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push_back(f.target, f.element)};
+        {self.push_back(m.target, m.element)};
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       node_elem = self.element.variable("node->element")
       destroy_node = f"{self.element.destroy(node_elem)};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         {self.node}* node;
         assert(target);
         node = target->front;
         while(node) {{
-          if({self.element.equal(node_elem, f.element)}) {{
+          if({self.element.equal(node_elem, m.element)}) {{
             if(node->prev) node->prev->next = node->next; else target->front = node->next;
             if(node->next) node->next->prev = node->prev; else target->back = node->prev;
             {destroy_node}
@@ -271,12 +271,12 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the deque to read - must not be empty
         @return the element at the front
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
@@ -288,11 +288,11 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the deque to read - must not be empty
         @return a constant view of the element at the front, valid while the element is held by the deque
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {front_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {front_element.bind(m.result)};
       """
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get back element",
@@ -301,12 +301,12 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the deque to read - must not be empty
         @return the element at the back
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, back_element)};
         return {result};
       """
@@ -318,11 +318,11 @@ class Deque(_StructRenderer, Sequential, Insertable):
 
         @param[in] target the deque to read - must not be empty
         @return a constant view of the element at the back, valid while the element is held by the deque
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {back_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {back_element.bind(m.result)};
       """
 
 
@@ -372,9 +372,9 @@ class Range(_Range, Bidirectional):
 
         @param[in] iterable the deque to span
         @return the range covering the whole deque
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.front = iterable->front;
@@ -382,8 +382,8 @@ class Range(_Range, Bidirectional):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return !target->front || !target->back || target->front == target->back->next || target->back == target->front->prev;
       """
@@ -391,50 +391,50 @@ class Range(_Range, Bidirectional):
     front_element = self.iterable.element.variable("target->front->element")
     back_element = self.iterable.element.variable("target->back->element")
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {front_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {front_element.bind(m.result)};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         target->front = target->front->next;
       """
 
-    with self.back as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.back as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, back_element)};
         return {result};
       """
 
-    with self.back_view as f:
-      f.inline_code = f"""
+    with self.back_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {back_element.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {back_element.bind(m.result)};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         target->back = target->back->prev;
       """

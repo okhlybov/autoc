@@ -54,8 +54,8 @@ class Map(Mapping, Hashed):
     slot_opt = set.slot.variable("target->set.elements[i]")
     slot_index = self.index.variable("target->set.elements[i].index")
 
-    with self.view as f:
-      f.code = f"""
+    with self.view as m:
+      m.code = f"""
         /*
           Direct open-addressing lookup without transient entry allocation:
           Hashes the search index directly and probes slots using the index comparator
@@ -65,17 +65,17 @@ class Map(Mapping, Hashed):
         assert(target);
         if(target->set.elements) {{
           assert(target->set.capacity > 0);
-          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          start = {self.index.hash(m.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
                 return {entry.element_view(slot).bind(self.element.view_type)};
               }}
             }} else goto not_found;
           }}
           for(i = 0; i < start; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
                 return {entry.element_view(slot).bind(self.element.view_type)};
               }}
             }} else goto not_found;
@@ -85,8 +85,8 @@ class Map(Mapping, Hashed):
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
-      f.code = f"""
+    with self.set as m:
+      m.code = f"""
         /*
           Direct open-addressing search to replace existing element in-place,
           or insert a new entry into the set if absent.
@@ -96,57 +96,57 @@ class Map(Mapping, Hashed):
         assert(target);
         if(target->set.elements) {{
           assert(target->set.capacity > 0);
-          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          start = {self.index.hash(m.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
-                {entry.replace_element(slot, f.element)};
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
+                {entry.replace_element(slot, m.element)};
                 return;
               }}
             }} else goto do_insert;
           }}
           for(i = 0; i < start; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
-                {entry.replace_element(slot, f.element)};
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
+                {entry.replace_element(slot, m.element)};
                 return;
               }}
             }} else goto do_insert;
           }}
         }}
         do_insert:
-        {entry.emplace_index(_entry, f.index)};
-        {entry.emplace_element(_entry, f.element)};
+        {entry.emplace_index(_entry, m.index)};
+        {entry.emplace_element(_entry, m.element)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         size_t i, start;
         {_entry.definition};
         assert(target);
         if(target->set.capacity > 0) {{
-          start = {self.index.hash(f.index)} & (target->set.capacity - 1);
+          start = {self.index.hash(m.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
                 return 0;
               }}
             }} else goto do_emplace_insert;
           }}
           for(i = 0; i < start; ++i) {{
             if(!{set.slot.empty(slot_opt)}) {{
-              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, m.index)}) {{
                 return 0;
               }}
             }} else goto do_emplace_insert;
           }}
         }}
         do_emplace_insert:
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         {entry.create_element(_entry, *create_args)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};

@@ -43,8 +43,8 @@ class String(_AliasRenderer, Indirection, Assignable, Sequential):
         @param[in,out] left the first string
         @param[in,out] right the second string
       """)
-    with self.swap as f:
-      f.inline_code = """
+    with self.swap as m:
+      m.inline_code = """
         char* temp;
         temp = *left;
         *left = *right;
@@ -60,8 +60,8 @@ class String(_AliasRenderer, Indirection, Assignable, Sequential):
 
         @param[in] source the string to duplicate - a null string duplicates into the empty one
         @return the newly allocated copy of the string
-      """) as f:
-      f.code = """
+      """) as m:
+      m.code = """
         if(source) {
           #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
             return strdup(source);
@@ -87,70 +87,70 @@ class String(_AliasRenderer, Indirection, Assignable, Sequential):
         so the string stays usable.
 
         @param[in,out] target the string to release - reset to the empty string
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         if(target != _autoc_empty_string) free(target);
       """
     
-    with self.set as f:
-      f.inline_code = f"""
+    with self.set as m:
+      m.inline_code = f"""
         assert(target);
         target[index] = element;
       """
       
-    with self.get as f:
-      f.inline_code = f"""
+    with self.get as m:
+      m.inline_code = f"""
         assert(target);
         return target[index];
       """
 
-    with self.view as f:
-      f.inline_code = f"""
+    with self.view as m:
+      m.inline_code = f"""
         assert(target);
         return &target[index];
       """
 
-    with self.indexed as f:
-      f.inline_code = f"""
+    with self.indexed as m:
+      m.inline_code = f"""
       assert(target);
-        return index < {self.size(f.target)};
+        return index < {self.size(m.target)};
       """
       
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return strlen(target);
       """
       
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return !strlen(target);
       """
       
-    with self.find_view as f:
-      f.inline_code = f"""
+    with self.find_view as m:
+      m.inline_code = f"""
         assert(target);
         return strchr(target, element);
       """
       
-    with self.method_from("equal") as f:
-      f.inline_code = f"""
+    with self.method_from("equal") as m:
+      m.inline_code = f"""
         assert(left);
         assert(right);
         return strcmp(left, right) == 0;
       """
 
-    with self.method_from("compare") as f:
-      f.inline_code = f"""
+    with self.method_from("compare") as m:
+      m.inline_code = f"""
         assert(left);
         assert(right);
         return strcmp(left, right);
       """
       
-    with self.method_from("hash") as f:
-      f.code = """
+    with self.method_from("hash") as m:
+      m.code = """
         /* the djb2a algorithm */
         char c;
         size_t hash = 5381;
@@ -178,8 +178,8 @@ class String(_AliasRenderer, Indirection, Assignable, Sequential):
         @return number of characters written, or negative on encoding error
         
         @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
-      """) as f:
-      f.code = """
+      """) as m:
+      m.code = """
         #if defined(AUTOC_HAS_VSNPRINTF) || defined(AUTOC_HAS_VSCPRINTF)
           int len;
           char* buf;
@@ -235,8 +235,8 @@ class String(_AliasRenderer, Indirection, Assignable, Sequential):
         @return number of characters written, or negative on encoding error
 
         @note This function relies on the C library `vsnprintf` function and unconditionally returns -1 when it is missing.
-      """) as f:
-      f.code = lambda: f"""
+      """) as m:
+      m.code = lambda: f"""
         int len;
         va_list args;
         assert(target);
@@ -307,8 +307,8 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the string to span
         @return the range covering the whole string
-      """) as f:
-      f.inline_code = lambda: f"""
+      """) as m:
+      m.inline_code = lambda: f"""
         {self} result;
         assert(iterable);
         result.iterable = iterable;
@@ -317,68 +317,68 @@ class Range(_Range, DirectAccess):
         return result;
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      f.inline_code = lambda: f"""
+    with self.front as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
-    with self.front_view as f:
-      f.inline_code = lambda: f"""
+    with self.front_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      f.inline_code = lambda: f"""
+    with self.back as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
-    with self.back_view as f:
-      f.inline_code = lambda: f"""
+    with self.back_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      f.inline_code = lambda: f"""
+    with self.get as m:
+      m.inline_code = lambda: f"""
       assert(target);
       return {self.iterable.get("target->iterable", "target->front + index")};
     """
 
-    with self.view as f:
-      f.inline_code = lambda: f"""
+    with self.view as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

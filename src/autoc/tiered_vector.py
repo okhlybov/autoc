@@ -50,33 +50,33 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
       No direct C++ equivalent, but close to [std::deque<>](https://cppreference.com/cpp/container/deque).
     """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->chunks = NULL;
         target->chunk_count = target->chunk_capacity = target->size = 0;
       """
 
-    with self.indexed as f:
-      f.inline_code = f"""
+    with self.indexed as m:
+      m.inline_code = f"""
         assert(target);
-        return {f.index} < target->size;
+        return {m.index} < target->size;
       """
 
-    with self.method(None, "extend", {"target": inout(self)}, hidden=True, visibility="internal", brief="Extend chunk table if needed (internal)") as f:
-      f.code = f"""
+    with self.method(None, "extend", {"target": inout(self)}, hidden=True, visibility="internal", brief="Extend chunk table if needed (internal)") as m:
+      m.code = f"""
         size_t index;
         {self._chunk_pp} chunks;
         assert(target);
@@ -95,9 +95,9 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         }}
       """
 
-    with self.destroy as f:
+    with self.destroy as m:
       if self.element.destructible:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
           if(target->chunks) {{
@@ -111,7 +111,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
         """
       else:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
           if(target->chunks) {{
@@ -132,11 +132,11 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to add to
         @param[in] element the element to add to the back
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         assert(target);
-        {self.extend(f.target)};
-        {self.element.copy(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), f.element)};
+        {self.extend(m.target)};
+        {self.element.copy(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), m.element)};
         ++target->size;
       """
 
@@ -149,11 +149,11 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
         Existing element addresses stay valid since chunks never move.
 
         @param[in,out] target the vector to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         assert(target);
-        {self.extend(f.target)};
+        {self.extend(m.target)};
         {self.element.create(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), *create_args)};
         ++target->size;
       """
@@ -167,28 +167,28 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to remove from - must not be empty
         @return the removed back element
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->size;
         {self.element.move(result, self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"))};
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push(f.target, f.element)};
+        {self.push(m.target, m.element)};
         return 1;
       """
 
     curr_var = self._element("target", "index")
     next_var = self._element("target", "index + 1")
-    with self.remove as f:
-      def _remove(f=f):
+    with self.remove as m:
+      def _remove(m):
         dest_curr = f"{self.element.destroy(curr_var)};" if self.element.destructible else ""
         dest_next = f"{self.element.destroy(next_var)};" if self.element.destructible else ""
         move_shift = (
@@ -200,7 +200,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           size_t index;
           assert(target);
           for(index = 0; index < target->size; ++index) {{
-            if({self.element.equal(curr_var, f.element)}) {{
+            if({self.element.equal(curr_var, m.element)}) {{
               {dest_curr}
               for(; index + 1 < target->size; ++index) {{
                 {move_shift}
@@ -211,7 +211,7 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
           }}
           return 0;
         """
-      f.code = _remove
+      m.code = _remove
 
     # Resize grows the vector by extending the chunk table and default-initializing the
     # new elements in place - no element migration is ever needed since the chunks are
@@ -236,56 +236,56 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[in,out] target the vector to resize
         @param[in] size the new number of elements - the tail is destroyed when shrinking and default-initialized when growing
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         size_t index;
         size_t needed;
         assert(target);
-        for(index = target->size; index < {f.size}; ++index) {{
-          {self.extend(f.target)};
+        for(index = target->size; index < {m.size}; ++index) {{
+          {self.extend(m.target)};
           {resize_create_i}
           ++target->size;
         }}
-        if({f.size} < target->size) {{
-          for(index = {f.size}; index < target->size; ++index) {{
+        if({m.size} < target->size) {{
+          for(index = {m.size}; index < target->size; ++index) {{
             {resize_destroy_i}
           }}
-          needed = ({f.size} + {self.chunk_mask}) >> {self.chunk_shift};
+          needed = ({m.size} + {self.chunk_mask}) >> {self.chunk_shift};
           for(index = needed; index < target->chunk_count; ++index) {{
             {self.memory.free("target->chunks[index]")};
           }}
           target->chunk_count = needed;
         }}
-        target->size = {f.size};
+        target->size = {m.size};
       """
 
-    with self.get as f:
-      result = f.result.variable("result")
-      f.inline_code = lambda f=f: f"""
+    with self.get as m:
+      result = m.result.variable("result")
+      m.inline_code = lambda m: f"""
         {result.definition};
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        {self.element.copy(result, self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]"))};
+        assert({self.indexed(m.target, m.index)});
+        {self.element.copy(result, self.element.variable(f"target->chunks[{m.index} >> {self.chunk_shift}][{m.index} & {self.chunk_mask}]"))};
         return {result};
       """
 
     # FIXME explicit casting here and there in the respective Range type is a kind of hack to deal with double pointer types
     # Normally Pointer type should be responsible for handling the per-indirection constness flags
-    with self.view as f:
-      f.inline_code = f"""
+    with self.view as m:
+      m.inline_code = f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        return {self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]").bind(f.result)};
+        assert({self.indexed(m.target, m.index)});
+        return {self.element.variable(f"target->chunks[{m.index} >> {self.chunk_shift}][{m.index} & {self.chunk_mask}]").bind(m.result)};
       """
 
     destroy_i = str(self.element.destroy(self.element.variable(f"target->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))) + ";" if self.element.destructible else str()
 
-    with self.set as f:
-      f.inline_code = lambda f=f: f"""
+    with self.set as m:
+      m.inline_code = lambda m: f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
+        assert({self.indexed(m.target, m.index)});
         {destroy_i}
-        {self.element.copy(self.element.variable(f"target->chunks[{f.index} >> {self.chunk_shift}][{f.index} & {self.chunk_mask}]"), f.element)};
+        {self.element.copy(self.element.variable(f"target->chunks[{m.index} >> {self.chunk_shift}][{m.index} & {self.chunk_mask}]"), m.element)};
       """
 
     with self.method(None, ("create", "size"), {"target": out(self), "size": self.index}, constraint=lambda: self.element.default_constructible or self.element.zero_initializable, brief="Create the vector with room for the given number of default-constructed elements",
@@ -296,59 +296,59 @@ class Vector(_StructRenderer, Assignable, Sortable, Sequential, Insertable):
 
         @param[out] target the vector to construct
         @param[in] size the number of default-initialized elements to provide room for
-      """) as f:
+      """) as m:
       if self.element.zero_initializable:
         # The chunked zeroed allocation is the default initialization - no per element operations
-        f.code = f"""
+        m.code = f"""
           size_t index, needed;
           assert(target);
-          if({f.size} > 0) {{
-            needed = ({f.size} + {self.chunk_mask}) >> {self.chunk_shift};
+          if({m.size} > 0) {{
+            needed = ({m.size} + {self.chunk_mask}) >> {self.chunk_shift};
             target->chunks = {self.memory.allocate(self._chunk_p, "needed")};
             target->chunk_capacity = needed;
             for(index = 0; index < needed; ++index) {{
               target->chunks[index] = {self.memory.allocate(self.element, f"{1 << self.chunk_shift}", zero=True)};
             }}
             target->chunk_count = needed;
-            target->size = {f.size};
+            target->size = {m.size};
           }} else {{
-            {self.create(f.target)};
+            {self.create(m.target)};
           }}
         """
       else:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
-          {self.create(f.target)};
-          for(index = 0; index < {f.size}; ++index) {{
-            {self.extend(f.target)};
+          {self.create(m.target)};
+          for(index = 0; index < {m.size}; ++index) {{
+            {self.extend(m.target)};
             {self.element.create(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"))};
             ++target->size;
           }}
         """
 
-    with self.copy as f:
-      f.code = lambda f=f: f"""
+    with self.copy as m:
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
         assert(source);
-        {self.create(f.target)};
+        {self.create(m.target)};
         for(index = 0; index < source->size; ++index) {{
-          {self.extend(f.target)};
+          {self.extend(m.target)};
           {self.element.copy(self.element.variable(f"target->chunks[target->size >> {self.chunk_shift}][target->size & {self.chunk_mask}]"), self.element.variable(f"source->chunks[index >> {self.chunk_shift}][index & {self.chunk_mask}]"))};
           ++target->size;
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->chunks = source->chunks;
         target->chunk_count = source->chunk_count;
         target->chunk_capacity = source->chunk_capacity;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
 
@@ -389,9 +389,9 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the tiered vector to span
         @return the range covering the whole vector
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -400,68 +400,68 @@ class Range(_Range, DirectAccess):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      f.inline_code = lambda: f"""
+    with self.front as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
-    with self.front_view as f:
-      f.inline_code = lambda: f"""
+    with self.front_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      f.inline_code = lambda: f"""
+    with self.back as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
-    with self.back_view as f:
-      f.inline_code = lambda: f"""
+    with self.back_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      f.inline_code = lambda: f"""
+    with self.get as m:
+      m.inline_code = lambda: f"""
       assert(target);
       return {self.iterable.get("target->iterable", "target->front + index")};
     """
 
-    with self.view as f:
-      f.inline_code = lambda: f"""
+    with self.view as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

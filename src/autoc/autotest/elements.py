@@ -32,16 +32,16 @@ class _Composite(_StructRenderer, Composite):
   def __setup__(self):
     super().__setup__()
 
-    with self.method(None, "create", {"target": out(self), "value": "int"}) as f:
-      f.inline_code = f"""
+    with self.method(None, "create", {"target": out(self), "value": "int"}) as m:
+      m.inline_code = f"""
         assert(target);
         target->value = (int*)malloc(sizeof(int));
         *target->value = value;
         ++at_alive;
       """
 
-    with self.destroy as f:
-      f.inline_code = f"""
+    with self.destroy as m:
+      m.inline_code = f"""
         assert(target);
         if(target->value) {{
           free(target->value);
@@ -49,8 +49,8 @@ class _Composite(_StructRenderer, Composite):
         }}
       """
 
-    with self.copy as f:
-      f.inline_code = f"""
+    with self.copy as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         target->value = (int*)malloc(sizeof(int));
@@ -58,22 +58,22 @@ class _Composite(_StructRenderer, Composite):
         ++at_alive;
       """
 
-    with self.move as f:
-      f.inline_code = f"""
+    with self.move as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         target->value = source->value;
         source->value = NULL;
       """
 
-    with self.equal as f:
-      f.inline_code = "return *left->value == *right->value;"
+    with self.equal as m:
+      m.inline_code = "return *left->value == *right->value;"
 
-    with self.compare as f:
-      f.inline_code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
+    with self.compare as m:
+      m.inline_code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
 
-    with self.hash as f:
-      f.inline_code = "return (size_t)*target->value;"
+    with self.hash as m:
+      m.inline_code = "return (size_t)*target->value;"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

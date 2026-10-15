@@ -48,20 +48,20 @@ class Queue(_StructRenderer, Insertable):
     slot0 = self.element.variable("target->elements[0]")
     slot_size = self.element.variable("target->elements[target->size]")
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->elements = NULL;
         target->capacity = target->size = 0;
@@ -74,19 +74,19 @@ class Queue(_StructRenderer, Insertable):
 
         @param[out] target the queue to construct
         @param[in] capacity the number of elements to reserve room for
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        if({f.capacity} > 0) {{
-          target->elements = {self.memory.allocate(self.element, f.capacity)};
+        if({m.capacity} > 0) {{
+          target->elements = {self.memory.allocate(self.element, m.capacity)};
         }} else target->elements = NULL;
-        target->capacity = {f.capacity};
+        target->capacity = {m.capacity};
         target->size = 0;
       """
 
-    with self.destroy as f:
+    with self.destroy as m:
       if self.element.destructible:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
           if(target->elements) {{
@@ -95,13 +95,13 @@ class Queue(_StructRenderer, Insertable):
           }}
         """
       else:
-        f.inline_code = f"""
+        m.inline_code = f"""
           assert(target);
           if(target->elements) {self.memory.free("target->elements")};
         """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -111,30 +111,30 @@ class Queue(_StructRenderer, Insertable):
         for(index = 0; index < source->size; ++index) {self.element.copy(self.element.variable("target->elements[index]"), self.element.variable("source->elements[index]"))};
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->elements = source->elements;
         target->capacity = source->capacity;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
-    with self.find_view as f:
-      f.code = lambda f=f: f"""
+    with self.find_view as m:
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
         for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(self.element.variable("target->elements[index]"), f.element)}) {{
-            return {self.element.variable("target->elements[index]").bind(f.result)};
+          if({self.element.equal(self.element.variable("target->elements[index]"), m.element)}) {{
+            return {self.element.variable("target->elements[index]").bind(m.result)};
           }}
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.method(None, "_grow", {"target": inout(self)}, hidden=True, visibility="internal", brief="Grow internal buffer if needed (internal)") as f:
-      f.code = f"""
+    with self.method(None, "_grow", {"target": inout(self)}, hidden=True, visibility="internal", brief="Grow internal buffer if needed (internal)") as m:
+      m.code = f"""
         size_t index, new_capacity;
         {self._element_p} elements;
         assert(target);
@@ -146,29 +146,29 @@ class Queue(_StructRenderer, Insertable):
         target->capacity = new_capacity;
       """
 
-    with self.method(None, ("sift", "up"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element up in heap (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("sift", "up"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element up in heap (internal)") as m:
+      m.code = lambda m: f"""
         size_t parent;
         assert(target);
-        while({f.index}) {{
-          parent = ({f.index} - 1)/2;
-          if({self.element.compare(self.element.variable("target->elements[parent]"), self.element.variable(f"target->elements[{f.index}]"))} >= 0) break;
-          {self.element.swap(self.element.variable("target->elements[parent]"), self.element.variable(f"target->elements[{f.index}]"))};
-          {f.index} = parent;
+        while({m.index}) {{
+          parent = ({m.index} - 1)/2;
+          if({self.element.compare(self.element.variable("target->elements[parent]"), self.element.variable(f"target->elements[{m.index}]"))} >= 0) break;
+          {self.element.swap(self.element.variable("target->elements[parent]"), self.element.variable(f"target->elements[{m.index}]"))};
+          {m.index} = parent;
         }}
       """
 
-    with self.method(None, ("sift", "down"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element down in heap (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("sift", "down"), {"target": inout(self), "index": std.size_t}, hidden=True, visibility="internal", brief="Sift element down in heap (internal)") as m:
+      m.code = lambda m: f"""
         size_t child;
         assert(target);
         for(;;) {{
-          child = 2*{f.index} + 1;
+          child = 2*{m.index} + 1;
           if(child >= target->size) break;
           if(child + 1 < target->size && {self.element.compare(self.element.variable("target->elements[child+1]"), self.element.variable("target->elements[child]"))} > 0) ++child;
-          if({self.element.compare(self.element.variable(f"target->elements[{f.index}]"), self.element.variable("target->elements[child]"))} >= 0) break;
-          {self.element.swap(self.element.variable(f"target->elements[{f.index}]"), self.element.variable("target->elements[child]"))};
-          {f.index} = child;
+          if({self.element.compare(self.element.variable(f"target->elements[{m.index}]"), self.element.variable("target->elements[child]"))} >= 0) break;
+          {self.element.swap(self.element.variable(f"target->elements[{m.index}]"), self.element.variable("target->elements[child]"))};
+          {m.index} = child;
         }}
       """
 
@@ -179,13 +179,13 @@ class Queue(_StructRenderer, Insertable):
 
         @param[in,out] target the queue to add to
         @param[in] element the element to add
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         assert(target);
-        if(target->size == target->capacity) {self._grow(f.target)};
-        {self.element.copy(slot_size, f.element)};
+        if(target->size == target->capacity) {self._grow(m.target)};
+        {self.element.copy(slot_size, m.element)};
         ++target->size;
-        {self.sift_up(f.target, "target->size - 1")};
+        {self.sift_up(m.target, "target->size - 1")};
       """
 
     with self.method(None, "emplace", {"target": inout(self)} | self.element.constructor_parameters,
@@ -196,14 +196,14 @@ class Queue(_StructRenderer, Insertable):
         restores the heap invariant with the O(log n) sift-up.
 
         @param[in,out] target the priority queue to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = lambda f=f: f"""
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = lambda m: f"""
         assert(target);
-        if(target->size == target->capacity) {self._grow(f.target)};
+        if(target->size == target->capacity) {self._grow(m.target)};
         {self.element.create(slot_size, *create_args)};
         ++target->size;
-        {self.sift_up(f.target, "target->size - 1")};
+        {self.sift_up(m.target, "target->size - 1")};
       """
 
     with self.method(self.element, "pop", {"target": inout(self)}, constraint=lambda: self.element.moveable and self.element.orderable, brief="Remove and return highest priority element",
@@ -214,41 +214,41 @@ class Queue(_StructRenderer, Insertable):
 
         @param[in,out] target the queue to remove from - must not be empty
         @return the highest priority element
-      """) as f:
-      result = f.result.variable("result")
-      f.code = lambda f=f: f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = lambda m: f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->size;
         {self.element.move(result, slot0)};
         if(target->size) {{
           {self.element.move(slot0, slot_size)};
-          {self.sift_down(f.target, 0)};
+          {self.sift_down(m.target, 0)};
         }}
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push(f.target, f.element)};
+        {self.push(m.target, m.element)};
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       destroy_slot_idx = f"{self.element.destroy(self.element.variable('target->elements[index]'))};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
         for(index = 0; index < target->size; ++index) {{
-          if({self.element.equal(self.element.variable("target->elements[index]"), f.element)}) {{
+          if({self.element.equal(self.element.variable("target->elements[index]"), m.element)}) {{
             {destroy_slot_idx}
             --target->size;
             if(index < target->size) {{
               {self.element.move(self.element.variable("target->elements[index]"), slot_size)};
-              {self.sift_down(f.target, "index")};
-              {self.sift_up(f.target, "index")};
+              {self.sift_down(m.target, "index")};
+              {self.sift_up(m.target, "index")};
             }}
             return 1;
           }}
@@ -263,12 +263,12 @@ class Queue(_StructRenderer, Insertable):
 
         @param[in] target the queue to read - must not be empty
         @return the highest priority element without removing it
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, slot0)};
         return {result};
       """
@@ -281,11 +281,11 @@ class Queue(_StructRenderer, Insertable):
 
         @param[in] target the queue to read - must not be empty
         @return a constant view of the highest priority element
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {slot0.bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {slot0.bind(m.result)};
       """
 
   def _render_struct(self, stream, header):

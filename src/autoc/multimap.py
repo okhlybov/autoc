@@ -40,49 +40,49 @@ class _Entry(Record):
     _index = self.index.variable("target->index")
     _values = self.values.variable("target->values")
 
-    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of values collection (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of values collection (internal)") as m:
+      m.code = f"""
         assert(target);
-        return {self.values.variable("target->values").bind(f.result)};
+        return {self.values.variable("target->values").bind(m.result)};
       """
 
-    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of index (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of index (internal)") as m:
+      m.code = f"""
         assert(target);
-        return {self.index.variable("target->index").bind(f.result)};
+        return {self.index.variable("target->index").bind(m.result)};
       """
 
-    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable, brief="Emplace index (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable, brief="Emplace index (internal)") as m:
+      m.code = f"""
         assert(target);
-        {self.index.copy(_index, f.index)};
+        {self.index.copy(_index, m.index)};
       """
 
-    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy index (internal)") as f:
+    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy index (internal)") as m:
       if self.index.destructible:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           {self.index.destroy(_index)};
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
         """
 
-    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.values}, hidden=True, visibility="internal", constraint=lambda: self.values.copyable, brief="Emplace values collection (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.values}, hidden=True, visibility="internal", constraint=lambda: self.values.copyable, brief="Emplace values collection (internal)") as m:
+      m.code = f"""
         assert(target);
-        {self.values.copy(_values, f.element)};
+        {self.values.copy(_values, m.element)};
       """
 
-    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy values collection (internal)") as f:
+    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy values collection (internal)") as m:
       if self.values.destructible:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           {self.values.destroy(_values)};
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
         """
 
@@ -90,8 +90,8 @@ class _Entry(Record):
     self.hash_lookup_equal = Macro("int", {"left": self, "right": self}, lambda left, right: str(self.index.equal( self.index.variable(f"(({left}).index)"), self.index.variable(f"(({right}).index)") )))
 
     if self.orderable:
-      with self.compare as f:
-        f.code = f"""
+      with self.compare as m:
+        m.code = f"""
           assert(left);
           assert(right);
           return {self.index.compare(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
@@ -144,16 +144,16 @@ class Range(_Range, Forward):
 
         @param[in] iterable the multimap to span
         @return the range covering the whole multimap {order_doc}
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         const {entry.name}* e;
         {result.definition};
         assert(iterable);
         result.single_key = 0;
         result.valid = 0;
         result.cur_index = NULL;
-        result.set_r = {set_range.new(f"&{f.iterable}->set")};
+        result.set_r = {set_range.new(f"&{m.iterable}->set")};
         while(!{set_range.empty("&result.set_r")}) {{
           e = (const {entry.name}*){set_range.front_view("&result.set_r")};
           result.cur_index = {entry.index_view("e")};
@@ -167,8 +167,8 @@ class Range(_Range, Forward):
         return {result};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return !target->valid;
       """
@@ -180,8 +180,8 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a constant view of the front index
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         assert(target->valid);
         return (const {self.index}*)target->cur_index;
@@ -193,10 +193,10 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a copy of the front index
-      """) as f:
-      result = f.result.variable("result")
+      """) as m:
+      result = m.result.variable("result")
       index_src = self.index.variable("(*target->cur_index)") if isinstance(self.index, autoc.core.Primitive) else self.index.view_type.variable("target->cur_index")
-      f.code = f"""
+      m.code = f"""
         {result.definition};
         assert(target);
         assert(target->valid);
@@ -204,16 +204,16 @@ class Range(_Range, Forward):
         return {result};
       """
 
-    with self.front_view as f:
-      f.code = f"""
+    with self.front_view as m:
+      m.code = f"""
         assert(target);
         assert(target->valid);
         return {col_range.front_view(val_r)};
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
         assert(target->valid);
@@ -221,8 +221,8 @@ class Range(_Range, Forward):
         return {result};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         const {entry.name}* e;
         assert(target);
         assert(target->valid);
@@ -303,29 +303,29 @@ class Map(Multimapping):
     _left = set.variable("left->set")
     _right = set.variable("right->set")
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         {set.create(_target)};
         target->size = 0;
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         {set.destroy(_target)};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {set.copy(_target, _source)};
         target->size = source->size;
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {set.move(_target, _source)};
@@ -333,64 +333,64 @@ class Map(Multimapping):
         source->size = 0;
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         assert(left);
         assert(right);
         if(left->size != right->size) return 0;
         return {set.equal(_left, _right)};
       """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         assert(target);
         return {set.hash(_target)};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return target->size == 0;
       """
 
-    with self.size as f:
-      f.code = f"""
+    with self.size as m:
+      m.code = f"""
         assert(target);
         return target->size;
       """
 
     if self.orderable:
-      with self.compare as f:
-        f.code = f"""
+      with self.compare as m:
+        m.code = f"""
           assert(left);
           assert(right);
           return {set.compare(_left, _right)};
         """
 
-    with self.find_view as f:
+    with self.find_view as m:
       r = set.range.variable("r")
-      f.code = f"""
+      m.code = f"""
         {r.definition};
         const {entry.name}* e;
         {self.element.view_type} fv;
         assert(target);
         for({r} = {set.range.new(_target)}; !{set.range.empty(r)}; {set.range.move_front(r)}) {{
           e = (const {entry.name}*){set.range.front_view(r)};
-          fv = {col.find_view(entry.element_view("e"), f.element)};
+          fv = {col.find_view(entry.element_view("e"), m.element)};
           if(fv) return fv;
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.view as f:
+    with self.view as m:
       found = Indirection(entry, constant=True).variable("found")
       vr = col.range.variable("vr")
-      f.code = f"""
+      m.code = f"""
         {_probe.definition};
         {found.definition};
         assert(target);
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         if({found} && !{col.empty(entry.element_view(found))}) {{
@@ -400,39 +400,39 @@ class Map(Multimapping):
         return ({self.element.view_type})NULL;
       """
 
-    with self.indexed as f:
-      f.code = f"""
+    with self.indexed as m:
+      m.code = f"""
         assert(target);
-        return {self.view(f.target, f.index)} != NULL;
+        return {self.view(m.target, m.index)} != NULL;
       """
 
-    with self.get as f:
-      result = f.result.variable("result")
+    with self.get as m:
+      result = m.result.variable("result")
       element_view = self.element.view_type.variable("elem_p")
-      f.code = f"""
+      m.code = f"""
         {result.definition};
         {element_view.definition};
         assert(target);
-        {element_view} = ({element_view.type}){self.view(f.target, f.index)};
+        {element_view} = ({element_view.type}){self.view(m.target, m.index)};
         if(!{element_view}) abort();
         {self.element.copy(result, element_view)};
         return {result};
       """
 
-    with self.put as f:
+    with self.put as m:
       found = Indirection(entry, constant=True).variable("found")
-      f.code = f"""
+      m.code = f"""
         {_probe.definition};
         {found.definition};
         assert(target);
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
-          {col.put(f"&(({entry.name}*){found})->values", f.element)};
+          {col.put(f"&(({entry.name}*){found})->values", m.element)};
           {entry.destroy(_probe)};
         }} else {{
-          {col.put("&probe.values", f.element)};
+          {col.put("&probe.values", m.element)};
           {set.put(_target, _probe)};
           {entry.destroy(_probe)};
         }}
@@ -440,9 +440,9 @@ class Map(Multimapping):
         return 1;
       """
 
-    with self.emplace as f:
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         _temp = self.element.variable("temp")
         _destroy_temp = f"{self.element.destroy(_temp)};" if self.element.destructible else ""
         return f"""
@@ -450,28 +450,28 @@ class Map(Multimapping):
           int result;
           assert(target);
           {self.element.create(_temp, *create_args)};
-          result = {self.put(f.target, f.index, _temp)};
+          result = {self.put(m.target, m.index, _temp)};
           {_destroy_temp}
           return result;
         """
-      f.code = _emplace_code
+      m.code = _emplace_code
 
-    with self.count as f:
+    with self.count as m:
       found = Indirection(entry, constant=True).variable("found")
-      f.code = f"""
+      m.code = f"""
         {_probe.definition};
         {found.definition};
         size_t cnt;
         assert(target);
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         cnt = {found} ? {col.size(entry.element_view(found))} : 0;
         return cnt;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       found = Indirection(entry, constant=True).variable("found")
       if hasattr(col, "range"):
         vr = col.range.variable("vr")
@@ -495,13 +495,13 @@ class Map(Multimapping):
         found_val = ""
 
       deref = "*" if isinstance(self.element, autoc.core.Primitive) else ""
-      f.code = f"""
+      m.code = f"""
         {_probe.definition};
         {found.definition};
         {vr_def}
         assert(target);
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
           if(!{col.empty(entry.element_view(found))}) {{
@@ -519,15 +519,15 @@ class Map(Multimapping):
         return 0;
       """
 
-    with self.wipe as f:
+    with self.wipe as m:
       found = Indirection(entry, constant=True).variable("found")
-      f.code = f"""
+      m.code = f"""
         {_probe.definition};
         {found.definition};
         size_t wiped;
         assert(target);
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         if({found}) {{
           wiped = {col.size(entry.element_view(found))};
@@ -540,10 +540,10 @@ class Map(Multimapping):
         return 0;
       """
 
-    with self.equal_range as f:
-      result = f.result.variable("result")
+    with self.equal_range as m:
+      result = m.result.variable("result")
       found = Indirection(entry, constant=True).variable("found")
-      f.code = f"""
+      m.code = f"""
         {result.definition};
         {_probe.definition};
         {found.definition};
@@ -552,7 +552,7 @@ class Map(Multimapping):
         result.valid = 0;
         result.cur_index = NULL;
         {entry.create(_probe)};
-        {self.index.copy(self.index.variable("probe.index"), f.index)};
+        {self.index.copy(self.index.variable("probe.index"), m.index)};
         {found} = ({found.type}){set.find_view(_target, _probe)};
         {entry.destroy(_probe)};
         if({found} && !{col.empty(entry.element_view(found))}) {{

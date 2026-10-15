@@ -41,28 +41,28 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
     curr_element = self.element.variable("curr->element")
     z_element = self.element.variable("z->element")
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->root = NULL;
         target->size = 0;
       """
 
-    with self.destroy as f:
+    with self.destroy as m:
       _destroy = self.element.destroy(node_element) if self.element.destructible else str()
-      f.code = f"""
+      m.code = f"""
         {self.node}* n;
         {self.node}* p;
         assert(target);
@@ -84,8 +84,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         }}
       """
 
-    with self.method(None, ("rotate", "left"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate left (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("rotate", "left"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate left (internal)") as m:
+      m.code = f"""
         {self.node}* r;
         {self.node}* p;
         assert(target);
@@ -103,8 +103,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         n->parent = ((size_t)r) | (n->parent & 1);
       """
 
-    with self.method(None, ("rotate", "right"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate right (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("rotate", "right"), {"target": inout(self), "n": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Rotate right (internal)") as m:
+      m.code = f"""
         {self.node}* l;
         {self.node}* p;
         assert(target);
@@ -122,8 +122,8 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         n->parent = ((size_t)l) | (n->parent & 1);
       """
 
-    with self.method(None, "transplant", {"target": inout(self), "u": Callable.Parameter(self._node_p), "v": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Transplant subtrees (internal)") as f:
-      f.code = f"""
+    with self.method(None, "transplant", {"target": inout(self), "u": Callable.Parameter(self._node_p), "v": Callable.Parameter(self._node_p)}, hidden=True, visibility="internal", brief="Transplant subtrees (internal)") as m:
+      m.code = f"""
         {self.node}* p;
         assert(target);
         assert(u);
@@ -134,22 +134,22 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         if(v) v->parent = ((size_t)p) | (v->parent & 1);
       """
 
-    with self.find_view as f:
-      f.code = f"""
+    with self.find_view as m:
+      m.code = f"""
         {self.node}* n;
         int order;
         assert(target);
         n = target->root;
         while(n) {{
-          order = {self.element.compare(node_element, f.element)};
-          if(order == 0) return {node_element.bind(f.result)};
+          order = {self.element.compare(node_element, m.element)};
+          if(order == 0) return {node_element.bind(m.result)};
           n = order > 0 ? n->left : n->right;
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         {self.node}* n;
         {self.node}* parent;
         {self.node}* curr;
@@ -161,14 +161,14 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         parent = NULL;
         curr = target->root;
         while(curr) {{
-          order = {self.element.compare(curr_element, f.element)};
+          order = {self.element.compare(curr_element, m.element)};
           if(order == 0) return 0;
           parent = curr;
           curr = order > 0 ? curr->left : curr->right;
         }}
         n = {self.memory.allocate(self.node)};
         assert(((size_t)n & 1) == 0); /* guard assert: verify allocated node is at least 2-byte aligned for 1-bit color tag */
-        {self.element.copy(node_element, f.element)};
+        {self.element.copy(node_element, m.element)};
         n->left = n->right = NULL;
         n->parent = ((size_t)parent) | 1; /* RED */
         if(!parent) target->root = n;
@@ -192,13 +192,13 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
             }} else {{
               if(n == p->right) {{
                 n = p;
-                {self.rotate_left(f.target, "n")};
+                {self.rotate_left(m.target, "n")};
                 p = ({self.node}*)(n->parent & ~(size_t)1);
                 g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
               p->parent &= ~(size_t)1; /* black */
               g->parent |= 1;          /* red */
-              {self.rotate_right(f.target, "g")};
+              {self.rotate_right(m.target, "g")};
             }}
           }} else {{
             u = g->left;
@@ -210,13 +210,13 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
             }} else {{
               if(n == p->left) {{
                 n = p;
-                {self.rotate_right(f.target, "n")};
+                {self.rotate_right(m.target, "n")};
                 p = ({self.node}*)(n->parent & ~(size_t)1);
                 g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
               p->parent &= ~(size_t)1; /* black */
               g->parent |= 1;          /* red */
-              {self.rotate_left(f.target, "g")};
+              {self.rotate_left(m.target, "g")};
             }}
           }}
         }}
@@ -224,10 +224,10 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         return 1;
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
       _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         {self.node}* n;
         {self.node}* parent;
         {self.node}* curr;
@@ -274,13 +274,13 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
             }} else {{
               if(n == p->right) {{
                 n = p;
-                {self.rotate_left(f.target, "n")};
+                {self.rotate_left(m.target, "n")};
                 p = ({self.node}*)(n->parent & ~(size_t)1);
                 g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
               p->parent &= ~(size_t)1; /* black */
               g->parent |= 1;          /* red */
-              {self.rotate_right(f.target, "g")};
+              {self.rotate_right(m.target, "g")};
             }}
           }} else {{
             u = g->left;
@@ -292,13 +292,13 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
             }} else {{
               if(n == p->left) {{
                 n = p;
-                {self.rotate_right(f.target, "n")};
+                {self.rotate_right(m.target, "n")};
                 p = ({self.node}*)(n->parent & ~(size_t)1);
                 g = ({self.node}*)(p->parent & ~(size_t)1);
               }}
               p->parent &= ~(size_t)1; /* black */
               g->parent |= 1;          /* red */
-              {self.rotate_left(f.target, "g")};
+              {self.rotate_left(m.target, "g")};
             }}
           }}
         }}
@@ -306,9 +306,9 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       _destroy_z_element = self.element.destroy(z_element) if self.element.destructible else str()
-      f.code = f"""
+      m.code = f"""
         {self.node}* z;
         {self.node}* y;
         {self.node}* x;
@@ -319,7 +319,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         assert(target);
         z = target->root;
         while(z) {{
-          order = {self.element.compare(z_element, f.element)};
+          order = {self.element.compare(z_element, m.element)};
           if(order == 0) break;
           z = order > 0 ? z->left : z->right;
         }}
@@ -330,11 +330,11 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
         if(!z->left) {{
           x = z->right;
           x_parent = ({self.node}*)(z->parent & ~(size_t)1);
-          {self.transplant(f.target, "z", "z->right")};
+          {self.transplant(m.target, "z", "z->right")};
         }} else if(!z->right) {{
           x = z->left;
           x_parent = ({self.node}*)(z->parent & ~(size_t)1);
-          {self.transplant(f.target, "z", "z->left")};
+          {self.transplant(m.target, "z", "z->left")};
         }} else {{
           y = z->right;
           while(y->left) y = y->left;
@@ -344,11 +344,11 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
             x_parent = y;
           }} else {{
             x_parent = ({self.node}*)(y->parent & ~(size_t)1);
-            {self.transplant(f.target, "y", "y->right")};
+            {self.transplant(m.target, "y", "y->right")};
             y->right = z->right;
             y->right->parent = ((size_t)y) | (y->right->parent & 1);
           }}
-          {self.transplant(f.target, "z", "y")};
+          {self.transplant(m.target, "z", "y")};
           y->left = z->left;
           y->left->parent = ((size_t)y) | (y->left->parent & 1);
           y->parent = (y->parent & ~(size_t)1) | (z->parent & 1);
@@ -365,7 +365,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
               if(w && (w->parent & 1)) {{
                 w->parent &= ~(size_t)1;
                 x_parent->parent |= 1;
-                {self.rotate_left(f.target, "x_parent")};
+                {self.rotate_left(m.target, "x_parent")};
                 w = x_parent->right;
               }}
               if((!w || !w->left || (w->left->parent & 1) == 0) && (!w || !w->right || (w->right->parent & 1) == 0)) {{
@@ -376,7 +376,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
                 if(!w || !w->right || (w->right->parent & 1) == 0) {{
                   if(w && w->left) w->left->parent &= ~(size_t)1;
                   if(w) w->parent |= 1;
-                  {self.rotate_right(f.target, "w")};
+                  {self.rotate_right(m.target, "w")};
                   w = x_parent->right;
                 }}
                 if(w) {{
@@ -384,7 +384,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
                   if(w->right) w->right->parent &= ~(size_t)1;
                 }}
                 x_parent->parent &= ~(size_t)1;
-                {self.rotate_left(f.target, "x_parent")};
+                {self.rotate_left(m.target, "x_parent")};
                 x = target->root;
                 break;
               }}
@@ -393,7 +393,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
               if(w && (w->parent & 1)) {{
                 w->parent &= ~(size_t)1;
                 x_parent->parent |= 1;
-                {self.rotate_right(f.target, "x_parent")};
+                {self.rotate_right(m.target, "x_parent")};
                 w = x_parent->left;
               }}
               if((!w || !w->left || (w->left->parent & 1) == 0) && (!w || !w->right || (w->right->parent & 1) == 0)) {{
@@ -404,7 +404,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
                 if(!w || !w->left || (w->left->parent & 1) == 0) {{
                   if(w && w->right) w->right->parent &= ~(size_t)1;
                   if(w) w->parent |= 1;
-                  {self.rotate_left(f.target, "w")};
+                  {self.rotate_left(m.target, "w")};
                   w = x_parent->left;
                 }}
                 if(w) {{
@@ -412,7 +412,7 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
                   if(w->left) w->left->parent &= ~(size_t)1;
                 }}
                 x_parent->parent &= ~(size_t)1;
-                {self.rotate_right(f.target, "x_parent")};
+                {self.rotate_right(m.target, "x_parent")};
                 x = target->root;
                 break;
               }}
@@ -426,34 +426,34 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
     range = self.range
     r = range.variable("r")
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         {r.definition};
         assert(target);
         assert(source);
-        {self.create(f.target)};
-        for({r} = {range.new(f.source)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          {self.put(f.target, range.front_view(r))};
+        {self.create(m.target)};
+        for({r} = {range.new(m.source)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          {self.put(m.target, range.front_view(r))};
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->root = source->root;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         {r.definition};
         assert(left);
         assert(right);
-        if({self.size(f.left)} == {self.size(f.right)}) {{
-          for({r} = {range.new(f.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
-            if(!{self.contains(f.right, range.front_view(r))}) return 0;
+        if({self.size(m.left)} == {self.size(m.right)}) {{
+          for({r} = {range.new(m.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
+            if(!{self.contains(m.right, range.front_view(r))}) return 0;
           }}
           return 1;
         }} else return 0;
@@ -462,14 +462,14 @@ class Set(_StructRenderer, autoc.set.Set, Ordered):
     rl = range.variable("left_r")
     rr = range.variable("right_r")
 
-    with self.compare as f:
-      f.code = f"""
+    with self.compare as m:
+      m.code = f"""
         {rl.definition};
         {rr.definition};
         int order;
         assert(left);
         assert(right);
-        for({rl} = {range.new(f.left)}, {rr} = {range.new(f.right)}; !{range.empty(rl)} && !{range.empty(rr)}; {range.move_front(rl)}, {range.move_front(rr)}) {{
+        for({rl} = {range.new(m.left)}, {rr} = {range.new(m.right)}; !{range.empty(rl)} && !{range.empty(rr)}; {range.move_front(rl)}, {range.move_front(rr)}) {{
           order = {self.element.compare(range.front_view(rl), range.front_view(rr))};
           if(order) return order;
         }}
@@ -528,9 +528,9 @@ class Range(_Range, Bidirectional):
 
         @param[in] iterable the set to span
         @return the range covering the whole set in ascending order
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -547,34 +547,34 @@ class Range(_Range, Bidirectional):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->remaining == 0;
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, front_element)};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {front_element.bind(self.iterable.element.view_type)};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         {self.iterable.node}* p;
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->remaining;
         if(target->remaining > 0) {{
           if(target->front_node->right) {{
@@ -591,28 +591,28 @@ class Range(_Range, Bidirectional):
         }}
       """
 
-    with self.back as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.back as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, back_element)};
         return {result};
       """
 
-    with self.back_view as f:
-      f.inline_code = f"""
+    with self.back_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {back_element.bind(self.iterable.element.view_type)};
       """
 
-    with self.move_back as f:
-      f.code = f"""
+    with self.move_back as m:
+      m.code = f"""
         {self.iterable.node}* p;
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->remaining;
         if(target->remaining > 0) {{
           if(target->back_node->left) {{

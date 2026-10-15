@@ -26,62 +26,62 @@ class Record(_StructRenderer, Composite):
     # The member-wise bodies are built lazily: the members of the records failing the
     # respective trait have their operations inactive so the eager construction would
     # render them disabled - the constraints gate the rendering alone
-    with self.create as f:
-      def _create(f=f):
+    with self.create as m:
+      def _create(m):
         code = []
-        target = f"({f.target.bind(self)})"
+        target = f"({m.target.bind(self)})"
         for field, type in self.fields.items():
           code.append(type.create(type.variable(f"{target}.{field}")))
           code.append(";")
         return str().join([str(x) for x in code])
-      f.inline_code = _create
+      m.inline_code = _create
 
-    with self.destroy as f:
+    with self.destroy as m:
       code = []
-      target = f"({f.target.bind(self)})"
+      target = f"({m.target.bind(self)})"
       for field, type in self.fields.items():
         if type.destructible:
           code.append(type.destroy(type.variable(f"{target}.{field}")))
           code.append(";")
-      f.inline_code = code
+      m.inline_code = code
 
-    with self.equal as f:
-      def _equal(f=f):
+    with self.equal as m:
+      def _equal(m):
         xs = []
-        left = f"({f.left.bind(self)})"
-        right = f"({f.right.bind(self)})"
+        left = f"({m.left.bind(self)})"
+        right = f"({m.right.bind(self)})"
         for field, type in self.fields.items():
           xs.append(str(type.equal(type.variable(f"{left}.{field}"), type.variable(f"{right}.{field}"))))
         return str().join(["return ", " && ".join(xs if xs else ["1"]), ";"])
-      f.inline_code = _equal
+      m.inline_code = _equal
 
-    with self.copy as f:
-      def _copy(f=f):
+    with self.copy as m:
+      def _copy(m):
         code = []
-        target = f"({f.target.bind(self)})"
-        source = f"({f.source.bind(self)})"
+        target = f"({m.target.bind(self)})"
+        source = f"({m.source.bind(self)})"
         for field, type in self.fields.items():
           code.append(type.copy(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
           code.append(";")
         return str().join([str(x) for x in code])
-      f.inline_code = _copy
+      m.inline_code = _copy
 
-    with self.move as f:
-      def _move(f=f):
+    with self.move as m:
+      def _move(m):
         # Built lazily: the fields of the non movable records have their moves inactive
         code = []
-        target = f"({f.target.bind(self)})"
-        source = f"({f.source.bind(self)})"
+        target = f"({m.target.bind(self)})"
+        source = f"({m.source.bind(self)})"
         for field, type in self.fields.items():
           code.append(type.move(type.variable(f"{target}.{field}"), type.variable(f"{source}.{field}")))
           code.append(";")
         return str().join([str(x) for x in code])
-      f.inline_code = _move
+      m.inline_code = _move
 
-    with self.hash as f:
-      def _hash(f=f):
+    with self.hash as m:
+      def _hash(m):
         code = []
-        target = f"({f.target.bind(self)})"
+        target = f"({m.target.bind(self)})"
         state = self.hasher.state_t.variable("state")
         code.append(f"{state.definition}; size_t result; {self.hasher.create(state)};")
         for field, type in self.fields.items():
@@ -89,7 +89,7 @@ class Record(_StructRenderer, Composite):
           code.append(";")
         code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
         return str().join([str(x) for x in code])
-      f.code = _hash
+      m.code = _hash
 
     if self.getters:
       for field, type in self.fields.items():
@@ -107,16 +107,16 @@ class Record(_StructRenderer, Composite):
 
         @param[in] target the record to read
         @return a copy of the {field} field
-      """) as f:
-      def _reader_code(f=f, type=type, field=field):
-        result = f.result.variable("result")
-        target = f"({f.target.bind(self)})"
+      """) as m:
+      def _reader_code(m):
+        result = m.result.variable("result")
+        target = f"({m.target.bind(self)})"
         return f"""
           {result.definition};
           {type.copy(result, type.variable(f"{target}.{field}"))};
           return {result};
         """
-      f.inline_code = _reader_code
+      m.inline_code = _reader_code
 
   def _add_writer(self, type, field):
     with self.method(None, ("set", field), {"target": out(self), "value": type}, visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Set the {field} field",
@@ -126,15 +126,15 @@ class Record(_StructRenderer, Composite):
 
         @param[out] target the record to update
         @param[in] value the value to store into the {field} field - the previous field value is destroyed
-      """) as f:
-      def _writer_code(f=f, type=type, field=field):
-        target = f"({f.target.bind(self)})"
+      """) as m:
+      def _writer_code(m):
+        target = f"({m.target.bind(self)})"
         destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else str()
         return f"""
           {destroy_field};
           {type.copy(type.variable(f"{target}.{field}"), "value")};
         """
-      f.inline_code = _writer_code
+      m.inline_code = _writer_code
 
   def _add_emplace_writer(self, type, field):
     with self.method(None, ("emplace", field), {"target": out(self)} | type.constructor_parameters, visibility=self.visibility, constraint=lambda: type.emplaceable, brief=f"Construct the {field} field in place",
@@ -143,16 +143,16 @@ class Record(_StructRenderer, Composite):
         held field value is destroyed first.
 
         @param[out] target the record to update
-      """) as f:
-      def _emplace_code(f=f, type=type, field=field):
-        create_args = [getattr(f, name) for name in type.constructor_parameters]
-        target = f"({f.target.bind(self)})"
+      """) as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in type.constructor_parameters]
+        target = f"({m.target.bind(self)})"
         destroy_field = type.destroy(type.variable(f"{target}.{field}")) if type.destructible else ""
         return f"""
           {destroy_field};
           {type.create(type.variable(f"{target}.{field}"), *create_args)};
         """
-      f.inline_code = _emplace_code
+      m.inline_code = _emplace_code
 
   def _getter_name(self, field):
     return self.decorate(field)

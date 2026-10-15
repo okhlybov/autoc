@@ -92,20 +92,20 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
     destroy_low = f"{self.element.destroy(self.element.variable('target->elements[low]'))};" if self.element.destructible else ""
     state = self.hasher.state_t.variable("state")
 
-    with self.size as f:
-      f.inline_code = """
+    with self.size as m:
+      m.inline_code = """
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = """
+    with self.empty as m:
+      m.inline_code = """
         assert(target);
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = """
+    with self.create as m:
+      m.inline_code = """
         assert(target);
         target->elements = NULL;
         target->size = 0;
@@ -118,8 +118,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
 
         @param[in] target the container to query
         @return the current capacity
-      """) as f:
-      f.inline_code = """
+      """) as m:
+      m.inline_code = """
         assert(target);
         return target->capacity;
       """
@@ -131,8 +131,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
 
         @param[in,out] target the container to query
         @return pointer to the first element
-      """) as f:
-      f.inline_code = """
+      """) as m:
+      m.inline_code = """
         assert(target);
         return target->elements;
       """
@@ -143,13 +143,13 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
 
         @param[in,out] target the container to expand
         @param[in] capacity the minimum capacity to reserve
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        if({f.capacity} > target->capacity) {{
+        if({m.capacity} > target->capacity) {{
           {Indirection(self.element)} new_elements;
           size_t i;
-          new_elements = {self.memory.allocate(self.element, f.capacity)};
+          new_elements = {self.memory.allocate(self.element, m.capacity)};
           for(i = 0; i < target->size; ++i) {{
             {self.element.move(self.element.variable("new_elements[i]"), self.element.variable("target->elements[i]"))};
           }}
@@ -157,7 +157,7 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
             {self.memory.free("target->elements")};
           }}
           target->elements = new_elements;
-          target->capacity = {f.capacity};
+          target->capacity = {m.capacity};
         }}
       """
 
@@ -166,8 +166,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         Reduces the allocated capacity down to the current size.
 
         @param[in,out] target the container to compact
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(target->size == 0) {{
           if(target->elements) {{
@@ -188,14 +188,14 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         }}
       """
 
-    with self.destroy as f:
+    with self.destroy as m:
       destroy_loop = f"""
         size_t i;
         for(i = 0; i < target->size; ++i) {{
           {self.element.destroy(self.element.variable("target->elements[i]"))};
         }}
       """ if self.element.destructible else ""
-      f.code = f"""
+      m.code = f"""
         assert(target);
         if(target->elements) {{
           {destroy_loop}
@@ -203,25 +203,25 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         }}
       """
 
-    with self.find_view as f:
-      f.references.add(self.lower_bound)
-      f.code = f"""
+    with self.find_view as m:
+      m.references.add(self.lower_bound)
+      m.code = f"""
         size_t low;
         assert(target);
-        low = {self.lower_bound(f.target, f.element)};
-        if(low < target->size && !{self.element.compare(self._element(f.target, "low"), f.element)}) {{
-          return {self.element.variable("target->elements[low]").bind(f.result)};
+        low = {self.lower_bound(m.target, m.element)};
+        if(low < target->size && !{self.element.compare(self._element(m.target, "low"), m.element)}) {{
+          return {self.element.variable("target->elements[low]").bind(m.result)};
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.remove as f:
-      f.references.add(self.lower_bound)
-      f.code = f"""
+    with self.remove as m:
+      m.references.add(self.lower_bound)
+      m.code = f"""
         size_t low, i;
         assert(target);
-        low = {self.lower_bound(f.target, f.element)};
-        if(low < target->size && !{self.element.compare(self._element(f.target, "low"), f.element)}) {{
+        low = {self.lower_bound(m.target, m.element)};
+        if(low < target->size && !{self.element.compare(self._element(m.target, "low"), m.element)}) {{
           {destroy_low}
           for(i = low; i + 1 < target->size; ++i) {{
             {self.element.move(self.element.variable("target->elements[i]"), self.element.variable("target->elements[i + 1]"))};
@@ -239,10 +239,10 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         @param[in] target the container to query
         @param[in] element the element to count
         @return number of equal elements
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        return {self.upper_bound(f.target, f.element)} - {self.lower_bound(f.target, f.element)};
+        return {self.upper_bound(m.target, m.element)} - {self.lower_bound(m.target, m.element)};
       """
 
     with self.method(Callable.Parameter(self.range), ("equal", "range"), {"target": self, "element": self.element}, references=(self.lower_bound, self.upper_bound), brief="Get range covering all elements equal to given element",
@@ -253,19 +253,19 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         @param[in] target the container to search
         @param[in] element the element to search for
         @return the range spanning all matching elements
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
         result.iterable = target;
-        result.front = {self.lower_bound(f.target, f.element)};
-        result.back = {self.upper_bound(f.target, f.element)};
+        result.front = {self.lower_bound(m.target, m.element)};
+        result.back = {self.upper_bound(m.target, m.element)};
         return {result};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         size_t i;
         assert(target);
         assert(source);
@@ -283,8 +283,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         }}
       """
 
-    with self.move as f:
-      f.code = """
+    with self.move as m:
+      m.code = """
         assert(target);
         assert(source);
         target->elements = source->elements;
@@ -295,8 +295,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         source->capacity = 0;
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         size_t i;
         assert(left);
         assert(right);
@@ -308,8 +308,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         return 1;
       """
 
-    with self.compare as f:
-      f.code = f"""
+    with self.compare as m:
+      m.code = f"""
         size_t i, min_size;
         int cmp;
         assert(left);
@@ -322,8 +322,8 @@ class Set(_StructRenderer, Bisectable, Ordered, Container):
         return left->size < right->size ? -1 : (left->size > right->size ? 1 : 0);
       """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         size_t result;
         size_t i;
         {state.definition};
@@ -370,9 +370,9 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the container to span
         @return the range covering the whole container
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -381,79 +381,79 @@ class Range(_Range, DirectAccess):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = """
+    with self.empty as m:
+      m.inline_code = """
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, self.element.variable("target->iterable->elements[target->front]"))};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {self.element.variable("target->iterable->elements[target->front]").bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {self.element.variable("target->iterable->elements[target->front]").bind(m.result)};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.back as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, self.element.variable("target->iterable->elements[target->back - 1]"))};
         return {result};
       """
 
-    with self.back_view as f:
-      f.inline_code = f"""
+    with self.back_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
-        return {self.element.variable("target->iterable->elements[target->back - 1]").bind(f.result)};
+        assert(!{self.empty(m.target)});
+        return {self.element.variable("target->iterable->elements[target->back - 1]").bind(m.result)};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.get as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(target->front + {f.index} < target->back);
-        {self.element.copy(result, self.element.variable(f"target->iterable->elements[target->front + {f.index}]"))};
+        assert(target->front + {m.index} < target->back);
+        {self.element.copy(result, self.element.variable(f"target->iterable->elements[target->front + {m.index}]"))};
         return {result};
       """
 
-    with self.view as f:
-      f.inline_code = f"""
+    with self.view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(target->front + {f.index} < target->back);
-        return {self.element.variable(f"target->iterable->elements[target->front + {f.index}]").bind(f.result)};
+        assert(target->front + {m.index} < target->back);
+        return {self.element.variable(f"target->iterable->elements[target->front + {m.index}]").bind(m.result)};
       """
 
-    with self.size as f:
-      f.inline_code = """
+    with self.size as m:
+      m.inline_code = """
         assert(target);
         return target->back > target->front ? target->back - target->front : 0;
       """

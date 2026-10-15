@@ -45,17 +45,17 @@ class Range(_Range, Forward):
 
         @param[in] iterable the multimap to span
         @return the range covering the whole multimap {order_doc}
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(iterable);
-        result.range = {self._range.new(f"&{f.iterable}->set")};
+        result.range = {self._range.new(f"&{m.iterable}->set")};
         return {result};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return {self._range.empty(_target_range)};
       """
@@ -67,27 +67,27 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a constant view of the front index
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.index_view(self._range.front_view(_target_range)).bind(self.index.view_type)};
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, self._entry.element_view(self._range.front_view(_target_range)))};
         return {result};
       """
 
-    with self.front_view as f:
-      f.code = f"""
+    with self.front_view as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.element_view(self._range.front_view(_target_range)).bind(self.element.view_type)};
       """
 
@@ -97,20 +97,20 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a copy of the front index
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.index.copy(result, self._entry.index_view(self._range.front_view(_target_range)))};
         return {result};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self._range.move_front(_target_range)};
       """
 
@@ -121,8 +121,8 @@ class Range(_Range, Forward):
 
           @param[in] target the range to measure
           @return number of elements
-        """) as f:
-        f.code = f"""
+        """) as m:
+        m.code = f"""
           assert(target);
           return {self._range.size(_target_range)};
         """
@@ -182,64 +182,64 @@ class Map(Multimapping, Ordered):
     _left = set.variable("left->set")
     _right = set.variable("right->set")
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         {set.create(_target)};
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         {set.destroy(_target)};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {set.copy(_target, _source)};
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {set.move(_target, _source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         assert(left);
         assert(right);
         return {set.equal(_left, _right)};
       """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         assert(target);
         return {set.hash(_target)};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return {set.empty(_target)};
       """
 
-    with self.size as f:
-      f.code = f"""
+    with self.size as m:
+      m.code = f"""
         assert(target);
         return {set.size(_target)};
       """
 
-    with self.view as f:
+    with self.view as m:
       found = Indirection(entry, constant=True).variable("found")
-      f.code = f"""
+      m.code = f"""
         {_entry.definition};
         {found.definition};
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         {found} = ({found.type}){set.find_view(_target, _entry)};
         {entry.destroy_index(_entry)};
         if({found}) {{
@@ -248,92 +248,92 @@ class Map(Multimapping, Ordered):
         return ({self.element.view_type})NULL;
       """
 
-    with self.indexed as f:
-      f.code = f"""
+    with self.indexed as m:
+      m.code = f"""
         assert(target);
-        return {self.view(f.target, f.index)} != NULL;
+        return {self.view(m.target, m.index)} != NULL;
       """
 
-    with self.get as f:
+    with self.get as m:
       _element_p = entry.element_p.variable("element_p")
-      result = f.result.variable("result")
-      f.code = f"""
+      result = m.result.variable("result")
+      m.code = f"""
         {_element_p.definition};
         {result.definition};
         assert(target);
-        {_element_p} = ({_element_p.type}){self.view(f.target, f.index)};
+        {_element_p} = ({_element_p.type}){self.view(m.target, m.index)};
         if(!{_element_p}) abort();
         {self.element.copy(result, _element_p)};
         return {result};
       """
 
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         {_entry.definition};
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
-        {entry.emplace_element(_entry, f.element)};
+        {entry.emplace_index(_entry, m.index)};
+        {entry.emplace_element(_entry, m.element)};
         {set.put(_target, _entry)};
         {entry.destroy_element(_entry)};
         {entry.destroy_index(_entry)};
         return 1;
       """
 
-    with self.emplace as f:
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         return f"""
           {_entry.definition};
           assert(target);
-          {entry.emplace_index(_entry, f.index)};
+          {entry.emplace_index(_entry, m.index)};
           {entry.create_element(_entry, *create_args)};
           {set.put(_target, _entry)};
           {entry.destroy_element(_entry)};
           {entry.destroy_index(_entry)};
           return 1;
         """
-      f.code = _emplace_code
+      m.code = _emplace_code
 
-    with self.remove as f:
-      f.code = f"""
+    with self.remove as m:
+      m.code = f"""
         {_entry.definition};
         int removed;
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         removed = {set.remove(_target, _entry)};
         {entry.destroy_index(_entry)};
         return removed;
       """
 
-    with self.wipe as f:
-      f.code = f"""
+    with self.wipe as m:
+      m.code = f"""
         {_entry.definition};
         size_t wiped;
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         wiped = {set.wipe(_target, _entry)};
         {entry.destroy_index(_entry)};
         return wiped;
       """
 
-    with self.count as f:
-      f.code = f"""
+    with self.count as m:
+      m.code = f"""
         {_entry.definition};
         size_t cnt;
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         cnt = {set.count(_target, _entry)};
         {entry.destroy_index(_entry)};
         return cnt;
       """
 
-    with self.equal_range as f:
-      result = f.result.variable("result")
-      f.code = f"""
+    with self.equal_range as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         {_entry.definition};
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         result.range = {set.equal_range(_target, _entry)};
         {entry.destroy_index(_entry)};
         return {result};
@@ -345,8 +345,8 @@ class Map(Multimapping, Ordered):
 
         @param[in] target the multimap to query
         @return the current capacity
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {set.capacity(_target)};
       """
@@ -357,10 +357,10 @@ class Map(Multimapping, Ordered):
 
         @param[in,out] target the multimap to expand
         @param[in] capacity the minimum capacity to reserve
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        {set.reserve(_target, f.capacity)};
+        {set.reserve(_target, m.capacity)};
       """
 
     with self.method(None, "compact", {"target": inout(self)}, brief="Compact storage to fit current size",
@@ -368,18 +368,18 @@ class Map(Multimapping, Ordered):
         Reduces the allocated capacity to match the current number of entries.
 
         @param[in,out] target the multimap to compact
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         {set.compact(_target)};
       """
 
-    with self.compare as f:
+    with self.compare as m:
       elem_cmp = f"""
         cmp = {self.element.compare(self.element.variable("left->set.elements[i].element"), self.element.variable("right->set.elements[i].element"))};
         if(cmp != 0) return cmp;
       """ if self.element.orderable else ""
-      f.code = f"""
+      m.code = f"""
         size_t i, min_size;
         int cmp;
         assert(left);

@@ -23,9 +23,9 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
       The closest C++ equivalent is [std::flat_multiset<>](https://en.cppreference.com/w/cpp/container/flat_multiset) / `boost::container::flat_multiset`.
     """
 
-    with self.put as f:
-      f.brief = "Insert element into multiset"
-      f.description = """
+    with self.put as m:
+      m.brief = "Insert element into multiset"
+      m.description = """
         Inserts the element into the multiset at the upper bound position, keeping equal elements
         in FIFO order.
 
@@ -33,40 +33,40 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
         @param[in] element the element to insert
         @return always returns 1
       """
-      f.references.add(self.upper_bound)
+      m.references.add(self.upper_bound)
       pos_code = f"""
         size_t pos, i;
         assert(target);
-        pos = {self.upper_bound(f.target, f.element)};
+        pos = {self.upper_bound(m.target, m.element)};
       """
-      f.code = self._insert_at_code(pos_code, "pos", f.element)
+      m.code = self._insert_at_code(pos_code, "pos", m.element)
 
-    with self.emplace as f:
-      f.brief = "Construct element in place in the multiset"
-      f.description = """
+    with self.emplace as m:
+      m.brief = "Construct element in place in the multiset"
+      m.description = """
         Constructs the element in place with the forwarded parameters and inserts it into the
         multiset at the upper bound position, keeping equal elements in FIFO order.
 
         @param[in,out] target the multiset to insert into
         @return always returns 1
       """
-      f.references.add(self.upper_bound)
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      m.references.add(self.upper_bound)
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         _temp_elem = self.element.variable("temp_elem")
         pos_code = f"""
           size_t pos, i;
           {_temp_elem.definition};
           assert(target);
           {self.element.create(_temp_elem, *create_args)};
-          pos = {self.upper_bound(f.target, _temp_elem)};
+          pos = {self.upper_bound(m.target, _temp_elem)};
         """
         return self._move_at_code(pos_code, "pos", _temp_elem)
-      f.code = _emplace_code
+      m.code = _emplace_code
 
-    with self.remove as f:
-      f.brief = "Remove one occurrence of element"
-      f.description = """
+    with self.remove as m:
+      m.brief = "Remove one occurrence of element"
+      m.description = """
         Removes one occurrence of the element if present, leaving the multiset unchanged otherwise.
 
         @param[in,out] target the multiset to remove from
@@ -74,19 +74,19 @@ class Set(autoc.flat_sets.Set, autoc.multiset.Multiset):
         @return non-zero if an element was removed, zero if absent
       """
 
-    with self.wipe as f:
-      f.references.add(self.lower_bound)
-      f.references.add(self.upper_bound)
+    with self.wipe as m:
+      m.references.add(self.lower_bound)
+      m.references.add(self.upper_bound)
       destroy_wipe_range = f"""
         for(i = low; i < high; ++i) {{
           {self.element.destroy(self.element.variable("target->elements[i]"))};
         }}
       """ if self.element.destructible else ""
-      f.code = f"""
+      m.code = f"""
         size_t low, high, count, i;
         assert(target);
-        low = {self.lower_bound(f.target, f.element)};
-        high = {self.upper_bound(f.target, f.element)};
+        low = {self.lower_bound(m.target, m.element)};
+        high = {self.upper_bound(m.target, m.element)};
         count = high - low;
         if(count > 0) {{
           {destroy_wipe_range}

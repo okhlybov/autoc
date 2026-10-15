@@ -815,10 +815,10 @@ class Composite(_Named, _Traitful):
     
     # The swap is hidden into the translation unit - primitives themselves do not expose it publicly
     self.method_from("swap", hidden=True, visibility="internal")
-    with self.swap as f:
+    with self.swap as m:
       # Exchanging the whole representations keeps both values valid - for the containers
       # this is the O(1) bookkeeping exchange regardless of the element type
-      f.code = f"""
+      m.code = f"""
         #ifdef __POCC__
           volatile /* A workaround for the Pelles C 14.50 optimization bug */
         #endif
@@ -832,10 +832,10 @@ class Composite(_Named, _Traitful):
     # default construction and exchanging the contents by swapping - the explicit move
     # definitions of the concrete types take precedence
     if self.default_constructible and self.swappable:
-      with self.move as f:
-        f.code = f"""
-          {self.create(f.target)};
-          {self.swap(f.target, f.source)};
+      with self.move as m:
+        m.code = f"""
+          {self.create(m.target)};
+          {self.swap(m.target, m.source)};
         """
 
   @property
@@ -1296,7 +1296,17 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
       raise ValueError(f"missing body of non-abstract function {self}")
     match self.code:
       case Iterable(): cs = [str(x) for x in self.code]
-      case _ if callable(self.code): cs = [str(self.code())]
+      case _ if callable(self.code):
+        argc = getattr(getattr(self.code, "__code__", None), "co_argcount", None)
+        if argc is None:
+          try:
+            cs = [str(self.code(self))]
+          except TypeError:
+            cs = [str(self.code())]
+        elif argc > 0:
+          cs = [str(self.code(self))]
+        else:
+          cs = [str(self.code())]
       case _: cs = [str(self.code)]
     return str().join(("{", *cs, "}\n"))
 
@@ -1313,6 +1323,14 @@ class Function(_Functional, _Parametrized, _VisibilityManager):
   
   def __exit__(self, *args):
     return False
+
+  def body(self, func):
+    self.code = func
+    return func
+
+  def inline_body(self, func):
+    self.inline_code = func
+    return func
 
   def __inline_code(self, obj):
     self.linkage = "inline"

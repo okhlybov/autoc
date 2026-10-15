@@ -99,22 +99,22 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
     _left = self._variant.variable("left->variant")
     _right = self._variant.variable("right->variant")
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->variant.tag < 0;
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return (size_t)(target->variant.tag + 1);
       """
 
-    with self.indexed as f:
-      f.inline_code = f"""
+    with self.indexed as m:
+      m.inline_code = f"""
         assert(target);
-        return {f.index} < (size_t)(target->variant.tag + 1);
+        return {m.index} < (size_t)(target->variant.tag + 1);
       """
 
     with self.method(self.index, "capacity", {"target": self}, brief="Get maximum capacity of static vector",
@@ -123,95 +123,95 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in] target the static vector to inspect
         @return maximum capacity of the vector
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {self._capacity};
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         {self._variant.create(_target)};
       """
 
     if self.destructible:
-      with self.destroy as f:
-        f.code = f"""
+      with self.destroy as m:
+        m.code = f"""
           assert(target);
           {self._variant.destroy(_target)};
         """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._variant.copy(_target, _source)};
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._variant.move(_target, _source)};
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         assert(left);
         assert(right);
         return {self._variant.equal(_left, _right)};
       """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         assert(target);
         return {self._variant.hash(_target)};
       """
 
-    with self.get as f:
-      result = f.result.variable("result")
+    with self.get as m:
+      result = m.result.variable("result")
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{self._capacity}._{i}"
         slot_var = self.element.variable(slot)
         cases.append(f"case {i}: {{{self.element.copy(result, slot_var)};}} break;")
-      f.inline_code = f"""
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        switch({f.index}) {{
+        assert({self.indexed(m.target, m.index)});
+        switch({m.index}) {{
           {" ".join(cases)}
         }}
         return {result};
       """
 
-    with self.view as f:
+    with self.view as m:
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{self._capacity}._{i}"
         slot_var = self.element.variable(slot)
-        cases.append(f"case {i}: return {slot_var.bind(f.result)};")
-      f.inline_code = f"""
+        cases.append(f"case {i}: return {slot_var.bind(m.result)};")
+      m.inline_code = f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        switch({f.index}) {{
+        assert({self.indexed(m.target, m.index)});
+        switch({m.index}) {{
           {" ".join(cases)}
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
+    with self.set as m:
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{self._capacity}._{i}"
         slot_var = self.element.variable(slot)
         destroy_stmt = f"{self.element.destroy(slot_var)};" if self.element.destructible else ""
-        cases.append(f"case {i}: {{{destroy_stmt} {self.element.copy(slot_var, f.element)};}} break;")
-      f.inline_code = f"""
+        cases.append(f"case {i}: {{{destroy_stmt} {self.element.copy(slot_var, m.element)};}} break;")
+      m.inline_code = f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        switch({f.index}) {{
+        assert({self.indexed(m.target, m.index)});
+        switch({m.index}) {{
           {" ".join(cases)}
         }}
       """
@@ -223,13 +223,13 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in,out] target the static vector to add to
         @param[in] element the element to push to the back
-      """) as f:
+      """) as m:
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{i+1}._{i}"
         slot_var = self.element.variable(slot)
-        cases.append(f"case {i}: {{{self.element.copy(slot_var, f.element)};}} break;")
-      f.inline_code = f"""
+        cases.append(f"case {i}: {{{self.element.copy(slot_var, m.element)};}} break;")
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag + 1 < {self._capacity});
         switch(target->variant.tag + 1) {{
@@ -245,14 +245,14 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
         Asserts that the vector has not reached its maximum capacity.
 
         @param[in,out] target the static vector to add to
-      """) as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+      """) as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{i+1}._{i}"
         slot_var = self.element.variable(slot)
         cases.append(f"case {i}: {{{self.element.create(slot_var, *create_args)};}} break;")
-      f.inline_code = f"""
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag + 1 < {self._capacity});
         switch(target->variant.tag + 1) {{
@@ -269,15 +269,15 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in,out] target the static vector to remove from
         @return the removed back element
-      """) as f:
-      result = f.result.variable("result")
+      """) as m:
+      result = m.result.variable("result")
       cases = []
       for i in range(self._capacity):
         slot = f"target->variant.value.s{i+1}._{i}"
         slot_var = self.element.variable(slot)
         destroy_stmt = f"{self.element.destroy(slot_var)};" if self.element.destructible else ""
         cases.append(f"case {i}: {{{self.element.move(result, slot_var)};}} break;")
-      f.inline_code = f"""
+      m.inline_code = f"""
         {result.definition};
         assert(target);
         assert(target->variant.tag >= 0);
@@ -288,10 +288,10 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
         return {result};
       """
 
-    with self.put as f:
-      f.inline_code = f"""
+    with self.put as m:
+      m.inline_code = f"""
         assert(target);
-        {self.push(f.target, f.element)};
+        {self.push(m.target, m.element)};
         return 1;
       """
 
@@ -312,7 +312,7 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
         shift_stmts.append(f"if({j} < target->variant.tag) {{ {shift_op} }}")
       shift_code = " ".join(shift_stmts)
       remove_cases.append(f"""case {i}:
-        if({self.element.equal(slot_i, f.element)}) {{
+        if({self.element.equal(slot_i, m.element)}) {{
           {destroy_slot}
           {shift_code}
           --target->variant.tag;
@@ -320,8 +320,8 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
         }}
         break;""")
 
-    with self.remove as f:
-      f.code = lambda f=f: f"""
+    with self.remove as m:
+      m.code = lambda m: f"""
         int i;
         assert(target);
         for(i = 0; i <= target->variant.tag; ++i) {{
@@ -337,9 +337,9 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
         Destroys all elements currently held by the static vector and resets it to the empty state.
 
         @param[in,out] target the static vector to clear
-      """) as f:
+      """) as m:
       destroy_stmt = f"{self._variant.destroy(_target)};" if self.destructible else ""
-      f.code = f"""
+      m.code = f"""
         assert(target);
         {destroy_stmt}
         target->variant.tag = -1;
@@ -352,19 +352,19 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[out] target the static vector to construct
         @param[in] size the number of default-initialized elements to create
-      """) as f:
+      """) as m:
       cases = []
       for k in range(1, self._capacity + 1):
         tuple_k = self.tuples[k - 1]
         tuple_var = tuple_k.variable(f"target->variant.value.s{k}")
         cases.append(f"case {k-1}: {{{tuple_k.create(tuple_var)};}} break;")
-      f.code = f"""
+      m.code = f"""
         assert(target);
-        assert({f.size} <= {self._capacity});
-        if({f.size} == 0) {{
+        assert({m.size} <= {self._capacity});
+        if({m.size} == 0) {{
           target->variant.tag = -1;
         }} else {{
-          target->variant.tag = (int){f.size} - 1;
+          target->variant.tag = (int){m.size} - 1;
           switch(target->variant.tag) {{
             {" ".join(cases)}
           }}
@@ -377,11 +377,11 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in] target the static vector to read
         @return a copy of the front element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag >= 0);
-        return {self.get(f.target, "0")};
+        return {self.get(m.target, "0")};
       """
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable, brief="Get copy of back element",
@@ -390,11 +390,11 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in] target the static vector to read
         @return a copy of the back element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag >= 0);
-        return {self.get(f.target, "(size_t)target->variant.tag")};
+        return {self.get(m.target, "(size_t)target->variant.tag")};
       """
 
     with self.method(self.element.view_type, ("front", "view"), {"target": self}, brief="Get view of front element",
@@ -404,11 +404,11 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in] target the static vector to read
         @return a constant view of the front element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag >= 0);
-        return {self.view(f.target, "0")};
+        return {self.view(m.target, "0")};
       """
 
     with self.method(self.element.view_type, ("back", "view"), {"target": self}, brief="Get view of back element",
@@ -418,11 +418,11 @@ class Packet(_StructRenderer, Assignable, Sequential, Insertable):
 
         @param[in] target the static vector to read
         @return a constant view of the back element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->variant.tag >= 0);
-        return {self.view(f.target, "(size_t)target->variant.tag")};
+        return {self.view(m.target, "(size_t)target->variant.tag")};
       """
 
   def _render_struct(self, stream, header):
@@ -457,9 +457,9 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the static vector to span
         @return the range covering the static vector
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -468,68 +468,68 @@ class Range(_Range, DirectAccess):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      f.inline_code = lambda: f"""
+    with self.front as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
-    with self.front_view as f:
-      f.inline_code = lambda: f"""
+    with self.front_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      f.inline_code = lambda: f"""
+    with self.back as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->back-1")};
       """
 
-    with self.back_view as f:
-      f.inline_code = lambda: f"""
+    with self.back_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->back-1")};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      f.inline_code = lambda: f"""
+    with self.get as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.get("target->iterable", "target->front + index")};
       """
 
-    with self.view as f:
-      f.inline_code = lambda: f"""
+    with self.view as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

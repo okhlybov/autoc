@@ -29,15 +29,15 @@ class _Range(_StructRenderer, Range):
   def __setup__(self):
     super().__setup__()
     
-    with self.copy as f:
-      f.inline_code = f"""
+    with self.copy as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         *target = *source;
       """
 
-    with self.move as f:
-      f.inline_code = f"""
+    with self.move as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         *target = *source;
@@ -100,10 +100,10 @@ class Container(Composite):
         @param[in] target the container to search
         @param[in] element the element to look for
         @return non-zero if the container holds an element equal to the given one
-      """) as f:
-      f.inline_code = lambda f=f: f"""
+      """) as m:
+      m.inline_code = lambda m: f"""
         assert(target);
-        return {self.find_view(f.target, f.element)} != NULL;
+        return {self.find_view(m.target, m.element)} != NULL;
       """
 
   @property

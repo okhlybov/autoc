@@ -37,27 +37,27 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
     node_element = self.element.variable("n->element")
     source_element = self.element.variable("source_n->element")
     target_element = self.element.variable("n->element")
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return target->size;
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->buckets = NULL;
         target->capacity = target->size = 0;
       """
 
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the hash table with the capacity rounded up to a power of two (internal)") as f:
-      f.code = f"""
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the hash table with the capacity rounded up to a power of two (internal)") as m:
+      m.code = f"""
         assert(target);
         assert(capacity > 0);
         target->capacity = _autoc_ceil_power2(capacity);
@@ -67,13 +67,13 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
     with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal",
       references=(self.allocate, self.create),
-      brief="Create set with given capacity (internal)") as f:
-      f.code = f"""
+      brief="Create set with given capacity (internal)") as m:
+      m.code = f"""
         assert(target);
         if(capacity) {{
-          {self.allocate(f.target, f.capacity)};
+          {self.allocate(m.target, m.capacity)};
         }} else {{
-          {self.create(f.target)};
+          {self.create(m.target)};
         }}
       """
 
@@ -87,15 +87,15 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
         @param[out] target the set to construct
         @param[in] size the estimated element count used to preallocate the hash table
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
+        {self.create_capacity(m.target, f"(size_t)({m.size}/{self.capacity_threshold})")};
       """
 
-    with self.destroy as f:
+    with self.destroy as m:
       _destroy = self.element.destroy(node_element) if self.element.destructible else str()
-      f.code = f"""
+      m.code = f"""
         size_t index;
         {self.node}* n;
         {self.node}* _n;
@@ -112,8 +112,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         }}
       """
 
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="internal", brief="Resize hash table (internal)") as f:
-      f.code = f"""
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, visibility="internal", brief="Resize hash table (internal)") as m:
+      m.code = f"""
         size_t index, bucket, new_capacity;
         {self._bucket_p} buckets;
         {self.node}* n;
@@ -137,39 +137,39 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         }}
       """
 
-    with self.find_view as f:
-      f.code = f"""
+    with self.find_view as m:
+      m.code = f"""
         size_t bucket;
         {self.node}* n;
         assert(target);
         if(!target->buckets) return ({self.element.view_type})NULL;
-        bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
+        bucket = {self.element.hash_lookup_hash(m.element)} & (target->capacity-1);
         for(n = target->buckets[bucket]; n; n = n->next) {{
-          if({self.element.hash_lookup_equal(node_element, f.element)}) return {node_element.bind(f.result)};
+          if({self.element.hash_lookup_equal(node_element, m.element)}) return {node_element.bind(m.result)};
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         size_t bucket;
         {self.node}* n;
         assert(target);
-        if({self.contains(f.target, f.element)}) return 0;
-        {self.resize(f.target, "target->size+1")};
-        bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
+        if({self.contains(m.target, m.element)}) return 0;
+        {self.resize(m.target, "target->size+1")};
+        bucket = {self.element.hash_lookup_hash(m.element)} & (target->capacity-1);
         n = {self.memory.allocate(self.node)};
-        {self.element.copy(node_element, f.element)};
+        {self.element.copy(node_element, m.element)};
         n->next = target->buckets[bucket];
         target->buckets[bucket] = n;
         ++target->size;
         return 1;
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
       _destroy_node = f"{self.element.destroy(node_element)};" if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t bucket;
         {self.node}* n;
         {self.node}* p;
@@ -186,7 +186,7 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
             }}
           }}
         }}
-        {self.resize(f.target, "target->size+1")};
+        {self.resize(m.target, "target->size+1")};
         bucket = {self.element.hash_lookup_hash(node_element)} & (target->capacity-1);
         n->next = target->buckets[bucket];
         target->buckets[bucket] = n;
@@ -194,17 +194,17 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         return 1;
       """
 
-    with self.remove as f:
+    with self.remove as m:
       _destroy = self.element.destroy(self.element.variable("n->element")) if self.element.destructible else str()
-      f.code = f"""
+      m.code = f"""
         size_t bucket;
         {self.node}* n;
         {self.node}** p;
         assert(target);
         if(!target->buckets) return 0;
-        bucket = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1);
+        bucket = {self.element.hash_lookup_hash(m.element)} & (target->capacity-1);
         for(p = &target->buckets[bucket]; *p; p = &(*p)->next) {{
-          if({self.element.hash_lookup_equal(self.element.variable("(*p)->element"), f.element)}) {{
+          if({self.element.hash_lookup_equal(self.element.variable("(*p)->element"), m.element)}) {{
             n = *p;
             *p = n->next;
             {_destroy};
@@ -216,14 +216,14 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         return 0;
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         size_t index, bucket;
         {self.node}* source_n;
         {self.node}* n;
         assert(target);
         assert(source);
-        {self.create_size(f.target, "source->size")};
+        {self.create_size(m.target, "source->size")};
         for(index = 0; index < source->capacity; ++index) {{
           for(source_n = source->buckets[index]; source_n; source_n = source_n->next) {{
             bucket = {self.element.hash_lookup_hash(source_element)} & (target->capacity-1); /* direct planting in order to prevent from triggering the subsequent resizings */
@@ -236,27 +236,27 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->buckets = source->buckets;
         target->capacity = source->capacity;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
     range = self.range
     r = range.variable("r")
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         {r.definition};
         assert(left);
         assert(right);
-        if({self.size(f.left)} == {self.size(f.right)}) {{
-          for({r} = {range.new(f.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
-            if(!{self.contains(f.right, range.front_view(r))}) return 0;
+        if({self.size(m.left)} == {self.size(m.right)}) {{
+          for({r} = {range.new(m.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
+            if(!{self.contains(m.right, range.front_view(r))}) return 0;
           }}
           return 1;
         }} else return 0;
@@ -303,8 +303,8 @@ class Range(_Range, Forward):
 
     node_element = self.element.variable("target->node->element")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next occupied bucket (internal)") as f:
-      f.code = f"""
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next occupied bucket (internal)") as m:
+      m.code = f"""
         assert(target);
         while(!target->node && target->bucket < target->iterable->capacity) {{
           target->node = target->iterable->buckets[target->bucket];
@@ -321,9 +321,9 @@ class Range(_Range, Forward):
 
         @param[in] iterable the set to span
         @return the range covering the whole set in unspecified order
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -333,33 +333,33 @@ class Range(_Range, Forward):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return !target->node;
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, node_element)};
         return {result};
       """
 
-    with self.front_view as f:
-      f.inline_code = f"""
+    with self.front_view as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {node_element.bind(self.iterable.element.view_type)};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         target->node = target->node->next;
-        {self.next(f.target)};
+        {self.next(m.target)};
       """

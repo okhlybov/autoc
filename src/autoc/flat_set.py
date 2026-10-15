@@ -22,22 +22,22 @@ class Set(autoc.flat_sets.Set, autoc.set.Set):
       The closest C++ equivalent is [std::flat_set<>](https://en.cppreference.com/w/cpp/container/flat_set) / `boost::container::flat_set`.
     """
 
-    with self.put as f:
-      f.references.add(self.lower_bound)
+    with self.put as m:
+      m.references.add(self.lower_bound)
       pos_code = f"""
         size_t pos, i;
         assert(target);
-        pos = {self.lower_bound(f.target, f.element)};
-        if(pos < target->size && !{self.element.compare(self._element(f.target, "pos"), f.element)}) {{
+        pos = {self.lower_bound(m.target, m.element)};
+        if(pos < target->size && !{self.element.compare(self._element(m.target, "pos"), m.element)}) {{
           return 0;
         }}
       """
-      f.code = self._insert_at_code(pos_code, "pos", f.element)
+      m.code = self._insert_at_code(pos_code, "pos", m.element)
 
-    with self.emplace as f:
-      f.references.add(self.lower_bound)
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      m.references.add(self.lower_bound)
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         _temp_elem = self.element.variable("temp_elem")
         _destroy_temp = f"{self.element.destroy(_temp_elem)};" if self.element.destructible else ""
         pos_code = f"""
@@ -45,13 +45,13 @@ class Set(autoc.flat_sets.Set, autoc.set.Set):
           {_temp_elem.definition};
           assert(target);
           {self.element.create(_temp_elem, *create_args)};
-          pos = {self.lower_bound(f.target, _temp_elem)};
-          if(pos < target->size && !{self.element.compare(self._element(f.target, "pos"), _temp_elem)}) {{
+          pos = {self.lower_bound(m.target, _temp_elem)};
+          if(pos < target->size && !{self.element.compare(self._element(m.target, "pos"), _temp_elem)}) {{
             {_destroy_temp}
             return 0;
           }}
         """
         return self._move_at_code(pos_code, "pos", _temp_elem)
-      f.code = _emplace_code
+      m.code = _emplace_code
 
 

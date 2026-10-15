@@ -27,18 +27,18 @@ class Variant(_StructRenderer, Composite):
   def __setup__(self):
     super().__setup__()
 
-    with self.create as f:
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"{target}.tag = -1;"
+    with self.create as m:
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"{target}.tag = -1;"
 
-    with self.destroy as f:
-      target = f"({f.target.bind(self)})"
-      f.code = self._destroy_active(target)
+    with self.destroy as m:
+      target = f"({m.target.bind(self)})"
+      m.code = self._destroy_active(target)
 
-    with self.equal as f:
-      def _equal(f=f):
-        left = f"({f.left.bind(self)})"
-        right = f"({f.right.bind(self)})"
+    with self.equal as m:
+      def _equal(m):
+        left = f"({m.left.bind(self)})"
+        right = f"({m.right.bind(self)})"
         code = [f"if({left}.tag != {right}.tag) return 0;"]
         code.append(f"switch({left}.tag) {{")
         for index, (name, type) in enumerate(self.alternatives.items()):
@@ -46,37 +46,37 @@ class Variant(_StructRenderer, Composite):
         code.append("default: return 1; /* both empty */")
         code.append("}")
         return str().join([str(x) for x in code])
-      f.code = _equal
+      m.code = _equal
 
-    with self.copy as f:
-      def _copy(f=f):
-        target = f"({f.target.bind(self)})"
-        source = f"({f.source.bind(self)})"
-        code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
+    with self.copy as m:
+      def _copy(m):
+        target = f"({m.target.bind(self)})"
+        source = f"({m.source.bind(self)})"
+        code = [f"assert({m.target});", f"assert({m.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
         for index, (name, type) in enumerate(self.alternatives.items()):
           code.append(f"case {index}: {{{type.copy(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
         code.append("}")
         return str().join([str(x) for x in code])
-      f.code = _copy
+      m.code = _copy
 
-    with self.move as f:
-      def _move(f=f):
+    with self.move as m:
+      def _move(m):
         # Built lazily: the alternatives of the non movable variants have their moves inactive
-        target = f"({f.target.bind(self)})"
-        source = f"({f.source.bind(self)})"
-        code = [f"assert({f.target});", f"assert({f.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
+        target = f"({m.target.bind(self)})"
+        source = f"({m.source.bind(self)})"
+        code = [f"assert({m.target});", f"assert({m.source});", f"{target}.tag = {source}.tag;", f"switch({source}.tag) {{"]
         for index, (name, type) in enumerate(self.alternatives.items()):
           code.append(f"case {index}: {{{type.move(type.variable(f"{target}.value.{name}"), type.variable(f"{source}.value.{name}"))};}} break;")
         code.append("}")
-        code.append(f"{self.create(f.source)}; /* the moved-from variant is left in the empty state */")
+        code.append(f"{self.create(m.source)}; /* the moved-from variant is left in the empty state */")
         return str().join([str(x) for x in code])
-      f.code = _move
+      m.code = _move
 
-    with self.hash as f:
-      def _hash(f=f):
-        target = f"({f.target.bind(self)})"
+    with self.hash as m:
+      def _hash(m):
+        target = f"({m.target.bind(self)})"
         state = self.hasher.state_t.variable("state")
-        code = [f"{state.definition}; size_t result; {self.hasher.create(state)};", f"assert({f.target});"]
+        code = [f"{state.definition}; size_t result; {self.hasher.create(state)};", f"assert({m.target});"]
         code.append(self.hasher.update(state, f"(size_t){target}.tag"))
         code.append(";")
         code.append(f"switch({target}.tag) {{")
@@ -85,7 +85,7 @@ class Variant(_StructRenderer, Composite):
         code.append("}")
         code.append(f"result = {self.hasher.hash(state)}; {self.hasher.destroy(state)}; return result;")
         return str().join([str(x) for x in code])
-      f.code = _hash
+      m.code = _hash
 
     with self.method("int", ("is", "empty"), {"target": self}, visibility=self.visibility, brief="Check if the variant holds no value",
       description="""
@@ -94,9 +94,9 @@ class Variant(_StructRenderer, Composite):
 
         @param[in] target the variant to test
         @return non-zero if the variant holds no value
-      """) as f:
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"return {target}.tag == -1;"
+      """) as m:
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"return {target}.tag == -1;"
 
     for index, (name, type) in enumerate(self.alternatives.items()):
       self._add_predicate(name, index)
@@ -113,9 +113,9 @@ class Variant(_StructRenderer, Composite):
 
         @param[in] target the variant to test
         @return non-zero if the variant currently holds the {name} alternative
-      """) as f:
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"return {target}.tag == {index};"
+      """) as m:
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"return {target}.tag == {index};"
 
   def _add_reader(self, type, name, index):
     with self.method(type, name, {"target": self}, attribute=("get", name), visibility=self.visibility, constraint=lambda: type.copyable, brief=f"Get the {name} value",
@@ -126,10 +126,10 @@ class Variant(_StructRenderer, Composite):
 
         @param[in] target the variant to read - must hold the {name} alternative
         @return a copy of the value held as the {name} alternative
-      """) as f:
-      result = f.result.variable("result")
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"""
         {result.definition};
         assert({target}.tag == {index});
         {type.copy(result, type.variable(f"{target}.value.{name}"))};
@@ -145,11 +145,11 @@ class Variant(_StructRenderer, Composite):
 
         @param[in] target the variant to read - must hold the {name} alternative
         @return a constant view of the value held as the {name} alternative, valid while the variant keeps that alternative
-      """) as f:
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"""
+      """) as m:
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"""
         assert({target}.tag == {index});
-        return {type.variable(f"{target}.value.{name}").bind(f.result)};
+        return {type.variable(f"{target}.value.{name}").bind(m.result)};
       """
 
   def _add_writer(self, type, name, index):
@@ -160,9 +160,9 @@ class Variant(_StructRenderer, Composite):
 
         @param[out] target the variant to update
         @param[in] value the value to store as the {name} alternative - the alternative previously held is destroyed
-      """) as f:
-      target = f"({f.target.bind(self)})"
-      f.inline_code = f"""
+      """) as m:
+      target = f"({m.target.bind(self)})"
+      m.inline_code = f"""
         {self._destroy_active(target)};
         {target}.tag = {index};
         {type.copy(type.variable(f"{target}.value.{name}"), "value")};
@@ -176,16 +176,16 @@ class Variant(_StructRenderer, Composite):
         exactly one value at a time.
 
         @param[out] target the variant to update
-      """) as f:
-      def _emplace_code(f=f, type=type, name=name, index=index):
-        create_args = [getattr(f, param) for param in type.constructor_parameters]
-        target = f"({f.target.bind(self)})"
+      """) as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, param) for param in type.constructor_parameters]
+        target = f"({m.target.bind(self)})"
         return f"""
           {self._destroy_active(target)};
           {target}.tag = {index};
           {type.create(type.variable(f"{target}.value.{name}"), *create_args)};
         """
-      f.inline_code = _emplace_code
+      m.inline_code = _emplace_code
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

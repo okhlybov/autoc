@@ -91,32 +91,32 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
     left_i = self.element.variable("left->elements[index]")
     right_i = self.element.variable("right->elements[index]")
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return 0;
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         return {self._size};
       """
 
-    with self.indexed as f:
-      f.inline_code = f"""
+    with self.indexed as m:
+      m.inline_code = f"""
         assert(target);
-        return {f.index} < {self._size};
+        return {m.index} < {self._size};
       """
 
-    with self.create as f:
+    with self.create as m:
       if self.element.zero_initializable:
-        f.inline_code = f"""
+        m.inline_code = f"""
           assert(target);
           memset(target->elements, 0, sizeof(target->elements));
         """
       else:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
           for(index = 0; index < {self._size}; ++index) {{
@@ -130,20 +130,20 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in,out] target the array to fill
         @param[in] element the value to assign to every position
-      """) as f:
+      """) as m:
       destroy_i = self.element.destroy(target_i) if self.element.destructible else ""
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
         for(index = 0; index < {self._size}; ++index) {{
           {destroy_i};
-          {self.element.copy(target_i, f.element)};
+          {self.element.copy(target_i, m.element)};
         }}
       """
 
     if self.destructible:
-      with self.destroy as f:
-        f.code = f"""
+      with self.destroy as m:
+        m.code = f"""
           size_t index;
           assert(target);
           for(index = 0; index < {self._size}; ++index) {{
@@ -151,8 +151,8 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
           }}
         """
 
-    with self.copy as f:
-      f.code = lambda f=f: f"""
+    with self.copy as m:
+      m.code = lambda m: f"""
         size_t index;
         assert(target);
         assert(source);
@@ -161,8 +161,8 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
@@ -171,8 +171,8 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         }}
       """
 
-    with self.swap as f:
-      f.code = f"""
+    with self.swap as m:
+      m.code = f"""
         size_t index;
         assert(left);
         assert(right);
@@ -181,33 +181,33 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
         }}
       """
 
-    with self.get as f:
-      result = f.result.variable("result")
-      slot = self.element.variable(f"target->elements[{f.index}]")
-      f.inline_code = lambda f=f: f"""
+    with self.get as m:
+      result = m.result.variable("result")
+      slot = self.element.variable(f"target->elements[{m.index}]")
+      m.inline_code = lambda m: f"""
         {result.definition};
         assert(target);
-        assert({self.indexed(f.target, f.index)});
+        assert({self.indexed(m.target, m.index)});
         {self.element.copy(result, slot)};
         return {result};
       """
 
-    with self.view as f:
-      slot = self.element.variable(f"target->elements[{f.index}]")
-      f.inline_code = f"""
+    with self.view as m:
+      slot = self.element.variable(f"target->elements[{m.index}]")
+      m.inline_code = f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
-        return {slot.bind(f.result)};
+        assert({self.indexed(m.target, m.index)});
+        return {slot.bind(m.result)};
       """
 
-    with self.set as f:
-      slot = self.element.variable(f"target->elements[{f.index}]")
+    with self.set as m:
+      slot = self.element.variable(f"target->elements[{m.index}]")
       destroy_slot = self.element.destroy(slot) if self.element.destructible else ""
-      f.inline_code = lambda f=f: f"""
+      m.inline_code = lambda m: f"""
         assert(target);
-        assert({self.indexed(f.target, f.index)});
+        assert({self.indexed(m.target, m.index)});
         {destroy_slot};
-        {self.element.copy(slot, f.element)};
+        {self.element.copy(slot, m.element)};
       """
 
     with self.method(None, "emplace", {"target": inout(self), "index": self.index} | self.element.constructor_parameters,
@@ -218,18 +218,18 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in,out] target the array to update
         @param[in] index the index to construct the element at
-      """) as f:
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-        slot = self.element.variable(f"target->elements[{f.index}]")
+      """) as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+        slot = self.element.variable(f"target->elements[{m.index}]")
         destroy_slot = self.element.destroy(slot) if self.element.destructible else ""
         return f"""
           assert(target);
-          assert({self.indexed(f.target, f.index)});
+          assert({self.indexed(m.target, m.index)});
           {destroy_slot};
           {self.element.create(slot, *create_args)};
         """
-      f.code = _emplace_code
+      m.code = _emplace_code
 
     with self.method(self.element, "front", {"target": self}, constraint=lambda: self.element.copyable,
       references=(self.get,),
@@ -239,10 +239,10 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in] target the array to read from
         @return a copy of the first element
-      """) as f:
-      f.inline_code = lambda f=f: f"""
+      """) as m:
+      m.inline_code = lambda m: f"""
         assert(target);
-        return {self.get(f.target, 0)};
+        return {self.get(m.target, 0)};
       """
 
     with self.method(self.element.view_type, ("front", "view"), {"target": self},
@@ -253,10 +253,10 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in] target the array to read from
         @return a constant view of the first element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        return {self.view(f.target, 0)};
+        return {self.view(m.target, 0)};
       """
 
     with self.method(self.element, "back", {"target": self}, constraint=lambda: self.element.copyable,
@@ -267,10 +267,10 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in] target the array to read from
         @return a copy of the last element
-      """) as f:
-      f.inline_code = lambda f=f: f"""
+      """) as m:
+      m.inline_code = lambda m: f"""
         assert(target);
-        return {self.get(f.target, self._size - 1)};
+        return {self.get(m.target, self._size - 1)};
       """
 
     with self.method(self.element.view_type, ("back", "view"), {"target": self},
@@ -281,10 +281,10 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in] target the array to read from
         @return a constant view of the last element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
-        return {self.view(f.target, self._size - 1)};
+        return {self.view(m.target, self._size - 1)};
       """
 
     with self.method(Indirection(self.element), "data", {"target": inout(self)}, brief="Get pointer to the underlying array",
@@ -293,8 +293,8 @@ class Array(_StructRenderer, Assignable, Sortable, Sequential):
 
         @param[in,out] target the array to inspect
         @return a pointer to the first element
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return target->elements;
       """
@@ -323,9 +323,9 @@ class Range(_Range, DirectAccess):
 
         @param[in] iterable the array to span
         @return the range covering the whole array
-      """) as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -334,68 +334,68 @@ class Range(_Range, DirectAccess):
         return {result};
       """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->front >= target->back;
       """
 
-    with self.front as f:
-      f.inline_code = lambda: f"""
+    with self.front as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->front")};
       """
 
-    with self.front_view as f:
-      f.inline_code = lambda: f"""
+    with self.front_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->front")};
       """
 
-    with self.move_front as f:
-      f.inline_code = f"""
+    with self.move_front as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
       """
 
-    with self.back as f:
-      f.inline_code = lambda: f"""
+    with self.back as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.get("target->iterable", "target->back - 1")};
       """
 
-    with self.back_view as f:
-      f.inline_code = lambda: f"""
+    with self.back_view as m:
+      m.inline_code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self.iterable.view("target->iterable", "target->back - 1")};
       """
 
-    with self.move_back as f:
-      f.inline_code = f"""
+    with self.move_back as m:
+      m.inline_code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         --target->back;
       """
 
-    with self.get as f:
-      f.inline_code = lambda: f"""
+    with self.get as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.get("target->iterable", "target->front + index")};
       """
 
-    with self.view as f:
-      f.inline_code = lambda: f"""
+    with self.view as m:
+      m.inline_code = lambda: f"""
         assert(target);
         return {self.iterable.view("target->iterable", "target->front + index")};
       """
 
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
         assert(target);
         assert(target->back >= target->front);
         return target->back - target->front;

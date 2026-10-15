@@ -48,20 +48,20 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
     source_slot = self.slot.variable("source->elements[index]")
     target_elements = self._slot_p.variable("target->elements")
     
-    with self.size as f:
-      f.inline_code = f"""
+    with self.size as m:
+      m.inline_code = f"""
       assert(target);
       return target->size;
     """
 
-    with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True, brief="Check if the element slot holds a live element (internal)") as f:
-      elem_expr = f"(*{f.element})" if isinstance(self.element, Composite) and not isinstance(self.element, Indirection) else f.element
-      f.code = f"""
+    with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True, brief="Check if the element slot holds a live element (internal)") as m:
+      elem_expr = f"(*{m.element})" if isinstance(self.element, Composite) and not isinstance(self.element, Indirection) else m.element
+      m.code = f"""
         return {self.slot._engaged(elem_expr)};
       """
     
-    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the element table with the capacity rounded up to a power of two (internal)") as f:
-      f.code = f"""
+    with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the element table with the capacity rounded up to a power of two (internal)") as m:
+      m.code = f"""
         assert(target);
         assert(capacity > 0);
         target->size = 0;
@@ -72,8 +72,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
     
     _target = self.variable("_target")
     
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         target->elements = NULL;
         target->capacity = target->size = 0;
@@ -81,15 +81,15 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
     with self.method(None, ("create", "capacity"), {"target": out(self), "capacity": std.size_t}, hidden=True, visibility="internal",
       references=(self.allocate, self.create),
-      brief="Create set with given capacity (internal)") as f:
-      f.code = f"""
+      brief="Create set with given capacity (internal)") as m:
+      m.code = f"""
         size_t index;
         assert(target);
         if(capacity) {{
-          {self.allocate(f.target, f.capacity)};
+          {self.allocate(m.target, m.capacity)};
           for(index = 0; index < target->capacity; ++index) {{{self.slot.create(target_slot)};}}
         }} else {{
-          {self.create(f.target)};
+          {self.create(m.target)};
         }}
       """
 
@@ -103,27 +103,27 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
         @param[out] target the set to construct
         @param[in] size the estimated element count used to preallocate the element table
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        {self.create_capacity(f.target, f"(size_t)({f.size}/{self.capacity_threshold})")};
+        {self.create_capacity(m.target, f"(size_t)({m.size}/{self.capacity_threshold})")};
       """
     
-    with self.method(Callable.Parameter(self._element_p), ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate element by value (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self._element_p), ("locate", "element"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate element by value (internal)") as m:
+      m.code = f"""
         size_t index, start;
         {self._element_p} _element = NULL;
         assert(target);
         assert(_index);
-        assert({self.is_element(f.element)});
+        assert({self.is_element(m.element)});
         /* linear probing */
         if(target->elements) {{
           assert(target->capacity > 0);
-          start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+          start = {self.element.hash_lookup_hash(m.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
           /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
           for(index = start; index < target->capacity; ++index) {{
             if(!{self.slot.empty(target_slot)}) {{
-              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, f.element)}) {{
+              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, m.element)}) {{
                 _element = ({self._element_p})&{target_element};
                 goto stop;
               }}
@@ -131,7 +131,7 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
           }}
           for(index = 0; index < start; ++index) {{
             if(!{self.slot.empty(target_slot)}) {{
-              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, f.element)}) {{
+              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, m.element)}) {{
                 _element = ({self._element_p})&{target_element};
                 goto stop;
               }}
@@ -144,16 +144,16 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         return NULL;
       """
     
-    with self.method(Callable.Parameter(self._element_p), ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate empty slot for element (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self._element_p), ("locate", "slot"), {"target": self, "_index": out(std.size_t), "element": self.element}, visibility="internal", hidden=True, constraint=lambda: self.element.comparable, brief="Locate empty slot for element (internal)") as m:
+      m.code = f"""
         size_t index, start;
         assert(target);
         assert(_index);
         assert(target->capacity > 0);
         assert(target->size < target->capacity);
-        assert({self.is_element(f.element)});
+        assert({self.is_element(m.element)});
         /* linear probing */
-        start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
+        start = {self.element.hash_lookup_hash(m.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
         /* lookup terminator for non-existing entry is either empty or deleted slot */
         for(index = start; index < target->capacity; ++index) {{
           if(!{self.slot.primed(target_slot)}) {{
@@ -170,8 +170,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         abort(); /* not finding a suitable empty slot is a fatal error */
       """
 
-    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, constraint=lambda: self.element.copyable, brief="Resize hash table (internal)") as f:
-      f.code = f"""
+    with self.method(None, "resize", {"target": inout(self), "new_size": std.size_t}, hidden=True, constraint=lambda: self.element.copyable, brief="Resize hash table (internal)") as m:
+      m.code = f"""
         {_target.definition};
         size_t index, _index, new_capacity;
         assert(target);
@@ -188,26 +188,26 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
               }}
             }}
             _target.size = target->size;
-            {self.destroy(f.target)};
+            {self.destroy(m.target)};
           }}
           *target = _target;
         }}
       """
     
-    with self.find_view as f:
-      f.code = f"""
+    with self.find_view as m:
+      m.code = f"""
         size_t index;
         assert(target);
-        assert({self.is_element(f.element)});
-        if({self.locate_element(f.target, "&index", f.element)}) {{
-          return {self.element.variable("target->elements[index]").bind(f.result)};
+        assert({self.is_element(m.element)});
+        if({self.locate_element(m.target, "&index", m.element)}) {{
+          return {self.element.variable("target->elements[index]").bind(m.result)};
         }}
         return ({self.element.view_type})NULL;
       """
     
-    with self.destroy as f:
+    with self.destroy as m:
       if self.slot.destructible:
-        f.code = f"""
+        m.code = f"""
           size_t index;
           assert(target);
           if(target->elements) {{
@@ -217,45 +217,45 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
           }}
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           if(target->elements) {{
             {self.memory.free(target_elements)};
           }}
         """
 
-    with self.empty as f:
-      f.inline_code = f"""
+    with self.empty as m:
+      m.inline_code = f"""
         assert(target);
         return target->size == 0;
       """
     
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         size_t index;
         assert(target);
-        assert({self.is_element(f.element)});
-        if(!{self.contains(f.target, f.element)}) {{
-          {self.resize(f.target, "target->size+1")};
-          {self.element.copy(self.locate_slot(f.target, "&index", f.element), f.element)};
+        assert({self.is_element(m.element)});
+        if(!{self.contains(m.target, m.element)}) {{
+          {self.resize(m.target, "target->size+1")};
+          {self.element.copy(self.locate_slot(m.target, "&index", m.element), m.element)};
           ++target->size;
           return 1;
         }} else return 0;
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
       _temp_elem = self.element.variable("temp_elem")
       _destroy_temp = f"{self.element.destroy(_temp_elem)};" if self.element.destructible else ""
       _move_or_copy = self.element.move if self.element.moveable else self.element.copy
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t index;
         {_temp_elem.definition};
         assert(target);
         {self.element.create(_temp_elem, *create_args)};
-        if(!{self.contains(f.target, _temp_elem)}) {{
-          {self.resize(f.target, "target->size+1")};
-          {_move_or_copy(self.locate_slot(f.target, "&index", _temp_elem), _temp_elem)};
+        if(!{self.contains(m.target, _temp_elem)}) {{
+          {self.resize(m.target, "target->size+1")};
+          {_move_or_copy(self.locate_slot(m.target, "&index", _temp_elem), _temp_elem)};
           ++target->size;
           return 1;
         }} else {{
@@ -264,52 +264,52 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         }}
       """
     
-    with self.remove as f:
-      f.code = f"""
+    with self.remove as m:
+      m.code = f"""
         size_t index;
         assert(target);
-        assert({self.is_element(f.element)});
-        if({self.locate_element(f.target, "&index", f.element)}) {{
+        assert({self.is_element(m.element)});
+        if({self.locate_element(m.target, "&index", m.element)}) {{
           {self.slot.set_state(target_slot, 1)};
           --target->size;
           return 1;
         }} else return 0;
       """
     
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         size_t index;
         assert(target);
         assert(source);
-        {self.create_size(f.target, "source->size")};
+        {self.create_size(m.target, "source->size")};
         for(index = 0; index < source->capacity; ++index) {{
           if({self.slot.primed(source_slot)}) {{
-            {self.put(f.target, source_element)};
+            {self.put(m.target, source_element)};
           }}
         }}
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         target->elements = source->elements;
         target->capacity = source->capacity;
         target->size = source->size;
-        {self.create(f.source)};
+        {self.create(m.source)};
       """
 
     range = self.range
     r = range.variable("r")
     
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         {r.definition};
         assert(left);
         assert(right);
-        if({self.size(f.left)} == {self.size(f.right)}) {{
-          for({r} = {range.new(f.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
-            if(!{self.contains(f.right, range.front_view(r))}) return 0;
+        if({self.size(m.left)} == {self.size(m.right)}) {{
+          for({r} = {range.new(m.left)}; !{range.empty(r)}; {range.move_front(r)}) {{
+            if(!{self.contains(m.right, range.front_view(r))}) return 0;
           }}
           return 1;
         }} else return 0;
@@ -350,8 +350,8 @@ class Range(_Range, Forward):
     front_element = self.element.variable("target->iterable->elements[target->front]")
     front_slot = self.iterable.slot.variable("target->iterable->elements[target->front]")
 
-    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next live element (internal)") as f:
-      f.code = lambda: f"""
+    with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next live element (internal)") as m:
+      m.code = lambda: f"""
         assert(target);
         while(!{self.empty("target")} && !{self.iterable.slot.primed(front_slot)}) ++target->front;
       """
@@ -364,9 +364,9 @@ class Range(_Range, Forward):
 
         @param[in] iterable the set to span
         @return the range covering the whole set in unspecified order
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(iterable);
         result.iterable = iterable;
@@ -375,35 +375,35 @@ class Range(_Range, Forward):
         return {result};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return target->front >= target->iterable->capacity;
       """
     
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = lambda: f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.code = lambda: f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         assert({self.iterable.slot.primed(front_slot)});
         {self.element.copy(result, front_element)};
         return {result};
       """
         
-    with self.front_view as f:
-      f.code = lambda: f"""
+    with self.front_view as m:
+      m.code = lambda: f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         assert({self.iterable.slot.primed(front_slot)});
         return {front_element.bind(self.iterable.element.view_type)};
       """
     
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         ++target->front;
-        {self.next(f.target)};
+        {self.next(m.target)};
       """    

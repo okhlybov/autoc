@@ -69,16 +69,16 @@ class Set(Traversable, Insertable):
         @param[in,out] target the set to add the elements to
         @param[in] other the set whose elements are added - the target itself is allowed and keeps it unchanged
         @return the number of elements added
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t added;
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 0;
+        assert({m.other});
+        if(target == {m.other}) return 0;
         added = 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          added += {self.put(f.target, range.front_view(r))};
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          added += {self.put(m.target, range.front_view(r))};
         }}
         return added;
       """
@@ -92,21 +92,21 @@ class Set(Traversable, Insertable):
         @param[in,out] target the set to remove the elements from
         @param[in] other the set whose elements are removed - the target itself is allowed and empties it in place
         @return the number of elements removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t removed;
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) {{
-          removed = {self.size(f.target)};
-          {self.destroy(f.target)};
-          {self.create(f.target)};
+        assert({m.other});
+        if(target == {m.other}) {{
+          removed = {self.size(m.target)};
+          {self.destroy(m.target)};
+          {self.create(m.target)};
           return removed;
         }}
         removed = 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          removed += {self.remove(f.target, range.front_view(r))};
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          removed += {self.remove(m.target, range.front_view(r))};
         }}
         return removed;
       """
@@ -121,19 +121,19 @@ class Set(Traversable, Insertable):
         @param[in,out] target the set to keep the elements in
         @param[in] other the set to intersect with - the target itself is allowed and keeps it unchanged
         @return the number of elements removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t removed;
         {r.definition};
         {temp.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) return 0; /* nothing is removed intersecting with self */
+        assert({m.other});
+        if(target == {m.other}) return 0; /* nothing is removed intersecting with self */
         {self.create(temp)};
-        {self.copy(temp, f.target)};
+        {self.copy(temp, m.target)};
         removed = 0;
         for({r} = {range.new(temp)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if(!{self.contains(f.other, range.front_view(r))}) removed += {self.remove(f.target, range.front_view(r))};
+          if(!{self.contains(m.other, range.front_view(r))}) removed += {self.remove(m.target, range.front_view(r))};
         }}
         {self.destroy(temp)};
         return removed;
@@ -148,22 +148,22 @@ class Set(Traversable, Insertable):
         @param[in,out] target the set to change
         @param[in] other the set to change the target by - the target itself is allowed and empties it in place
         @return the number of elements added or removed
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         size_t changed;
         {r.definition};
         assert(target);
-        assert({f.other});
-        if(target == {f.other}) {{
-          changed = {self.size(f.target)};
-          {self.destroy(f.target)};
-          {self.create(f.target)};
+        assert({m.other});
+        if(target == {m.other}) {{
+          changed = {self.size(m.target)};
+          {self.destroy(m.target)};
+          {self.create(m.target)};
           return changed;
         }}
         changed = 0;
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.contains(f.target, range.front_view(r))}) changed += {self.remove(f.target, range.front_view(r))};
-          else changed += {self.put(f.target, range.front_view(r))};
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if({self.contains(m.target, range.front_view(r))}) changed += {self.remove(m.target, range.front_view(r))};
+          else changed += {self.put(m.target, range.front_view(r))};
         }}
         return changed;
       """
@@ -176,13 +176,13 @@ class Set(Traversable, Insertable):
         @param[in] target the set to test
         @param[in] other the set to test against
         @return non-zero if every element of the target is also present in the other set
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
-        assert({f.other});
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if(!{self.contains(f.other, range.front_view(r))}) return 0;
+        assert({m.other});
+        for({r} = {range.new(m.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if(!{self.contains(m.other, range.front_view(r))}) return 0;
         }}
         return 1;
       """
@@ -195,13 +195,13 @@ class Set(Traversable, Insertable):
         @param[in] target the set to test against
         @param[in] other the set to test
         @return non-zero if every element of the other set is also present in the target
-      """) as f:
-      f.code = lambda f=f: f"""
+      """) as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
-        assert({f.other});
-        for({r} = {range.new(f.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if(!{self.contains(f.target, range.front_view(r))}) return 0;
+        assert({m.other});
+        for({r} = {range.new(m.other)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if(!{self.contains(m.target, range.front_view(r))}) return 0;
         }}
         return 1;
       """

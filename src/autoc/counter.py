@@ -85,29 +85,29 @@ class Counter(_StructRenderer, Multiset):
     _left = self._map.variable("left->map")
     _right = self._map.variable("right->map")
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         {self._map.create(_target)};
         target->total_size = 0;
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         {self._map.destroy(_target)};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._map.copy(_target, _source)};
         target->total_size = source->total_size;
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._map.move(_target, _source)};
@@ -115,8 +115,8 @@ class Counter(_StructRenderer, Multiset):
         source->total_size = 0;
       """
 
-    with self.swap as f:
-      f.code = f"""
+    with self.swap as m:
+      m.code = f"""
         size_t tmp_size;
         assert(left);
         assert(right);
@@ -126,8 +126,8 @@ class Counter(_StructRenderer, Multiset):
         right->total_size = tmp_size;
       """
 
-    with self.equal as f:
-      f.code = f"""
+    with self.equal as m:
+      m.code = f"""
         assert(left);
         assert(right);
         if(left->total_size != right->total_size) return 0;
@@ -135,27 +135,27 @@ class Counter(_StructRenderer, Multiset):
       """
 
     if self.orderable:
-      with self.compare as f:
-        f.code = f"""
+      with self.compare as m:
+        m.code = f"""
           assert(left);
           assert(right);
           return {self._map.compare(_left, _right)};
         """
 
-    with self.hash as f:
-      f.code = f"""
+    with self.hash as m:
+      m.code = f"""
         assert(target);
         return {self._map.hash(_target)};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return target->total_size == 0;
       """
 
-    with self.size as f:
-      f.code = f"""
+    with self.size as m:
+      m.code = f"""
         assert(target);
         return target->total_size;
       """
@@ -166,8 +166,8 @@ class Counter(_StructRenderer, Multiset):
 
         @param[in] target the counter to measure
         @return the total element count
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         return target->total_size;
       """
@@ -178,8 +178,8 @@ class Counter(_StructRenderer, Multiset):
 
         @param[in] target the counter to measure
         @return the count of distinct elements
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         return {self._map.size(_target)};
       """
@@ -189,26 +189,26 @@ class Counter(_StructRenderer, Multiset):
         Removes all elements from the counter, resetting total and distinct sizes to zero.
 
         @param[in,out] target the counter to clear
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         {self._map.destroy(_target)};
         {self._map.create(_target)};
         target->total_size = 0;
       """
 
-    with self.count as f:
-      f.code = f"""
+    with self.count as m:
+      m.code = f"""
         const size_t* v;
         assert(target);
-        v = (const size_t*){self._map.view(_target, f.element)};
+        v = (const size_t*){self._map.view(_target, m.element)};
         return v ? *v : 0;
       """
 
-    with self.contains as f:
-      f.code = f"""
+    with self.contains as m:
+      m.code = f"""
         assert(target);
-        return {self.count(f.target, f.element)} > 0;
+        return {self.count(m.target, m.element)} > 0;
       """
 
     with self.method(None, "add", {"target": inout(self), "element": self.element, "count": std.size_t}, brief="Add element with multiplicity",
@@ -219,16 +219,16 @@ class Counter(_StructRenderer, Multiset):
         @param[in,out] target the counter to modify
         @param[in] element the element to add
         @param[in] count the multiplicity to add
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         const size_t* v;
         assert(target);
         if(count == 0) return;
-        v = (const size_t*){self._map.view(_target, f.element)};
+        v = (const size_t*){self._map.view(_target, m.element)};
         if(v) {{
-          {self._map.set(_target, f.element, "*v + count")};
+          {self._map.set(_target, m.element, "*v + count")};
         }} else {{
-          {self._map.set(_target, f.element, "count")};
+          {self._map.set(_target, m.element, "count")};
         }}
         target->total_size += count;
       """
@@ -242,21 +242,21 @@ class Counter(_StructRenderer, Multiset):
         @param[in] element the element to remove
         @param[in] count the maximum multiplicity to remove
         @return the number of occurrences actually removed
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         const size_t* v;
         size_t old_count, removed;
         assert(target);
         if(count == 0) return 0;
-        v = (const size_t*){self._map.view(_target, f.element)};
+        v = (const size_t*){self._map.view(_target, m.element)};
         if(!v) return 0;
         old_count = *v;
         if(old_count <= count) {{
           removed = old_count;
-          {self._map.remove(_target, f.element)};
+          {self._map.remove(_target, m.element)};
         }} else {{
           removed = count;
-          {self._map.set(_target, f.element, "old_count - count")};
+          {self._map.set(_target, m.element, "old_count - count")};
         }}
         target->total_size -= removed;
         return removed;
@@ -271,59 +271,59 @@ class Counter(_StructRenderer, Multiset):
         @param[in] element the element to remove
         @param[in] count the maximum multiplicity to remove
         @return the number of occurrences actually removed
-      """) as f:
-      f.inline_code = lambda f=f: f"""
-        return {self.subtract(f.target, f.element, f.count)};
+      """) as m:
+      m.inline_code = lambda m: f"""
+        return {self.subtract(m.target, m.element, m.count)};
       """
 
-    with self.put as f:
-      f.code = f"""
+    with self.put as m:
+      m.code = f"""
         assert(target);
-        {self.add(f.target, f.element, 1)};
+        {self.add(m.target, m.element, 1)};
         return 1;
       """
 
-    with self.emplace as f:
-      def _emplace_code(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.emplace as m:
+      def _emplace_code(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         _temp = self.element.variable("temp")
         _destroy_temp = f"{self.element.destroy(_temp)};" if self.element.destructible else ""
         return f"""
           {_temp.definition};
           assert(target);
           {self.element.create(_temp, *create_args)};
-          {self.add(f.target, _temp, 1)};
+          {self.add(m.target, _temp, 1)};
           {_destroy_temp}
           return 1;
         """
-      f.code = _emplace_code
+      m.code = _emplace_code
 
-    with self.remove as f:
-      f.code = f"""
+    with self.remove as m:
+      m.code = f"""
         const size_t* v;
         size_t old_count;
         assert(target);
-        v = (const size_t*){self._map.view(_target, f.element)};
+        v = (const size_t*){self._map.view(_target, m.element)};
         if(!v) return 0;
         old_count = *v;
         if(old_count <= 1) {{
-          {self._map.remove(_target, f.element)};
+          {self._map.remove(_target, m.element)};
         }} else {{
-          {self._map.set(_target, f.element, "old_count - 1")};
+          {self._map.set(_target, m.element, "old_count - 1")};
         }}
         target->total_size -= 1;
         return 1;
       """
 
-    with self.wipe as f:
-      f.code = f"""
+    with self.wipe as m:
+      m.code = f"""
         const size_t* v;
         size_t old_count;
         assert(target);
-        v = (const size_t*){self._map.view(_target, f.element)};
+        v = (const size_t*){self._map.view(_target, m.element)};
         if(!v) return 0;
         old_count = *v;
-        {self._map.remove(_target, f.element)};
+        {self._map.remove(_target, m.element)};
         target->total_size -= old_count;
         return old_count;
       """
@@ -336,24 +336,24 @@ class Counter(_StructRenderer, Multiset):
         @param[in,out] target the counter to modify
         @param[in] element the element to remove completely
         @return the multiplicity removed
-      """) as f:
-      f.inline_code = lambda f=f: f"""
-        return {self.wipe(f.target, f.element)};
+      """) as m:
+      m.inline_code = lambda m: f"""
+        return {self.wipe(m.target, m.element)};
       """
 
-    with self.equal_range as f:
-      result = f.result.variable("result")
+    with self.equal_range as m:
+      result = m.result.variable("result")
       single = self.element.variable("result.single_element")
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         {result.definition};
         size_t cnt;
         assert(target);
-        cnt = {self.count(f.target, f.element)};
+        cnt = {self.count(m.target, m.element)};
         result.counter = target;
         result.is_single = 1;
         result.single_count = cnt;
         if(cnt > 0) {{
-          {self.element.copy(single, f.element)};
+          {self.element.copy(single, m.element)};
         }}
         return {result};
       """
@@ -362,47 +362,47 @@ class Counter(_StructRenderer, Multiset):
     r = self.range.variable("r")
     elem = self.element.variable("elem")
 
-    with self.union as f:
-      f.code = lambda f=f: f"""
+    with self.union as m:
+      m.code = lambda m: f"""
         size_t added = 0;
         {r.definition};
         assert(target);
         assert(other);
         if(target == other) return 0;
-        for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        for({r} = {self.range.new(m.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          size_t t_cnt = {self.count(f.target, elem)};
+          size_t t_cnt = {self.count(m.target, elem)};
           if(o_cnt > t_cnt) {{
-            {self.add(f.target, elem, "o_cnt - t_cnt")};
+            {self.add(m.target, elem, "o_cnt - t_cnt")};
             added += o_cnt - t_cnt;
           }}
         }}
         return added;
       """
 
-    with self.difference as f:
-      f.code = lambda f=f: f"""
+    with self.difference as m:
+      m.code = lambda m: f"""
         size_t removed = 0;
         {r.definition};
         assert(target);
         assert(other);
         if(target == other) {{
           removed = target->total_size;
-          {self.clear(f.target)};
+          {self.clear(m.target)};
           return removed;
         }}
-        for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        for({r} = {self.range.new(m.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          removed += {self.subtract(f.target, elem, "o_cnt")};
+          removed += {self.subtract(m.target, elem, "o_cnt")};
         }}
         return removed;
       """
 
-    with self.intersection as f:
+    with self.intersection as m:
       temp = self.variable("temp")
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t removed = 0;
         {self.name} {temp};
         {r.definition};
@@ -410,24 +410,24 @@ class Counter(_StructRenderer, Multiset):
         assert(other);
         if(target == other) return 0;
         {self.create(temp)};
-        {self.copy(temp, f.target)};
+        {self.copy(temp, m.target)};
         for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, elem)};
+          size_t o_cnt = {self.count(m.other, elem)};
           if(o_cnt == 0) {{
-            removed += {self.wipe(f.target, elem)};
+            removed += {self.wipe(m.target, elem)};
           }} else if(t_cnt > o_cnt) {{
-            removed += {self.subtract(f.target, elem, "t_cnt - o_cnt")};
+            removed += {self.subtract(m.target, elem, "t_cnt - o_cnt")};
           }}
         }}
         {self.destroy(temp)};
         return removed;
       """
 
-    with self.symmetric_difference as f:
+    with self.symmetric_difference as m:
       temp = self.variable("temp")
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t changed = 0;
         {self.name} {temp};
         {r.definition};
@@ -435,59 +435,59 @@ class Counter(_StructRenderer, Multiset):
         assert(other);
         if(target == other) {{
           changed = target->total_size;
-          {self.clear(f.target)};
+          {self.clear(m.target)};
           return changed;
         }}
         {self.create(temp)};
-        for({r} = {self.range.new(f.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        for({r} = {self.range.new(m.other)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t o_cnt = {self.range.count(r)};
-          size_t t_cnt = {self.count(f.target, elem)};
+          size_t t_cnt = {self.count(m.target, elem)};
           if(o_cnt > t_cnt) {{
             {self.add(temp, elem, "o_cnt - t_cnt")};
           }}
         }}
-        for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        for({r} = {self.range.new(m.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, elem)};
+          size_t o_cnt = {self.count(m.other, elem)};
           if(o_cnt > 0) {{
             size_t rem = t_cnt > o_cnt ? o_cnt : t_cnt;
-            {self.subtract(f.target, elem, "rem")};
+            {self.subtract(m.target, elem, "rem")};
             changed += rem;
           }}
         }}
         for({r} = {self.range.new(temp)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t cnt = {self.range.count(r)};
-          {self.add(f.target, elem, "cnt")};
+          {self.add(m.target, elem, "cnt")};
           changed += cnt;
         }}
         {self.destroy(temp)};
         return changed;
       """
 
-    with self.is_subset as f:
-      f.code = lambda f=f: f"""
+    with self.is_subset as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
         assert(other);
         if(target == other) return 1;
         if(target->total_size > other->total_size) return 0;
-        for({r} = {self.range.new(f.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
+        for({r} = {self.range.new(m.target)}; !{self.range.empty(r)}; {self.range.move_front(r)}) {{
           {elem.definition} = {self.range.front(r)};
           size_t t_cnt = {self.range.count(r)};
-          size_t o_cnt = {self.count(f.other, elem)};
+          size_t o_cnt = {self.count(m.other, elem)};
           if(t_cnt > o_cnt) return 0;
         }}
         return 1;
       """
 
-    with self.is_superset as f:
-      f.code = lambda f=f: f"""
+    with self.is_superset as m:
+      m.code = lambda m: f"""
         assert(target);
         assert(other);
-        return {self.is_subset(f.other, f.target)};
+        return {self.is_subset(m.other, m.target)};
       """
 
     with self.method(None, ("assign", "union"), {"target": inout(self), "other": self},
@@ -500,9 +500,9 @@ class Counter(_StructRenderer, Multiset):
 
         @param[in,out] target the destination counter
         @param[in] other the counter to unite with
-      """) as f:
-      f.inline_code = lambda f=f: f"""
-        ((void){self.union(f.target, f.other)});
+      """) as m:
+      m.inline_code = lambda m: f"""
+        ((void){self.union(m.target, m.other)});
       """
 
     with self.method(None, ("assign", "intersection"), {"target": inout(self), "other": self},
@@ -515,9 +515,9 @@ class Counter(_StructRenderer, Multiset):
 
         @param[in,out] target the destination counter
         @param[in] other the counter to intersect with
-      """) as f:
-      f.inline_code = lambda f=f: f"""
-        ((void){self.intersection(f.target, f.other)});
+      """) as m:
+      m.inline_code = lambda m: f"""
+        ((void){self.intersection(m.target, m.other)});
       """
 
     with self.method(None, ("assign", "difference"), {"target": inout(self), "other": self},
@@ -530,9 +530,9 @@ class Counter(_StructRenderer, Multiset):
 
         @param[in,out] target the counter to subtract from
         @param[in] other the counter whose multiplicities are subtracted
-      """) as f:
-      f.inline_code = lambda f=f: f"""
-        ((void){self.difference(f.target, f.other)});
+      """) as m:
+      m.inline_code = lambda m: f"""
+        ((void){self.difference(m.target, m.other)});
       """
 
 
@@ -577,27 +577,27 @@ class Range(_Range, Forward):
 
         @param[in] iterable the counter to span
         @return the range covering the counter
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(iterable);
-        result.range = {self._map_range.new(f"&{f.iterable}->map")};
+        result.range = {self._map_range.new(f"&{m.iterable}->map")};
         result.counter = iterable;
         result.single_count = 0;
         result.is_single = 0;
         return {result};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         if(target->is_single) return target->single_count == 0;
         return {self._map_range.empty(_range)};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
         if(target->is_single) {{
           target->single_count = 0;
@@ -606,15 +606,15 @@ class Range(_Range, Forward):
         {self._map_range.move_front(_range)};
       """
 
-    with self.front_view as f:
-      f.code = f"""
+    with self.front_view as m:
+      m.code = f"""
         assert(target);
         if(target->is_single) return &target->single_element;
         return {self._map_range.index_front_view(_range)};
       """
 
-    with self.front as f:
-      f.code = f"""
+    with self.front as m:
+      m.code = f"""
         assert(target);
         if(target->is_single) return target->single_element;
         return {self._map_range.index_front(_range)};
@@ -626,8 +626,8 @@ class Range(_Range, Forward):
 
         @param[in] target the range to read
         @return the multiplicity count
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
         if(target->is_single) return target->single_count;
         return *{self._map_range.front_view(_range)};

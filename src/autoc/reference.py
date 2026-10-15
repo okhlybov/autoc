@@ -55,8 +55,8 @@ class _Reference(Indirection, Composite):
         @param[in,out] left the first reference
         @param[in,out] right the second reference
       """)
-    with self.swap as f:
-      f.inline_code = f"""
+    with self.swap as m:
+      m.inline_code = f"""
         {self} temp;
         temp = *left;
         *left = *right;
@@ -98,28 +98,28 @@ class Raw(_AliasRenderer, _Reference):
   def __setup__(self):
     super().__setup__()
     
-    with self.new as f:
-      result = f.result.variable("result")
-      f.inline_code = f"""
+    with self.new as m:
+      result = m.result.variable("result")
+      m.inline_code = f"""
         {result.definition};
         {result} = {self.memory.allocate(self.type)};
-        {self.type.create(result, *f.arguments)};
+        {self.type.create(result, *m.arguments)};
         return {result};
       """
       
-    with self.share as f:
-      f.inline_code = f"""
+    with self.share as m:
+      m.inline_code = f"""
         assert(source);
-        return ({self}){f.source};
+        return ({self}){m.source};
       """
       
-    with self.free as f:
+    with self.free as m:
       # Raw bears no layout of its own: new() allocates the referenced type
       # directly, so free() releases exactly that allocation
-      f.code = f"""
-        if({f.target}) {{
-          {self.type.destroy(f.target) if self.type.destructible else str()};
-          {self.memory.free(f"(void*){f.target}")};
+      m.code = f"""
+        if({m.target}) {{
+          {self.type.destroy(m.target) if self.type.destructible else str()};
+          {self.memory.free(f"(void*){m.target}")};
         }}
       """
 
@@ -174,29 +174,29 @@ class Counted(_StructRenderer, _Reference):
       @param[in,out] right the second reference
     """
     
-    with self.new as f:
+    with self.new as m:
       value = self.type.variable("storage->value")
-      f.inline_code = f"""
+      m.inline_code = f"""
         {self._layout}* storage;
         storage = {self.memory.allocate(f"sizeof({self._layout})", cast=self._layout)};
-        {self.type.create(value, *f.arguments)};
+        {self.type.create(value, *m.arguments)};
         storage->count = 1;
-        return ({f.result})storage;
+        return ({m.result})storage;
       """
       
-    with self.share as f:
-      f.inline_code = f"""
+    with self.share as m:
+      m.inline_code = f"""
         assert(source);
-        ++(({self._layout}*){f.source})->count;
-        return ({self}){f.source};
+        ++(({self._layout}*){m.source})->count;
+        return ({self}){m.source};
       """
       
-    with self.free as f:
-      f.inline_code = f"""
-        if({f.target}) {{
-          if(--(({self._layout}*){f.target})->count == 0) {{
-            {self.type.destroy(f.target) if self.type.destructible else str()};
-            {self.memory.free(f"({self._layout}*){f.target}")};
+    with self.free as m:
+      m.inline_code = f"""
+        if({m.target}) {{
+          if(--(({self._layout}*){m.target})->count == 0) {{
+            {self.type.destroy(m.target) if self.type.destructible else str()};
+            {self.memory.free(f"({self._layout}*){m.target}")};
           }}
         }}
       """

@@ -23,66 +23,66 @@ class _Entry(Record):
     _index = self.index.variable("target->index")
     _element = self.element.variable("target->element")
 
-    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of element (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self.element_p), ("element", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of element (internal)") as m:
+      m.code = f"""
         assert(target);
-        return {self.element.variable("target->element").bind(f.result)};
+        return {self.element.variable("target->element").bind(m.result)};
       """
 
-    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of index (internal)") as f:
-      f.code = f"""
+    with self.method(Callable.Parameter(self.index_p), ("index", "view"), {"target": self}, hidden=True, visibility="internal", brief="Get view of index (internal)") as m:
+      m.code = f"""
         assert(target);
-        return {self.index.variable("target->index").bind(f.result)};
+        return {self.index.variable("target->index").bind(m.result)};
       """
 
-    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable, brief="Emplace index (internal)") as f:
-      f.code = f"""
+    with self.method(None, ("emplace", "index"), {"target": inout(self), "index": self.index}, hidden=True, visibility="internal", constraint=lambda: self.index.copyable, brief="Emplace index (internal)") as m:
+      m.code = f"""
         assert(target);
-        {self.index.copy(_index, f.index)};
+        {self.index.copy(_index, m.index)};
       """
 
-    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy index (internal)") as f:
+    with self.method(None, ("destroy", "index"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy index (internal)") as m:
       if self.index.destructible:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           {self.index.destroy(_index)};
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
         """
       
-    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Emplace element (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("emplace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Emplace element (internal)") as m:
+      m.code = lambda m: f"""
         assert(target);
-        {self.element.copy(_element, f.element)};
+        {self.element.copy(_element, m.element)};
       """
 
-    with self.method(None, ("create", "element"), {"target": inout(self)} | self.element.constructor_parameters, hidden=True, visibility="internal", constraint=lambda: self.element.emplaceable, brief="Create element in-place (internal)") as f:
-      def _create_element(f=f):
-        create_args = [getattr(f, name) for name in self.element.constructor_parameters]
+    with self.method(None, ("create", "element"), {"target": inout(self)} | self.element.constructor_parameters, hidden=True, visibility="internal", constraint=lambda: self.element.emplaceable, brief="Create element in-place (internal)") as m:
+      def _create_element(m):
+        create_args = [getattr(m, name) for name in self.element.constructor_parameters]
         return f"""
           assert(target);
           {self.element.create(_element, *create_args)};
         """
-      f.code = _create_element
+      m.code = _create_element
 
-    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy element (internal)") as f:
+    with self.method(None, ("destroy", "element"), {"target": inout(self)}, hidden=True, visibility="internal", brief="Destroy element (internal)") as m:
       if self.element.destructible:
-        f.code = f"""
+        m.code = f"""
           assert(target);
           {self.element.destroy(_element)};
         """
       else:
-        f.code = f"""
+        m.code = f"""
           assert(target);
         """
 
-    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Replace element in-place (internal)") as f:
-      f.code = lambda f=f: f"""
+    with self.method(None, ("replace", "element"), {"target": inout(self), "element": self.element}, hidden=True, visibility="internal", constraint=lambda: self.element.copyable, brief="Replace element in-place (internal)") as m:
+      m.code = lambda m: f"""
         assert(target);
-        {self.destroy_element(f.target)};
-        {self.element.copy(_element, f.element)};
+        {self.destroy_element(m.target)};
+        {self.element.copy(_element, m.element)};
       """
 
     self.hash_lookup_hash = Macro(std.size_t, {"target": self}, lambda target: str(self.index.hash( self.index.variable(f"(({target}).index)") )))
@@ -92,16 +92,16 @@ class _Entry(Record):
     # must compare them by the index as well - the hash-based backends need no ordering and
     # stay usable over non-orderable indices
     if self.index.comparable:
-      with self.equal as f:
-        f.code = f"""
+      with self.equal as m:
+        m.code = f"""
           assert(left);
           assert(right);
           return {self.index.equal(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
         """
 
     if self.index.orderable:
-      with self.compare as f:
-        f.code = f"""
+      with self.compare as m:
+        m.code = f"""
           assert(left);
           assert(right);
           return {self.index.compare(self.index.variable("((left)->index)"), self.index.variable("((right)->index)"))};
@@ -162,17 +162,17 @@ class Range(_Range, Forward):
 
         @param[in] iterable the mapping to span
         @return the range covering the whole mapping {order_doc}
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(iterable);
-        result.range = {self._range.new(f"&{f.iterable}->set")};
+        result.range = {self._range.new(f"&{m.iterable}->set")};
         return {result};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return {self._range.empty(_target_range)};
       """
@@ -184,27 +184,27 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a constant view of the front index
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.index_view(self._range.front_view(_target_range)).bind(self.index.view_type)};
       """
 
-    with self.front as f:
-      result = f.result.variable("result")
-      f.code = f"""
+    with self.front as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, self._entry.element_view(self._range.front_view(_target_range)))};
         return {result};
       """
 
-    with self.front_view as f:
-      f.code = f"""
+    with self.front_view as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.element_view(self._range.front_view(_target_range)).bind(self.element.view_type)};
       """
 
@@ -214,20 +214,20 @@ class Range(_Range, Forward):
 
         @param[in] target the non-empty range to inspect
         @return a copy of the front index
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.index.copy(result, self._entry.index_view(self._range.front_view(_target_range)))};
         return {result};
       """
 
-    with self.move_front as f:
-      f.code = f"""
+    with self.move_front as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self._range.move_front(_target_range)};
       """
 
@@ -250,19 +250,19 @@ class BidirectionalRange(Range, Bidirectional):
 
         @param[in] target the non-empty range to inspect
         @return a constant view of the back element
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.element_view(self._range.back_view(_target_range)).bind(self.element.view_type)};
       """
 
-    with self.back as f:
-      result = f.result.variable("result")
-      f.code = f"""
+    with self.back as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.element.copy(result, self._entry.element_view(self._range.back_view(_target_range)))};
         return {result};
       """
@@ -274,10 +274,10 @@ class BidirectionalRange(Range, Bidirectional):
 
         @param[in] target the non-empty range to inspect
         @return a constant view of the back index
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         return {self._entry.index_view(self._range.back_view(_target_range)).bind(self.index.view_type)};
       """
 
@@ -287,20 +287,20 @@ class BidirectionalRange(Range, Bidirectional):
 
         @param[in] target the non-empty range to inspect
         @return a copy of the back index
-      """) as f:
-      result = f.result.variable("result")
-      f.code = f"""
+      """) as m:
+      result = m.result.variable("result")
+      m.code = f"""
         {result.definition};
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self.index.copy(result, self._entry.index_view(self._range.back_view(_target_range)))};
         return {result};
       """
 
-    with self.move_back as f:
-      f.code = f"""
+    with self.move_back as m:
+      m.code = f"""
         assert(target);
-        assert(!{self.empty(f.target)});
+        assert(!{self.empty(m.target)});
         {self._range.move_back(_target_range)};
       """
 
@@ -344,61 +344,61 @@ class Mapping(_StructRenderer, Traversable, Assignable):
     _left = self._set.variable("left->set")
     _right = self._set.variable("right->set")
 
-    with self.create as f:
-      f.code = f"""
+    with self.create as m:
+      m.code = f"""
         assert(target);
         {self._set.create(_target)};
       """
 
-    with self.destroy as f:
-      f.code = f"""
+    with self.destroy as m:
+      m.code = f"""
         assert(target);
         {self._set.destroy(_target)};
       """
 
-    with self.copy as f:
-      f.code = f"""
+    with self.copy as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._set.copy(_target, _source)};
       """
 
-    with self.move as f:
-      f.code = f"""
+    with self.move as m:
+      m.code = f"""
         assert(target);
         assert(source);
         {self._set.move(_target, _source)};
       """
 
-    with self.equal as f:
-      f.code = lambda f=f: f"""
+    with self.equal as m:
+      m.code = lambda m: f"""
         assert(left);
         assert(right);
         return {self._set.equal(_left, _right)};
       """
 
     if self.orderable:
-      with self.compare as f:
-        f.code = lambda f=f: f"""
+      with self.compare as m:
+        m.code = lambda m: f"""
           assert(left);
           assert(right);
           return {self._set.compare(_left, _right)};
         """
 
-    with self.hash as f:
-      f.code = lambda f=f: f"""
+    with self.hash as m:
+      m.code = lambda m: f"""
         assert(target);
         return {self._set.hash(_target)};
       """
 
-    with self.empty as f:
-      f.code = f"""
+    with self.empty as m:
+      m.code = f"""
         assert(target);
         return {self._set.empty(_target)};
       """
 
-    with self.size as f:
-      f.code = f"""
+    with self.size as m:
+      m.code = f"""
         assert(target);
         return {self._set.size(_target)};
       """
@@ -406,20 +406,20 @@ class Mapping(_StructRenderer, Traversable, Assignable):
     set = self._set
     entry = set.element
 
-    with self.indexed as f:
-      f.code = f"""
+    with self.indexed as m:
+      m.code = f"""
         assert(target);
-        return {self.view(f.target, f.index)} != NULL;
+        return {self.view(m.target, m.index)} != NULL;
       """
 
-    with self.get as f:
+    with self.get as m:
       _element_p = entry.element_p.variable("element_p")
-      result = f.result.variable("result")
-      f.code = f"""
+      result = m.result.variable("result")
+      m.code = f"""
         {_element_p.definition};
         {result.definition};
         assert(target);
-        {_element_p} = ({_element_p.type}){self.view(f.target, f.index)};
+        {_element_p} = ({_element_p.type}){self.view(m.target, m.index)};
         if(!{_element_p}) abort();
         {self.element.copy(result, _element_p)};
         return {result};
@@ -434,12 +434,12 @@ class Mapping(_StructRenderer, Traversable, Assignable):
         @param[in,out] target the map to modify
         @param[in] index the key to remove
         @return 1 if an entry was removed, 0 if not found
-      """) as f:
-      f.code = f"""
+      """) as m:
+      m.code = f"""
         {_entry.definition};
         int removed;
         assert(target);
-        {entry.emplace_index(_entry, f.index)};
+        {entry.emplace_index(_entry, m.index)};
         removed = {set.remove(_target, _entry)};
         {entry.destroy_index(_entry)};
         return removed;

@@ -43,12 +43,12 @@ class OpaqueType(Composite):
   def __setup__(self):
     super().__setup__()
     # Define create, copy, destroy so it's a valid copyable type
-    with self.create as f:
-      f.inline_code = "assert(target); target->value = 0;"
-    with self.copy as f:
-      f.inline_code = "assert(target); assert(source); target->value = source->value;"
-    with self.destroy as f:
-      f.inline_code = "assert(target);"
+    with self.create as m:
+      m.inline_code = "assert(target); target->value = 0;"
+    with self.copy as m:
+      m.inline_code = "assert(target); assert(source); target->value = source->value;"
+    with self.destroy as m:
+      m.inline_code = "assert(target);"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
@@ -63,14 +63,14 @@ class ComparableOnlyType(Composite):
 
   def __setup__(self):
     super().__setup__()
-    with self.create as f:
-      f.inline_code = "assert(target); target->value = 0;"
-    with self.copy as f:
-      f.inline_code = "assert(target); assert(source); target->value = source->value;"
-    with self.destroy as f:
-      f.inline_code = "assert(target);"
-    with self.equal as f:
-      f.inline_code = "return 1;"
+    with self.create as m:
+      m.inline_code = "assert(target); target->value = 0;"
+    with self.copy as m:
+      m.inline_code = "assert(target); assert(source); target->value = source->value;"
+    with self.destroy as m:
+      m.inline_code = "assert(target);"
+    with self.equal as m:
+      m.inline_code = "return 1;"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

@@ -47,58 +47,58 @@ class Map(Mapping, Hashed):
     node_index = entry.index.variable("n->element.index")
     _target = self._set.variable("target->set")
 
-    with self.view as f:
-      f.code = f"""
+    with self.view as m:
+      m.code = f"""
         size_t bucket;
         {n.definition};
         assert(target);
         if(!target->set.buckets) return ({self.element.view_type})NULL;
-        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+        bucket = {self.index.hash(m.index)} & (target->set.capacity-1);
         for(n = target->set.buckets[bucket]; n; n = n->next) {{
-          if({self.index.equal(node_index, f.index)}) return {entry.element_view(node_entry).bind(self.element.view_type)};
+          if({self.index.equal(node_index, m.index)}) return {entry.element_view(node_entry).bind(self.element.view_type)};
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.set as f:
-      f.code = f"""
+    with self.set as m:
+      m.code = f"""
         size_t bucket;
         {n.definition};
         assert(target);
-        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+        bucket = {self.index.hash(m.index)} & (target->set.capacity-1);
         for(n = (target->set.buckets ? target->set.buckets[bucket] : ({n.type})NULL); n; n = n->next) {{
-          if({self.index.equal(node_index, f.index)}) break;
+          if({self.index.equal(node_index, m.index)}) break;
         }}
         if(n) {{
-          {entry.replace_element(node_entry, f.element)}; /* an entry with the specified index already exists - replace its element's contents in-place */
+          {entry.replace_element(node_entry, m.element)}; /* an entry with the specified index already exists - replace its element's contents in-place */
         }} else {{
           {self._set.resize(_target, "target->set.size+1")};
-          bucket = {self.index.hash(f.index)} & (target->set.capacity-1); /* the capacity might have changed - recompute the bucket */
+          bucket = {self.index.hash(m.index)} & (target->set.capacity-1); /* the capacity might have changed - recompute the bucket */
           {n} = {self.memory.allocate(set.node)};
-          {entry.emplace_index(node_entry, f.index)};
-          {entry.emplace_element(node_entry, f.element)};
+          {entry.emplace_index(node_entry, m.index)};
+          {entry.emplace_element(node_entry, m.element)};
           n->next = target->set.buckets[bucket];
           target->set.buckets[bucket] = n;
           ++target->set.size;
         }}
       """
 
-    with self.emplace as f:
-      create_args = [getattr(f, name) for name in self.element.constructor_parameters]
-      f.code = f"""
+    with self.emplace as m:
+      create_args = [getattr(m, name) for name in self.element.constructor_parameters]
+      m.code = f"""
         size_t bucket;
         {n.definition};
         assert(target);
         if(target->set.capacity > 0) {{
-          bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+          bucket = {self.index.hash(m.index)} & (target->set.capacity-1);
           for(n = (target->set.buckets ? target->set.buckets[bucket] : ({n.type})NULL); n; n = n->next) {{
-            if({self.index.equal(node_index, f.index)}) return 0;
+            if({self.index.equal(node_index, m.index)}) return 0;
           }}
         }}
         {self._set.resize(_target, "target->set.size+1")};
-        bucket = {self.index.hash(f.index)} & (target->set.capacity-1);
+        bucket = {self.index.hash(m.index)} & (target->set.capacity-1);
         {n} = {self.memory.allocate(set.node)};
-        {entry.emplace_index(node_entry, f.index)};
+        {entry.emplace_index(node_entry, m.index)};
         {entry.create_element(node_entry, *create_args)};
         n->next = target->set.buckets[bucket];
         target->set.buckets[bucket] = n;

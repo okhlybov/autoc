@@ -11,10 +11,10 @@ class Type(_StructRenderer, Composite):
 
   def __setup__(self):
     super().__setup__()
-    with self.create as f:
-      f.inline_code = "assert(target); target->value = 7;"
-    with self.destroy as f:
-      f.inline_code = "assert(target);"
+    with self.create as m:
+      m.inline_code = "assert(target); target->value = 7;"
+    with self.destroy as m:
+      m.inline_code = "assert(target);"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)

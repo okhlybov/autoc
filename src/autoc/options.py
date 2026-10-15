@@ -48,22 +48,22 @@ class Option(Composite):
     element = self.element
     e = "(*target)"
 
-    with self.create as f:
-      f.inline_code = f"""
+    with self.create as m:
+      m.inline_code = f"""
         assert(target);
         {self._mark(0)(e)};
       """
 
     destroy_slot = element.destroy(self._slot_var(e)) if self.destructible else ""
     if self.destructible:
-      with self.destroy as f:
-        f.inline_code = f"""
+      with self.destroy as m:
+        m.inline_code = f"""
           assert(target);
           if({self._engaged(e)}) {{{destroy_slot};}}
         """
 
-    with self.copy as f:
-      f.inline_code = f"""
+    with self.copy as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         if({self._engaged("(*source)")}) {{
@@ -72,8 +72,8 @@ class Option(Composite):
         {self._mark_states_from(e, "(*source)")};
       """
 
-    with self.move as f:
-      f.inline_code = f"""
+    with self.move as m:
+      m.inline_code = f"""
         assert(target);
         assert(source);
         if({self._engaged("(*source)")}) {{
@@ -85,29 +85,29 @@ class Option(Composite):
 
     # The generic swap exchanges the two values through the move protocol - a plain
     # struct exchange would shallow-copy the element leaving both sides owning it
-    with self.swap as f:
+    with self.swap as m:
       temp = self.variable("temp")
       destroy_temp = f"{self.destroy(temp)};" if self.destructible else ""
-      f.inline_code = f"""
+      m.inline_code = f"""
         {temp.definition};
         assert(left);
         assert(right);
         {self.create(temp)};
-        {self.move(temp, f.left)};
-        {self.move(f.left, f.right)};
-        {self.move(f.right, temp)};
+        {self.move(temp, m.left)};
+        {self.move(m.left, m.right)};
+        {self.move(m.right, temp)};
         {destroy_temp}
       """
 
     if element.comparable:
-      with self.equal as f:
+      with self.equal as m:
         state_diff = [f"if(({self._is(s)(f"(*left)")}) != ({self._is(s)(f"(*right)")})) return 0;" for s in self.sentinel_states]
-        f.inline_code = [f"assert(left);", f"assert(right);", *state_diff,
+        m.inline_code = [f"assert(left);", f"assert(right);", *state_diff,
                          f"if(!{self._engaged("(*left)")}) return 1;",
                          f"return {element.equal(self._slot_var("(*left)"), self._slot_var("(*right)"))};"]
 
     if element.orderable:
-      with self.compare as f:
+      with self.compare as m:
         # empty orders before the value which orders before the user states in index order
         user_states = [s for s in self.sentinel_states if s != 0]
         def side(e):
@@ -115,16 +115,16 @@ class Option(Composite):
           for rank, s in enumerate(user_states, start=2):
             chain.append(f"({self._is(s)(e)}) ? {rank} : ")
           return f"({"".join(chain)}1)"
-        f.inline_code = [f"assert(left);", f"assert(right);",
+        m.inline_code = [f"assert(left);", f"assert(right);",
                          f"int l = {side("(*left)")}, r = {side("(*right)")};",
                          f"if(l != r) return l < r ? -1 : +1;",
                          f"if(l != 1) return 0;",
                          f"return {element.compare(self._slot_var("(*left)"), self._slot_var("(*right)"))};"]
 
     if element.hashable:
-      with self.hash as f:
+      with self.hash as m:
         state = self.hasher.state_t.variable("state")
-        f.inline_code = [f"{state.definition}; size_t result;",
+        m.inline_code = [f"{state.definition}; size_t result;",
                          f"assert(target);",
                          f"{self.hasher.create(state)};",
                          f"{self.hasher.update(state, f"(size_t)({self._state_chain(e)})")};",
@@ -140,8 +140,8 @@ class Option(Composite):
 
         @param[in] target the optional to check
         @return non-zero when the optional is in the empty state
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {self._is(0)(e)};
       """
@@ -156,8 +156,8 @@ class Option(Composite):
 
               @param[in] target the optional to check
               @return non-zero when the optional is in the {name} state
-            """) as f:
-            f.inline_code = f"""
+            """) as m:
+            m.inline_code = f"""
               assert(target);
               return {self._is(s)(e)};
             """
@@ -169,8 +169,8 @@ class Option(Composite):
 
         @param[in] target the optional to check
         @return non-zero when the optional holds an element value
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {self._engaged(e)};
       """
@@ -182,8 +182,8 @@ class Option(Composite):
 
         @param[in] target the optional to inspect
         @return the current state index
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         return {self._state_chain(e)};
       """
@@ -195,9 +195,9 @@ class Option(Composite):
 
           @param[in] target the optional to read
           @return the held element value
-        """) as f:
-        result = f.result.variable("result")
-        f.inline_code = f"""
+        """) as m:
+        result = m.result.variable("result")
+        m.inline_code = f"""
           {result.definition};
           assert(target);
           assert({self._engaged(e)});
@@ -211,11 +211,11 @@ class Option(Composite):
 
         @param[in] target the optional to inspect
         @return constant view of the held element value
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         assert({self._engaged(e)});
-        return {self._slot_var(e).bind(f.result)};
+        return {self._slot_var(e).bind(m.result)};
       """
 
     if element.copyable:
@@ -226,13 +226,13 @@ class Option(Composite):
 
           @param[in,out] target the optional to engage
           @param[in] element the element to copy
-        """) as f:
+        """) as m:
         engaged_mark = self._mark(self.engaged_state)(e)
         engaged_code = f"\n          {engaged_mark};" if engaged_mark else ""
-        f.inline_code = f"""
+        m.inline_code = f"""
           assert(target);
           if({self._engaged(e)}) {{{destroy_slot};}}
-          {element.copy(self._slot_var(e), f.element)};{engaged_code}
+          {element.copy(self._slot_var(e), m.element)};{engaged_code}
         """
 
     if element.emplaceable:
@@ -244,11 +244,11 @@ class Option(Composite):
           place with the forwarded parameters.
 
           @param[in,out] target the optional to engage
-        """) as f:
-        create_args = [getattr(f, name) for name in element.constructor_parameters]
+        """) as m:
+        create_args = [getattr(m, name) for name in element.constructor_parameters]
         engaged_mark = self._mark(self.engaged_state)(e)
         engaged_code = f"\n          {engaged_mark};" if engaged_mark else ""
-        f.inline_code = f"""
+        m.inline_code = f"""
           assert(target);
           if({self._engaged(e)}) {{{destroy_slot};}}
           {element.create(self._slot_var(e), *create_args)};{engaged_code}
@@ -260,8 +260,8 @@ class Option(Composite):
         empty state.
 
         @param[in,out] target the optional to reset
-      """) as f:
-      f.inline_code = f"""
+      """) as m:
+      m.inline_code = f"""
         assert(target);
         if({self._engaged(e)}) {{{destroy_slot};}}
         {self._mark(0)(e)};
@@ -275,11 +275,11 @@ class Option(Composite):
 
           @param[in,out] target the optional to transition
           @param[in] state the state to enter
-        """) as f:
-        marks = [f"if({f.state} == {s}) {{{self._mark(s)(e)};}}" for s in self.sentinel_states]
-        f.inline_code = f"""
+        """) as m:
+        marks = [f"if({m.state} == {s}) {{{self._mark(s)(e)};}}" for s in self.sentinel_states]
+        m.inline_code = f"""
           assert(target);
-          assert({f.state} >= 0 && {f.state} < {self.nstates});
+          assert({m.state} >= 0 && {m.state} < {self.nstates});
           if({self._engaged(e)}) {{
             {{{destroy_slot};}}
           }}

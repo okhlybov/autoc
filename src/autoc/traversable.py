@@ -16,25 +16,25 @@ class Traversable(Container):
     range = self.range
     r = range.variable("r")
 
-    with self.find_view as f:
-      f.code = lambda f=f: f"""
+    with self.find_view as m:
+      m.code = lambda m: f"""
         {r.definition};
         assert(target);
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
-          if({self.element.equal(range.front_view(r), f.element)}) return {range.front_view(r)};
+        for({r} = {range.new(m.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+          if({self.element.equal(range.front_view(r), m.element)}) return {range.front_view(r)};
         }}
         return ({self.element.view_type})NULL;
       """
 
-    with self.hash as f:
+    with self.hash as m:
       state = self.hasher.state_t.variable("state")
-      f.code = lambda f=f: f"""
+      m.code = lambda m: f"""
         size_t result;
         {r.definition};
         {state.definition};
         assert(target);
         {self.hasher.create(state)};
-        for({r} = {range.new(f.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
+        for({r} = {range.new(m.target)}; !{range.empty(r)}; {range.move_front(r)}) {{
           {self.hasher.update(state, self.element.hash(range.front_view(r)))};
         }}
         result = {self.hasher.hash(state)};

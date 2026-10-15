@@ -10,18 +10,18 @@ class Type(_StructRenderer, Composite):
 
   def __setup__(self):
     super().__setup__()
-    with self.create as f:
-      f.inline_code = "assert(target); target->value = (int*)malloc(sizeof(int)); *target->value = -1;"
-    with self.destroy as f:
-      f.inline_code = "assert(target); free(target->value);"
-    with self.copy as f:
-      f.inline_code = "assert(target); assert(source); target->value = (int*)malloc(sizeof(int)); *target->value = *source->value;"
-    with self.equal as f:
-      f.inline_code = "return *left->value == *right->value;"
-    with self.compare as f:
-      f.inline_code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
-    with self.hash as f:
-      f.inline_code = "return (size_t)*target->value;"
+    with self.create as m:
+      m.inline_code = "assert(target); target->value = (int*)malloc(sizeof(int)); *target->value = -1;"
+    with self.destroy as m:
+      m.inline_code = "assert(target); free(target->value);"
+    with self.copy as m:
+      m.inline_code = "assert(target); assert(source); target->value = (int*)malloc(sizeof(int)); *target->value = *source->value;"
+    with self.equal as m:
+      m.inline_code = "return *left->value == *right->value;"
+    with self.compare as m:
+      m.inline_code = "return *left->value == *right->value ? 0 : (*left->value > *right->value ? +1 : -1);"
+    with self.hash as m:
+      m.inline_code = "return (size_t)*target->value;"
 
   def _render_struct(self, stream, header):
     super()._render_struct(stream, header)
