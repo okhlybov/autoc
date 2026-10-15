@@ -4,14 +4,18 @@ from autoc.intrusive_hash_map import Map
 # Better to use index field for marking entries otherwise
 # memory debuggers gonna complain about uninitialized access
 
-xs = {
-  "is_empty": lambda entry: f"{entry}.index == INT_MIN /* EMPTY? */",
-  "mark_empty": lambda entry: f"{entry}.index = INT_MIN /* EMPTY */",
-  "is_deleted": lambda entry: f"{entry}.index == INT_MAX /* DELETED? */",
-  "mark_deleted": lambda entry: f"{entry}.index = INT_MAX /* DELETED */",
+states = {
+  "empty": (
+    lambda entry: f"{entry}.index == INT_MIN /* empty? */",
+    lambda entry: f"{entry}.index = INT_MIN /* empty! */",
+  ),
+  "deleted": (
+    lambda entry: f"{entry}.index == INT_MAX /* deleted? */",
+    lambda entry: f"{entry}.index = INT_MAX /* deleted! */",
+  ),
 }
 
-x = Type(type := Map("intrusive_int2int_hash_map", "int", "int", **xs))
+x = Type(type := Map("intrusive_int2int_hash_map", "int", "int", states))
 
 t = type.variable("t")
 

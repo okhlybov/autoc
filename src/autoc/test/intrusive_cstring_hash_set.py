@@ -3,14 +3,18 @@ from autoc.intrusive_hash_set import Set
 from autoc.test.cstring import cstring, s
 
 
-xs = {
-  "is_empty": lambda element: f"{element} == (char*)(unsigned long)0  /* EMPTY? */",
-  "mark_empty": lambda element: f"{element} = (char*)(unsigned long)0  /* EMPTY */",
-  "is_deleted": lambda element: f"{element} == (char*)(unsigned long)1  /* DELETED? */",
-  "mark_deleted": lambda element: f"{element} = (char*)(unsigned long)1  /* DELETED */",
+states = {
+  "empty": (
+    lambda element: f"{element} == (char*)(unsigned long)0  /* empty? */",
+    lambda element: f"{element} = (char*)(unsigned long)0  /* empty! */",
+  ),
+  "deleted": (
+    lambda element: f"{element} == (char*)(unsigned long)1  /* deleted? */",
+    lambda element: f"{element} = (char*)(unsigned long)1  /* deleted! */",
+  ),
 }
 
-x = Type(type := Set("intrusive_cstring_hash_set", cstring, **xs))
+x = Type(type := Set("intrusive_cstring_hash_set", cstring, states))
 
 t = type.variable("t")
 

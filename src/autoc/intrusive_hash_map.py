@@ -11,22 +11,20 @@ class Map(Mapping, Hashed):
   brief = "Map from index to element over open addressing with sentinel values"
 
   @enforced
-  def _make_set(self, backend: autoc.set.Set & Hashed = Set, **kwargs):
+  def _make_set(self, states, backend: autoc.set.Set & Hashed = Set, **kwargs):
     return backend(
       self._decorate_component("set", abbreviate=True),
       _Entry(self._decorate_component("entry", abbreviate=True), self.element, self.index, visibility="internal"),
+      states,
       visibility="internal",
       algebraic_operations=False,
       **kwargs,
     )
 
-  def __init__(self, name, element, index, *args, is_empty, is_deleted, mark_empty, mark_deleted, **kwargs):
+  def __init__(self, name, element, index, states, *args, **kwargs):
     super().__init__(name, element, index, *args, **kwargs)
     self._set = self._make_set(
-      is_empty=is_empty,
-      mark_empty=mark_empty,
-      is_deleted=is_deleted,
-      mark_deleted=mark_deleted,
+      states,
     )
     self.dependencies.add(self._set)
     self._setup_range()
@@ -53,6 +51,7 @@ class Map(Mapping, Hashed):
     _entry = entry.variable("entry")
     _target = self._set.variable("target->set")
     slot = entry.variable("target->set.elements[i]")
+    slot_opt = set.slot.variable("target->set.elements[i]")
     slot_index = self.index.variable("target->set.elements[i].index")
 
     with self.view as f:
@@ -68,15 +67,15 @@ class Map(Mapping, Hashed):
           assert(target->set.capacity > 0);
           start = {self.index.hash(f.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 return {entry.element_view(slot).bind(self.element.view_type)};
               }}
             }} else goto not_found;
           }}
           for(i = 0; i < start; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 return {entry.element_view(slot).bind(self.element.view_type)};
               }}
             }} else goto not_found;
@@ -99,16 +98,16 @@ class Map(Mapping, Hashed):
           assert(target->set.capacity > 0);
           start = {self.index.hash(f.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 {entry.replace_element(slot, f.element)};
                 return;
               }}
             }} else goto do_insert;
           }}
           for(i = 0; i < start; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 {entry.replace_element(slot, f.element)};
                 return;
               }}
@@ -132,15 +131,15 @@ class Map(Mapping, Hashed):
         if(target->set.capacity > 0) {{
           start = {self.index.hash(f.index)} & (target->set.capacity - 1);
           for(i = start; i < target->set.capacity; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 return 0;
               }}
             }} else goto do_emplace_insert;
           }}
           for(i = 0; i < start; ++i) {{
-            if(!({set.is_empty(slot)})) {{
-              if(!({set.is_deleted(slot)}) && {self.index.equal(slot_index, f.index)}) {{
+            if(!{set.slot.empty(slot_opt)}) {{
+              if({set.slot.primed(slot_opt)} && {self.index.equal(slot_index, f.index)}) {{
                 return 0;
               }}
             }} else goto do_emplace_insert;

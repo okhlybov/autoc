@@ -2,14 +2,18 @@ from autoc.test import *
 from autoc.intrusive_hash_set import Set
 from autoc.test.primitive_arc import type
 
-xs = dict(
-  is_empty=lambda element: f"{element} == ({type})(size_t)2 /* empty? */",
-  mark_empty=lambda element: f"{element} = ({type})(size_t)2 /* empty! */",
-  is_deleted=lambda element: f"{element} == ({type})(size_t)1 /* deleted? */",
-  mark_deleted=lambda element: f"{element} = ({type})(size_t)1 /* deleted! */",
-)
+states = {
+  "empty": (
+    lambda element: f"{element} == ({type})(size_t)2 /* empty? */",
+    lambda element: f"{element} = ({type})(size_t)2 /* empty! */",
+  ),
+  "deleted": (
+    lambda element: f"{element} == ({type})(size_t)1 /* deleted? */",
+    lambda element: f"{element} = ({type})(size_t)1 /* deleted! */",
+  ),
+}
 
-x = Type(type := Set("intrusive_primitive_arc_hash_set", type, **xs))
+x = Type(type := Set("intrusive_primitive_arc_hash_set", type, states))
 
 t = type.variable("t")
 t1 = type.variable("t1")

@@ -1,16 +1,19 @@
 from autoc.test import *
-import autoc.std as std
 from autoc.intrusive_hash_set import Set
 
 
-xs = {
-  "is_empty": lambda element: f"{element} == INT_MIN /* EMPTY? */",
-  "mark_empty": lambda element: f"{element} = INT_MIN /* EMPTY */",
-  "is_deleted": lambda element: f"{element} == INT_MAX /* DELETED? */",
-  "mark_deleted": lambda element: f"{element} = INT_MAX /* DELETED */",
+states = {
+  "empty": (
+    lambda element: f"{element} == INT_MIN /* empty? */",
+    lambda element: f"{element} = INT_MIN /* empty! */",
+  ),
+  "deleted": (
+    lambda element: f"{element} == INT_MAX /* deleted? */",
+    lambda element: f"{element} = INT_MAX /* deleted! */",
+  ),
 }
 
-x = Type(type := Set("intrusive_int_hash_set", "int", **xs))
+x = Type(type := Set("intrusive_int_hash_set", "int", states))
 
 t = type.variable("t")
 t1 = type.variable("t1")

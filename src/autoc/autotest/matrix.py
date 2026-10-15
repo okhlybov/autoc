@@ -50,32 +50,26 @@ ORDERED = ("int", "cstring", "comp")
 # the emitters are chosen per element kind (INT_MIN/INT_MAX for ints, low
 # pointer values for counted references)
 def _int_sentinels():
-  return dict(
-    is_empty=lambda e: f"{e} == INT_MIN",
-    mark_empty=lambda e: f"{e} = INT_MIN",
-    is_deleted=lambda e: f"{e} == INT_MAX",
-    mark_deleted=lambda e: f"{e} = INT_MAX",
-  )
+  return {
+    "empty": (lambda e: f"{e} == INT_MIN", lambda e: f"{e} = INT_MIN"),
+    "deleted": (lambda e: f"{e} == INT_MAX", lambda e: f"{e} = INT_MAX"),
+  }
 
 
 def _arc_sentinels():
-  return dict(
-    is_empty=lambda e: f"{e} == (int*)(size_t)2",
-    mark_empty=lambda e: f"{e} = (int*)(size_t)2",
-    is_deleted=lambda e: f"{e} == (int*)(size_t)1",
-    mark_deleted=lambda e: f"{e} = (int*)(size_t)1",
-  )
+  return {
+    "empty": (lambda e: f"{e} == (int*)(size_t)2", lambda e: f"{e} = (int*)(size_t)2"),
+    "deleted": (lambda e: f"{e} == (int*)(size_t)1", lambda e: f"{e} = (int*)(size_t)1"),
+  }
 
 
 # Map sentinels receive the whole entry expression and mark its index field -
 # keeping the mark on one field spares memory debuggers from untouching the rest
 def _int_entry_sentinels():
-  return dict(
-    is_empty=lambda e: f"{e}.index == INT_MIN",
-    mark_empty=lambda e: f"{e}.index = INT_MIN",
-    is_deleted=lambda e: f"{e}.index == INT_MAX",
-    mark_deleted=lambda e: f"{e}.index = INT_MAX",
-  )
+  return {
+    "empty": (lambda e: f"{e}.index == INT_MIN", lambda e: f"{e}.index = INT_MIN"),
+    "deleted": (lambda e: f"{e}.index == INT_MAX", lambda e: f"{e}.index = INT_MAX"),
+  }
 
 
 # Simple rows: (factory, family name, kinds) where factory takes (name, element)
@@ -98,9 +92,9 @@ ROWS = (
   (_simple(Queue), "queue", ("int", "cstring", "comp")),
   (_simple(PriorityQueue), "pqueue", ("int", "cstring")),
   (_simple(ChainedHashSet), "chained_set", ALL),
-  (lambda name, element: IntrusiveHashSet(name, element, dependencies=(std.limits_h,), **_int_sentinels()),
+  (lambda name, element: IntrusiveHashSet(name, element, _int_sentinels(), dependencies=(std.limits_h,)),
    "intrusive_set", ("int",)),
-  (lambda name, element: IntrusiveHashSet(name, element, **_arc_sentinels()),
+  (lambda name, element: IntrusiveHashSet(name, element, _arc_sentinels()),
    "intrusive_set", ("arc",)),
   (_simple(RbSet), "rb_set", ORDERED),
   (_simple(AvlSet), "avl_set", ORDERED),
@@ -120,7 +114,7 @@ MAP_ROWS = (
   (_map_simple(FlatMap), "flat_map", ("int", "cstring")),
   (_map_simple(TreeMap, set=RbSet), "rb_tree_map", ("int", "cstring")),
   (_map_simple(BTreeMap, order=4), "btree_map", ORDERED),
-  (lambda name, value, key: IntrusiveHashMap(name, value, key, dependencies=(std.limits_h,), **_int_entry_sentinels()),
+  (lambda name, value, key: IntrusiveHashMap(name, value, key, _int_entry_sentinels(), dependencies=(std.limits_h,)),
    "intrusive_hash_map", ("int",)),
   (_map_simple(FlatMultimap), "flat_multimap", ("int",)),
   (lambda name, value, key: Multimap(name, value, key, AvlSet, Vector), "multimap", ("int",)),

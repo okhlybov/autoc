@@ -3,14 +3,8 @@ from autoc.range import Forward
 import autoc.set
 from autoc.hashed import Hashed
 from autoc.container import _Range
-from autoc.core import out, inout, Macro, Indirection, Callable, _StructRenderer, _ceil_power2
-
-
-class _Macro(Macro):
-
-  def __init__(self, result, parameters, emitter, **kwargs):
-    # Wrap the passthough arguments in () to circumvent operation proirity issues for user-supplied code
-    super().__init__(result, parameters, lambda *args: emitter(*(f"({x})" for x in args)), **kwargs)
+from autoc.core import out, inout, Macro, Indirection, Callable, Composite, _StructRenderer, _ceil_power2
+from autoc.intrusive_option import Option as IntrusiveOption
 
 
 #
@@ -18,14 +12,18 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
 
   brief = "Set of distinct elements over open addressing with sentinel values"
   
-  def __init__(self, *args, capacity_threshold=0.75, dependencies=(), is_empty, is_deleted, mark_empty, mark_deleted, **kwargs):
-    super().__init__(*args, dependencies=(*dependencies, _ceil_power2), **kwargs)
+  def __init__(self, name, element, states, *args, capacity_threshold=0.75, dependencies=(), **kwargs):
+    super().__init__(name, element, *args, dependencies=(*dependencies, _ceil_power2), **kwargs)
+    self.slot = IntrusiveOption(
+      self._decorate_component("slot", abbreviate=True),
+      self.element,
+      states,
+      visibility="internal",
+    )
+    self.dependencies.add(self.slot)
+    self._slot_p = Indirection(self.slot)
     self._element_p = Indirection(self.element)
     self.capacity_threshold = capacity_threshold
-    self.is_empty = _Macro("int", {"entry": self.element}, is_empty)
-    self.is_deleted = _Macro("int", {"entry": self.element}, is_deleted)
-    self.mark_empty = _Macro(None, {"entry": out(self.element)}, mark_empty)
-    self.mark_deleted = _Macro(None, {"entry": out(self.element)}, mark_deleted)
     self.range = Range(self)
 
   @property
@@ -44,19 +42,22 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
       The closest C++ equivalent is [std::unordered_set<>](https://cppreference.com/cpp/container/unordered_set).
     """
 
-    target_i = self.element.variable("target->elements[index]")
-    source_i = self.element.variable("source->elements[index]")
-    target_elements = self._element_p.variable("target->elements")
+    target_element = self.element.variable("target->elements[index]")
+    target_slot = self.slot.variable("target->elements[index]")
+    source_element = self.element.variable("source->elements[index]")
+    source_slot = self.slot.variable("source->elements[index]")
+    target_elements = self._slot_p.variable("target->elements")
     
     with self.size as f:
       f.inline_code = f"""
       assert(target);
       return target->size;
     """
-    
+
     with self.method("int", ("is", "element"), {"element": self.element}, visibility="internal", hidden=True, brief="Check if the element slot holds a live element (internal)") as f:
+      elem_expr = f"(*{f.element})" if isinstance(self.element, Composite) and not isinstance(self.element, Indirection) else f.element
       f.code = f"""
-        return !({self.is_empty(f.element)} || {self.is_deleted(f.element)});
+        return {self.slot._engaged(elem_expr)};
       """
     
     with self.method(None, "allocate", {"target": inout(self), "capacity": std.size_t}, hidden=True, visibility="internal", brief="Allocate the element table with the capacity rounded up to a power of two (internal)") as f:
@@ -66,7 +67,7 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         target->size = 0;
         target->capacity = _autoc_ceil_power2(capacity);
         assert(!(target->capacity & (target->capacity - 1))); /* verify the capacity is a power of 2 */
-        {target_elements} = {self.memory.allocate(self.element, "target->capacity")};
+        {target_elements} = {self.memory.allocate(self.slot, "target->capacity")};
       """
     
     _target = self.variable("_target")
@@ -86,7 +87,7 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         assert(target);
         if(capacity) {{
           {self.allocate(f.target, f.capacity)};
-          for(index = 0; index < target->capacity; ++index) {self.mark_empty(target_i)};
+          for(index = 0; index < target->capacity; ++index) {{{self.slot.create(target_slot)};}}
         }} else {{
           {self.create(f.target)};
         }}
@@ -121,17 +122,17 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
           start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
           /* lookup terminator for the existing entry is an empty slot while deleted slot is not */
           for(index = start; index < target->capacity; ++index) {{
-            if(!({self.is_empty(target_i)})) {{
-              if(!({self.is_deleted(target_i)}) && {self.element.hash_lookup_equal(target_i, f.element)}) {{
-                _element = &{target_i};
+            if(!{self.slot.empty(target_slot)}) {{
+              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, f.element)}) {{
+                _element = ({self._element_p})&{target_element};
                 goto stop;
               }}
             }} else goto stop;
           }}
           for(index = 0; index < start; ++index) {{
-            if(!({self.is_empty(target_i)})) {{
-              if(!({self.is_deleted(target_i)}) && {self.element.hash_lookup_equal(target_i, f.element)}) {{
-                _element = &{target_i};
+            if(!{self.slot.empty(target_slot)}) {{
+              if({self.slot.primed(target_slot)} && {self.element.hash_lookup_equal(target_element, f.element)}) {{
+                _element = ({self._element_p})&{target_element};
                 goto stop;
               }}
             }} else goto stop;
@@ -155,15 +156,15 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         start = {self.element.hash_lookup_hash(f.element)} & (target->capacity-1); /* capacity is assumed to be the power of 2 */
         /* lookup terminator for non-existing entry is either empty or deleted slot */
         for(index = start; index < target->capacity; ++index) {{
-          if(!{self.is_element(target_i)}) {{
+          if(!{self.slot.primed(target_slot)}) {{
             *_index = index;
-            return &{target_i};
+            return ({self._element_p})&{target_element};
           }}
         }}
         for(index = 0; index < start; ++index) {{
-          if(!{self.is_element(target_i)}) {{
+          if(!{self.slot.primed(target_slot)}) {{
             *_index = index;
-            return &{target_i};
+            return ({self._element_p})&{target_element};
           }}
         }}
         abort(); /* not finding a suitable empty slot is a fatal error */
@@ -182,8 +183,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
           {self.create_capacity(_target, "new_capacity")};
           if(target->elements) {{
             for(index = 0; index < target->capacity; ++index) {{
-              if({self.is_element(target_i)}) {{
-                {self.element.copy(self.locate_slot(_target, "&_index", target_i), target_i)}; /* direct planting in order to prevent from triggering the subsequent resizings */
+              if({self.slot.primed(target_slot)}) {{
+                {self.element.copy(self.locate_slot(_target, "&_index", target_element), target_element)}; /* direct planting in order to prevent from triggering the subsequent resizings */
               }}
             }}
             _target.size = target->size;
@@ -205,14 +206,13 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
       """
     
     with self.destroy as f:
-      if self.element.destructible:
+      if self.slot.destructible:
         f.code = f"""
           size_t index;
           assert(target);
           if(target->elements) {{
             for(index = 0; index < target->capacity; ++index)
-              if({self.is_element(target_i)})
-                {self.element.destroy(target_i)};
+              {self.slot.destroy(target_slot)};
             {self.memory.free(target_elements)};
           }}
         """
@@ -265,14 +265,12 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
       """
     
     with self.remove as f:
-      _destroy = self.element.destroy(target_i) if self.element.destructible else str()
       f.code = f"""
         size_t index;
         assert(target);
         assert({self.is_element(f.element)});
         if({self.locate_element(f.target, "&index", f.element)}) {{
-          {_destroy};
-          {self.mark_deleted(target_i)};
+          {self.slot.set_state(target_slot, 1)};
           --target->size;
           return 1;
         }} else return 0;
@@ -285,8 +283,8 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
         assert(source);
         {self.create_size(f.target, "source->size")};
         for(index = 0; index < source->capacity; ++index) {{
-          if({self.is_element(source_i)}) {{
-            {self.put(f.target, source_i)};
+          if({self.slot.primed(source_slot)}) {{
+            {self.put(f.target, source_element)};
           }}
         }}
       """
@@ -322,7 +320,7 @@ class Set(_StructRenderer, autoc.set.Set, Hashed):
     super()._render_struct(stream, header)
     stream.append(f"""
       struct {self.name} {{
-        {self.element}* elements; /**< @private */
+        {self.slot}* elements; /**< @private */
         {std.size_t} capacity; /**< @private */
         {std.size_t} size; /**< @private */
       }};
@@ -350,11 +348,12 @@ class Range(_Range, Forward):
     super().__setup__()
     
     front_element = self.element.variable("target->iterable->elements[target->front]")
+    front_slot = self.iterable.slot.variable("target->iterable->elements[target->front]")
 
     with self.method(None, "next", {"target": inout(self)}, hidden=True, visibility="internal", brief="Advance the range to the next live element (internal)") as f:
       f.code = lambda: f"""
         assert(target);
-        while(!{self.empty("target")} && !{self.iterable.is_element(front_element)}) ++target->front;
+        while(!{self.empty("target")} && !{self.iterable.slot.primed(front_slot)}) ++target->front;
       """
     
     with self.method(Callable.Parameter(self), "new", {"iterable" : self.iterable}, brief="Create the range spanning the whole set",
@@ -388,7 +387,7 @@ class Range(_Range, Forward):
         {result.definition};
         assert(target);
         assert(!{self.empty(f.target)});
-        assert({self.iterable.is_element(front_element)});
+        assert({self.iterable.slot.primed(front_slot)});
         {self.element.copy(result, front_element)};
         return {result};
       """
@@ -397,7 +396,7 @@ class Range(_Range, Forward):
       f.code = lambda: f"""
         assert(target);
         assert(!{self.empty(f.target)});
-        assert({self.iterable.is_element(front_element)});
+        assert({self.iterable.slot.primed(front_slot)});
         return {front_element.bind(self.iterable.element.view_type)};
       """
     

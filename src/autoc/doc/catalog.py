@@ -83,10 +83,8 @@ K = Placeholder(
 # The sentinel operations the intrusive containers need are left symbolic - the manual
 # declares the generic API and is never compiled, so the sentinels stay abstract
 _sentinels = {
-  "is_empty": lambda element: f"{element} == T_EMPTY",
-  "mark_empty": lambda element: f"{element} = T_EMPTY",
-  "is_deleted": lambda element: f"{element} == T_DELETED",
-  "mark_deleted": lambda element: f"{element} = T_DELETED",
+  "empty": (lambda element: f"{element} == T_EMPTY", lambda element: f"{element} = T_EMPTY"),
+  "deleted": (lambda element: f"{element} == T_DELETED", lambda element: f"{element} = T_DELETED"),
 }
 
 
@@ -359,8 +357,8 @@ def configure_module(module):
   module.add(Multimap("Multimap", T, K, AVLSet, Vector))
   module.add(FlatMultiset("FlatMultiset", T))
   module.add(FlatSet("FlatSet", T))
-  module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, **_sentinels))
-  module.add(IntrusiveHashSet("IntrusiveHashSet", T, **_sentinels))
+  module.add(IntrusiveHashMap("IntrusiveHashMap", T, K, _sentinels))
+  module.add(IntrusiveHashSet("IntrusiveHashSet", T, _sentinels))
   module.add(List("List", T))
   module.add(PriorityQueue("PriorityQueue", T))
   module.add(Queue("Queue", T))
